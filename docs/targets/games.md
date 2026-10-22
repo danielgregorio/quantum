@@ -147,6 +147,7 @@ A sound the game can play (qg:play).
 | `name` | a name | required |  |
 | `src` | text | required | an .ogg or .wav |
 | `loop` | true / false | `false` | plays until qg:stop (music) |
+| `bus` | a name |  | the bus it is heard on (music, effects...): how loud a bus is, qg:volume and a menu's qg:slider set, kept between runs |
 
 Goes inside: `q:application`.
 
@@ -709,13 +710,14 @@ Goes inside: `qg:scene`.
 
 ### `qg:hud`
 
-Text over the game.
+Text and pictures over the game.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-center` | `top-left` |  |
+| `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-left` / `bottom-center` / `bottom-right` | `top-left` |  |
 | `font` | text |  | a .ttf, relative to the .q or a folder above it |
 | `size` | integer | `8` | the font size of its items, unless an item says otherwise |
+| `if` | an expression |  | shown only while this is true |
 
 Goes inside: `qg:scene`.
 
@@ -729,6 +731,7 @@ A number from the scene state, or how many of an item the players hold, in the H
 | `item` | a name |  | a qg:item: how many are held (or bind=) |
 | `label` | text | `` | text before the number |
 | `size` | integer |  | font size |
+| `color` | `#rrggbb` |  | its colour (#rrggbb) |
 
 Goes inside: `qg:hud`.
 
@@ -741,6 +744,7 @@ A string from the scene state, in the HUD.
 | `bind` | a name |  | a q:set of the scene (or value=) |
 | `value` | an expression |  | an expression, read every frame (or bind=) |
 | `size` | integer |  | font size |
+| `color` | `#rrggbb` |  | its colour (#rrggbb) |
 
 Goes inside: `qg:hud`.
 
@@ -779,6 +783,8 @@ A list of buttons (and text fields) over the scene. A player moves through it wi
 | `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-center` | `center` |  |
 | `font` | text |  | a .ttf, relative to the .q or a folder above it |
 | `size` | integer | `16` | font size |
+| `columns` | integer | `1` | its items in a grid of so many columns: left and right move along a row |
+| `rows` | integer | `0` | how many rows show at once; the others scroll into view with the focus (0: all of them) |
 
 Goes inside: `qg:scene`.
 
@@ -817,6 +823,7 @@ The usual networked-game menu, ready made: play here (local=), host, an address 
 | `address` | text | `127.0.0.1:7777` | what the address field starts with, unless the web page's address has ?join=... |
 | `font` | text |  |  |
 | `size` | integer | `16` |  |
+| `options` | a name |  | a scene of the game's options (how loud, the full screen, the keys): an Options button goes there |
 
 Goes inside: `qg:scene`.
 
@@ -1151,17 +1158,22 @@ Goes inside: a handler.
 
 ### `qg:save`
 
-Saves the game to continue it later: the game state (every q:set of q:application) and a scene to come back to. One save per game, kept between runs (in a browser, by the browser); a new qg:save replaces it. `has_save()` says whether there is one. A networked game is not saved.
+Saves the game to continue it later: the game state (every q:set of q:application) and a scene to come back to. Kept between runs (in a browser, by the browser); a new qg:save replaces it. `has_save()` says whether there is one. A networked game is not saved.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `scene` | a name |  | the scene to continue in (none: this one); it starts over, what was in it is not saved |
+| `slot` | an expression |  | which of several saves (1, 2, 3...: a game each); the scenes with save="true" save into it from then on. None: the one save |
 
 Goes inside: a handler.
 
 ### `qg:continue`
 
 Continues the saved game (qg:save): its game state back, and on to its scene. Nothing when there is no save.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `slot` | an expression |  | which save (qg:save slot=); the scenes with save="true" save into it from then on. None: the one save |
 
 Goes inside: a handler.
 
@@ -1380,6 +1392,27 @@ A carried thing is put down where it is (qg:attach): it touches again.
 
 Goes inside: a handler.
 
+### `qg:volume`
+
+How loud a bus of the game's sounds is, from 0 (silent) to 100; kept between runs. `volume('music')` reads it. Only heard.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `bus` | a name | required | a bus of the game's sounds (qg:sound bus=) |
+| `value` | an expression | required | 0 to 100 |
+
+Goes inside: a handler.
+
+### `qg:fullscreen`
+
+The game fills the screen, or goes back to a window; kept between runs. `fullscreen()` reads it. In a browser, the page goes full screen.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `on` | an expression |  | true or false; none: the other of what it is |
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:choice`
@@ -1406,6 +1439,18 @@ Lines someone says, shown one at a time in a box at the bottom of the screen (qg
 | `sheet` | a name |  | a qg:spritesheet of faces: a line's portrait= is a frame of it |
 
 Goes inside: `qg:scene`.
+
+### `qg:icon`
+
+A picture in the HUD: a frame of a sheet (a heart before the hearts, a logo on a title).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `sheet` | a name | required | a qg:spritesheet or qg:tileset |
+| `frame` | an expression | `0` | a frame of it, or an expression read every frame |
+| `scale` | number | `1.0` | how large: 2 is twice its size |
+
+Goes inside: `qg:hud`.
 
 ### `qg:label`
 
@@ -1522,6 +1567,35 @@ One text of the game, in a qg:language.
 
 Goes inside: `qg:language`.
 
+### `qg:rebind`
+
+A key of a qg:menu: it shows the action's key, and once chosen, the next key, mouse button or joypad button pressed becomes the action's (Escape keeps the old one). Kept between runs. Local to the machine, as a field is: the replay and the lockstep carry the actions, not the keys.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `action` | a name | required | an action of the game (qg:input, or a default one) |
+| `label` | text | `` | text before the key; the action's name when not given |
+| `player` | integer | `1` | whose action |
+| `if` | an expression |  | shown, and choosable, only while this is true |
+
+Goes inside: `qg:menu`.
+
+### `qg:slider`
+
+A value of a qg:menu that left and right change while it has the focus: how loud a bus is (bus=, from 0 to 100, kept between runs), or a number of the scene or the game (bind=).
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `label` | text | `` | text before it |
+| `bus` | a name |  | a bus of the game's sounds (qg:sound bus=), or bind= |
+| `bind` | a name |  | a number q:set of the scene or the game, or bus= |
+| `min` | number | `0.0` |  |
+| `max` | number | `100.0` |  |
+| `step` | number | `10.0` | how much a press of left or right changes it |
+| `if` | an expression |  | shown, and choosable, only while this is true |
+
+Goes inside: `qg:menu`.
+
 ### `qg:steer`
 
 A part: left and right turn the body, up pushes it the way it points and down holds it back; it drifts, and slows by drag= on its own. Its picture turns with it. An Asteroids ship, a car seen from above, a horse. It needs no qg:walk.
@@ -1564,6 +1638,36 @@ Runs its handler after so many ticks, or every so many ticks, in this scene.
 
 Goes inside: `qg:scene`.
 
+### `qg:touch-button`
+
+A button on a touch screen that presses one of the game's actions while it is touched, as a key would (a replay and the lockstep see the action). In the application, every scene has it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `action` | a name | required | an action of the game |
+| `x` | number | required |  |
+| `y` | number | required | its middle, on the screen |
+| `size` | number | `32.0` | its width across, in pixels |
+| `label` | text | `` | a letter or a word on it |
+| `player` | integer | `1` | whose action |
+| `show` | `touch` / `always` | `touch` | touch: only on a device with a touch screen |
+
+Goes inside: `q:application`, `qg:scene`.
+
+### `qg:touch-stick`
+
+A stick on a touch screen: dragged from its middle, it presses left, right, up and down as far as it is pushed (strength()). In the application, every scene has it.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `x` | number | required |  |
+| `y` | number | required | its middle, on the screen |
+| `size` | number | `56.0` | its width across, in pixels |
+| `player` | integer | `1` | whose directions |
+| `show` | `touch` / `always` | `touch` | touch: only on a device with a touch screen |
+
+Goes inside: `q:application`, `qg:scene`.
+
 ### `qg:when`
 
 Runs its handler when a condition turns true: a wave beaten (`count('enemy') == 0`), a room solved, a score reached. The condition is read at the start of every tick, from the scene's first, after the qg:afters due then (not while the scene is paused); the handler runs on the tick it is first true, and again only after it has been false. Holds actions and statements.
@@ -1576,7 +1680,7 @@ Goes inside: `qg:scene`.
 
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `distance()`, `nearest()`, `sees()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core's. `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core's. `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
 
 ## `gd:` attributes
 
@@ -1671,13 +1775,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:tileset>
   <qg:spritesheet name="chars" src="assets/kenney/tilemap-characters_packed.png" tile="24" />
 
-  <qg:sound name="jump" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="coin" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="stomp" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="block" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="powerup" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="jump" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="coin" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="stomp" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="block" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="powerup" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="sparkle" preset="stars" color="#ffe060" />
@@ -1714,6 +1818,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SCORE" as="PONTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -1724,7 +1832,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="New game" as="Novo jogo" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Jump" as="Pular" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -1735,7 +1851,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Language" as="Idioma" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Jump" as="Saltar" />
+</qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each level cleared saves it) ===== -->
 
@@ -1744,6 +1868,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:menu position="center">
       <qg:button label="New game"><qg:goto-scene name="map" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -2193,6 +2318,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:hud>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#3b7d4f">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Jump" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -2226,6 +2363,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="opened" value="[]" />
     <q:set name="message" value="" />
   </q:function>
+  <!-- three games, each kept apart (qg:save slot=): one goes on where it was, an empty one starts -->
+  <q:function name="game_label" params="n">
+    <q:return value="{tr('Game') + ' ' + str(n) + ': ' + (tr('go on') if has_save(n) else tr('new'))}" />
+  </q:function>
+  <q:function name="play" params="n">
+    <q:if condition="{has_save(n)}">
+      <qg:continue slot="{n}" />
+      <q:else>
+        <q:call function="anew" />
+        <qg:save slot="{n}" scene="room-1" />
+        <qg:goto-scene name="room-1" />
+      </q:else>
+    </q:if>
+  </q:function>
   <!-- a hurt, the same in every room: a function of the game -->
   <q:function name="hurt" params="me">
     <qg:play sound="hurt" />
@@ -2241,11 +2392,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:tileset>
   <qg:spritesheet name="hero" src="assets/hero.png" tile="24" />
 
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="pick" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound name="hit" bus="effects" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound name="hurt" bus="effects" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound name="pick" bus="effects" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound name="open" bus="effects" src="assets/kenney/audio/block.ogg" />
+  <qg:sound name="win" bus="effects" src="assets/kenney/audio/win.ogg" />
+
+  <!-- on a phone: a stick to walk and a button for the sword, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="sparkle" preset="stars" color="#fff0a0" />
@@ -2286,7 +2441,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="The keep is quiet again." as="A fortaleza está quieta outra vez." />
     <qg:phrase text="Once more" as="Mais uma vez" />
     <qg:phrase text="To the title" as="Para o início" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Sword" as="Espada" />
+    <qg:phrase text="Game" as="Jogo" />
+    <qg:phrase text="go on" as="continuar" />
+    <qg:phrase text="new" as="novo" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
     <qg:phrase text="KEYS" as="LLAVES" />
@@ -2302,16 +2468,41 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="The keep is quiet again." as="La fortaleza vuelve a estar en calma." />
     <qg:phrase text="Once more" as="Otra vez" />
     <qg:phrase text="To the title" as="Al inicio" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Sword" as="Espada" />
+    <qg:phrase text="Game" as="Partida" />
+    <qg:phrase text="go on" as="seguir" />
+    <qg:phrase text="new" as="nueva" />
+</qg:language>
 
   <!-- ===== The title: a new game, or the saved one (each room entered saves it) ===== -->
 
   <qg:scene name="title" width="256" height="224" background="#2b2b3a">
     <qg:hud position="top-center" size="32"><qg:text value="{'KEEP'}" /></qg:hud>
-    <qg:menu position="center">
-      <qg:button label="New game"><q:call function="anew" /><qg:goto-scene name="room-1" /></qg:button>
-      <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+    <qg:menu position="center" size="14">
+      <qg:button label="{game_label(1)}"><q:call function="play" args="1" /></qg:button>
+      <qg:button label="{game_label(2)}"><q:call function="play" args="2" /></qg:button>
+      <qg:button label="{game_label(3)}"><q:call function="play" args="3" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the sword's key; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#2b2b3a">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Sword" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
     </qg:menu>
   </qg:scene>
 
@@ -2361,10 +2552,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="east" x="252" y="99" width="8" height="36" to="room-2" at="west" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 2: the crossing. West to 1, north to 3, south to 4, east (locked) to 5. ===== -->
@@ -2424,10 +2617,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="east" x="252" y="99" width="8" height="36" to="room-5" at="west" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 3: the key, guarded. South to 2. ===== -->
@@ -2493,10 +2688,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="south" x="117" y="220" width="36" height="8" to="room-2" at="north" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 4: the switch. North to 2. ===== -->
@@ -2549,10 +2746,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="north" x="117" y="-4" width="36" height="8" to="room-2" at="south" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 5: behind the locked door; the gate the switch opens. West to 2, east to 6. ===== -->
@@ -2604,10 +2803,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="east" x="252" y="99" width="8" height="36" to="room-6" at="west" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== Room 6: the chest. ===== -->
@@ -2654,10 +2855,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:exit name="west" x="-4" y="99" width="8" height="36" to="room-5" at="east" />
 
     <qg:hud position="top-left">
-      <qg:counter bind="hearts" label="HEARTS" />
-      <qg:counter bind="keys" label="KEYS" />
-      <qg:text bind="message" />
+      <qg:icon sheet="dungeon" frame="9" />
+      <qg:counter bind="hearts" label="HEARTS" color="#ff8080" />
+      <qg:icon sheet="dungeon" frame="8" />
+      <qg:counter bind="keys" label="KEYS" color="#ffe070" />
     </qg:hud>
+    <qg:hud position="bottom-left" if="{message != ''}"><qg:text bind="message" /></qg:hud>
   </qg:scene>
 
   <!-- ===== The end, and the game over ===== -->
@@ -2731,15 +2934,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:tileset>
   <qg:spritesheet name="delvers" src="assets/delvers.png" tile="24" />
 
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="pick" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="heal" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
-  <qg:sound name="twang" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="torchlight" src="assets/torchlight.ogg" loop="true" />
-  <qg:sound name="crypt" src="assets/crypt.ogg" loop="true" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="pick" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="heal" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="open" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="twang" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="music" name="torchlight" src="assets/torchlight.ogg" loop="true" />
+  <qg:sound bus="music" name="crypt" src="assets/crypt.ogg" loop="true" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="torch" preset="fire" amount="20" size="3" lifetime="0.7" speed="30" />
@@ -2799,6 +3002,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
              ai="fly" speed="100" walls="stop" rotate="true" lifetime="180" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="HEARTS" as="CORAÇÕES" />
     <qg:phrase text="GEMS" as="GEMAS" />
@@ -2818,7 +3025,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="THE VAULT IS OPEN." as="O COFRE ESTÁ ABERTO." />
     <qg:phrase text="THE VAULT IS YOURS." as="O COFRE É SEU." />
     <qg:phrase text="THE CRYPT KEEPS YOU." as="A CRIPTA FICA COM VOCÊ." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Sword" as="Espada" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
     <qg:phrase text="GEMS" as="GEMAS" />
@@ -2838,7 +3054,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="THE VAULT IS OPEN." as="LA BÓVEDA ESTÁ ABIERTA." />
     <qg:phrase text="THE VAULT IS YOURS." as="LA BÓVEDA ES TUYA." />
     <qg:phrase text="THE CRYPT KEEPS YOU." as="LA CRIPTA SE QUEDA CONTIGO." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Sword" as="Espada" />
+</qg:language>
 
   <!-- ===== The title: alone, together, or the saved delve ===== -->
 
@@ -2855,6 +3080,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:button label="Play alone"><qg:goto-scene name="crypt-1" fade="0.4" /></qg:button>
       <qg:button label="Play together"><qg:goto-scene name="together" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -3200,6 +3426,19 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:menu>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#16141e">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Music" bus="music" />
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Sword" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -3226,11 +3465,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="boss" src="assets/boss.png" tile="40" />
   <qg:spritesheet name="space" src="assets/space.png" tile="256x224" />
 
-  <qg:sound name="shoot" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="boom" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="shoot" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="boom" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
 
   <!-- The ship's shot: flies up, gone after 80 ticks or when it leaves the screen. -->
   <qg:prefab name="Shot" tag="shot" sheet="ships" frame="8" hitbox="18x8"
@@ -3294,6 +3533,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SCORE" as="PONTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -3302,7 +3545,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="THE DRIFT IS CLEAR" as="O CAMPO ESTÁ LIMPO" />
     <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="O CAMPO ESTÁ LIMPO. APERTE PULAR." />
     <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO NO CAMPO. APERTE PULAR." />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Fire" as="Atirar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -3311,9 +3560,25 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="THE DRIFT IS CLEAR" as="EL CAMPO ESTÁ DESPEJADO" />
     <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="EL CAMPO ESTÁ DESPEJADO. PULSA SALTAR." />
     <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO EN EL CAMPO. PULSA SALTAR." />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Fire" as="Disparar" />
+</qg:language>
   <qg:scene name="play" width="256" height="224" background="#0a0a1e" seed="3">
     <qg:sprite sheet="space" x="128" y="112" />
+    <!-- Escape (or the joypad's B) pauses, with the options; again, or Resume, goes on -->
+    <qg:on-input action="cancel">
+      <q:if condition="{paused()}"><qg:resume /><q:else><qg:pause /></q:else></q:if>
+    </qg:on-input>
+    <qg:menu if="{paused()}" size="12">
+      <qg:button label="Resume"><qg:resume /></qg:button>
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Fire" action="jump" />
+    </qg:menu>
     <q:set name="message" value="" />
     <q:set name="boss_down" value="false" type="boolean" />
 
@@ -3448,17 +3713,39 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- The title: two on one keyboard, or one on each machine — host, or join at
        an address. The court starts on both machines once both are there. -->
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="up" label="^" x="48" y="300" size="64" />
+  <qg:touch-button action="down" label="v" x="48" y="360" size="64" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="PONG" as="PONG" />
     <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="P1 up" as="J1 cima" />
+    <qg:phrase text="P2 up" as="J2 cima" />
+    <qg:phrase text="P1 down" as="J1 baixo" />
+    <qg:phrase text="P2 down" as="J2 baixo" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="PONG" as="PONG" />
     <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="P1 up" as="J1 arriba" />
+    <qg:phrase text="P2 up" as="J2 arriba" />
+    <qg:phrase text="P1 down" as="J1 abajo" />
+    <qg:phrase text="P2 down" as="J2 abajo" />
+</qg:language>
   <qg:scene name="title" width="640" height="400" background="#24272a">
     <qg:hud position="top-center" size="48"><qg:text value="{'PONG'}" /></qg:hud>
-    <qg:lobby local="court" local-label="Two players, one keyboard" size="20" />
+    <qg:lobby local="court" local-label="Two players, one keyboard" size="20" options="options" />
   </qg:scene>
 
   <qg:scene name="court" width="640" height="400" background="#24272a" seed="1">
@@ -3487,6 +3774,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:zone name="right-wall" tag="wall" x="640" y="0" width="20" height="400" />
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="640" height="400" background="#24272a">
+    <qg:hud position="top-center" size="36"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="18" columns="2">
+      <qg:rebind label="P1 up" action="up" />
+      <qg:rebind label="P2 up" action="up" player="2" />
+      <qg:rebind label="P1 down" action="down" />
+      <qg:rebind label="P2 down" action="down" player="2" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -3508,8 +3809,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="player" src="assets/player.png" tile="112x136" />
   <qg:spritesheet name="creeps" src="assets/creeps.png" tile="100x140" />
 
-  <qg:sound name="music" src="assets/music.ogg" loop="true" />
-  <qg:sound name="death" src="assets/gameover.wav" />
+  <qg:sound bus="music" name="music" src="assets/music.ogg" loop="true" />
+  <qg:sound bus="effects" name="death" src="assets/gameover.wav" />
 
   <qg:input action="jump" keys="Space, Enter, JoyA, JoyStart" />
 
@@ -3526,18 +3827,37 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="90" y="630" size="140" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="Start" as="Começar" />
     <qg:phrase text="Dodge the&#10;Creeps" as="Desvie das&#10;Criaturas" />
     <qg:phrase text="Get Ready" as="Prepare-se" />
     <qg:phrase text="Game Over" as="Fim de jogo" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="Start" as="Empezar" />
     <qg:phrase text="Dodge the&#10;Creeps" as="Esquiva a las&#10;Criaturas" />
     <qg:phrase text="Get Ready" as="Prepárate" />
     <qg:phrase text="Game Over" as="Fin del juego" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+</qg:language>
   <qg:scene name="title" width="480" height="720" background="#385f61">
     <q:set name="message" value="Dodge the&#10;Creeps" />
     <qg:hud position="center" font="fonts/Xolonium-Regular.ttf" size="60">
@@ -3546,6 +3866,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <!-- The demo's StartButton: clicked, or Enter, or the joypad's A. -->
     <qg:menu position="bottom-center" font="fonts/Xolonium-Regular.ttf" size="60">
       <qg:button label="Start"><qg:goto-scene name="play" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
     </qg:menu>
     <qg:on-input action="jump">
       <qg:goto-scene name="play" />
@@ -3610,6 +3931,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <qg:goto-scene name="play" />
       </q:if>
     </qg:on-input>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="480" height="720" background="#385f61">
+    <qg:hud position="top-center" size="48"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" font="fonts/Xolonium-Regular.ttf" size="28">
+      <qg:slider label="Music" bus="music" />
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>
@@ -3690,6 +4023,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="buy-gatling" label="1" x="1050" y="590" size="64" />
+  <qg:touch-button action="buy-explosive" label="2" x="1120" y="590" size="64" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="TOWERS" as="TORRES" />
     <qg:phrase text="Play alone" as="Jogar sozinho" />
@@ -3704,7 +4041,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" as="1: Metralhadora (50)   2: Explosiva (70)   clique numa casa para construir, numa torre para melhorar (50)" />
     <qg:phrase text="The base stands. Press space to play again." as="A base resistiu. Aperte espaço para jogar de novo." />
     <qg:phrase text="The base fell. Press space to try again." as="A base caiu. Aperte espaço para tentar de novo." />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Turret 1" as="Torre 1" />
+    <qg:phrase text="Turret 2" as="Torre 2" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="TOWERS" as="TORRES" />
     <qg:phrase text="Play alone" as="Jugar solo" />
@@ -3719,13 +4063,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" as="1: Ametralladora (50)   2: Explosiva (70)   haz clic en una casilla para construir, en una torre para mejorarla (50)" />
     <qg:phrase text="The base stands. Press space to play again." as="La base resiste. Pulsa espacio para jugar otra vez." />
     <qg:phrase text="The base fell. Press space to try again." as="La base cayó. Pulsa espacio para intentarlo otra vez." />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Turret 1" as="Torre 1" />
+    <qg:phrase text="Turret 2" as="Torre 2" />
+</qg:language>
 
   <!-- The title: alone, or two builders on two machines. -->
   <qg:scene name="title" width="1152" height="648" background="#1a1a1a">
     <qg:sprite sheet="map" x="578" y="372" gd:modulate="#ffffff60" />
     <qg:hud position="top-center" size="48"><qg:text value="{'TOWERS'}" /></qg:hud>
-    <qg:lobby local="map" local-label="Play alone" size="22" />
+    <qg:lobby local="map" local-label="Play alone" size="22" options="options" />
   </qg:scene>
 
   <qg:scene name="map" width="1152" height="648" background="#1a1a1a" seed="11">
@@ -3831,6 +4182,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:on-input action="jump"><qg:goto-scene name="map" /></qg:on-input>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="1152" height="648" background="#1a1a1a">
+    <qg:hud position="top-center" size="48"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="22">
+      <qg:rebind label="Turret 1" action="buy-gatling" />
+      <qg:rebind label="Turret 2" action="buy-explosive" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -3870,6 +4233,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="70" y="290" size="96" />
+  <qg:touch-button action="punch" label="P" x="520" y="300" size="64" />
+  <qg:touch-button action="kick" label="K" x="595" y="250" size="64" />
+  <qg:touch-button action="jump" label="J" x="595" y="325" size="48" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="ARENA" as="ARENA" />
     <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
@@ -3884,7 +4253,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="PLAYER 2 WINS - press jump" as="JOGADOR 2 VENCE - aperte pular" />
     <qg:phrase text="P1 rounds" as="Rounds J1" />
     <qg:phrase text="P2 rounds" as="Rounds J2" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="P1 punch" as="J1 soco" />
+    <qg:phrase text="P2 punch" as="J2 soco" />
+    <qg:phrase text="P1 kick" as="J1 chute" />
+    <qg:phrase text="P2 kick" as="J2 chute" />
+    <qg:phrase text="P1 jump" as="J1 pulo" />
+    <qg:phrase text="P2 jump" as="J2 pulo" />
+    <qg:phrase text="P1 crouch" as="J1 agachar" />
+    <qg:phrase text="P2 crouch" as="J2 agachar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="ARENA" as="ARENA" />
     <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
@@ -3899,13 +4281,26 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="PLAYER 2 WINS - press jump" as="GANA EL JUGADOR 2 - pulsa saltar" />
     <qg:phrase text="P1 rounds" as="Asaltos J1" />
     <qg:phrase text="P2 rounds" as="Asaltos J2" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="P1 punch" as="J1 puñetazo" />
+    <qg:phrase text="P2 punch" as="J2 puñetazo" />
+    <qg:phrase text="P1 kick" as="J1 patada" />
+    <qg:phrase text="P2 kick" as="J2 patada" />
+    <qg:phrase text="P1 jump" as="J1 salto" />
+    <qg:phrase text="P2 jump" as="J2 salto" />
+    <qg:phrase text="P1 crouch" as="J1 agacharse" />
+    <qg:phrase text="P2 crouch" as="J2 agacharse" />
+</qg:language>
 
   <!-- The title: two on one keyboard, or one on each machine. -->
   <qg:scene name="title" width="640" height="360" background="#201820">
     <qg:sprite sheet="stage" x="320" y="180" />
     <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>
-    <qg:lobby local="fight" local-label="Two players, one keyboard" size="18" />
+    <qg:lobby local="fight" local-label="Two players, one keyboard" size="18" options="options" />
   </qg:scene>
 
   <qg:scene name="fight" width="640" height="360" background="#201820" seed="1">
@@ -4010,6 +4405,24 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:on-input action="jump"><qg:goto-scene name="fight" /></qg:on-input>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="640" height="360" background="#201820">
+    <qg:hud position="top-center" size="32"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="16" columns="2" rows="4">
+      <qg:rebind label="P1 punch" action="punch" />
+      <qg:rebind label="P2 punch" action="punch" player="2" />
+      <qg:rebind label="P1 kick" action="kick" />
+      <qg:rebind label="P2 kick" action="kick" player="2" />
+      <qg:rebind label="P1 jump" action="jump" />
+      <qg:rebind label="P2 jump" action="jump" player="2" />
+      <qg:rebind label="P1 crouch" action="down" />
+      <qg:rebind label="P2 crouch" action="down" player="2" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -4068,7 +4481,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Checkmate - White wins" as="Xeque-mate - as brancas vencem" />
     <qg:phrase text="Checkmate - Black wins" as="Xeque-mate - as pretas vencem" />
     <qg:phrase text="Stalemate" as="Afogamento - empate" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="CHESS" as="AJEDREZ" />
     <qg:phrase text="Two players, one board" as="Dos jugadores, un tablero" />
@@ -4084,12 +4502,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Checkmate - White wins" as="Jaque mate - ganan las blancas" />
     <qg:phrase text="Checkmate - Black wins" as="Jaque mate - ganan las negras" />
     <qg:phrase text="Stalemate" as="Rey ahogado - tablas" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+</qg:language>
 
   <!-- The title: both colours on one board, or white and black on two machines. -->
   <qg:scene name="title" width="496" height="540" background="#2a2520">
     <qg:hud position="top-center" size="40"><qg:text value="{'CHESS'}" /></qg:hud>
-    <qg:lobby local="game" local-label="Two players, one board" size="18" />
+    <qg:lobby local="game" local-label="Two players, one board" size="18" options="options" />
   </qg:scene>
 
   <qg:scene name="game" width="496" height="540" background="#2a2520">
@@ -4368,6 +4791,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:on-select>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="496" height="540" background="#2a2520">
+    <qg:hud position="top-center" size="36"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="18">
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -4411,10 +4844,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="sky" src="assets/sky.png" tile="2458x480" />
   <qg:spritesheet name="hills" src="assets/hills.png" tile="2048x480" />
 
-  <qg:sound name="jump" src="assets/jump.wav" />
-  <qg:sound name="shoot" src="assets/shoot.wav" />
-  <qg:sound name="coin" src="assets/coin_pickup.wav" />
-  <qg:sound name="explode" src="assets/explode.wav" />
+  <qg:sound bus="effects" name="jump" src="assets/jump.wav" />
+  <qg:sound bus="effects" name="shoot" src="assets/shoot.wav" />
+  <qg:sound bus="effects" name="coin" src="assets/coin_pickup.wav" />
+  <qg:sound bus="effects" name="explode" src="assets/explode.wav" />
 
   <qg:prefab name="Coin" tag="coin" sheet="coin" frame="0" hitbox="20x20" scale="0.65">
     <qg:animation name="walk" frames="0,1,2,3,2,1" fps="6" />
@@ -4447,16 +4880,34 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
              shape="-174.04,-0.43; -94.04,-23.61; 91.84,-28.64; 80.29,-5.16; -54.32,0.04; -179.99,26.44" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="80" y="400" size="110" />
+  <qg:touch-button action="jump" label="A" x="720" y="410" size="72" />
+  <qg:touch-button action="shoot" label="B" x="640" y="430" size="64" />
+  <qg:touch-button action="pause" label="II" x="770" y="30" size="40" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="COINS" as="MOEDAS" />
     <qg:phrase text="Resume" as="Continuar" />
     <qg:phrase text="Restart" as="Recomeçar" />
-  </qg:language>
+      <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Jump" as="Pular" />
+    <qg:phrase text="Shoot" as="Atirar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="COINS" as="MONEDAS" />
     <qg:phrase text="Resume" as="Continuar" />
     <qg:phrase text="Restart" as="Reiniciar" />
-  </qg:language>
+      <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Jump" as="Saltar" />
+    <qg:phrase text="Shoot" as="Disparar" />
+</qg:language>
   <qg:scene name="level" width="800" height="480" background="#52c9ff">
     <!-- level/background/parallax_background.tscn: a base scale of 0.1 times each layer's -->
     <qg:parallax sheet="sky" scroll="0.02" />
@@ -4567,6 +5018,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:button label="Restart">
         <qg:goto-scene name="level" />
       </qg:button>
+      <!-- beyond the demo: the options, kept between runs -->
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Jump" action="jump" />
+      <qg:rebind label="Shoot" action="shoot" />
     </qg:menu>
   </qg:scene>
 
@@ -4603,12 +5059,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="paddles" src="assets/paddles.png" tile="48x8" />
   <qg:spritesheet name="ball" src="assets/ball.png" tile="8" />
 
-  <qg:sound name="bounce" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="break" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="clank" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="boom" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="lost" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="clear" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="bounce" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="break" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="clank" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="boom" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="lost" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="clear" src="assets/kenney/audio/win.ogg" />
 
   <!-- The serve: Space, Up, W or the joypad's A, as it is let go. -->
   <qg:input action="jump" keys="Space, Up, W, JoyA" />
@@ -4704,6 +5160,11 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="left" label="&lt;" x="34" y="206" size="48" />
+  <qg:touch-button action="right" label="&gt;" x="90" y="206" size="48" />
+  <qg:touch-button action="jump" label="A" x="286" y="206" size="48" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="BRICKS" as="TIJOLOS" />
     <qg:phrase text="Play alone" as="Jogar sozinho" />
@@ -4718,7 +5179,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE" as="DE DOIS A QUATRO JOGADORES, CADA UM NA SUA MÁQUINA" />
     <qg:phrase text="EVERY BRICK IS BROKEN" as="TODOS OS TIJOLOS QUEBRADOS" />
     <qg:phrase text="THE BALLS ARE GONE" as="AS BOLAS ACABARAM" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Serve" as="Sacar" />
+    <qg:phrase text="Left" as="Esquerda" />
+    <qg:phrase text="Right" as="Direita" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="BRICKS" as="LADRILLOS" />
     <qg:phrase text="Play alone" as="Jugar solo" />
@@ -4733,7 +5204,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE" as="DE DOS A CUATRO JUGADORES, CADA UNO EN SU MÁQUINA" />
     <qg:phrase text="EVERY BRICK IS BROKEN" as="TODOS LOS LADRILLOS ROTOS" />
     <qg:phrase text="THE BALLS ARE GONE" as="SE ACABARON LAS PELOTAS" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Serve" as="Sacar" />
+    <qg:phrase text="Left" as="Izquierda" />
+    <qg:phrase text="Right" as="Derecha" />
+</qg:language>
 
   <qg:scene name="title" width="320" height="240" background="#1c1a2c">
     <qg:sprite sheet="bricks" frame="0" x="64" y="56" />
@@ -4745,6 +5226,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:menu position="center" size="14">
       <qg:button label="Play alone"><q:call function="anew" /><qg:goto-scene name="level" fade="0.3" /></qg:button>
       <qg:button label="Play together"><q:call function="anew" /><qg:goto-scene name="together" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
       <!-- a desktop build quits; a page in a browser has nothing to quit to -->
       <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
@@ -4900,6 +5382,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:menu>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="320" height="240" background="#1c1a2c">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Serve" action="jump" />
+      <qg:rebind label="Left" action="left" />
+      <qg:rebind label="Right" action="right" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -4946,12 +5442,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:tileset>
   <qg:spritesheet name="siege" src="assets/siege.png" tile="16" />
 
-  <qg:sound name="twang" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="clank" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="zap" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="horn" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="twang" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="clank" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="zap" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="horn" src="assets/kenney/audio/win.ogg" />
 
   <!-- fire: the mouse's left button, J, or the right trigger; the right stick aims -->
   <qg:input action="fire" keys="MouseLeft, J, JoyR2" />
@@ -5041,6 +5537,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </q:function>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="200" />
+  <qg:touch-button action="fire" label="A" x="284" y="200" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SIEGE" as="CERCO" />
     <qg:phrase text="Play alone" as="Jogar sozinho" />
@@ -5057,7 +5557,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="BEST" as="MELHORES" />
     <qg:phrase text="To the title" as="Para o início" />
     <qg:phrase text="TWO PLAYERS, EACH ON THEIR OWN MACHINE" as="DOIS JOGADORES, CADA UM NA SUA MÁQUINA" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Fire" as="Atirar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SIEGE" as="ASEDIO" />
     <qg:phrase text="Play alone" as="Jugar solo" />
@@ -5074,13 +5582,22 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="BEST" as="MEJORES" />
     <qg:phrase text="To the title" as="Al inicio" />
     <qg:phrase text="TWO PLAYERS, EACH ON THEIR OWN MACHINE" as="DOS JUGADORES, CADA UNO EN SU MÁQUINA" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Fire" as="Disparar" />
+</qg:language>
 
   <qg:scene name="title" width="320" height="240" background="#2e3b24">
     <qg:hud position="top-center" size="32"><qg:text value="{tr('SIEGE')}" /></qg:hud>
     <qg:menu position="center" size="14">
       <qg:button label="Play alone"><q:call function="anew" /><qg:goto-scene name="keep" fade="0.3" /></qg:button>
       <qg:button label="Play together"><q:call function="anew" /><qg:goto-scene name="together" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
       <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
     </qg:menu>
@@ -5215,6 +5732,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:menu>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="320" height="240" background="#2e3b24">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Fire" action="fire" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -5270,10 +5799,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:spritesheet name="people" src="assets/people.png" tile="16" />
   <qg:spritesheet name="faces" src="assets/faces.png" tile="32" />
 
-  <qg:sound name="push" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="open" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="pick" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="done" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="push" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="open" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="pick" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="done" src="assets/kenney/audio/win.ogg" />
   <qg:particles name="dust" preset="smoke" color="#c8c0b0" />
   <qg:particles name="cheer" preset="confetti" />
 
@@ -5294,6 +5823,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:animation name="fly" frames="11,12" fps="4" />
     <qg:on-screen-exit><qg:destroy /></qg:on-screen-exit>
   </qg:prefab>
+
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="restart" label="R" x="304" y="176" size="24" />
 
   <qg:language lang="pt" name="Português">
     <qg:phrase text="New game" as="Novo jogo" />
@@ -5326,7 +5858,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="That's the lot. Good work!" as="É tudo. Bom trabalho!" />
     <qg:phrase text="Another shift?" as="Mais um turno?" />
     <qg:phrase text="Home time." as="Hora de ir para casa." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Restart" as="Recomeçar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
@@ -5358,7 +5898,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="That's the lot. Good work!" as="Eso es todo. ¡Buen trabajo!" />
     <qg:phrase text="Another shift?" as="¿Otro turno?" />
     <qg:phrase text="Home time." as="Hora de volver a casa." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Restart" as="Reiniciar" />
+</qg:language>
 
   <!-- ===== The title ===== -->
 
@@ -5367,6 +5915,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:menu position="center">
       <qg:button label="New game"><qg:goto-scene name="dock" fade="0.3" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -5501,6 +6050,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:hud>
   </qg:scene>
 
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="320" height="192" background="#20283a">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Restart" action="restart" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
 </q:application>
 ```
 
@@ -5532,6 +6093,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- Every tile of the three layers is a picture of its own; the Grid
        layer's are the ones that stop a walker. -->
   <!-- beyond the demo: the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="140" y="580" size="200" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Ei, é uma boa hora para uma luta de JRPG, não acha?" />
     <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Deixa eu me apresentar: sou o seu OPONENTE." />
@@ -5552,7 +6116,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Defend" as="Defender" />
     <qg:phrase text="Potion" as="Poção" />
     <qg:phrase text="Flee" as="Fugir" />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Oye, es un buen momento para una pelea de JRPG, ¿no crees?" />
     <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Déjame presentarme: soy tu OPONENTE." />
@@ -5573,15 +6142,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Defend" as="Defender" />
     <qg:phrase text="Potion" as="Poción" />
     <qg:phrase text="Flee" as="Huir" />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+</qg:language>
 
   <qg:tileset name="world" src="assets/tiles.png" tile="64" />
   <qg:spritesheet name="pawns" src="assets/pawns.png" tile="64" />
   <qg:spritesheet name="fighters" src="assets/fighters.png" tile="128" />
   <qg:spritesheet name="arena" src="assets/arena.png" tile="1280x720" />
   <!-- beyond the demo: music of our own (scripts/art/rpg_music.py, CC0) -->
-  <qg:sound name="meadow" src="assets/meadow.ogg" loop="true" />
-  <qg:sound name="clash" src="assets/clash.ogg" loop="true" />
+  <qg:sound bus="music" name="meadow" src="assets/meadow.ogg" loop="true" />
+  <qg:sound bus="music" name="clash" src="assets/clash.ogg" loop="true" />
 
   <qg:prefab name="Opponent" tag="opponent" sheet="pawns" frame="2" hitbox="48x48" />
   <qg:prefab name="Key" tag="key" sheet="pawns" frame="3" hitbox="48x48" />
@@ -5690,6 +6264,18 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:line who="OPPONENT" text="Aha! I won, maybe you can try again next time." />
       <qg:on-end><q:set name="outcome" value="" /></qg:on-end>
     </qg:dialogue>
+
+    <!-- beyond the demo: Escape (or the joypad's B) pauses, with the options; not while someone talks -->
+    <qg:on-input action="cancel">
+      <q:if condition="{not talking()}">
+        <q:if condition="{paused()}"><qg:resume /><q:else><qg:pause /></q:else></q:if>
+      </q:if>
+    </qg:on-input>
+    <qg:menu if="{paused() and not talking()}" size="32">
+      <qg:button label="Resume"><qg:resume /></qg:button>
+      <qg:slider label="Music" bus="music" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+    </qg:menu>
 
     <!-- Back from a fight: where it started, and what the opponent says of it. -->
     <q:if condition="{outcome != ''}">

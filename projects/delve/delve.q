@@ -34,15 +34,15 @@
   </qg:tileset>
   <qg:spritesheet name="delvers" src="assets/delvers.png" tile="24" />
 
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="pick" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="heal" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="open" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
-  <qg:sound name="twang" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="torchlight" src="assets/torchlight.ogg" loop="true" />
-  <qg:sound name="crypt" src="assets/crypt.ogg" loop="true" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="pick" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="heal" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="open" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="twang" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="music" name="torchlight" src="assets/torchlight.ogg" loop="true" />
+  <qg:sound bus="music" name="crypt" src="assets/crypt.ogg" loop="true" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="torch" preset="fire" amount="20" size="3" lifetime="0.7" speed="30" />
@@ -102,6 +102,10 @@
              ai="fly" speed="100" walls="stop" rotate="true" lifetime="180" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="HEARTS" as="CORAÇÕES" />
     <qg:phrase text="GEMS" as="GEMAS" />
@@ -121,7 +125,16 @@
     <qg:phrase text="THE VAULT IS OPEN." as="O COFRE ESTÁ ABERTO." />
     <qg:phrase text="THE VAULT IS YOURS." as="O COFRE É SEU." />
     <qg:phrase text="THE CRYPT KEEPS YOU." as="A CRIPTA FICA COM VOCÊ." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Sword" as="Espada" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="HEARTS" as="CORAZONES" />
     <qg:phrase text="GEMS" as="GEMAS" />
@@ -141,7 +154,16 @@
     <qg:phrase text="THE VAULT IS OPEN." as="LA BÓVEDA ESTÁ ABIERTA." />
     <qg:phrase text="THE VAULT IS YOURS." as="LA BÓVEDA ES TUYA." />
     <qg:phrase text="THE CRYPT KEEPS YOU." as="LA CRIPTA SE QUEDA CONTIGO." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Sword" as="Espada" />
+</qg:language>
 
   <!-- ===== The title: alone, together, or the saved delve ===== -->
 
@@ -158,6 +180,7 @@
       <qg:button label="Play alone"><qg:goto-scene name="crypt-1" fade="0.4" /></qg:button>
       <qg:button label="Play together"><qg:goto-scene name="together" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -500,6 +523,19 @@
         </q:if>
       </qg:button>
       <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="256" height="224" background="#16141e">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Music" bus="music" />
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Sword" action="jump" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
     </qg:menu>
   </qg:scene>
 

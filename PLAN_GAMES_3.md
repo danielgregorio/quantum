@@ -1,9 +1,9 @@
 # Games 3 — what the game language takes from Godot and Unity next
 
 > Status: approved 2026-10-21, whole, the ten "later" items included (each
-> comes in with the game that asks for it: Phase 6). Phases 1, 2 and 3 done
-> (2026-10-21 and 22: Siege the game of the second, Crates of the third);
-> Phase 4 next.
+> comes in with the game that asks for it: Phase 6). Phases 1 to 4 done
+> (2026-10-21 and 22: Siege the game of the second, Crates of the third, and
+> the fourth in every game); Phase 5 next.
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The proposal it comes from is the Claude Docs page "Proposta: próximos
 > recursos da linguagem de jogos"; the map it was chosen from is
@@ -261,14 +261,45 @@ a phone. It is what separates an example from a game someone publishes.
 | Grid and scrolling menus | `columns=` on `qg:menu`, scrolling past the screen | level select, a shop, an inventory | M |
 | A macOS build | a macOS preset in `scripts/export-games.py` | shipping on desktop | S |
 
-- [ ] options screen: `bus=`, `qg:volume`, `qg:slider`, `qg:fullscreen`
-- [ ] `qg:rebind`
-- [ ] save slots
-- [ ] touch controls, Android and iOS presets
-- [ ] HUD layout, `qg:icon`
-- [ ] menu grids and scrolling
-- [ ] macOS preset
-- [ ] the twelve games with an options screen
+- [x] options screen: `bus=`, `qg:volume`, `qg:slider`, `qg:fullscreen`
+- [x] `qg:rebind`
+- [x] save slots
+- [x] touch controls, Android and iOS presets
+- [x] HUD layout, `qg:icon`
+- [x] menu grids and scrolling
+- [x] macOS preset
+- [x] the twelve games with an options screen (fourteen now)
+
+What was built (2026-10-22):
+
+- Keep first, as it should read: three games on its title (`qg:save slot=`,
+  `has_save(n)`), an Options scene (a slider of its sounds' bus, the full
+  screen, the sword's key), a heart and a key drawn in its HUD and the
+  message along the bottom only while there is one, and a stick and a button
+  for a phone. The other thirteen followed: Options on each title (a lobby's
+  `options=`), or in the pause menu of Robot, Drift and the RPG; Arena's keys
+  in a grid of two columns that scrolls; touch controls for each.
+- `q.gd`: the settings (`quantum-settings.json`: volumes, full screen,
+  keys), the buses made from the sounds' `bus=` under Master, the keys put
+  back over the game's own as the inputs are made, the slots
+  (`quantum-save-<n>.json`, and the slot in use).
+- `menu.gd`: sliders and keys among the buttons, a grid, a scroll that
+  follows the focus; a key waits for the next press in `_input`, locally, as
+  a field's typing does. `hud.gd`: icons, colours, `if=`, the bottom corners.
+  `touch.gd`: buttons and sticks that press the actions with
+  `Input.action_press`, so the tick, the replay and the lockstep see actions
+  as from keys.
+- `scripts/export-games.py`: macOS (exported here: an unsigned universal
+  .app), Android and iOS presets, with ETC2/ASTC imported for them.
+
+What was learned: Godot makes mouse events from touches, which worked the
+controls twice and compared a finger's number with "mouse"; the made events
+carry the emulation device and are left out. A test touches the window, not
+the scene: the stretch from 320x192 to the window is the root viewport's
+final transform. A macOS build for Apple's chips needs ETC2/ASTC imported,
+which the desktop builds do not. A slider's number may not be called
+`speed`: the compiler keeps the names of the properties of Godot's nodes
+from the game's state, so the test's is `pace`.
 
 ## Phase 5 — Multiplayer and the play protocol
 

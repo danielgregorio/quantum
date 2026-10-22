@@ -1268,17 +1268,24 @@ func save_persisted(state: Node, names: Array) -> void:
 
 # --- saving: qg:save, qg:continue, has_save() ---
 #
-# One save per game, next to the q:sets with saved="true": the game's state
-# (every q:set of <q:application>) and the scene to come back to. The scene
-# starts over when it is continued; what was in it is not kept. A networked
-# game is not saved: each machine would keep its own.
+# A save, next to the q:sets with saved="true": the game's state (every q:set
+# of <q:application>) and the scene to come back to. The scene starts over
+# when it is continued; what was in it is not kept. A networked game is not
+# saved: each machine would keep its own. With slot= there are several, a
+# game each (quantum-save-2.json); the last slot saved or continued is the one
+# a scene with save="true" saves into. Without, the one save.
+
+var slot = null   # the save in use: null for the one save, else its number
 
 static func _q_node() -> Node:
 	return (Engine.get_main_loop() as SceneTree).root.get_node_or_null("Q")
 
 
-static func _save_path() -> String:
-	return _persist_file("quantum-save.json")
+static func _save_path(slot_ = null) -> String:
+	if slot_ == null:
+		var q := _q_node()
+		slot_ = q.slot if q != null else null
+	return _persist_file("quantum-save.json" if slot_ == null else "quantum-save-%d.json" % int(slot_))
 
 
 static func _persist_file(file: String) -> String:
@@ -1295,12 +1302,14 @@ static func _networked(scene: Node) -> bool:
 	return net != null and net.started
 
 
-static func save_game(ctx: Node, at: String = "") -> void:
+static func save_game(ctx: Node, at: String = "", slot_ = null) -> void:
 	var scene := _current_scene(ctx)
 	if scene == null:
 		return
 	if _networked(scene):
 		return
+	if slot_ != null:
+		_q_node().slot = int(slot_)
 	var where := at if at != "" else String(scene.name)
 	var f := FileAccess.open(_save_path(), FileAccess.WRITE)
 	if f == null:
@@ -1308,19 +1317,23 @@ static func save_game(ctx: Node, at: String = "") -> void:
 		return
 	f.store_string(JSON.stringify({"scene": where, "game": G.quantum_state()}))
 	f.close()
-	event("save", {"scene": where})
+	var q := _q_node()
+	event("save", {"scene": where} if q.slot == null else {"scene": where, "slot": q.slot})
 
 
-static func has_save() -> bool:
-	return FileAccess.file_exists(_save_path())
+# has_save(): the save in use (the one save, or the slot last used); has_save(2): that slot.
+static func has_save(slot_ = null) -> bool:
+	return FileAccess.file_exists(_save_path(slot_))
 
 
-static func continue_game(ctx: Node) -> void:
+static func continue_game(ctx: Node, slot_ = null) -> void:
 	var scene := _current_scene(ctx)   # P too: a prefab's handler, a function of the game there
 	if scene == null:
 		return
-	if _networked(scene) or not has_save():
+	if _networked(scene) or not has_save(slot_):
 		return
+	if slot_ != null:
+		_q_node().slot = int(slot_)
 	var f := FileAccess.open(_save_path(), FileAccess.READ)
 	var data = JSON.parse_string(f.get_as_text()) if f != null else null
 	if typeof(data) != TYPE_DICTIONARY or typeof(data.get("game")) != TYPE_DICTIONARY:
@@ -1330,8 +1343,172 @@ static func continue_game(ctx: Node) -> void:
 	for n in data["game"]:
 		if known.has(n):   # a save from an older version of the game: what it still has
 			G.set(n, data["game"][n])
-	event("continue", {"scene": str(data.get("scene", ""))})
+	event("continue", {"scene": str(data.get("scene", ""))} if slot_ == null else {"scene": str(data.get("scene", "")), "slot": int(slot_)})
 	goto_scene(scene, str(data.get("scene", "")))
+
+
+# --- settings: how loud each bus is, the full screen, the keys (kept between runs) ---
+#
+# What the player chose on an options screen, in quantum-settings.json next
+# to the saves: {"volume": {bus: 0 to 100}, "fullscreen": bool, "keys":
+# {action: [key, ...]}}. Only heard, seen or pressed: the game's state never
+# reads it, so replays and peers are as before (the lockstep carries actions).
+
+var settings: Dictionary = {}
+var _settings_read := false
+
+
+func _settings() -> Dictionary:
+	if not _settings_read:
+		_settings_read = true
+		var f := FileAccess.open(_persist_file("quantum-settings.json"), FileAccess.READ)
+		var data = JSON.parse_string(f.get_as_text()) if f != null else null
+		settings = data if typeof(data) == TYPE_DICTIONARY else {}
+	return settings
+
+
+func _keep_settings() -> void:
+	var f := FileAccess.open(_persist_file("quantum-settings.json"), FileAccess.WRITE)
+	if f == null:
+		push_warning("quantum: cannot write the settings")
+		return
+	f.store_string(JSON.stringify(settings))
+
+
+# The buses of the game's sounds (qg:sound bus=), under Master, at the volumes kept.
+func make_buses(names: Array) -> void:
+	for bus in names:
+		if AudioServer.get_bus_index(bus) < 0:
+			AudioServer.add_bus()
+			var i := AudioServer.bus_count - 1
+			AudioServer.set_bus_name(i, bus)
+			AudioServer.set_bus_send(i, "Master")
+		_apply_volume(bus)
+	if bool(_settings().get("fullscreen", false)):
+		_apply_fullscreen(true)
+
+
+# volume('music'): how loud a bus is, 0 to 100.
+func volume(bus: String) -> float:
+	return float(_settings().get("volume", {}).get(bus, 100.0))
+
+
+func set_volume(bus: String, value: float) -> void:
+	var v := clampf(value, 0.0, 100.0)
+	var volumes: Dictionary = _settings().get("volume", {})
+	if volumes.get(bus) == v:
+		return
+	volumes[bus] = v
+	settings["volume"] = volumes
+	_keep_settings()
+	_apply_volume(bus)
+	event("volume", {"bus": bus, "value": v})
+
+
+func _apply_volume(bus: String) -> void:
+	var i := AudioServer.get_bus_index(bus)
+	if i < 0:
+		return
+	var v := volume(bus)
+	AudioServer.set_bus_mute(i, v <= 0.0)
+	AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 0.01) / 100.0))
+
+
+func fullscreen() -> bool:
+	return bool(_settings().get("fullscreen", false))
+
+
+func set_fullscreen(on: bool) -> void:
+	_settings()["fullscreen"] = on
+	_keep_settings()
+	_apply_fullscreen(on)
+	event("fullscreen", {"on": on})
+
+
+func _apply_fullscreen(on: bool) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if on else DisplayServer.WINDOW_MODE_WINDOWED)
+
+
+# qg:rebind: the action's key of that kind (a key, a mouse button, a joypad
+# button) becomes `ev`; the others stay. Kept, and put back on the next run.
+func rebind(action: String, ev: InputEvent) -> void:
+	if not InputMap.has_action(action):
+		return
+	for old in InputMap.action_get_events(action):
+		if old.get_class() == ev.get_class():
+			InputMap.action_erase_event(action, old)
+	InputMap.action_add_event(action, ev)
+	var keys: Dictionary = _settings().get("keys", {})
+	keys[action] = InputMap.action_get_events(action).map(func(e): return _key_entry(e)).filter(func(e): return e != null)
+	settings["keys"] = keys
+	_keep_settings()
+	event("rebind", {"action": action, "key": key_name(action)})
+
+
+# The keys kept from an earlier run, over the game's own (quantum_game.gd, as the inputs are made).
+func apply_keys() -> void:
+	var keys: Dictionary = _settings().get("keys", {})
+	for action in keys.keys():
+		if not InputMap.has_action(action):
+			continue
+		InputMap.action_erase_events(action)
+		for entry in keys[action]:
+			var ev = _key_event(entry)
+			if ev != null:
+				InputMap.action_add_event(action, ev)
+
+
+static func _key_entry(e: InputEvent):
+	if e is InputEventKey:
+		return OS.get_keycode_string((e as InputEventKey).physical_keycode)
+	if e is InputEventMouseButton:
+		return {"mouse_button": (e as InputEventMouseButton).button_index}
+	if e is InputEventJoypadButton:
+		return {"joy_button": (e as InputEventJoypadButton).button_index, "device": e.device}
+	if e is InputEventJoypadMotion:
+		return {"joy_axis": (e as InputEventJoypadMotion).axis, "value": (e as InputEventJoypadMotion).axis_value,
+			"device": e.device}
+	return null
+
+
+static func _key_event(entry):
+	if entry is Dictionary and entry.has("mouse_button"):
+		var mb := InputEventMouseButton.new()
+		mb.button_index = int(entry["mouse_button"])
+		return mb
+	if entry is Dictionary and entry.has("joy_button"):
+		var jb := InputEventJoypadButton.new()
+		jb.button_index = int(entry["joy_button"])
+		jb.device = int(entry.get("device", 0))
+		return jb
+	if entry is Dictionary and entry.has("joy_axis"):
+		var ja := InputEventJoypadMotion.new()
+		ja.axis = int(entry["joy_axis"])
+		ja.axis_value = float(entry["value"])
+		ja.device = int(entry.get("device", 0))
+		return ja
+	if entry is String:
+		var ev := InputEventKey.new()
+		ev.physical_keycode = OS.find_keycode_from_string(entry)
+		return ev
+	return null
+
+
+# The first key of an action, as a person reads it: Space, Left mouse, Joypad 0.
+static func key_name(action: String) -> String:
+	if not InputMap.has_action(action):
+		return ""
+	for e in InputMap.action_get_events(action):
+		if e is InputEventKey:
+			return OS.get_keycode_string((e as InputEventKey).physical_keycode)
+	for e in InputMap.action_get_events(action):
+		if e is InputEventMouseButton:
+			return ["", "Left mouse", "Right mouse", "Middle mouse"][clampi((e as InputEventMouseButton).button_index, 0, 3)]
+		if e is InputEventJoypadButton:
+			return "Joypad %d" % (e as InputEventJoypadButton).button_index
+	return ""
 
 
 # --- sounds (an instance method: Q is an autoload node) ---
@@ -1348,6 +1525,20 @@ static func _imported(src: String) -> Resource:
 	if not FileAccess.file_exists(path) and ResourceLoader.exists(path):
 		return load(path)
 	return null
+
+
+# A frame of a sheet as a picture of its own (a HUD's qg:icon).
+static func frame_texture(sheet: Dictionary, frame: int) -> Texture2D:
+	var texture := texture(str(sheet["src"]))
+	if texture == null:
+		return null
+	var w := int(sheet["tile"][0])
+	var h := int(sheet["tile"][1])
+	var cols := maxi(1, texture.get_width() / w)
+	var atlas := AtlasTexture.new()
+	atlas.atlas = texture
+	atlas.region = Rect2((frame % cols) * w, (frame / cols) * h, w, h)
+	return atlas
 
 
 static func texture(src: String) -> Texture2D:
@@ -1409,6 +1600,8 @@ func load_sounds(sounds: Dictionary) -> void:
 		var player := AudioStreamPlayer.new()
 		player.name = name_
 		player.stream = stream
+		if sounds[name_].get("bus") != null:
+			player.bus = str(sounds[name_]["bus"])   # made by make_buses, before
 		apply_gd(player, sounds[name_].get("gd"))
 		add_child(player)
 		_sounds[name_] = player
@@ -1421,7 +1614,7 @@ var resimulating: bool = false   # the rollback replays old ticks: record sounds
 # pitch or a vary, it plays in a voice of its own (the same sound can then
 # overlap itself), freed when it has played. Only heard: the state records the
 # name, and the random pitch comes from a generator of its own, never the game's.
-func play(name_: String, volume: float = 0.0, pitch: float = 1.0, vary: float = 0.0) -> void:
+func play(name_: String, louder: float = 0.0, pitch: float = 1.0, vary: float = 0.0) -> void:
 	sounds_played.append(name_)
 	event("sound", {"name": name_})
 	if resimulating:
@@ -1429,13 +1622,13 @@ func play(name_: String, volume: float = 0.0, pitch: float = 1.0, vary: float = 
 	var player: AudioStreamPlayer = _sounds.get(name_)
 	if player == null:
 		return
-	if volume == 0.0 and pitch == 1.0 and vary == 0.0:
+	if louder == 0.0 and pitch == 1.0 and vary == 0.0:
 		player.play()
 		return
 	var voice := AudioStreamPlayer.new()
 	voice.stream = player.stream
 	voice.bus = player.bus
-	voice.volume_db = player.volume_db + volume
+	voice.volume_db = player.volume_db + louder
 	voice.pitch_scale = maxf(0.05, pitch + (_voices.randf_range(-vary, vary) if vary > 0.0 else 0.0))
 	add_child(voice)
 	voice.play()
@@ -1469,14 +1662,14 @@ func music(spec) -> void:
 	var player: AudioStreamPlayer = _sounds.get(to)
 	if player == null:
 		return
-	var volume: float = float(spec.get("volume", 0.0))
+	var db: float = float(spec.get("volume", 0.0))
 	if fade <= 0.0:
-		player.volume_db = volume
+		player.volume_db = db
 		player.play()
 		return
 	player.volume_db = -80.0
 	player.play()
-	_music_to(player, volume, fade, false)
+	_music_to(player, db, fade, false)
 
 
 func _music_to(player: AudioStreamPlayer, db: float, seconds: float, then_stop: bool) -> void:

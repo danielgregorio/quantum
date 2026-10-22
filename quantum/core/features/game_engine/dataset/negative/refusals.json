@@ -805,6 +805,110 @@
         "choice",
         "line"
       ]
+    },
+    {
+      "id": "game-bad-047",
+      "intent": "A slider of a bus no sound is on",
+      "input": {
+        "natural_language": "A slider for the voices, in a game whose sounds have no voices bus",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"song\" src=\"assets/kenney/audio/win.ogg\" loop=\"true\" bus=\"music\" />\n  <qg:scene name=\"options\">\n    <qg:menu><qg:slider label=\"Voices\" bus=\"voices\" /></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:slider bus=\"voices\">: no qg:sound is heard on that bus (buses: music)"
+      },
+      "why_invalid": "A bus is made by the sounds heard on it; one no sound names does not exist, and its slider would move nothing.",
+      "correction": "Put the voices on it: bus=\"voices\" on their qg:sound.",
+      "tags": [
+        "slider",
+        "bus"
+      ]
+    },
+    {
+      "id": "game-bad-048",
+      "intent": "A key for an action the game has not",
+      "input": {
+        "natural_language": "A menu to choose the key for dashing, in a game with no dash",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"options\">\n    <qg:menu><qg:rebind label=\"Dash\" action=\"dash\" /></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:rebind action=\"dash\">: no such action"
+      },
+      "why_invalid": "A key is chosen for one of the game's actions; dash is not one.",
+      "correction": "Declare it: <qg:input action=\"dash\" keys=\"Shift\" />.",
+      "tags": [
+        "rebind"
+      ]
+    },
+    {
+      "id": "game-bad-049",
+      "intent": "A slider for two things",
+      "input": {
+        "natural_language": "A slider for the music that also sets the volume number",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"song\" src=\"assets/kenney/audio/win.ogg\" loop=\"true\" bus=\"music\" />\n  <q:set name=\"loud\" value=\"5\" type=\"number\" />\n  <qg:scene name=\"options\">\n    <qg:menu><qg:slider label=\"Music\" bus=\"music\" bind=\"loud\" /></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:slider> takes bus= or bind=, one of them"
+      },
+      "why_invalid": "A slider sets one value: a bus's volume, or a number of the state.",
+      "correction": "Keep bus=\"music\"; read it with volume('music') where the number was used.",
+      "tags": [
+        "slider"
+      ]
+    },
+    {
+      "id": "game-bad-050",
+      "intent": "The Master bus",
+      "input": {
+        "natural_language": "The music on the Master bus",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"song\" src=\"assets/kenney/audio/win.ogg\" loop=\"true\" bus=\"Master\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "Master is every bus together"
+      },
+      "why_invalid": "Master is the bus every other one goes into; a slider of it would set everything at once.",
+      "correction": "Name a bus of the game's own: bus=\"music\".",
+      "tags": [
+        "sound",
+        "bus"
+      ]
+    },
+    {
+      "id": "game-bad-051",
+      "intent": "A touch button for no action",
+      "input": {
+        "natural_language": "A phone button that dashes, in a game with no dash",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:touch-button action=\"dash\" label=\"D\" x=\"280\" y=\"200\" />\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:touch-button action=\"dash\">: no such action"
+      },
+      "why_invalid": "A touch button presses one of the game's actions, as a key would; dash is not one.",
+      "correction": "Use an action the game has (jump), or declare dash with qg:input.",
+      "tags": [
+        "touch-button"
+      ]
+    },
+    {
+      "id": "game-bad-052",
+      "intent": "A picture whose frame is a word",
+      "input": {
+        "natural_language": "A heart picture in the HUD with frame=\"heart\"",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:hud><qg:icon sheet=\"tiles\" frame=\"heart\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:icon frame=\"heart\">: a frame number, or an expression"
+      },
+      "why_invalid": "A frame is a number of the sheet, counted from 0, left to right and down.",
+      "correction": "Give its number: frame=\"44\".",
+      "tags": [
+        "icon"
+      ]
     }
   ]
 }

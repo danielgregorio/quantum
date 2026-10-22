@@ -21,6 +21,7 @@ func _ready() -> void:
 		return
 	spec = JSON.parse_string(f.get_as_text())
 	_register_inputs(spec.get("inputs", {}))
+	Q.apply_keys()   # the keys chosen on an options screen in an earlier run (qg:rebind)
 	if OS.has_feature("web"):
 		add_child(WebPlay.new())   # window.quantumPlay: an agent plays the exported game (web_play.py)
 	_languages(spec.get("languages", {}))

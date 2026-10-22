@@ -23,12 +23,12 @@
   <qg:spritesheet name="paddles" src="assets/paddles.png" tile="48x8" />
   <qg:spritesheet name="ball" src="assets/ball.png" tile="8" />
 
-  <qg:sound name="bounce" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="break" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="clank" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="boom" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="lost" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="clear" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="bounce" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="break" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="clank" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="boom" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="lost" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="clear" src="assets/kenney/audio/win.ogg" />
 
   <!-- The serve: Space, Up, W or the joypad's A, as it is let go. -->
   <qg:input action="jump" keys="Space, Up, W, JoyA" />
@@ -124,6 +124,11 @@
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="left" label="&lt;" x="34" y="206" size="48" />
+  <qg:touch-button action="right" label="&gt;" x="90" y="206" size="48" />
+  <qg:touch-button action="jump" label="A" x="286" y="206" size="48" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="BRICKS" as="TIJOLOS" />
     <qg:phrase text="Play alone" as="Jogar sozinho" />
@@ -138,7 +143,17 @@
     <qg:phrase text="TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE" as="DE DOIS A QUATRO JOGADORES, CADA UM NA SUA MÁQUINA" />
     <qg:phrase text="EVERY BRICK IS BROKEN" as="TODOS OS TIJOLOS QUEBRADOS" />
     <qg:phrase text="THE BALLS ARE GONE" as="AS BOLAS ACABARAM" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Serve" as="Sacar" />
+    <qg:phrase text="Left" as="Esquerda" />
+    <qg:phrase text="Right" as="Direita" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="BRICKS" as="LADRILLOS" />
     <qg:phrase text="Play alone" as="Jugar solo" />
@@ -153,7 +168,17 @@
     <qg:phrase text="TWO TO FOUR PLAYERS, EACH ON THEIR OWN MACHINE" as="DE DOS A CUATRO JUGADORES, CADA UNO EN SU MÁQUINA" />
     <qg:phrase text="EVERY BRICK IS BROKEN" as="TODOS LOS LADRILLOS ROTOS" />
     <qg:phrase text="THE BALLS ARE GONE" as="SE ACABARON LAS PELOTAS" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Serve" as="Sacar" />
+    <qg:phrase text="Left" as="Izquierda" />
+    <qg:phrase text="Right" as="Derecha" />
+</qg:language>
 
   <qg:scene name="title" width="320" height="240" background="#1c1a2c">
     <qg:sprite sheet="bricks" frame="0" x="64" y="56" />
@@ -165,6 +190,7 @@
     <qg:menu position="center" size="14">
       <qg:button label="Play alone"><q:call function="anew" /><qg:goto-scene name="level" fade="0.3" /></qg:button>
       <qg:button label="Play together"><q:call function="anew" /><qg:goto-scene name="together" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
       <!-- a desktop build quits; a page in a browser has nothing to quit to -->
       <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
@@ -317,6 +343,20 @@
     <qg:hud position="center" size="12"><qg:text value="{tr('SCORE') + ' ' + str(score)}" /></qg:hud>
     <qg:menu position="bottom-center" size="12">
       <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="320" height="240" background="#1c1a2c">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Serve" action="jump" />
+      <qg:rebind label="Left" action="left" />
+      <qg:rebind label="Right" action="right" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
     </qg:menu>
   </qg:scene>
 

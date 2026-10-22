@@ -2602,3 +2602,102 @@ class TestPuzzleAndAdventure:
         e = refuse(tmp_path, HEAD.replace('tile="18" />', 'tile="18">\n    <qg:tile frame="10" frames="0" />\n'
                                                          '  </qg:tileset>', 1) + '  <qg:scene name="main" />\n' + TAIL)
         assert '<qg:tile frames=>: 1 or more' in e.message
+
+
+class TestShipping:
+    """PLAN_GAMES_3.md, Phase 4 (what every game needs to be shipped)."""
+
+    SOUNDS = ('  <qg:sound name="song" src="assets/kenney/audio/win.ogg" loop="true" bus="music" />\n'
+              '  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />\n')
+
+    def scene(self, body, head=''):
+        return HEAD + self.SOUNDS + head + f'  <qg:scene name="main">\n{body}  </qg:scene>\n' + TAIL
+
+    def test_buses_sliders_keys_and_a_grid(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <q:set name="pace" value="1" type="number" />
+    <qg:menu columns="2" rows="3">
+      <qg:slider label="Music" bus="music" />
+      <qg:slider label="Pace" bind="pace" min="1" max="5" step="1" if="{pace > 0}" />
+      <qg:rebind action="jump" player="2" />
+      <qg:button label="Loud"><qg:volume bus="music" value="{volume('music') + 10}" /><qg:fullscreen on="{not fullscreen()}" /></qg:button>
+    </qg:menu>
+''', head='  <qg:input action="jump" keys="Up" player="2" />\n'))
+        data = json.loads((out / 'game.json').read_text())
+        assert data['buses'] == ['music'] and data['sounds']['song']['bus'] == 'music' and 'bus' not in data['sounds']['hit']
+        menu = next(n for n in data['scenes']['main']['nodes'] if n['kind'] == 'menu')
+        assert (menu['columns'], menu['rows']) == (2, 3)
+        assert [i['kind'] for i in menu['items']] == ['slider', 'slider', 'rebind', 'button']
+        assert menu['items'][0] == {'kind': 'slider', 'label': 'Music', 'min': 0.0, 'max': 100.0, 'step': 10.0, 'bus': 'music'}
+        assert menu['items'][1]['bind'] == 'pace' and menu['items'][1]['if_method']
+        assert menu['items'][2] == {'kind': 'rebind', 'action': 'p2_jump', 'label': 'jump'}
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.set_volume("music", float((Q.volume("music") + 10)))' in script
+        assert 'Q.set_fullscreen(bool((not Q.fullscreen())))' in script
+
+    def test_what_menus_refuse(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:menu><qg:slider label="X" bus="voices" /></qg:menu>\n'))
+        assert '<qg:slider bus="voices">: no qg:sound is heard on that bus (buses: music)' in e.message
+        e = refuse(tmp_path, self.scene('    <q:set name="n" value="1" type="number" />\n'
+                                        '    <qg:menu><qg:slider bus="music" bind="n" /></qg:menu>\n'))
+        assert '<qg:slider> takes bus= or bind=, one of them' in e.message
+        e = refuse(tmp_path, self.scene('    <q:set name="t" value="a" type="string" />\n    <qg:menu><qg:slider bind="t" /></qg:menu>\n'))
+        assert "a slider holds a number; 't' is a string" in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu><qg:slider bus="music" min="5" max="5" /></qg:menu>\n'))
+        assert 'min= below max=' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu><qg:rebind action="dash" /></qg:menu>\n'))
+        assert '<qg:rebind action="dash">: no such action' in e.message
+        e = refuse(tmp_path, self.scene('    <qg:menu columns="0"><qg:button label="a" /></qg:menu>\n'))
+        assert 'columns= 1 or more' in e.message
+
+    def test_volume_needs_a_bus_a_sound_is_on(self, tmp_path):
+        e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:volume bus="effects" value="0" /></qg:on-input>\n'))
+        assert '<qg:volume bus="effects">: no qg:sound is heard on that bus' in e.message
+        e = refuse(tmp_path, self.scene('', head='  <qg:sound name="x" src="assets/kenney/audio/win.ogg" bus="Master" />\n'))
+        assert 'Master is every bus together' in e.message
+
+    def test_save_slots(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <qg:on-input action="jump">
+      <q:if condition="{has_save(2)}"><qg:continue slot="2" />
+        <q:else><qg:save slot="{1 + 1}" scene="main" /></q:else></q:if>
+    </qg:on-input>
+'''))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.has_save(2)' in script and 'Q.continue_game(self, 2)' in script
+        assert 'Q.save_game(self, "main", (1 + 1))' in script
+
+    def test_a_hud_with_pictures(self, tmp_path):
+        out = build(tmp_path, self.scene('''    <q:set name="n" value="0" type="number" />
+    <qg:hud position="bottom-right" if="{n > 0}">
+      <qg:icon sheet="k" frame="9" scale="2" />
+      <qg:counter bind="n" label="N" color="#ff0000" />
+      <qg:icon sheet="c" frame="{n % 2}" />
+      <qg:text value="{'x'}" color="#00ff00" />
+    </qg:hud>
+'''))
+        hud = next(n for n in json.loads((out / 'game.json').read_text())['scenes']['main']['nodes'] if n['kind'] == 'hud')
+        assert hud['position'] == 'bottom-right' and hud['if_method']
+        assert hud['items'][0] == {'kind': 'icon', 'sheet': 'k', 'scale': 2.0, 'frame': 9}
+        assert hud['items'][1]['color'] == '#ff0000' and hud['items'][2]['frame_method']
+        e = refuse(tmp_path, self.scene('    <qg:hud><qg:icon sheet="nope" /></qg:hud>\n'))
+        assert "no qg:spritesheet or qg:tileset named 'nope'" in e.message
+        e = refuse(tmp_path, self.scene('    <qg:hud><qg:icon sheet="k" frame="nine" /></qg:hud>\n'))
+        assert '<qg:icon frame="nine">: a frame number, or an expression' in e.message
+
+    def test_touch_controls(self, tmp_path):
+        out = build(tmp_path, self.scene('    <qg:touch-button action="jump" label="A" x="200" y="100" />\n',
+                                         head='  <qg:touch-stick x="40" y="100" show="always" />\n'))
+        data = json.loads((out / 'game.json').read_text())
+        assert data['touch'] == [{'kind': 'stick', 'x': 40.0, 'y': 100.0, 'size': 56.0, 'player': 1, 'show': 'always'}]
+        assert data['scenes']['main']['touch'] == [{'kind': 'button', 'x': 200.0, 'y': 100.0, 'size': 32.0, 'player': 1,
+                                                    'show': 'touch', 'action': 'jump', 'label': 'A'}]
+        e = refuse(tmp_path, self.scene('    <qg:touch-button action="dash" x="1" y="1" />\n'))
+        assert '<qg:touch-button action="dash">: no such action' in e.message
+        e = refuse(tmp_path, self.scene('', head='  <qg:touch-stick x="1" y="1" size="0" />\n'))
+        assert '<qg:touch-stick size=>: more than 0' in e.message
+
+    def test_a_lobby_with_options(self, tmp_path):
+        out = build(tmp_path, HEAD + '  <qg:multiplayer players="2" />\n  <qg:scene name="title">\n'
+                    '    <qg:lobby local="main" options="options" />\n  </qg:scene>\n  <qg:scene name="main" />\n'
+                    '  <qg:scene name="options" />\n' + TAIL)
+        menu = next(n for n in json.loads((out / 'game.json').read_text())['scenes']['title']['nodes'] if n['kind'] == 'menu')
+        assert 'Options' in [i.get('label') for i in menu['items']]

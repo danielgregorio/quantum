@@ -68,6 +68,10 @@
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="buy-gatling" label="1" x="1050" y="590" size="64" />
+  <qg:touch-button action="buy-explosive" label="2" x="1120" y="590" size="64" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="TOWERS" as="TORRES" />
     <qg:phrase text="Play alone" as="Jogar sozinho" />
@@ -82,7 +86,14 @@
     <qg:phrase text="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" as="1: Metralhadora (50)   2: Explosiva (70)   clique numa casa para construir, numa torre para melhorar (50)" />
     <qg:phrase text="The base stands. Press space to play again." as="A base resistiu. Aperte espaço para jogar de novo." />
     <qg:phrase text="The base fell. Press space to try again." as="A base caiu. Aperte espaço para tentar de novo." />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Turret 1" as="Torre 1" />
+    <qg:phrase text="Turret 2" as="Torre 2" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="TOWERS" as="TORRES" />
     <qg:phrase text="Play alone" as="Jugar solo" />
@@ -97,13 +108,20 @@
     <qg:phrase text="1: Gatling (50)   2: Explosive (70)   click a cell to build, click a tower to upgrade (50)" as="1: Ametralladora (50)   2: Explosiva (70)   haz clic en una casilla para construir, en una torre para mejorarla (50)" />
     <qg:phrase text="The base stands. Press space to play again." as="La base resiste. Pulsa espacio para jugar otra vez." />
     <qg:phrase text="The base fell. Press space to try again." as="La base cayó. Pulsa espacio para intentarlo otra vez." />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Turret 1" as="Torre 1" />
+    <qg:phrase text="Turret 2" as="Torre 2" />
+</qg:language>
 
   <!-- The title: alone, or two builders on two machines. -->
   <qg:scene name="title" width="1152" height="648" background="#1a1a1a">
     <qg:sprite sheet="map" x="578" y="372" gd:modulate="#ffffff60" />
     <qg:hud position="top-center" size="48"><qg:text value="{'TOWERS'}" /></qg:hud>
-    <qg:lobby local="map" local-label="Play alone" size="22" />
+    <qg:lobby local="map" local-label="Play alone" size="22" options="options" />
   </qg:scene>
 
   <qg:scene name="map" width="1152" height="648" background="#1a1a1a" seed="11">
@@ -207,6 +225,18 @@
     <q:set name="message" value="The base fell. Press space to try again." />
     <qg:hud position="center" size="40"><qg:text bind="message" /><qg:counter bind="wave" label="Reached wave" /></qg:hud>
     <qg:on-input action="jump"><qg:goto-scene name="map" /></qg:on-input>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="1152" height="648" background="#1a1a1a">
+    <qg:hud position="top-center" size="48"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="22">
+      <qg:rebind label="Turret 1" action="buy-gatling" />
+      <qg:rebind label="Turret 2" action="buy-explosive" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>

@@ -27,7 +27,7 @@ def _unescape(text: str) -> str:
 def shown(source: str) -> set:
     texts = set()
     for attr in ('label', 'local-label', 'text', 'who'):
-        for m in re.finditer(rf'<qg:(?!phrase)[\w-]+[^>]*?\s{attr}="([^"{{][^"]*)"', source):
+        for m in re.finditer(rf'<qg:(?!phrase|touch-button)[\w-]+[^>]*?\s{attr}="([^"{{][^"]*)"', source):
             texts.add(m.group(1))
     texts |= set(re.findall(r"<qg:text value=\"\{'([^']*)'\}\"", source))
     for name in set(re.findall(r'<qg:text bind="(\w+)"', source)):

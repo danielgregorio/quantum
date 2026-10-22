@@ -11,7 +11,8 @@
 > rows its phases cover are updated as each lands (Phase 1: nine rows, and
 > gaps 1, 2, 4, 7, 27 and 28 below, and the maths of 3; Phase 2, with Siege:
 > twelve rows more, and gaps 3, 5, 8, 14, 16, 23, 24, 25, 30 and 31; Phase 3,
-> with Crates: nine rows more, and gaps 6, 13, 15, 18, 21, 22 and 26).
+> with Crates: nine rows more, and gaps 6, 13, 15, 18, 21, 22 and 26; Phase 4,
+> into every game: ten rows more, and gaps 9, 10, 11, 19, 29, 33 and 42).
 
 Each row is one feature a 2D game is made of, as Godot 4.4 and Unity 6 (URP
 2D with its packages: 2D Tilemap, Physics 2D, Input System, Cinemachine 3,
@@ -226,13 +227,13 @@ declarative shape for it.
 | Mouse buttons and pointer | `InputEventMouseButton`, `get_global_mouse_position()` | `Mouse.current` | `MouseLeft`, `MouseRight`, `MouseMiddle`; `qg:cursor` (`step=`, `grid=`, `sheet=`), `cursor.x`, `cursor.y`, `cursor.col`, `cursor.row` | covered |
 | Clicking a thing | `input_event` on a `CollisionObject2D` | `OnMouseDown`, `IPointerClickHandler` | `qg:on-select` (`other` is the thing under the cursor) | covered |
 | Right-click on a thing, wheel, hover | `MOUSE_BUTTON_WHEEL_UP`, `mouse_entered` | `Mouse.scroll`, `IPointerEnterHandler` | — (`qg:on-select` answers select only) | gap |
-| Touch | `InputEventScreenTouch`, the mouse emulated from touch | `Touchscreen`, EnhancedTouch | a tap is a click in a browser | partial: one pointer, no gestures |
-| On-screen buttons and sticks | `TouchScreenButton` | `OnScreenButton`, `OnScreenStick` | — | gap |
+| Touch | `InputEventScreenTouch`, the mouse emulated from touch | `Touchscreen`, EnhancedTouch | a tap is a click; `qg:touch-button` and `qg:touch-stick` take a finger each | partial: no gestures |
+| On-screen buttons and sticks | `TouchScreenButton` | `OnScreenButton`, `OnScreenStick` | `qg:touch-button action=` and `qg:touch-stick` press the game's actions (strength() for the stick), on a touch screen or always (every game has them) | covered |
 | On press | `is_action_just_pressed()` | `performed` | `qg:on-input action=`; a press between two ticks is kept for the next one | covered |
 | On release | `is_action_just_released()` | `canceled`, Press interaction (Release Only) | `qg:on-input on="release"` | covered |
 | Held, and for how long (a run button, a charge shot) | `is_action_pressed()` | Hold interaction, `IsPressed()` | `pressing('run')`, `pressed_for('fire')` (ticks; on the tick it is let go, how long it was), for player 1 or another | covered |
 | Sequences (double tap, a fighter's motion inputs) | script | MultiTap interaction, script | — | gap |
-| Rebinding in the game | `InputMap.action_erase_events()`, `action_add_event()` | `PerformInteractiveRebinding()` | — (keys are fixed at compile time) | gap |
+| Rebinding in the game | `InputMap.action_erase_events()`, `action_add_event()` | `PerformInteractiveRebinding()` | `qg:rebind action=` in a menu: the next key, mouse or joypad button pressed, kept between runs (every game's options) | covered |
 
 ## 13. Audio
 
@@ -244,7 +245,7 @@ declarative shape for it.
 | Sounds bound to events | script | script | `jump-sound=`, `fire-sound=`, `attack-sound=`; `sound=` on `qg:item`, `qg:jump`, `qg:leap`, `qg:shoot` | covered |
 | Music, crossfading between scenes | a looping player in an autoload, a tween on `volume_db` | `AudioSource.loop`, `AudioMixer` snapshots `TransitionTo()` | `qg:sound loop="true"`; `qg:music sound= fade= volume=`: other music crossfades, the same plays on | covered |
 | Changing music inside a scene (a boss) | a tween | snapshots | `qg:play` and `qg:stop` of a looping `qg:sound` | partial: no crossfade inside a scene |
-| Buses and volume settings (music, effects) | `AudioServer` buses | `AudioMixer` groups, exposed parameters | `gd:bus` on `qg:sound` names a bus no game can declare | gap |
+| Buses and volume settings (music, effects) | `AudioServer` buses | `AudioMixer` groups, exposed parameters | `bus=` on `qg:sound`; `qg:volume bus= value=`, `volume()`, a menu's `qg:slider bus=`, kept between runs | covered |
 | Effects (reverb, low-pass under water) | `AudioEffect*` on buses | mixer effects | — | by design: a DSP chain is low-level; a named preset could come later |
 | Positional sound | `AudioStreamPlayer2D` | `AudioSource.spatialBlend` | — | gap |
 | Adaptive music (layers, changes on the beat) | `AudioStreamInteractive`, `AudioStreamSynchronized` | FMOD, Wwise (third party) | — | gap |
@@ -278,16 +279,16 @@ declarative shape for it.
 | A HUD over the game | `CanvasLayer` + `Control` | Canvas (uGUI), `UIDocument` (UI Toolkit) | `qg:hud position= font= size=` | covered |
 | Numbers and text from the state | `Label` + script | `TMP_Text` + script | `qg:counter bind=` or `item=`, `label=`; `qg:text bind=` or `value="{...}"` | covered |
 | Bars | `ProgressBar`, `TextureProgressBar` | `Slider` or a filled `Image`; UI Toolkit `ProgressBar` | `qg:bar bind= max= width= height= color=` (a `q:set`, or `p1.health`) | covered |
-| Pictures in the HUD (icons, portraits, a logo) | `TextureRect` | `Image` | `qg:inventory` (each item's picture and count) | partial: no other picture in the HUD |
+| Pictures in the HUD (icons, portraits, a logo) | `TextureRect` | `Image` | `qg:icon sheet= frame= scale=` (Keep's heart and key); `qg:inventory`; a dialogue's `portrait=` | covered |
 | Text and bars in the world (signs, a floating "+100", a bar over a head) | a `Label` or `Control` in the scene | `TextMeshPro`, a world-space Canvas | `qg:label` over a character or a prefab, or at a place of a scene; `qg:emit text=` floats a number up (Siege) | partial: text, not a bar drawn in the world |
-| Placement | anchors, offsets, containers | `RectTransform` anchors, layout groups | `position=`: `top-left`, `top-center`, `top-right`, `center`, `bottom-center` | partial: no bottom corners, no x and y |
-| A HUD shown only sometimes | `visible` | `SetActive` | `if=` on `qg:menu` and `qg:button`; refused on `qg:hud` ("has no attribute 'if'") | partial: none on `qg:hud` |
+| Placement | anchors, offsets, containers | `RectTransform` anchors, layout groups | `position=`: the four corners, `top-center`, `center`, `bottom-center` | partial: no x and y |
+| A HUD shown only sometimes | `visible` | `SetActive` | `if=` on `qg:hud`, `qg:menu` and its items | covered |
 | Fonts and sizes | `FontFile`, `SystemFont` | TextMeshPro font assets | `font=` (a `.ttf`) and `size=` on `qg:hud`, `qg:menu`, `qg:dialogue`, `qg:lobby`; `size=` per item | covered |
 | Text colour, outlines, rich text, panel styles | `Theme`, `LabelSettings`, `RichTextLabel` BBCode | USS, TextMeshPro rich text | `color=` on `qg:bar`; `gd:modulate` on a `qg:counter` or `qg:text` | partial: no text colour of the language's own, no rich text |
 | Menus and screens (title, pause, game over) | `Button`, containers, focus | `Button`, `EventSystem` navigation | `qg:menu` + `qg:button` (`label="{...}"`, `if=`): up, down and select, the mouse, the joypad's A; `qg:menu if="{paused()}"` | covered |
 | Text fields | `LineEdit` | `TMP_InputField`, `TextField` | `qg:field bind= label= max-length=` (typing is local to the machine) | covered |
 | Sliders, toggles, dropdowns (an options screen) | `HSlider`, `CheckBox`, `OptionButton` | `Slider`, `Toggle`, `TMP_Dropdown` | a toggle is a `qg:button` whose label reads the state | partial: no slider or dropdown |
-| Grids and scrolling lists | `GridContainer`, `ScrollContainer`, `ItemList` | `GridLayoutGroup`, `ScrollRect`, `ListView` | — (a menu is one column) | gap |
+| Grids and scrolling lists | `GridContainer`, `ScrollContainer`, `ItemList` | `GridLayoutGroup`, `ScrollRect`, `ListView` | `columns=` and `rows=` on `qg:menu`: a grid, the rows beyond scrolled into view with the focus (Arena's keys) | covered |
 | Dialogue boxes | Dialogic, Dialogue Manager (third party) | Yarn Spinner, Ink (third party) | `qg:dialogue`, `qg:line who= text=`, `qg:say`, `qg:on-end`, `talking()` | covered |
 | Dialogue choices | add-ons | Yarn Spinner options | `qg:choice label= if=` in a `qg:line`, with what it does (Crates' foreman, Keep's end) | covered |
 | Portraits and typewriter text | `visible_ratio`, add-ons | `maxVisibleCharacters`, add-ons | `speed=` and `sheet=` on `qg:dialogue`, `portrait=` on `qg:line` | covered |
@@ -318,7 +319,7 @@ declarative shape for it.
 | One action on every thing of a group | `call_group()` | `FindGameObjectsWithTag()` + a loop | `qg:for-each tag= var=` | covered |
 | Quitting | `get_tree().quit()` | `Application.Quit()` | `qg:quit`, `can_quit()` (false in a browser) | covered |
 | Loading screens, async loading | `ResourceLoader.load_threaded_request()` | `LoadSceneAsync()` | — | by design: small games; loading is the runtime's job |
-| Window size and fullscreen | `DisplayServer.window_set_mode()` | `Screen.fullScreenMode` | the window from the first scene's size | gap |
+| Window size and fullscreen | `DisplayServer.window_set_mode()` | `Screen.fullScreenMode` | the window from the first scene's size; `qg:fullscreen`, `fullscreen()`, kept between runs | covered |
 
 ## 19. Persistence
 
@@ -326,7 +327,7 @@ declarative shape for it.
 |---|---|---|---|---|
 | Values kept between runs (a best score, a setting) | `ConfigFile`, `FileAccess` in `user://` | `PlayerPrefs` | `q:set saved="true"` | covered |
 | Save and continue | script + `FileAccess`, `JSON` | script + `JsonUtility`, `persistentDataPath` | `qg:save scene=`, `qg:continue`, `has_save()`, `qg:scene save="true"`; items and the things picked up or opened go in the save | covered |
-| Save slots | script | script | one save per game | gap |
+| Save slots | script | script | `slot=` on `qg:save` and `qg:continue`, `has_save(n)` (Keep's three games) | covered |
 | Saving in the middle of a scene | script that serialises nodes | script | the saved scene starts over; the game state and the items are kept | partial: no positions or enemies saved |
 | A high-score table | script | script | a saved `q:set` (Drift's best), `sort()` and a slice (`sort(best + [t])[:10]`) | covered |
 | In a browser | `user://` on IndexedDB | `PlayerPrefs` on IndexedDB | the same, kept by the browser (`scripts/check-save-in-browser.py`) | covered |
@@ -387,8 +388,8 @@ declarative shape for it.
 |---|---|---|---|---|
 | Web | Web export (threads optional since 4.3) | Web (WebGL; WebGPU experimental) | `scripts/export-games.py --preset Web`, without threads, for a static host | covered |
 | Linux and Windows | export presets, `--export-release` | Build Profiles | `--preset Linux`, `--preset Windows` | covered |
-| macOS | export preset | Build Profile | — (no preset in `scripts/export-games.py`) | gap |
-| Android and iOS | export presets | Build Profiles | — | gap |
+| macOS | export preset | Build Profile | `--preset macOS` in `scripts/export-games.py`: an unsigned universal .app | covered |
+| Android and iOS | export presets | Build Profiles | `--preset Android` (with the Android SDK) and `--preset iOS` (an Xcode project a Mac builds); the touch controls | covered |
 | Consoles | third-party porting companies | licensed platform Build Profiles | — | by design: closed SDKs, licensed per developer |
 | A headless server | dedicated-server export | Dedicated Server build target | `--q-relay=PORT`: the game hosts without a seat | covered |
 
@@ -420,26 +421,27 @@ declarative shape for it.
 | Game rules: health, shots, pickups | 10 | 0 | 0 | 0 | 10 |
 | AI and navigation | 9 | 0 | 1 | 1 | 11 |
 | Camera | 8 | 1 | 1 | 0 | 10 |
-| Input | 8 | 1 | 5 | 0 | 14 |
-| Audio | 4 | 2 | 3 | 1 | 10 |
+| Input | 10 | 1 | 3 | 0 | 14 |
+| Audio | 5 | 2 | 2 | 1 | 10 |
 | Particles and visual effects | 5 | 0 | 0 | 1 | 6 |
 | Lighting, shaders and post-processing | 0 | 1 | 2 | 3 | 6 |
-| UI | 9 | 6 | 1 | 0 | 16 |
+| UI | 12 | 4 | 0 | 0 | 16 |
 | Time | 6 | 0 | 1 | 1 | 8 |
-| Scene flow | 7 | 1 | 1 | 1 | 10 |
-| Persistence | 4 | 1 | 1 | 1 | 7 |
+| Scene flow | 8 | 1 | 0 | 1 | 10 |
+| Persistence | 5 | 1 | 0 | 1 | 7 |
 | Localization | 4 | 1 | 2 | 0 | 7 |
 | Multiplayer and networking | 12 | 2 | 1 | 2 | 17 |
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
-| Export and platforms | 3 | 0 | 2 | 1 | 6 |
+| Export and platforms | 5 | 0 | 0 | 1 | 6 |
 | Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **175** | **29** | **24** | **23** | **251** |
+| **Total** | **185** | **27** | **16** | **23** | **251** |
 
-Of 251 rows, 175 are covered and 29 partial; 24 are gaps, and 23 are left
-out by design: seven in ten covered (146, 42 and 40 when the map was made;
+Of 251 rows, 185 are covered and 27 partial; 16 are gaps, and 23 are left
+out by design: three in four covered (146, 42 and 40 when the map was made;
 Phase 1 of PLAN_GAMES_3.md covered nine rows, Phase 2 twelve more, Phase 3
-nine more). The gaps gather in input (five: rebinding, touch controls,
-sequences, the second mouse button, vibration), then audio (three). The rows
+nine more, Phase 4 ten more). The gaps gather in input (three: sequences,
+the second mouse button, vibration), then audio, lighting and localization (two
+each). The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
 lockstep makes unnecessary.
@@ -459,9 +461,9 @@ above is in this list, and so are many **partial** ones.
 6. **Pushable things.** *Done: PLAN_GAMES_3.md, Phase 3.* `pushable="true"` on a solid prefab: a character walking into it moves it, a cell on a grid, unless something stops it. Box puzzles, puzzle rooms in an adventure.
 7. **Held actions, and how far.** *Done: PLAN_GAMES_3.md, Phase 1.* `pressing('run')`, `pressed_for('fire')` (ticks) and `strength('right')` in expressions (`held()` is taken by items). Charge shots, a run button, hold-to-confirm, analog speed in a rule.
 8. **Rotate and thrust.** *Done: PLAN_GAMES_3.md, Phase 2.* `<qg:steer turn= thrust= drag=>`, a part of `qg:behavior`: left and right turn the body, up pushes it the way it points. Asteroids-likes, top-down racing.
-9. **An options screen.** `bus=` on `qg:sound` with `<qg:volume bus= value=>` (kept between runs), `<qg:slider bind= min= max=>` in a `qg:menu`, and `<qg:fullscreen>`. Every game that ships.
-10. **Touch controls and phones.** `<qg:touch-button action= x= y=>` and a touch stick that press the game's own actions (so replays and peers see them); Android and iOS presets in `scripts/export-games.py`. Mobile browsers and phones.
-11. **Save slots.** `slot=` on `qg:save`, `qg:continue` and `has_save()`; later, a save in the middle of a scene kept as the scene's input tape and replayed. RPGs and long adventures.
+9. **An options screen.** *Done: PLAN_GAMES_3.md, Phase 4.* `bus=` on `qg:sound` with `<qg:volume bus= value=>` (kept between runs), `<qg:slider bind= min= max=>` in a `qg:menu`, and `<qg:fullscreen>`. Every game that ships.
+10. **Touch controls and phones.** *Done: PLAN_GAMES_3.md, Phase 4.* `<qg:touch-button action= x= y=>` and a touch stick that press the game's own actions (so replays and peers see them); Android and iOS presets in `scripts/export-games.py`. Mobile browsers and phones.
+11. **Save slots.** *Done: PLAN_GAMES_3.md, Phase 4.* `slot=` on `qg:save`, `qg:continue` and `has_save()`; later, a save in the middle of a scene kept as the scene's input tape and replayed. RPGs and long adventures.
 12. **2D lights and shadows.** `<qg:light radius= color=>` on a character or a prefab, `darkness=` on `qg:scene`, shadows from solid tiles; only seen, like the camera. Caves, horror, stealth.
 13. **Camera direction.** *Done: PLAN_GAMES_3.md, Phase 3.* `<qg:camera-to target= x= y= zoom= seconds=>`, then back to `follow=`. Cutscenes, a boss's entrance, showing the door a lever opened.
 14. **Lines, beams and trails.** *Done: PLAN_GAMES_3.md, Phase 2.* `<qg:beam from= to= color= width=>` between two things, `trail=` on a prefab. Laser turrets (Towers' ray turret), grappling hooks, a fast ship's wake.
@@ -469,7 +471,7 @@ above is in this list, and so are many **partial** ones.
 16. **Jump buffering.** *Done: PLAN_GAMES_3.md, Phase 2.* `buffer-frames=` on `controller="platformer"` and on `qg:jump`: a press just before landing still jumps. Every platformer.
 17. **The other mouse button, the wheel, hover.** `action=` on `qg:on-select` (`cancel` for a right-click), `MouseWheelUp` and `MouseWheelDown` in `keys=`, `qg:on-select on="hover"`. Strategy (selling a tower, as Towers' README asks), point-and-click (look or use).
 18. **Dialogue choices, portraits, typewriter text.** *Done: PLAN_GAMES_3.md, Phase 3.* `<qg:choice label=>` holding actions inside a `qg:line`, `portrait=` on `qg:line`, `speed=` on `qg:dialogue`. RPGs, visual novels.
-19. **HUD layout and pictures.** `bottom-left` and `bottom-right`, `color=` on HUD items, `if=` on `qg:hud`, and `<qg:icon sheet= frame=>` in a HUD. Every game's HUD; a title with a logo.
+19. **HUD layout and pictures.** *Done: PLAN_GAMES_3.md, Phase 4.* `bottom-left` and `bottom-right`, `color=` on HUD items, `if=` on `qg:hud`, and `<qg:icon sheet= frame=>` in a HUD. Every game's HUD; a title with a logo.
 20. **Characters that block each other.** `blocks="characters"` on `qg:character`. Co-op platformers (standing on a partner), sports.
 21. **Things made of things.** *Done: PLAN_GAMES_3.md, Phase 3.* `<qg:attach target= to= dx= dy=>` (and `qg:detach`), and `extends=` on `qg:prefab`. A carried item, a turret on a tank, a family of enemies that differ in one number.
 22. **Animated tiles.** *Done: PLAN_GAMES_3.md, Phase 3.* `frames=` and `fps=` on `qg:tile`. Water, lava and torches in any tile game.
@@ -479,11 +481,11 @@ above is in this list, and so are many **partial** ones.
 26. **More of Tiled.** *Done: PLAN_GAMES_3.md, Phase 3.* Zones, exits and paths drawn as Tiled objects (a rectangle of class `zone`, a polyline as a `qg:path`), object and tile properties of the game's own, several tilesets per map, flipped tiles. Large levels drawn wholly in Tiled.
 27. **Functions for every scene.** *Done: PLAN_GAMES_3.md, Phase 1.* `q:function` directly in `q:application`. Games with several levels that share rules.
 28. **Sorting.** *Done: PLAN_GAMES_3.md, Phase 1, as the Core's `sort(list)`.* `sorted(list)` in expressions. High-score tables, turn order in tactics.
-29. **Rebinding keys.** `<qg:rebind action=>` in a menu: the next key pressed becomes the action's, kept between runs. Desktop releases, accessibility.
+29. **Rebinding keys.** *Done: PLAN_GAMES_3.md, Phase 4.* `<qg:rebind action=>` in a menu: the next key pressed becomes the action's, kept between runs. Desktop releases, accessibility.
 30. **Collision sides left and right.** *Done: PLAN_GAMES_3.md, Phase 2.* `side="left"` and `side="right"` on `qg:on-collision`, as `qg:on-screen-exit` has. Switches hit from the side, bumpers, shields.
 31. **Flying things that bounce off tiles.** *Done: PLAN_GAMES_3.md, Phase 2.* `walls="bounce"` on `ai="fly"`, with the cell it hit in reach of `tile_at()`. Ricochet shots, a ball in a level of tiles.
 32. **Split screen.** `player=` on `qg:camera`, one view per player. Local versus racing, co-op that splits up.
-33. **Grids and lists in menus.** `columns=` on `qg:menu`, scrolling past the screen. Level select, a shop, an inventory screen.
+33. **Grids and lists in menus.** *Done: PLAN_GAMES_3.md, Phase 4.* `columns=` on `qg:menu`, scrolling past the screen. Level select, a shop, an inventory screen.
 34. **Music and sounds inside a scene.** `qg:music` as an action (a crossfade inside a scene, layers that come in), and `sounds="a, b, c"` on `qg:play` (one drawn each time). A boss fight's music, footsteps.
 35. **Input sequences and vibration.** `qg:on-input sequence="down, right, punch" within=` and `<qg:rumble player= strength= seconds=>`. Fighting games (motion inputs), any game on a gamepad.
 36. **Sound in place.** `at=` on `qg:play`: softer, and to one side, the farther the thing is from the middle of the screen. Large levels.
@@ -492,7 +494,7 @@ above is in this list, and so are many **partial** ones.
 39. **Names and messages between players.** `shared="true"` on a `qg:field`: its text travels with the inputs when it is entered, not as it is typed. Networked games that show who is who, or let the players talk.
 40. **Nine-slice pictures.** `slice=` on `qg:spritesheet`, for boxes that stretch. Dialogue boxes, framed menus.
 41. **Isometric and hexagonal maps.** `shape="hex"` or `"iso"` on `qg:tileset`, with neighbours and pathfinding to match. Strategy and tactics games.
-42. **macOS builds.** A `macOS` preset in `scripts/export-games.py`. Desktop releases.
+42. **macOS builds.** *Done: PLAN_GAMES_3.md, Phase 4.* A `macOS` preset in `scripts/export-games.py`. Desktop releases.
 43. **Hot reload.** `quantum run game.q --watch`: rebuild on save and come back to the same tick from the session's tape. Whoever writes a game.
 
 ## What Quantum has that neither engine has

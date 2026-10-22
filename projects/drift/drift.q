@@ -16,11 +16,11 @@
   <qg:spritesheet name="boss" src="assets/boss.png" tile="40" />
   <qg:spritesheet name="space" src="assets/space.png" tile="256x224" />
 
-  <qg:sound name="shoot" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="boom" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="win" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="shoot" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="boom" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
 
   <!-- The ship's shot: flies up, gone after 80 ticks or when it leaves the screen. -->
   <qg:prefab name="Shot" tag="shot" sheet="ships" frame="8" hitbox="18x8"
@@ -84,6 +84,10 @@
   </qg:prefab>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="184" />
+  <qg:touch-button action="jump" label="A" x="220" y="184" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SCORE" as="PONTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -92,7 +96,13 @@
     <qg:phrase text="THE DRIFT IS CLEAR" as="O CAMPO ESTÁ LIMPO" />
     <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="O CAMPO ESTÁ LIMPO. APERTE PULAR." />
     <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO NO CAMPO. APERTE PULAR." />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Fire" as="Atirar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SCORE" as="PUNTOS" />
     <qg:phrase text="LIVES" as="VIDAS" />
@@ -101,9 +111,25 @@
     <qg:phrase text="THE DRIFT IS CLEAR" as="EL CAMPO ESTÁ DESPEJADO" />
     <qg:phrase text="THE DRIFT IS CLEAR. PRESS JUMP." as="EL CAMPO ESTÁ DESPEJADO. PULSA SALTAR." />
     <qg:phrase text="LOST IN THE DRIFT. PRESS JUMP." as="PERDIDO EN EL CAMPO. PULSA SALTAR." />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Fire" as="Disparar" />
+</qg:language>
   <qg:scene name="play" width="256" height="224" background="#0a0a1e" seed="3">
     <qg:sprite sheet="space" x="128" y="112" />
+    <!-- Escape (or the joypad's B) pauses, with the options; again, or Resume, goes on -->
+    <qg:on-input action="cancel">
+      <q:if condition="{paused()}"><qg:resume /><q:else><qg:pause /></q:else></q:if>
+    </qg:on-input>
+    <qg:menu if="{paused()}" size="12">
+      <qg:button label="Resume"><qg:resume /></qg:button>
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Fire" action="jump" />
+    </qg:menu>
     <q:set name="message" value="" />
     <q:set name="boss_down" value="false" type="boolean" />
 

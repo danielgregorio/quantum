@@ -29,6 +29,12 @@
   <qg:multiplayer players="2" delay="2" rollback="8" start="fight" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="70" y="290" size="96" />
+  <qg:touch-button action="punch" label="P" x="520" y="300" size="64" />
+  <qg:touch-button action="kick" label="K" x="595" y="250" size="64" />
+  <qg:touch-button action="jump" label="J" x="595" y="325" size="48" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="ARENA" as="ARENA" />
     <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
@@ -43,7 +49,20 @@
     <qg:phrase text="PLAYER 2 WINS - press jump" as="JOGADOR 2 VENCE - aperte pular" />
     <qg:phrase text="P1 rounds" as="Rounds J1" />
     <qg:phrase text="P2 rounds" as="Rounds J2" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="P1 punch" as="J1 soco" />
+    <qg:phrase text="P2 punch" as="J2 soco" />
+    <qg:phrase text="P1 kick" as="J1 chute" />
+    <qg:phrase text="P2 kick" as="J2 chute" />
+    <qg:phrase text="P1 jump" as="J1 pulo" />
+    <qg:phrase text="P2 jump" as="J2 pulo" />
+    <qg:phrase text="P1 crouch" as="J1 agachar" />
+    <qg:phrase text="P2 crouch" as="J2 agachar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="ARENA" as="ARENA" />
     <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
@@ -58,13 +77,26 @@
     <qg:phrase text="PLAYER 2 WINS - press jump" as="GANA EL JUGADOR 2 - pulsa saltar" />
     <qg:phrase text="P1 rounds" as="Asaltos J1" />
     <qg:phrase text="P2 rounds" as="Asaltos J2" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="P1 punch" as="J1 puñetazo" />
+    <qg:phrase text="P2 punch" as="J2 puñetazo" />
+    <qg:phrase text="P1 kick" as="J1 patada" />
+    <qg:phrase text="P2 kick" as="J2 patada" />
+    <qg:phrase text="P1 jump" as="J1 salto" />
+    <qg:phrase text="P2 jump" as="J2 salto" />
+    <qg:phrase text="P1 crouch" as="J1 agacharse" />
+    <qg:phrase text="P2 crouch" as="J2 agacharse" />
+</qg:language>
 
   <!-- The title: two on one keyboard, or one on each machine. -->
   <qg:scene name="title" width="640" height="360" background="#201820">
     <qg:sprite sheet="stage" x="320" y="180" />
     <qg:hud position="top-center" size="40"><qg:text value="{'ARENA'}" /></qg:hud>
-    <qg:lobby local="fight" local-label="Two players, one keyboard" size="18" />
+    <qg:lobby local="fight" local-label="Two players, one keyboard" size="18" options="options" />
   </qg:scene>
 
   <qg:scene name="fight" width="640" height="360" background="#201820" seed="1">
@@ -167,6 +199,24 @@
     <q:set name="message" value="{'PLAYER ' + ('1' if wins_1 > wins_2 else '2') + ' WINS - press jump'}" />
     <qg:hud position="center" size="24"><qg:text bind="message" /></qg:hud>
     <qg:on-input action="jump"><qg:goto-scene name="fight" /></qg:on-input>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="640" height="360" background="#201820">
+    <qg:hud position="top-center" size="32"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="16" columns="2" rows="4">
+      <qg:rebind label="P1 punch" action="punch" />
+      <qg:rebind label="P2 punch" action="punch" player="2" />
+      <qg:rebind label="P1 kick" action="kick" />
+      <qg:rebind label="P2 kick" action="kick" player="2" />
+      <qg:rebind label="P1 jump" action="jump" />
+      <qg:rebind label="P2 jump" action="jump" player="2" />
+      <qg:rebind label="P1 crouch" action="down" />
+      <qg:rebind label="P2 crouch" action="down" player="2" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>

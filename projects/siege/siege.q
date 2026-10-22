@@ -36,12 +36,12 @@
   </qg:tileset>
   <qg:spritesheet name="siege" src="assets/siege.png" tile="16" />
 
-  <qg:sound name="twang" src="assets/kenney/audio/jump.ogg" />
-  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
-  <qg:sound name="clank" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="zap" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="hurt" src="assets/kenney/audio/hurt.ogg" />
-  <qg:sound name="horn" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="twang" src="assets/kenney/audio/jump.ogg" />
+  <qg:sound bus="effects" name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound bus="effects" name="clank" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="zap" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="hurt" src="assets/kenney/audio/hurt.ogg" />
+  <qg:sound bus="effects" name="horn" src="assets/kenney/audio/win.ogg" />
 
   <!-- fire: the mouse's left button, J, or the right trigger; the right stick aims -->
   <qg:input action="fire" keys="MouseLeft, J, JoyR2" />
@@ -131,6 +131,10 @@
   </q:function>
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="40" y="200" />
+  <qg:touch-button action="fire" label="A" x="284" y="200" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="SIEGE" as="CERCO" />
     <qg:phrase text="Play alone" as="Jogar sozinho" />
@@ -147,7 +151,15 @@
     <qg:phrase text="BEST" as="MELHORES" />
     <qg:phrase text="To the title" as="Para o início" />
     <qg:phrase text="TWO PLAYERS, EACH ON THEIR OWN MACHINE" as="DOIS JOGADORES, CADA UM NA SUA MÁQUINA" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Fire" as="Atirar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="SIEGE" as="ASEDIO" />
     <qg:phrase text="Play alone" as="Jugar solo" />
@@ -164,13 +176,22 @@
     <qg:phrase text="BEST" as="MEJORES" />
     <qg:phrase text="To the title" as="Al inicio" />
     <qg:phrase text="TWO PLAYERS, EACH ON THEIR OWN MACHINE" as="DOS JUGADORES, CADA UNO EN SU MÁQUINA" />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Fire" as="Disparar" />
+</qg:language>
 
   <qg:scene name="title" width="320" height="240" background="#2e3b24">
     <qg:hud position="top-center" size="32"><qg:text value="{tr('SIEGE')}" /></qg:hud>
     <qg:menu position="center" size="14">
       <qg:button label="Play alone"><q:call function="anew" /><qg:goto-scene name="keep" fade="0.3" /></qg:button>
       <qg:button label="Play together"><q:call function="anew" /><qg:goto-scene name="together" /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
       <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
     </qg:menu>
@@ -302,6 +323,18 @@
     </qg:hud>
     <qg:menu position="bottom-center" size="12">
       <qg:button label="To the title"><qg:leave /><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="320" height="240" background="#2e3b24">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="14">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Fire" action="fire" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
     </qg:menu>
   </qg:scene>
 

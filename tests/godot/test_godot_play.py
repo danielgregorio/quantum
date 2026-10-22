@@ -229,7 +229,7 @@ def test_the_lobby_and_the_board_in_the_players_language(pong, chess, godot):
         menu = PlaySession.screen(game.observe(), 'menu')['items']
         assert [i.get('button') or i.get('field') for i in menu] == \
             ['Dois jogadores, um teclado', 'Criar uma partida', 'Endereço', 'Entrar', 'Assistir', 'Cancelar',
-             'Idioma: Português']
+             'Opções', 'Idioma: Português']
     with PlaySession(chess, binary=godot, lang='es') as game:
         seen = game.until("scene == 'game'", tap=['select'], max_ticks=10)
         assert 'Juegan blancas - haz clic en una pieza y luego adónde va' in PlaySession.screen(seen, 'hud')['items']
@@ -239,7 +239,7 @@ def test_the_lobby_and_the_board_in_the_players_language(pong, chess, godot):
 def test_the_language_button_shows_the_next_language(pong, godot):
     # the lobby's last button: English, then each of the game's languages, then English again
     with PlaySession(pong, binary=godot) as game:
-        for _ in range(5):                                   # past the local game, Host, Address, Join, Watch
+        for _ in range(6):                                   # past the local game, Host, Address, Join, Watch, Options
             game.act(tap=['down'], ticks=2)
         shown = []
         for _ in range(3):
@@ -254,11 +254,11 @@ def test_the_language_button_shows_the_next_language(pong, godot):
 
 def test_the_language_chosen_is_kept_for_the_next_run(pong, godot, tmp_path):
     from quantum.runtime.godot_replay import replay, tape_from_holds
-    to_the_button = [('down', t, t + 1) for t in (1, 3, 5, 7, 9)]
-    replay(pong, 14, tape_from_holds(to_the_button + [('select', 11, 12)]), binary=godot, persist_dir=tmp_path)
+    to_the_button = [('down', t, t + 1) for t in (1, 3, 5, 7, 9, 11)]
+    replay(pong, 16, tape_from_holds(to_the_button + [('select', 13, 14)]), binary=godot, persist_dir=tmp_path)
     assert (tmp_path / 'quantum-language.txt').read_text() == 'pt'
     # the next run starts in pt, so the button shows the one after it
-    replay(pong, 14, tape_from_holds(to_the_button + [('select', 11, 12)]), binary=godot, persist_dir=tmp_path)
+    replay(pong, 16, tape_from_holds(to_the_button + [('select', 13, 14)]), binary=godot, persist_dir=tmp_path)
     assert (tmp_path / 'quantum-language.txt').read_text() == 'es'
 
 

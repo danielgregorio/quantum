@@ -1,9 +1,12 @@
 #!/usr/bin/env python
-"""Export the games with Godot's export templates: for the browser, Linux and Windows.
+"""Export the games with Godot's export templates: for the browser, Linux and Windows; macOS, Android, iOS when asked.
 
     python scripts/export-games.py --install-templates [FILE.tpz]   # once: Godot's templates (1.2 GB)
-    python scripts/export-games.py                                  # every game, every preset
+    python scripts/export-games.py                                  # every game: Web, Linux, Windows
     python scripts/export-games.py hopper chess --preset Web        # some games, one preset
+    python scripts/export-games.py keep --preset macOS              # an app for a Mac (unsigned)
+    python scripts/export-games.py keep --preset Android            # an .apk (needs the Android SDK, below)
+    python scripts/export-games.py keep --preset iOS                # an Xcode project (a Mac builds it)
     python scripts/export-games.py --out /some/dir                  # elsewhere than docs/public/games/
 
 The games are every projects/<name>/<name>.q. Each lands in docs/public/games/<name>/:
@@ -18,6 +21,16 @@ site is built; nothing here is committed.
 
 Templates: --install-templates downloads Godot's archive for the pinned
 version from GitHub (or takes a file) and unpacks it where Godot looks.
+
+macOS: a .zip of an unsigned .app (<name>-macos.zip); a Mac opens it with
+"Open" from its context menu. Android: Godot's editor settings name the
+Android SDK and a Java SDK (export/android/android_sdk_path and
+java_sdk_path); QUANTUM_ANDROID_KEYSTORE, QUANTUM_ANDROID_KEYSTORE_USER and
+QUANTUM_ANDROID_KEYSTORE_PASSWORD the key that signs the release (without
+them, the debug key signs it); the .apk is <name>-android.apk. iOS: an
+Xcode project (<name>-ios.zip) for a Mac with Xcode to build and sign;
+QUANTUM_IOS_TEAM_ID is the Apple team. On a phone the games show their
+touch controls (qg:touch-button, qg:touch-stick).
 """
 
 import html
@@ -58,7 +71,36 @@ binary_format/architecture="x86_64"
 codesign/enable=false
 application/modify_resources=false
 '''),
+    'macOS': ('macOS', '{name}.zip', '''binary_format/architecture="universal"
+application/bundle_identifier="net.quantumframework.{id}"
+application/min_macos_version="10.12"
+codesign/codesign=0
+notarization/notarization=0
+texture_format/s3tc_bptc=true
+texture_format/etc2_astc=true
+'''),
+    'Android': ('Android', '{name}.apk', '''gradle_build/use_gradle_build=false
+architectures/armeabi-v7a=true
+architectures/arm64-v8a=true
+package/unique_name="net.quantumframework.{id}"
+package/name="{title}"
+screen/immersive_mode=true
+keystore/release="{keystore}"
+keystore/release_user="{keystore_user}"
+keystore/release_password="{keystore_password}"
+'''),
+    'iOS': ('iOS', '{name}.ipa', '''application/app_store_team_id="{team}"
+application/bundle_identifier="net.quantumframework.{id}"
+application/export_project_only=true
+application/targeted_device_family=2
+orientation/landscape_left=true
+orientation/landscape_right=true
+orientation/portrait=false
+orientation/portrait_upside_down=false
+'''),
 }
+# What the site builds: a browser's, and the desktops' downloads.
+DEFAULT_PRESETS = ['Web', 'Linux', 'Windows']
 
 TEMPLATES_URL = (f'https://github.com/godotengine/godot/releases/download/{GODOT_VERSION}-stable/'
                  f'Godot_v{GODOT_VERSION}-stable_export_templates.tpz')
@@ -106,6 +148,15 @@ def install_templates(source: str = '') -> int:
 
 def preset_file(name: str, preset: str, target: Path) -> str:
     platform, _, options = PRESETS[preset]
+    titles = {}
+    if (REPO / 'projects' / 'games.json').is_file():
+        titles = {g['name']: g['title'] for g in
+                  json.loads((REPO / 'projects' / 'games.json').read_text(encoding='utf-8'))['games']}
+    options = options.format(id=re.sub(r'[^a-z0-9]', '', name.lower()), title=titles.get(name, name.title()),
+                             keystore=os.environ.get('QUANTUM_ANDROID_KEYSTORE', ''),
+                             keystore_user=os.environ.get('QUANTUM_ANDROID_KEYSTORE_USER', ''),
+                             keystore_password=os.environ.get('QUANTUM_ANDROID_KEYSTORE_PASSWORD', ''),
+                             team=os.environ.get('QUANTUM_IOS_TEAM_ID', ''))
     return (f'[preset.0]\n\nname="{preset}"\nplatform="{platform}"\nrunnable=true\n'
             f'export_filter="all_resources"\ninclude_filter=""\nexclude_filter=""\nexport_path="{target.as_posix()}"\n'
             f'\n[preset.0.options]\n\n{options}')
@@ -129,12 +180,25 @@ def export(name: str, source: Path, preset: str, out_root: Path, godot: Path) ->
         work = work_dir / filename.format(name=name)
         target = out / f'{name}-{preset.lower()}.zip'
     (project / 'export_presets.cfg').write_text(preset_file(name, preset, work), encoding='utf-8')
-    result = subprocess.run([str(godot), '--headless', '--path', str(project), '--export-release', preset, str(work)],
+    if preset in ('macOS', 'Android', 'iOS'):   # Apple's chips and phones read ETC2/ASTC textures
+        settings = (project / 'project.godot').read_text(encoding='utf-8')
+        if 'import_etc2_astc' not in settings:
+            (project / 'project.godot').write_text(settings.replace(
+                '[rendering]\n', '[rendering]\ntextures/vram_compression/import_etc2_astc=true\n', 1), encoding='utf-8')
+    # Android without a release key of its own: the debug key signs it
+    how = '--export-debug' if preset == 'Android' and not os.environ.get('QUANTUM_ANDROID_KEYSTORE') else '--export-release'
+    result = subprocess.run([str(godot), '--headless', '--path', str(project), how, preset, str(work)],
                             capture_output=True, text=True, timeout=900)
     errors = script_errors(result.stdout + result.stderr)
-    if errors or not work.is_file():
+    # iOS writes an Xcode project next to where the .ipa would be
+    made = work.is_file() or (preset == 'iOS' and work.parent.is_dir() and any(work.parent.iterdir()))
+    if errors or not made:
         raise RuntimeError(f'{name} ({preset}): export failed\n' + '\n'.join(errors) + result.stderr[-2000:])
-    if preset != 'Web':
+    if preset in ('macOS', 'Android'):   # one file already: a .zip of the .app, an .apk
+        target = out / f'{name}-{preset.lower()}{work.suffix}'
+        shutil.move(str(work), target)
+        shutil.rmtree(work.parent)
+    elif preset != 'Web':
         with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as z:
             for f in sorted(work.parent.iterdir()):
                 z.write(f, f'{name}/{f.name}')
@@ -524,9 +588,11 @@ def write_index(out_root: Path) -> Path:
             if relay and '<qg:multiplayer' in source.read_text(encoding='utf-8'):
                 links.append(f'<a class="online" href="#" data-game="{name}" data-relay="{html.escape(relay)}">'
                              'Play online with a friend</a>')
-        for preset, label in (('linux', 'Linux'), ('windows', 'Windows')):
+        for preset, label in (('linux', 'Linux'), ('windows', 'Windows'), ('macos', 'macOS')):
             if (folder / f'{name}-{preset}.zip').is_file():
                 links.append(f'<a href="{name}/{name}-{preset}.zip">{label}</a>')
+        if (folder / f'{name}-android.apk').is_file():
+            links.append(f'<a href="{name}/{name}-android.apk">Android</a>')
         write_source(name, g['title'], folder)
         links.append(f'<a class="source" href="{name}/source/">View the source</a>')
         img = (f'<a class="shot" href="{name}/"><img src="{name}/screenshot.png" alt="{html.escape(g["title"])}" '
@@ -554,7 +620,7 @@ def main(argv) -> int:
         return install_templates(argv[i + 1] if i + 1 < len(argv) and not argv[i + 1].startswith('--') else '')
     all_games = games()
     names = [a for a in argv if not a.startswith('--') and a in all_games]
-    presets = [argv[argv.index('--preset') + 1]] if '--preset' in argv else list(PRESETS)
+    presets = [argv[argv.index('--preset') + 1]] if '--preset' in argv else list(DEFAULT_PRESETS)
     out_root = Path(argv[argv.index('--out') + 1]) if '--out' in argv else REPO / 'docs' / 'public' / 'games'
     known = {a for a in argv if not a.startswith('--')} - set(all_games) - set(PRESETS) - {str(out_root)}
     known -= {argv[argv.index('--preset') + 1]} if '--preset' in argv else set()

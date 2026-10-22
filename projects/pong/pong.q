@@ -35,17 +35,39 @@
   <!-- The title: two on one keyboard, or one on each machine — host, or join at
        an address. The court starts on both machines once both are there. -->
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="up" label="^" x="48" y="300" size="64" />
+  <qg:touch-button action="down" label="v" x="48" y="360" size="64" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="PONG" as="PONG" />
     <qg:phrase text="Two players, one keyboard" as="Dois jogadores, um teclado" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="P1 up" as="J1 cima" />
+    <qg:phrase text="P2 up" as="J2 cima" />
+    <qg:phrase text="P1 down" as="J1 baixo" />
+    <qg:phrase text="P2 down" as="J2 baixo" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="PONG" as="PONG" />
     <qg:phrase text="Two players, one keyboard" as="Dos jugadores, un teclado" />
-  </qg:language>
+      <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="P1 up" as="J1 arriba" />
+    <qg:phrase text="P2 up" as="J2 arriba" />
+    <qg:phrase text="P1 down" as="J1 abajo" />
+    <qg:phrase text="P2 down" as="J2 abajo" />
+</qg:language>
   <qg:scene name="title" width="640" height="400" background="#24272a">
     <qg:hud position="top-center" size="48"><qg:text value="{'PONG'}" /></qg:hud>
-    <qg:lobby local="court" local-label="Two players, one keyboard" size="20" />
+    <qg:lobby local="court" local-label="Two players, one keyboard" size="20" options="options" />
   </qg:scene>
 
   <qg:scene name="court" width="640" height="400" background="#24272a" seed="1">
@@ -72,6 +94,20 @@
     <qg:zone name="floor" tag="edge" x="0" y="400" width="640" height="20" />
     <qg:zone name="left-wall" tag="wall" x="-20" y="0" width="20" height="400" />
     <qg:zone name="right-wall" tag="wall" x="640" y="0" width="20" height="400" />
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="640" height="400" background="#24272a">
+    <qg:hud position="top-center" size="36"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="18" columns="2">
+      <qg:rebind label="P1 up" action="up" />
+      <qg:rebind label="P2 up" action="up" player="2" />
+      <qg:rebind label="P1 down" action="down" />
+      <qg:rebind label="P2 down" action="down" player="2" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>

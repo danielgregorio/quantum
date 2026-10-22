@@ -21,6 +21,9 @@
   <!-- Every tile of the three layers is a picture of its own; the Grid
        layer's are the ones that stop a walker. -->
   <!-- beyond the demo: the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="140" y="580" size="200" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Ei, é uma boa hora para uma luta de JRPG, não acha?" />
     <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Deixa eu me apresentar: sou o seu OPONENTE." />
@@ -41,7 +44,12 @@
     <qg:phrase text="Defend" as="Defender" />
     <qg:phrase text="Potion" as="Poção" />
     <qg:phrase text="Flee" as="Fugir" />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Oye, es un buen momento para una pelea de JRPG, ¿no crees?" />
     <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Déjame presentarme: soy tu OPONENTE." />
@@ -62,15 +70,20 @@
     <qg:phrase text="Defend" as="Defender" />
     <qg:phrase text="Potion" as="Poción" />
     <qg:phrase text="Flee" as="Huir" />
-  </qg:language>
+      <qg:phrase text="Resume" as="Continuar" />
+    <qg:phrase text="Music" as="Música" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+</qg:language>
 
   <qg:tileset name="world" src="assets/tiles.png" tile="64" />
   <qg:spritesheet name="pawns" src="assets/pawns.png" tile="64" />
   <qg:spritesheet name="fighters" src="assets/fighters.png" tile="128" />
   <qg:spritesheet name="arena" src="assets/arena.png" tile="1280x720" />
   <!-- beyond the demo: music of our own (scripts/art/rpg_music.py, CC0) -->
-  <qg:sound name="meadow" src="assets/meadow.ogg" loop="true" />
-  <qg:sound name="clash" src="assets/clash.ogg" loop="true" />
+  <qg:sound bus="music" name="meadow" src="assets/meadow.ogg" loop="true" />
+  <qg:sound bus="music" name="clash" src="assets/clash.ogg" loop="true" />
 
   <qg:prefab name="Opponent" tag="opponent" sheet="pawns" frame="2" hitbox="48x48" />
   <qg:prefab name="Key" tag="key" sheet="pawns" frame="3" hitbox="48x48" />
@@ -179,6 +192,18 @@
       <qg:line who="OPPONENT" text="Aha! I won, maybe you can try again next time." />
       <qg:on-end><q:set name="outcome" value="" /></qg:on-end>
     </qg:dialogue>
+
+    <!-- beyond the demo: Escape (or the joypad's B) pauses, with the options; not while someone talks -->
+    <qg:on-input action="cancel">
+      <q:if condition="{not talking()}">
+        <q:if condition="{paused()}"><qg:resume /><q:else><qg:pause /></q:else></q:if>
+      </q:if>
+    </qg:on-input>
+    <qg:menu if="{paused() and not talking()}" size="32">
+      <qg:button label="Resume"><qg:resume /></qg:button>
+      <qg:slider label="Music" bus="music" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+    </qg:menu>
 
     <!-- Back from a fight: where it started, and what the opponent says of it. -->
     <q:if condition="{outcome != ''}">

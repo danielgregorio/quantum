@@ -39,6 +39,7 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	scene.q_spec = scene_spec
 	scene.q_game = game
 	scene.q_seed = int(scene_spec.get("seed", 0))
+	Q.make_buses(game.get("buses", []))
 	Q.load_sounds(game.get("sounds", {}))
 	Q.particles_spec = game.get("particles", {})
 
@@ -236,6 +237,12 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				hud.setup(node_spec, scene)
 				Q.apply_gd(hud, node_spec.get("gd"))
 				scene.add_child(hud)
+	# on a touch screen: the game's buttons and sticks, and this scene's
+	var touch: Array = game.get("touch", []) + scene_spec.get("touch", [])
+	if not touch.is_empty():
+		var pads = load("res://addons/quantum/touch.gd").new()
+		pads.setup(touch)
+		scene.add_child(pads)
 	# Arriving through an exit: the character stands in the exit it was
 	# sent to, which stays disarmed until it walks out of it.
 	var arrive_at = G.get("_q_arrive_at")

@@ -73,6 +73,7 @@ class Game:
     particles: Dict[str, Element] = field(default_factory=dict)
     items: Dict[str, Element] = field(default_factory=dict)
     functions: List[Statement] = field(default_factory=list)   # q:function at the application level: every scene's
+    touch: List[Element] = field(default_factory=list)   # qg:touch-button and qg:touch-stick: every scene's
 
 
 def _local(element: ET.Element) -> tuple:
@@ -298,6 +299,7 @@ def read_game(app) -> Game:
     particles: Dict[str, Element] = {}
     items: Dict[str, Element] = {}
     functions: List[Statement] = []
+    touch: List[Element] = []
     try:
         made = _extended_prefabs(root)
         for child in root:
@@ -323,6 +325,8 @@ def read_game(app) -> Game:
                     if any(lang.get('lang') == el.get('lang') for lang in languages):
                         raise GameCompileError(f'two <qg:language lang="{el.get("lang")}">', el.line)
                     languages.append(el)
+                elif el.tag in ('touch-button', 'touch-stick'):
+                    touch.append(el)
                 elif el.tag == 'multiplayer':
                     if multiplayer is not None:
                         raise GameCompileError('one <qg:multiplayer> per game', el.line)
@@ -354,7 +358,7 @@ def read_game(app) -> Game:
     if not scenes:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
     return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
-                game_state, inputs, multiplayer, languages, particles, items, functions)
+                game_state, inputs, multiplayer, languages, particles, items, functions, touch)
 
 
 def _child_key(child: ET.Element) -> tuple:

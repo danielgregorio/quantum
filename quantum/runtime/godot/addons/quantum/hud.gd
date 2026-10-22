@@ -2,22 +2,25 @@ extends CanvasLayer
 # Text over the game (qg:hud): counters and texts bound to the scene's (or
 # the game's) state, read every frame so the HUD is never stale. With a
 # font= the labels use it; size= is the font size. qg:inventory is a row of
-# the items held (qg:item), each its picture and how many.
+# the items held (qg:item), each its picture and how many. A qg:icon is a
+# picture, and the item after it shares its line (a heart, then the hearts).
+# With if=, it shows only while that is true.
 
 var _scene: Node = null
-var _labels: Array = []   # [{label, bind, prefix}], or {inventory: row, size, shown}
+var _labels: Array = []   # [{label, bind, prefix}], or {inventory: row, size, shown}, or {icon, method, sheet}
 var _font: Font = null
+var _if_method = null     # if=: shown only while it is true
 
 
 func setup(spec: Dictionary, scene: Node) -> void:
 	_scene = scene
 	name = "Hud"
-	var box := VBoxContainer.new()
+	var box: BoxContainer = VBoxContainer.new()
 	var viewport_w: int = ProjectSettings.get_setting("display/window/size/viewport_width", 256)
 	var viewport_h: int = ProjectSettings.get_setting("display/window/size/viewport_height", 224)
 	var position_ := str(spec.get("position", "top-left"))
 	var centered := position_ == "top-center" or position_ == "center" or position_ == "bottom-center"
-	var right := position_ == "top-right"
+	var right := position_ == "top-right" or position_ == "bottom-right"
 	match position_:
 		"top-center":
 			box.position = Vector2(0, 4)
@@ -34,6 +37,14 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			box.position = Vector2(0, 0)
 			box.size = Vector2(viewport_w, viewport_h - 4)
 			box.alignment = BoxContainer.ALIGNMENT_END
+		"bottom-left":
+			box.position = Vector2(4, 0)
+			box.size = Vector2(viewport_w - 8, viewport_h - 4)
+			box.alignment = BoxContainer.ALIGNMENT_END
+		"bottom-right":
+			box.position = Vector2(0, 0)
+			box.size = Vector2(viewport_w - 4, viewport_h - 4)
+			box.alignment = BoxContainer.ALIGNMENT_END
 		_:
 			box.position = Vector2(4, 4)
 	add_child(box)
@@ -44,7 +55,32 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			push_warning("quantum: cannot load the font " + str(spec["font"]))
 	var size := int(spec.get("size", 8))
 	_font = font
+	_if_method = spec.get("if_method")
+	var outer: BoxContainer = box
+	var line: HBoxContainer = null   # the line an icon opened, for the item after it
 	for item in spec.get("items", []):
+		box = outer
+		if line != null:
+			box = line
+			line = null
+		if item["kind"] == "icon":
+			line = HBoxContainer.new()
+			line.add_theme_constant_override("separation", 3)
+			if centered or right:
+				line.alignment = BoxContainer.ALIGNMENT_END if right else BoxContainer.ALIGNMENT_CENTER
+			outer.add_child(line)
+			var icon := TextureRect.new()
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			var sheet: Dictionary = scene.q_game["sheets"][item["sheet"]]
+			icon.custom_minimum_size = Vector2(sheet["tile"][0], sheet["tile"][1]) * float(item.get("scale", 1.0))
+			Q.apply_gd(icon, item.get("gd"))
+			line.add_child(icon)
+			var entry := {"icon": icon, "sheet": sheet, "frame": int(item.get("frame", 0)), "method": item.get("frame_method"),
+				"shown": -1}
+			_labels.append(entry)
+			continue
 		if item["kind"] == "inventory":
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 6)
@@ -76,6 +112,8 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			label.add_theme_font_size_override("font_size", int(item["size"]) if item.get("size") != null else size)
 			if font != null:
 				label.add_theme_font_override("font", font)
+			if item.get("color") != null:
+				label.add_theme_color_override("font_color", Color(str(item["color"])))
 			if centered or right:
 				label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_CENTER
 				label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -94,9 +132,13 @@ func _process(_delta: float) -> void:
 # as its value against its maximum.
 func quantum_view() -> Dictionary:
 	_refresh()
+	if not visible:
+		return {}
 	var shown := []
 	for entry in _labels:
-		if entry.has("bar"):
+		if entry.has("icon"):
+			shown.append({"icon": entry["shown"]})
+		elif entry.has("bar"):
 			shown.append({"bar": entry["bind"], "value": entry["bar"].value, "max": entry["bar"].max_value})
 		elif entry.has("inventory"):
 			shown.append({"inventory": entry["shown"]})
@@ -115,7 +157,15 @@ func _bound(bind: String):
 
 
 func _refresh() -> void:
+	if _if_method != null:
+		visible = bool(_scene.call(_if_method))
 	for entry in _labels:
+		if entry.has("icon"):
+			var f: int = int(_scene.call(entry["method"])) if entry["method"] != null else int(entry["frame"])
+			if f != entry["shown"]:
+				entry["shown"] = f
+				entry["icon"].texture = Q.frame_texture(entry["sheet"], f)
+			continue
 		if entry.has("bar"):
 			var v = _bound(entry["bind"])
 			entry["bar"].value = float(v) if v != null else 0.0

@@ -237,8 +237,14 @@ class _Compiler:
         sounds = {}
         for name, el in g.sounds.items():
             sounds[name] = {'src': self._asset(el.get('src'), el.line), 'loop': el.get('loop')}
+            if el.get('bus'):
+                if el.get('bus') == 'Master':
+                    raise GameCompileError(f'<qg:sound bus="Master">: Master is every bus together; name a bus of '
+                                           f'your own (music, effects)', el.line)
+                sounds[name]['bus'] = el.get('bus')
             gdprops.attach(sounds[name], 'AudioStreamPlayer', el.gd, f'<qg:sound name="{name}">', el.line)
         self.sounds = sounds
+        self.buses = sorted({s_['bus'] for s_ in sounds.values() if s_.get('bus')})
         particles = {}
         for name, el in g.particles.items():
             particles[name] = {'preset': el.get('preset')}
@@ -267,6 +273,7 @@ class _Compiler:
         prefabs = {}
         self._part_targets: List[tuple] = []
         pscript = SceneScript('prefabs', game_state=self.game_state, actions=self.actions)
+        pscript.buses = set(self.buses)
         compile_game_functions(pscript, g.functions)   # a prefab's handlers call the game's q:functions too
         for name, el in g.prefabs.items():
             self._sheet_exists(el.get('sheet'), sheets, el.line)
@@ -416,6 +423,8 @@ class _Compiler:
                 'multiplayer': self.multiplayer,
                 'sheets': sheets,
                 'sounds': sounds,
+                'buses': self.buses,
+                'touch': self._touch(g.touch, None),
                 'particles': particles,
                 'items': self.items,
                 'languages': languages,
@@ -678,6 +687,24 @@ class _Compiler:
                 raise GameCompileError('<qg:steer>: turn=, thrust= and drag= 0 or more, max= more than 0', line)
         return parts
 
+    def _touch(self, elements: list, scene: Optional[str]) -> List[dict]:
+        """qg:touch-button and qg:touch-stick: on a touch screen, what presses the game's actions."""
+        out = []
+        for el in elements:
+            if el.get('player') < 1:
+                raise GameCompileError(f'<qg:{el.tag} player=>: 1 or more', el.line)
+            if el.get('size') <= 0:
+                raise GameCompileError(f'<qg:{el.tag} size=>: more than 0', el.line)
+            spec = {'kind': 'stick' if el.tag == 'touch-stick' else 'button', 'x': el.get('x'), 'y': el.get('y'),
+                    'size': el.get('size'), 'player': el.get('player'), 'show': el.get('show')}
+            if el.tag == 'touch-button':
+                if el.get('action') not in self.actions:
+                    raise GameCompileError(f'<qg:touch-button action="{el.get("action")}">: no such action (the game '
+                                           f'has {", ".join(sorted(self.actions))})', el.line)
+                spec.update({'action': el.get('action'), 'label': el.get('label')})
+            out.append(spec)
+        return out
+
     @staticmethod
     def _sheet_exists(name: str, sheets: dict, line: Optional[int]) -> None:
         if name not in sheets:
@@ -688,6 +715,7 @@ class _Compiler:
         name = scene.get('name')
         scene.children = _expand_lobbies(scene.children, self.multiplayer, bool(self.languages))
         script = SceneScript(name, game_state=self.game_state)
+        script.buses = set(self.buses)
         self._states_checked: list = []
         # the characters, by id: names in the scene's expressions, targets of its actions
         script.node_ids = ([c.get('id') for c in scene.find_all('character')]
@@ -746,6 +774,7 @@ class _Compiler:
         conditions = 0
         on_death: Dict[str, str] = {}
         whens: List[list] = []
+        touch: list = []
         tiled: dict = {}
         pointers: List[tuple] = []   # (player, line) of the characters controller="pointer": they need a cursor
         cameras_here = any(isinstance(n, Element) and n.tag == 'camera' for n in scene.children)
@@ -1235,13 +1264,55 @@ class _Compiler:
                             raise GameCompileError(f'<qg:field bind="{bind}">: a field holds text; {bind!r} is a {var.type}', c.line)
                         items.append({'kind': 'field', 'bind': bind, 'label': c.get('label'), 'max_length': c.get('max-length'),
                                       'game': bind not in script.state})
+                    elif isinstance(c, Element) and c.tag == 'slider':
+                        if (c.get('bus') is None) == (c.get('bind') is None):
+                            raise GameCompileError('<qg:slider> takes bus= or bind=, one of them', c.line)
+                        if c.get('min') >= c.get('max') or c.get('step') <= 0:
+                            raise GameCompileError('<qg:slider>: min= below max=, and a step= more than 0', c.line)
+                        item = {'kind': 'slider', 'label': c.get('label'), 'min': c.get('min'), 'max': c.get('max'),
+                                'step': c.get('step')}
+                        if c.get('bus') is not None:
+                            if c.get('bus') not in self.buses:
+                                raise GameCompileError(f'<qg:slider bus="{c.get("bus")}">: no qg:sound is heard on that '
+                                                       f'bus (buses: {", ".join(self.buses) or "none: give a qg:sound bus="})',
+                                                       c.line)
+                            item['bus'] = c.get('bus')
+                        else:
+                            bind = c.get('bind')
+                            var = script.state.get(bind) or self.game_state.get(bind)
+                            if var is None:
+                                raise GameCompileError(f'<qg:slider bind="{bind}">: no q:set of that name in the scene or '
+                                                       f'the game', c.line)
+                            if var.typed and var.type != 'number':
+                                raise GameCompileError(f'<qg:slider bind="{bind}">: a slider holds a number; {bind!r} is '
+                                                       f'a {var.type}', c.line)
+                            item.update({'bind': bind, 'game': bind not in script.state})
+                        items.append(item)
+                    elif isinstance(c, Element) and c.tag == 'rebind':
+                        if c.get('action') not in self.actions:
+                            raise GameCompileError(f'<qg:rebind action="{c.get("action")}">: no such action (the game has '
+                                                   f'{", ".join(sorted(self.actions))})', c.line)
+                        if c.get('player') < 1:
+                            raise GameCompileError('<qg:rebind player=>: 1 or more', c.line)
+                        action = c.get('action') if c.get('player') == 1 else f'p{c.get("player")}_{c.get("action")}'
+                        items.append({'kind': 'rebind', 'action': action, 'label': c.get('label') or c.get('action')})
                     else:
-                        raise GameCompileError('<qg:menu> holds qg:button and qg:field', getattr(c, 'line', el.line))
+                        raise GameCompileError('<qg:menu> holds qg:button, qg:field, qg:slider and qg:rebind',
+                                               getattr(c, 'line', el.line))
+                    if isinstance(c, Element) and c.tag in ('slider', 'rebind') and c.get('if') is not None:
+                        n = len(items) - 1
+                        items[-1]['if_method'] = f'_q_menu_{menus}_if_{n}'
+                        script.functions.append(
+                            f'func {items[-1]["if_method"]}():\n\treturn {compile_expression(c.get("if"), script.scope(), c.line)}\n')
                 if not items:
                     raise GameCompileError('<qg:menu> needs at least one qg:button', el.line)
                 font = self._asset(el.get('font'), el.line) if el.get('font') else None
+                if el.get('columns') < 1 or el.get('rows') < 0:
+                    raise GameCompileError('<qg:menu>: columns= 1 or more, rows= 0 or more', el.line)
                 nodes.append({'kind': 'menu', 'player': el.get('player'), 'position': el.get('position'),
-                              'size': el.get('size'), 'font': font, 'items': items})
+                              'size': el.get('size'), 'font': font, 'items': items,
+                              **({'columns': el.get('columns')} if el.get('columns') > 1 else {}),
+                              **({'rows': el.get('rows')} if el.get('rows') else {})})
                 if el.get('if') is not None:
                     nodes[-1]['if_method'] = f'_q_menu_{menus}_if'
                     script.functions.append(
@@ -1278,7 +1349,7 @@ class _Compiler:
                         if c.tag == 'counter' and c.get('item') is not None:
                             self._items_known([(c.get('item'), c.line)])
                             items.append({'kind': 'counter', 'item': c.get('item'), 'label': c.get('label', ''),
-                                          'size': c.get('size')})
+                                          'size': c.get('size'), **({'color': c.get('color')} if c.get('color') else {})})
                             gdprops.attach(items[-1], 'Label', c.gd, '<qg:counter>', c.line)
                             continue
                         if c.get('bind') is not None and c.get('bind') not in script.state and c.get('bind') not in self.game_state:
@@ -1286,19 +1357,43 @@ class _Compiler:
                                 f'<qg:{c.tag} bind="{c.get("bind")}">: no q:set of that name in the scene '
                                 f'or the game', c.line)
                         items.append({'kind': c.tag, 'bind': c.get('bind'), 'label': c.get('label', ''),
-                                      'size': c.get('size')})
+                                      'size': c.get('size'), **({'color': c.get('color')} if c.get('color') else {})})
                         if c.tag == 'text' and c.get('value') is not None:
                             texts += 1
                             items[-1]['value_method'] = f'_q_text_{texts}'
                             script.functions.append(
                                 f'func _q_text_{texts}():\n\treturn Q.to_str({compile_expression(c.get("value"), script.scope(), c.line)})\n')
                         gdprops.attach(items[-1], 'Label', c.gd, f'<qg:{c.tag}>', c.line)
+                    elif isinstance(c, Element) and c.tag == 'icon':
+                        self._sheet_exists(c.get('sheet'), sheets, c.line)
+                        if c.get('scale') <= 0:
+                            raise GameCompileError('<qg:icon scale=>: more than 0', c.line)
+                        icon = {'kind': 'icon', 'sheet': c.get('sheet'), 'scale': c.get('scale')}
+                        frame = str(c.get('frame'))
+                        if is_expression(frame):
+                            texts += 1
+                            icon['frame_method'] = f'_q_text_{texts}'
+                            script.functions.append(f'func _q_text_{texts}():\n\treturn int('
+                                                    f'{compile_expression(frame, script.scope(), c.line)})\n')
+                        else:
+                            try:
+                                icon['frame'] = int(frame)
+                            except ValueError:
+                                raise GameCompileError(f'<qg:icon frame="{frame}">: a frame number, or an expression '
+                                                       f'({{...}})', c.line) from None
+                        gdprops.attach(icon, 'TextureRect', c.gd, '<qg:icon>', c.line)
+                        items.append(icon)
                     else:
-                        raise GameCompileError('<qg:hud> holds qg:counter, qg:text, qg:bar and qg:inventory',
+                        raise GameCompileError('<qg:hud> holds qg:counter, qg:text, qg:icon, qg:bar and qg:inventory',
                                                getattr(c, 'line', el.line))
                 font = self._asset(el.get('font'), el.line) if el.get('font') else None
                 nodes.append({'kind': 'hud', 'position': el.get('position'), 'items': items,
                               'font': font, 'size': el.get('size')})
+                if el.get('if') is not None:
+                    texts += 1
+                    nodes[-1]['if_method'] = f'_q_text_{texts}'
+                    script.functions.append(f'func _q_text_{texts}():\n\treturn bool('
+                                            f'{compile_expression(el.get("if"), script.scope(), el.line)})\n')
                 self._node_elements.append(el)
             elif el.tag == 'dialogue':
                 dname = el.get('name')
@@ -1363,6 +1458,8 @@ class _Compiler:
                                     **({'sheet': el.get('sheet')} if el.get('sheet') else {})}
                 nodes.append(dialogues[dname])
                 self._node_elements.append(el)
+            elif el.tag in ('touch-button', 'touch-stick'):
+                touch.append(el)
             elif el.tag in ('play', 'stop'):
                 pass   # an enter statement, read above
             elif el.tag == 'music':
@@ -1477,6 +1574,8 @@ class _Compiler:
                                        f'"{player}" />', line)
         if whens:
             spec['when'] = whens
+        if touch:
+            spec['touch'] = self._touch(touch, name)
         if tiled:
             spec['tiled'] = tiled   # the Tiled map's own properties: tiled('par')
         if scene.get('y-sort'):
@@ -1578,7 +1677,8 @@ LOBBY_PHRASES = {
            'Waiting for the other player to come back': 'Esperando o outro jogador voltar',
            'Catching up': 'Alcançando a partida', 'The other player left': 'O outro jogador saiu',
            'The games differ: the match stopped': 'Os jogos divergiram: a partida parou',
-           'Start now': 'Começar agora', 'here': 'aqui', 'Watch': 'Assistir', 'Watching': 'Assistindo'},
+           'Start now': 'Começar agora', 'here': 'aqui', 'Watch': 'Assistir', 'Watching': 'Assistindo',
+           'Options': 'Opções'},
     'es': {'Language': 'Idioma', 'Host a game': 'Crear una partida', 'Address': 'Dirección', 'Join': 'Unirse', 'Cancel': 'Cancelar',
            'Waiting for the other players on port': 'Esperando a los demás jugadores en el puerto',
            'Joining': 'Uniéndose a', 'Connected, starting...': 'Conectado, empezando...',
@@ -1586,7 +1686,8 @@ LOBBY_PHRASES = {
            'Waiting for the other player to come back': 'Esperando a que el otro jugador vuelva',
            'Catching up': 'Poniéndose al día', 'The other player left': 'El otro jugador se fue',
            'The games differ: the match stopped': 'Las partidas difieren: el juego se detuvo',
-           'Start now': 'Empezar ya', 'here': 'aquí', 'Watch': 'Mirar', 'Watching': 'Mirando'},
+           'Start now': 'Empezar ya', 'here': 'aquí', 'Watch': 'Mirar', 'Watching': 'Mirando',
+           'Options': 'Opciones'},
 }
 
 # The label of a button for qg:next-language: "Language: English".
@@ -1626,6 +1727,9 @@ def _expand_lobbies(children: list, multiplayer: Optional[dict], languages: bool
             buttons.insert(-1, _el('button', line, [_el('start-now', line)], label='Start now',
                                    **{'if': '{' + f"(net_status() == 'hosting' or (net_status() == 'connected' and net_player() == 1)) "
                                          f"and net_players() >= {least}" + '}'}))
+        if el.get('options'):   # the game's options screen
+            buttons.append(_el('button', line, [_el('goto-scene', line, name=el.get('options'))], label='Options',
+                               **{'if': '{' + _IDLE + '}'}))
         if languages:   # a game in several languages: a button to show the next one
             buttons.append(_el('button', line, [_el('next-language', line)], label=LANGUAGE_LABEL))
         # each part through tr(), in the player's language (LOBBY_PHRASES); the same text in English

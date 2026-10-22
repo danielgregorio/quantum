@@ -73,6 +73,31 @@ alter the behaviour of an existing app is listed under **Breaking**.
   `qg:become` and `qg:deflect`, `at=` of `qg:burst`, `qg:shake` and
   `qg:spawn` take a parameter, a loop variable or a q:set holding a thing, and
   `qg:spawn at=` a character's id, as `qg:destroy` and `qg:tween` already did.
+- Laboratory: to ship a game, Phase 4 of `PLAN_GAMES_3.md`, in every game of
+  `projects/`. An options screen: `bus=` on `qg:sound` puts it on a bus
+  (music, effects); `<qg:slider>` in a menu changes, with left and right, how
+  loud a bus is (`bus=`) or a number of the state (`bind= min= max= step=`);
+  `<qg:volume bus= value=>` and `volume('music')` set and read a bus;
+  `<qg:fullscreen on=>` and `fullscreen()`; `<qg:rebind action=>` in a menu
+  takes the next key, mouse button or joypad button pressed for the action
+  (Escape keeps the old one). What the player chose there is kept between
+  runs (`quantum-settings.json`, next to the saves), and the replay and the
+  lockstep, which carry actions, are as before. Save slots: `slot=` on
+  `qg:save` and `qg:continue`, `has_save(2)`; the scenes with `save="true"`
+  save into the slot last used (Keep keeps three games). A HUD takes
+  `<qg:icon sheet= frame= scale=>` (the item after it shares its line),
+  `color=` on its texts and counters, `if=`, and the bottom corners. A menu
+  takes `columns=` (left and right move along a row) and `rows=` (the rest
+  scroll into view with the focus). `<qg:touch-button action=>` and
+  `<qg:touch-stick>`, in the application or a scene, press the game's actions
+  on a touch screen as keys would (`show="always"` everywhere); a lobby's
+  `options=` adds an Options button. `scripts/export-games.py` builds a Mac
+  app (`--preset macOS`, checked here), an `.apk` with the Android SDK
+  (`--preset Android`) and an Xcode project (`--preset iOS`); the site still
+  builds Web, Linux and Windows. Every game has options (on its title, or in
+  the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
+  Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
+  seven games and six refusals more.
 - Laboratory: Crates (`projects/crates/crates.q`), a box-pushing puzzle on a
   dockside, written for Phase 3 of `PLAN_GAMES_3.md`: three rooms drawn in
   Tiled (`projects/crates/rooms/`: two tilesets, flipped walls, animated

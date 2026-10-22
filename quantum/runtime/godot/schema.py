@@ -47,7 +47,7 @@ ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'c
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
-           'after', 'beam', 'camera-to', 'attach', 'detach')
+           'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -122,7 +122,9 @@ TAGS: Dict[str, Tag] = {
         'A sound the game can play (qg:play).',
         {'name': Attr('ident', required=True),
          'src': Attr('str', required=True, doc='an .ogg or .wav'),
-         'loop': Attr('bool', False, doc='plays until qg:stop (music)')},
+         'loop': Attr('bool', False, doc='plays until qg:stop (music)'),
+         'bus': Attr('ident', None, doc='the bus it is heard on (music, effects...): how loud a bus is, qg:volume '
+                                        'and a menu\'s qg:slider set, kept between runs')},
         parents=('application',)),
     'particles': Tag(
         'A particle effect the game can show: a preset and a few overrides. qg:emit plays it once where a thing '
@@ -382,7 +384,10 @@ TAGS: Dict[str, Tag] = {
          'if': Attr('expr', None, doc='shown, and choosable, only while this is true: paused(), a q:set...'),
          'position': Attr('enum:top-left|top-center|top-right|center|bottom-center', 'center'),
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
-         'size': Attr('int', 16, doc='font size')},
+         'size': Attr('int', 16, doc='font size'),
+         'columns': Attr('int', 1, doc='its items in a grid of so many columns: left and right move along a row'),
+         'rows': Attr('int', 0, doc='how many rows show at once; the others scroll into view with the focus '
+                                    '(0: all of them)')},
         parents=('scene',)),
     'button': Tag(
         'A button of a qg:menu. What it holds runs when it is chosen: actions and statements, like a handler.',
@@ -395,6 +400,25 @@ TAGS: Dict[str, Tag] = {
         {'bind': Attr('ident', required=True, doc='a q:set of the scene or the game'),
          'label': Attr('str', '', doc='text before the box'),
          'max-length': Attr('int', 64)},
+        parents=('menu',)),
+    'slider': Tag(
+        'A value of a qg:menu that left and right change while it has the focus: how loud a bus is (bus=, '
+        'from 0 to 100, kept between runs), or a number of the scene or the game (bind=).',
+        {'label': Attr('str', '', doc='text before it'),
+         'bus': Attr('ident', None, doc='a bus of the game\'s sounds (qg:sound bus=), or bind='),
+         'bind': Attr('ident', None, doc='a number q:set of the scene or the game, or bus='),
+         'min': Attr('float', 0.0), 'max': Attr('float', 100.0),
+         'step': Attr('float', 10.0, doc='how much a press of left or right changes it'),
+         'if': Attr('expr', None, doc='shown, and choosable, only while this is true')},
+        parents=('menu',)),
+    'rebind': Tag(
+        'A key of a qg:menu: it shows the action\'s key, and once chosen, the next key, mouse button or joypad '
+        'button pressed becomes the action\'s (Escape keeps the old one). Kept between runs. Local to the '
+        'machine, as a field is: the replay and the lockstep carry the actions, not the keys.',
+        {'action': Attr('ident', required=True, doc='an action of the game (qg:input, or a default one)'),
+         'label': Attr('str', '', doc='text before the key; the action\'s name when not given'),
+         'player': Attr('int', 1, doc='whose action'),
+         'if': Attr('expr', None, doc='shown, and choosable, only while this is true')},
         parents=('menu',)),
     'dialogue': Tag(
         'Lines someone says, shown one at a time in a box at the bottom of the screen (qg:say opens it).',
@@ -494,23 +518,33 @@ TAGS: Dict[str, Tag] = {
          'zoom-min': Attr('float', 0.5, doc='fit: as far out as it goes')},
         parents=('scene',)),
     'hud': Tag(
-        'Text over the game.',
-        {'position': Attr('enum:top-left|top-center|top-right|center|bottom-center', 'top-left'),
+        'Text and pictures over the game.',
+        {'position': Attr('enum:top-left|top-center|top-right|center|bottom-left|bottom-center|bottom-right',
+                          'top-left'),
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
-         'size': Attr('int', 8, doc='the font size of its items, unless an item says otherwise')},
+         'size': Attr('int', 8, doc='the font size of its items, unless an item says otherwise'),
+         'if': Attr('expr', None, doc='shown only while this is true')},
         parents=('scene',)),
+    'icon': Tag(
+        'A picture in the HUD: a frame of a sheet (a heart before the hearts, a logo on a title).',
+        {'sheet': Attr('ident', required=True, doc='a qg:spritesheet or qg:tileset'),
+         'frame': Attr('expr', '0', doc='a frame of it, or an expression read every frame'),
+         'scale': Attr('float', 1.0, doc='how large: 2 is twice its size')},
+        parents=('hud',)),
     'counter': Tag(
         'A number from the scene state, or how many of an item the players hold, in the HUD.',
         {'bind': Attr('ident', None, doc='a q:set of the scene or the game (or item=)'),
          'item': Attr('ident', None, doc='a qg:item: how many are held (or bind=)'),
          'label': Attr('str', '', doc='text before the number'),
-         'size': Attr('int', None, doc='font size')},
+         'size': Attr('int', None, doc='font size'),
+         'color': Attr('color', None, doc='its colour (#rrggbb)')},
         parents=('hud',)),
     'text': Tag(
         'A string from the scene state, in the HUD.',
         {'bind': Attr('ident', None, doc='a q:set of the scene (or value=)'),
          'value': Attr('expr', None, doc='an expression, read every frame (or bind=)'),
-         'size': Attr('int', None, doc='font size')},
+         'size': Attr('int', None, doc='font size'),
+         'color': Attr('color', None, doc='its colour (#rrggbb)')},
         parents=('hud',)),
     'on-collision': Tag(
         'What happens when this character or prefab touches something. Holds actions and statements; '
@@ -1023,7 +1057,9 @@ TAGS: Dict[str, Tag] = {
          'port': Attr('int', 7777),
          'address': Attr('str', '127.0.0.1:7777',
                          doc="what the address field starts with, unless the web page's address has ?join=..."),
-         'font': Attr('str', None), 'size': Attr('int', 16)},
+         'font': Attr('str', None), 'size': Attr('int', 16),
+         'options': Attr('ident', None, doc='a scene of the game\'s options (how loud, the full screen, the keys): '
+                                            'an Options button goes there')},
         parents=('scene',)),
     'host': Tag(
         'Hosts the networked game (qg:multiplayer): this machine is player 1 and waits for the others; the game '
@@ -1061,10 +1097,12 @@ TAGS: Dict[str, Tag] = {
         parents=('handler',)),
     'save': Tag(
         'Saves the game to continue it later: the game state (every q:set of q:application) and a scene to '
-        'come back to. One save per game, kept between runs (in a browser, by the browser); a new qg:save '
-        'replaces it. `has_save()` says whether there is one. A networked game is not saved.',
+        'come back to. Kept between runs (in a browser, by the browser); a new qg:save replaces it. '
+        '`has_save()` says whether there is one. A networked game is not saved.',
         {'scene': Attr('ident', None, doc='the scene to continue in (none: this one); it starts over, '
-                       'what was in it is not saved')},
+                       'what was in it is not saved'),
+         'slot': Attr('expr', None, doc='which of several saves (1, 2, 3...: a game each); the scenes with '
+                                        'save="true" save into it from then on. None: the one save')},
         parents=('handler',)),
     'next-language': Tag(
         'Shows the game in its next language (qg:language), after its own: a button for it is '
@@ -1075,8 +1113,38 @@ TAGS: Dict[str, Tag] = {
     'continue': Tag(
         'Continues the saved game (qg:save): its game state back, and on to its scene. Nothing when there '
         'is no save.',
-        {},
+        {'slot': Attr('expr', None, doc='which save (qg:save slot=); the scenes with save="true" save into it '
+                                        'from then on. None: the one save')},
         parents=('handler',)),
+    'volume': Tag(
+        'How loud a bus of the game\'s sounds is, from 0 (silent) to 100; kept between runs. `volume(\'music\')` '
+        'reads it. Only heard.',
+        {'bus': Attr('ident', required=True, doc='a bus of the game\'s sounds (qg:sound bus=)'),
+         'value': Attr('expr', required=True, doc='0 to 100')},
+        parents=('handler',)),
+    'fullscreen': Tag(
+        'The game fills the screen, or goes back to a window; kept between runs. `fullscreen()` reads it. In a '
+        'browser, the page goes full screen.',
+        {'on': Attr('expr', None, doc='true or false; none: the other of what it is')},
+        parents=('handler',)),
+    'touch-button': Tag(
+        'A button on a touch screen that presses one of the game\'s actions while it is touched, as a key '
+        'would (a replay and the lockstep see the action). In the application, every scene has it.',
+        {'action': Attr('ident', required=True, doc='an action of the game'),
+         'x': Attr('float', required=True), 'y': Attr('float', required=True, doc='its middle, on the screen'),
+         'size': Attr('float', 32.0, doc='its width across, in pixels'),
+         'label': Attr('str', '', doc='a letter or a word on it'),
+         'player': Attr('int', 1, doc='whose action'),
+         'show': Attr('enum:touch|always', 'touch', doc='touch: only on a device with a touch screen')},
+        parents=('application', 'scene')),
+    'touch-stick': Tag(
+        'A stick on a touch screen: dragged from its middle, it presses left, right, up and down as far as it '
+        'is pushed (strength()). In the application, every scene has it.',
+        {'x': Attr('float', required=True), 'y': Attr('float', required=True, doc='its middle, on the screen'),
+         'size': Attr('float', 56.0, doc='its width across, in pixels'),
+         'player': Attr('int', 1, doc='whose directions'),
+         'show': Attr('enum:touch|always', 'touch', doc='touch: only on a device with a touch screen')},
+        parents=('application', 'scene')),
 }
 
 # q: statements the compiler reads itself (see model.py).

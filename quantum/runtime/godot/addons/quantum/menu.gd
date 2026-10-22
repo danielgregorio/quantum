@@ -14,6 +14,16 @@ extends CanvasLayer
 # A field, once chosen, takes the keyboard until Enter or until it loses the
 # focus; what is typed is the bound state. Typing is local: it is not input
 # the replay or the lockstep carries.
+#
+# A slider (qg:slider) is changed by left and right while it has the focus, a
+# step a press, or set where it is clicked: a bus's volume (kept between
+# runs) or a number of the state. A key (qg:rebind), once chosen, waits for
+# the next key, mouse button or joypad button pressed, which becomes the
+# action's; Escape leaves it as it was. Like typing, that is local.
+#
+# columns= lays the items out in a grid (left and right move along a row,
+# unless a slider has the focus); rows= shows so many rows at once, and the
+# rest scroll into view with the focus.
 
 var player: int = 1
 var focus: int = 0
@@ -22,6 +32,9 @@ var _items: Array = []            # [{spec, control, line}]
 var _editing: int = -1            # the field being typed in, or -1
 var _pointer_seen = null          # the pointer at the last tick (null: not yet seen)
 var _if_method = null             # qg:menu if=: the menu is there only while it is true
+var _waiting: int = -1            # the key (qg:rebind) waiting for the next key pressed, or -1
+var _columns: int = 1
+var _scroll: ScrollContainer = null
 
 
 func setup(spec: Dictionary, scene: Node) -> void:
@@ -53,8 +66,62 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	if spec.get("font") != null:
 		font = Q.font(str(spec["font"]))
 	var size := int(spec.get("size", 16))
+	# the items: a column, or a grid of columns=; in a box that scrolls when rows= says how many show
+	_columns = int(spec.get("columns", 1))
+	var holder: Container
+	if _columns > 1:
+		var grid := GridContainer.new()
+		grid.columns = _columns
+		grid.add_theme_constant_override("h_separation", size)
+		holder = grid
+	else:
+		holder = VBoxContainer.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var start: bool = str(spec.get("position", "center")) in ["top-left", "top-right"]
+	if spec.get("rows") != null:
+		_scroll = ScrollContainer.new()
+		_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+		_scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_scroll.custom_minimum_size = Vector2(0, int(spec["rows"]) * (size * 1.75 + 4))
+		_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if start else Control.SIZE_SHRINK_CENTER
+		_scroll.add_child(holder)
+		box.add_child(_scroll)
+	else:
+		holder.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if start else Control.SIZE_SHRINK_CENTER
+		box.add_child(holder)
+	var list: Container = holder
 	for item in spec.get("items", []):
 		var entry := {"spec": item, "control": null, "line": null}
+		if item["kind"] == "slider" or item["kind"] == "rebind":
+			var row := HBoxContainer.new()
+			row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_theme_constant_override("separation", size / 2)
+			var label := Label.new()
+			label.text = str(item.get("label", ""))
+			_style(label, font, size)
+			row.add_child(label)
+			if item["kind"] == "slider":
+				var bar := HSlider.new()
+				bar.min_value = float(item["min"])
+				bar.max_value = float(item["max"])
+				bar.step = 0.0
+				bar.editable = false
+				bar.focus_mode = Control.FOCUS_NONE
+				bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				bar.custom_minimum_size = Vector2(size * 6, size)
+				bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+				row.add_child(bar)
+				entry["bar"] = bar
+			var value := Label.new()
+			_style(value, font, size)
+			row.add_child(value)
+			entry["value"] = value
+			list.add_child(row)
+			entry["control"] = row
+			_items.append(entry)
+			continue
 		if item["kind"] == "button":
 			var b := Button.new()
 			b.focus_mode = Control.FOCUS_NONE
@@ -63,7 +130,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			b.text = str(item.get("label", ""))
 			_style(b, font, size)
 			Q.apply_gd(b, item.get("gd"))
-			box.add_child(b)
+			list.add_child(b)
 			entry["control"] = b
 		else:
 			var row := HBoxContainer.new()
@@ -85,7 +152,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			line.text_submitted.connect(func(_t): _stop_editing())
 			line.focus_exited.connect(_stop_editing)
 			row.add_child(line)
-			box.add_child(row)
+			list.add_child(row)
 			entry["control"] = row
 			entry["line"] = line
 		_items.append(entry)
@@ -155,11 +222,20 @@ func quantum_view() -> Dictionary:
 		if spec["kind"] == "button":
 			item["button"] = Q.translate(_scene.call(spec["label_method"])) if spec.get("label_method") != null \
 				else Q.translate(spec.get("label", ""))
+		elif spec["kind"] == "slider":
+			item["slider"] = Q.translate(spec.get("label", ""))
+			item["value"] = _slider_value(spec)
+		elif spec["kind"] == "rebind":
+			item["rebind"] = Q.translate(spec.get("label", ""))
+			item["key"] = "..." if _waiting == i else Q.key_name(spec["action"])
 		else:
 			item["field"] = Q.translate(spec.get("label", ""))
 			item["value"] = str(_read(spec["bind"], spec.get("game", false)))
 		items.append(item)
-	return {"kind": "menu", "player": player, "shown": active(), "focus": focus, "items": items}
+	var view := {"kind": "menu", "player": player, "shown": active(), "focus": focus, "items": items}
+	if _scroll != null:
+		view["scroll"] = _scroll.scroll_vertical   # pixels scrolled down (rows=)
+	return view
 
 
 # For the rollback.
@@ -177,7 +253,7 @@ func active() -> bool:
 
 
 func _physics_process(_delta: float) -> void:
-	if _editing >= 0:
+	if _editing >= 0 or _waiting >= 0:
 		return
 	if not active():
 		_pointer_seen = null   # a pointer that moved while it was away does not choose when it comes back
@@ -197,16 +273,88 @@ func _physics_process(_delta: float) -> void:
 			if hit >= 0:
 				focus = hit
 	var at := shown.find(focus)
+	var sliding: bool = _items[focus]["spec"]["kind"] == "slider"
+	var moved := int(Q.tapped(_a("right"))) - int(Q.tapped(_a("left")))
 	if Q.tapped(_a("down")):
-		focus = shown[(at + 1) % shown.size()]
+		focus = shown[(at + _columns) % shown.size()] if _columns > 1 else shown[(at + 1) % shown.size()]
 	elif Q.tapped(_a("up")):
-		focus = shown[(at - 1 + shown.size()) % shown.size()]
+		focus = shown[(at - _columns + shown.size() * _columns) % shown.size()] if _columns > 1 \
+			else shown[(at - 1 + shown.size()) % shown.size()]
+	elif moved != 0 and sliding:
+		var spec: Dictionary = _items[focus]["spec"]
+		_slide(spec, _slider_value(spec) + moved * float(spec["step"]))
+	elif moved != 0 and _columns > 1:
+		focus = shown[(at + moved + shown.size()) % shown.size()]
 	if Q.tapped(_a("select")):
 		var target := focus
 		if Q.held(_a("click")) and pointer != null:
 			target = _item_at(pointer)
 		if target >= 0:
-			_choose(target)
+			if _items[target]["spec"]["kind"] == "slider" and Q.held(_a("click")) and pointer != null:
+				_slide_to(target, pointer)   # where on the bar it was clicked
+			else:
+				_choose(target)
+	if _scroll != null:
+		_scroll.ensure_control_visible.call_deferred(_items[focus]["control"])
+
+
+func _slider_value(spec: Dictionary) -> float:
+	if spec.get("bus") != null:
+		return Q.volume(str(spec["bus"]))
+	return float(_read(spec["bind"], spec.get("game", false)))
+
+
+# A slider's new value: within min and max, on a step from min.
+func _slide(spec: Dictionary, v: float) -> void:
+	var lo := float(spec["min"])
+	var step := float(spec["step"])
+	v = clampf(lo + roundf((v - lo) / step) * step, lo, float(spec["max"]))
+	if spec.get("bus") != null:
+		Q.set_volume(str(spec["bus"]), v)
+	elif spec.get("game", false):
+		G.set(spec["bind"], v)
+	else:
+		_scene.set(spec["bind"], v)
+	Q.event("slide", {"slider": Q.translate(spec.get("label", "")), "value": v})
+
+
+func _slide_to(i: int, p: Vector2) -> void:
+	focus = i
+	var bar: HSlider = _items[i]["bar"]
+	var r := bar.get_global_rect()
+	var spec: Dictionary = _items[i]["spec"]
+	var k := clampf((p.x - r.position.x) / maxf(r.size.x, 1.0), 0.0, 1.0)
+	_slide(spec, float(spec["min"]) + k * (float(spec["max"]) - float(spec["min"])))
+
+
+# A key waiting (qg:rebind): the next key, mouse button or joypad button pressed is the action's.
+func _input(event: InputEvent) -> void:
+	if _waiting < 0 or not event.is_pressed() or event.is_echo():
+		return
+	var action: String = _items[_waiting]["spec"]["action"]
+	var chosen: InputEvent = null
+	if event is InputEventKey:
+		if (event as InputEventKey).physical_keycode == KEY_ESCAPE:
+			_waiting = -1   # as it was
+			get_viewport().set_input_as_handled()
+			return
+		var key := InputEventKey.new()
+		key.physical_keycode = (event as InputEventKey).physical_keycode
+		chosen = key
+	elif event is InputEventMouseButton:
+		var mb := InputEventMouseButton.new()
+		mb.button_index = (event as InputEventMouseButton).button_index
+		chosen = mb
+	elif event is InputEventJoypadButton:
+		var jb := InputEventJoypadButton.new()
+		jb.button_index = (event as InputEventJoypadButton).button_index
+		jb.device = event.device
+		chosen = jb
+	if chosen == null:
+		return
+	_waiting = -1
+	Q.rebind(action, chosen)
+	get_viewport().set_input_as_handled()
 
 
 func _choose(i: int) -> void:
@@ -216,6 +364,10 @@ func _choose(i: int) -> void:
 	if spec["kind"] == "button":
 		if _scene.has_method(spec["handler"]):
 			_scene.call(spec["handler"], null, null)
+	elif spec["kind"] == "rebind":
+		_waiting = i
+	elif spec["kind"] == "slider":
+		pass   # left and right change it
 	else:
 		_editing = i
 		var line: LineEdit = _items[i]["line"]
@@ -240,4 +392,10 @@ func _refresh() -> void:
 			var value := str(_read(spec["bind"], spec.get("game", false)))
 			if entry["line"].text != value:
 				entry["line"].text = value
+		if spec["kind"] == "slider":
+			var v := _slider_value(spec)
+			entry["bar"].value = v
+			entry["value"].text = str(int(v)) if v == floorf(v) else str(snappedf(v, 0.01))
+		if spec["kind"] == "rebind":
+			entry["value"].text = "..." if _waiting == i else Q.key_name(spec["action"])
 		c.modulate = Color(1, 1, 1) if i == focus else Color(0.62, 0.62, 0.62)

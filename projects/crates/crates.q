@@ -45,10 +45,10 @@
   <qg:spritesheet name="people" src="assets/people.png" tile="16" />
   <qg:spritesheet name="faces" src="assets/faces.png" tile="32" />
 
-  <qg:sound name="push" src="assets/kenney/audio/block.ogg" />
-  <qg:sound name="open" src="assets/kenney/audio/powerup.ogg" />
-  <qg:sound name="pick" src="assets/kenney/audio/coin.ogg" />
-  <qg:sound name="done" src="assets/kenney/audio/win.ogg" />
+  <qg:sound bus="effects" name="push" src="assets/kenney/audio/block.ogg" />
+  <qg:sound bus="effects" name="open" src="assets/kenney/audio/powerup.ogg" />
+  <qg:sound bus="effects" name="pick" src="assets/kenney/audio/coin.ogg" />
+  <qg:sound bus="effects" name="done" src="assets/kenney/audio/win.ogg" />
   <qg:particles name="dust" preset="smoke" color="#c8c0b0" />
   <qg:particles name="cheer" preset="confetti" />
 
@@ -69,6 +69,9 @@
     <qg:animation name="fly" frames="11,12" fps="4" />
     <qg:on-screen-exit><qg:destroy /></qg:on-screen-exit>
   </qg:prefab>
+
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-button action="restart" label="R" x="304" y="176" size="24" />
 
   <qg:language lang="pt" name="Português">
     <qg:phrase text="New game" as="Novo jogo" />
@@ -101,7 +104,15 @@
     <qg:phrase text="That's the lot. Good work!" as="É tudo. Bom trabalho!" />
     <qg:phrase text="Another shift?" as="Mais um turno?" />
     <qg:phrase text="Home time." as="Hora de ir para casa." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opções" />
+    <qg:phrase text="OPTIONS" as="OPÇÕES" />
+    <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Back" as="Voltar" />
+    <qg:phrase text="Restart" as="Recomeçar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="New game" as="Nueva partida" />
     <qg:phrase text="Continue" as="Continuar" />
@@ -133,7 +144,15 @@
     <qg:phrase text="That's the lot. Good work!" as="Eso es todo. ¡Buen trabajo!" />
     <qg:phrase text="Another shift?" as="¿Otro turno?" />
     <qg:phrase text="Home time." as="Hora de volver a casa." />
-  </qg:language>
+      <qg:phrase text="Options" as="Opciones" />
+    <qg:phrase text="OPTIONS" as="OPCIONES" />
+    <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Restart" as="Reiniciar" />
+</qg:language>
 
   <!-- ===== The title ===== -->
 
@@ -142,6 +161,7 @@
     <qg:menu position="center">
       <qg:button label="New game"><qg:goto-scene name="dock" fade="0.3" /></qg:button>
       <qg:button label="Continue" if="{has_save()}"><qg:continue /></qg:button>
+      <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('Language') + ': ' + language()}"><qg:next-language /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -274,6 +294,18 @@
       <qg:text value="{tr(tiled('title')) + '   ' + tr('PADS') + ' ' + str(placed()) + '/' + str(count('crate'))}" />
       <qg:text bind="message" />
     </qg:hud>
+  </qg:scene>
+
+  <!-- ===== Options: how loud, the full screen, the keys; kept between runs ===== -->
+
+  <qg:scene name="options" width="320" height="192" background="#20283a">
+    <qg:hud position="top-center" size="24"><qg:text value="{tr('OPTIONS')}" /></qg:hud>
+    <qg:menu position="center" size="12">
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Restart" action="restart" />
+      <qg:button label="Back"><qg:goto-scene name="title" /></qg:button>
+    </qg:menu>
   </qg:scene>
 
 </q:application>

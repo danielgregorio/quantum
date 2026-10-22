@@ -49,7 +49,10 @@ _FUNCTIONS = {
     'talking': 'Q.talking(self)',            # a qg:dialogue is open (qg:say)
     'tr': 'Q.translate({0})',                # a text in the player's language (qg:language)
     'language': 'Q.language_name()',         # the name of the language shown, in it (English: the game's own)
-    'has_save': 'Q.has_save()',              # a qg:save is there to continue
+    'has_save': {0: 'Q.has_save()',          # a qg:save is there to continue
+                 1: 'Q.has_save({0})'},      # ...in that slot (qg:save slot=)
+    'volume': 'Q.volume({0})',               # how loud a bus is, 0 to 100 (qg:volume, a menu's qg:slider)
+    'fullscreen': 'Q.fullscreen()',          # the game fills the screen (qg:fullscreen)
     'distance': 'Q.distance({0}, {1})',      # pixels between two things or characters (INF when one is gone)
     'nearest': 'Q.nearest({0}, {1})',        # the character of that id, or thing of that tag, nearest the first
     'sees': 'Q.sees({0}, {1})',              # no solid tile of the tilemap between the two

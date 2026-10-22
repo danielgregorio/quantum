@@ -61,6 +61,7 @@ class SceneScript:
     items_used: List[tuple] = field(default_factory=list)  # (item, line) from qg:give and qg:take
     states_used: List[tuple] = field(default_factory=list)    # (name, line) from become
     scenes_used: List[tuple] = field(default_factory=list)    # (name, line) from goto-scene
+    buses: Optional[set] = None   # the buses of the game's sounds (qg:sound bus=), for qg:volume
     paths_used: List[tuple] = field(default_factory=list)     # (name, line) from spawn at="path"
     dialogues_used: List[tuple] = field(default_factory=list)  # (name, line) from qg:say
     net_used: List[Optional[int]] = field(default_factory=list)   # lines of qg:host, qg:join, qg:leave
@@ -678,12 +679,27 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
             return f'Q.goto_scene(self, {json.dumps(el.get("name"))}, {float(fade)!r})'
         return f'Q.goto_scene(self, {json.dumps(el.get("name"))})'
     if el.tag == 'save':
+        slot = compile_expression(el.get('slot'), scope, el.line) if el.get('slot') is not None else 'null'
         if el.get('scene'):
             script.scenes_used.append((el.get('scene'), el.line))
+        if el.get('slot') is not None:
+            return f'Q.save_game(self, {json.dumps(el.get("scene") or "")}, {slot})'
+        if el.get('scene'):
             return f'Q.save_game(self, {json.dumps(el.get("scene"))})'
         return 'Q.save_game(self)'
     if el.tag == 'continue':
+        if el.get('slot') is not None:
+            return f'Q.continue_game(self, {compile_expression(el.get("slot"), scope, el.line)})'
         return 'Q.continue_game(self)'
+    if el.tag == 'volume':
+        if script.buses is not None and el.get('bus') not in script.buses:
+            raise GameCompileError(f'<qg:volume bus="{el.get("bus")}">: no qg:sound is heard on that bus (buses: '
+                                   f'{", ".join(sorted(script.buses)) or "none: give a qg:sound bus="})', el.line)
+        return f'Q.set_volume({json.dumps(el.get("bus"))}, float({compile_expression(el.get("value"), scope, el.line)}))'
+    if el.tag == 'fullscreen':
+        if el.get('on') is None:
+            return 'Q.set_fullscreen(not Q.fullscreen())'
+        return f'Q.set_fullscreen(bool({compile_expression(el.get("on"), scope, el.line)}))'
     if el.tag == 'next-language':
         return 'Q.next_language()'
     if el.tag == 'checkpoint':

@@ -7,7 +7,7 @@ outline: [2, 3]
 
 **[All the games on one page →](https://quantumframework.net/games/)**
 
-Thirteen games written in the game language, each a single `.q` file in
+Fourteen games written in the game language, each a single `.q` file in
 [`projects/`](https://github.com/danielgregorio/quantum/tree/main/projects), built by
 `quantum run`, replayed in CI from input tapes, and exported here by Godot
 4.4.1 for the browser, Linux and Windows. The browser builds run as
@@ -18,6 +18,16 @@ Source column below, or **View the source** on the games page): every line
 highlighted and numbered, each tag a link to its entry in
 [the reference](/targets/games), and what a tag or an attribute does shown
 when it is pointed at.
+
+Each game has its options: **Options** on its title (or, in Robot, Drift and
+the RPG, in the menu Escape opens): how loud the music and the sounds are, the
+full screen, and the keys, each chosen by pressing it; they are kept for the
+next time. On a phone's browser the games show their controls under the
+fingers: a stick and the buttons each game needs. Keep keeps three games
+apart: each of **Game 1**, **Game 2** and **Game 3** starts anew or goes on
+where it was left. `scripts/export-games.py` also builds a Mac app
+(`--preset macOS`), and with the Android SDK an `.apk` (`--preset Android`);
+`--preset iOS` writes an Xcode project for a Mac to build.
 
 Pong, Arena, Chess and Towers are played by two, on one keyboard or over the
 network: on the title, one machine chooses **Host a game**, the other types

@@ -33,10 +33,10 @@
   <qg:spritesheet name="sky" src="assets/sky.png" tile="2458x480" />
   <qg:spritesheet name="hills" src="assets/hills.png" tile="2048x480" />
 
-  <qg:sound name="jump" src="assets/jump.wav" />
-  <qg:sound name="shoot" src="assets/shoot.wav" />
-  <qg:sound name="coin" src="assets/coin_pickup.wav" />
-  <qg:sound name="explode" src="assets/explode.wav" />
+  <qg:sound bus="effects" name="jump" src="assets/jump.wav" />
+  <qg:sound bus="effects" name="shoot" src="assets/shoot.wav" />
+  <qg:sound bus="effects" name="coin" src="assets/coin_pickup.wav" />
+  <qg:sound bus="effects" name="explode" src="assets/explode.wav" />
 
   <qg:prefab name="Coin" tag="coin" sheet="coin" frame="0" hitbox="20x20" scale="0.65">
     <qg:animation name="walk" frames="0,1,2,3,2,1" fps="6" />
@@ -69,16 +69,34 @@
              shape="-174.04,-0.43; -94.04,-23.61; 91.84,-28.64; 80.29,-5.16; -54.32,0.04; -179.99,26.44" />
 
   <!-- the game in Portuguese and Spanish (a web page's ?lang=pt, the command line's q-lang, or the system's language) -->
+    <!-- on a phone: what the keys do, under a finger, in every scene -->
+  <qg:touch-stick x="80" y="400" size="110" />
+  <qg:touch-button action="jump" label="A" x="720" y="410" size="72" />
+  <qg:touch-button action="shoot" label="B" x="640" y="430" size="64" />
+  <qg:touch-button action="pause" label="II" x="770" y="30" size="40" />
+
   <qg:language lang="pt" name="Português">
     <qg:phrase text="COINS" as="MOEDAS" />
     <qg:phrase text="Resume" as="Continuar" />
     <qg:phrase text="Restart" as="Recomeçar" />
-  </qg:language>
+      <qg:phrase text="Sounds" as="Sons" />
+    <qg:phrase text="Full screen" as="Tela cheia" />
+    <qg:phrase text="on" as="sim" />
+    <qg:phrase text="off" as="não" />
+    <qg:phrase text="Jump" as="Pular" />
+    <qg:phrase text="Shoot" as="Atirar" />
+</qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="COINS" as="MONEDAS" />
     <qg:phrase text="Resume" as="Continuar" />
     <qg:phrase text="Restart" as="Reiniciar" />
-  </qg:language>
+      <qg:phrase text="Sounds" as="Sonidos" />
+    <qg:phrase text="Full screen" as="Pantalla completa" />
+    <qg:phrase text="on" as="sí" />
+    <qg:phrase text="off" as="no" />
+    <qg:phrase text="Jump" as="Saltar" />
+    <qg:phrase text="Shoot" as="Disparar" />
+</qg:language>
   <qg:scene name="level" width="800" height="480" background="#52c9ff">
     <!-- level/background/parallax_background.tscn: a base scale of 0.1 times each layer's -->
     <qg:parallax sheet="sky" scroll="0.02" />
@@ -189,6 +207,11 @@
       <qg:button label="Restart">
         <qg:goto-scene name="level" />
       </qg:button>
+      <!-- beyond the demo: the options, kept between runs -->
+      <qg:slider label="Sounds" bus="effects" />
+      <qg:button label="{tr('Full screen') + ': ' + (tr('on') if fullscreen() else tr('off'))}"><qg:fullscreen /></qg:button>
+      <qg:rebind label="Jump" action="jump" />
+      <qg:rebind label="Shoot" action="shoot" />
     </qg:menu>
   </qg:scene>
 
