@@ -239,8 +239,8 @@ class _Compiler:
             sounds[name] = {'src': self._asset(el.get('src'), el.line), 'loop': el.get('loop')}
             if el.get('bus'):
                 if el.get('bus') == 'Master':
-                    raise GameCompileError(f'<qg:sound bus="Master">: Master is every bus together; name a bus of '
-                                           f'your own (music, effects)', el.line)
+                    raise GameCompileError('<qg:sound bus="Master">: Master is every bus together; name a bus of '
+                                           'your own (music, effects)', el.line)
                 sounds[name]['bus'] = el.get('bus')
             gdprops.attach(sounds[name], 'AudioStreamPlayer', el.gd, f'<qg:sound name="{name}">', el.line)
         self.sounds = sounds
