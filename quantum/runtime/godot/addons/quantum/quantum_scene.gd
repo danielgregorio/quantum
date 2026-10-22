@@ -184,15 +184,29 @@ func _physics_process(_delta: float) -> void:
 			call(q_on_release[action], null, null)
 	for cursor in q_cursors:
 		var p: int = cursor.player
-		var select: String = "select" if p == 1 else "p%d_select" % p
-		if not Q.tapped(select):
-			continue
-		var handler = q_on_select.get(str(p), q_on_select.get("0"))
-		if handler == null:
-			continue
-		var at: Dictionary = cursor.where()
-		var other = Q.thing_at(self, "", at["x"], at["y"])
-		call(handler, at, other)
+		for action in _select_actions():
+			if not Q.tapped(action if p == 1 else "p%d_%s" % [p, action]):
+				continue
+			var suffix: String = "" if action == "select" else ":" + action
+			var handler = q_on_select.get(str(p) + suffix, q_on_select.get("0" + suffix))
+			if handler == null:
+				continue
+			var at: Dictionary = cursor.where()
+			var other = Q.thing_at(self, "", at["x"], at["y"])
+			call(handler, at, other)
+
+
+# The actions qg:on-select answers: select, and those of its action= (a right click).
+var _select_actions_: Array = []
+
+
+func _select_actions() -> Array:
+	if _select_actions_.is_empty():
+		for key in q_on_select.keys():
+			var action: String = "select" if not ":" in str(key) else str(key).split(":")[1]
+			if not action in _select_actions_:
+				_select_actions_.append(action)
+	return _select_actions_
 
 
 # --- qg:on-screen-exit and qg:on-screen-enter ---

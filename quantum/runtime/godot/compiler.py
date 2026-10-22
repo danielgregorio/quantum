@@ -35,7 +35,7 @@ DEFAULT_INPUTS = {
     # the mouse button alone: a menu tells a click (what is under the pointer) from Enter (what has the focus)
     'click': ['MouseLeft'],
 }
-MOUSE_BUTTONS = {'MouseLeft': 1, 'MouseRight': 2, 'MouseMiddle': 3}
+MOUSE_BUTTONS = {'MouseLeft': 1, 'MouseRight': 2, 'MouseMiddle': 3, 'WheelUp': 4, 'WheelDown': 5}
 
 # Joypad names a qg:input may use: Godot's button index, or an axis and its sign.
 JOY_BUTTONS = {'JoyA': 0, 'JoyB': 1, 'JoyX': 2, 'JoyY': 3, 'JoySelect': 4, 'JoyStart': 6, 'JoyL': 9, 'JoyR': 10,
@@ -949,10 +949,15 @@ class _Compiler:
                                   'handler': compile_handler(script, f'_on_screen_{len(on_screen)}', el.children,
                                                              el.line)})
             elif el.tag == 'on-select':
-                key = str(el.get('player') or 0)
+                action = el.get('action')
+                if action not in self.actions:
+                    raise GameCompileError(f'<qg:on-select action="{action}">: no such action (the defaults are '
+                                           f'{", ".join(DEFAULT_INPUTS)}; a qg:input declares another)', el.line)
+                # "2": player 2's select; "0:sell": anyone's sell (a right click on a thing)
+                key = str(el.get('player') or 0) + ('' if action == 'select' else ':' + action)
                 if key in on_select:
-                    raise GameCompileError('two <qg:on-select> for the same player', el.line)
-                on_select[key] = compile_handler(script, f'_on_select_{key}', el.children, el.line,
+                    raise GameCompileError('two <qg:on-select> for the same player and action', el.line)
+                on_select[key] = compile_handler(script, f'_on_select_{_ident(key.replace(":", "_"))}', el.children, el.line,
                                                  params=('cursor', 'other'))
             elif el.tag == 'cursor':
                 if el.get('sheet'):

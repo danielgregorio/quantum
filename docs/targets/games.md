@@ -895,11 +895,12 @@ Goes inside: `qg:scene`.
 
 ### `qg:on-select`
 
-What happens when a player presses select with their qg:cursor somewhere. Holds actions and statements; `cursor` is where (x, y, col, row, player), `other` the thing under it, or null.
+What happens when a player presses select with their qg:cursor somewhere (or another action: action= with a qg:input of the right mouse button, MouseRight, is a right click on a thing). Holds actions and statements; `cursor` is where (x, y, col, row, player), `other` the thing under it, or null. `hovered()` reads the thing under a cursor at any time.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `player` | integer |  | only this player's cursor (any, when not given) |
+| `action` | a name | `select` | the action that chooses: select (the left button, Enter), or one a qg:input declares (keys="MouseRight", "WheelUp", "WheelDown") |
 
 Goes inside: `qg:scene`.
 
@@ -1698,7 +1699,7 @@ Goes inside: `qg:scene`.
 
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core's. `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core's. `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
 
 ## `gd:` attributes
 
@@ -3994,6 +3995,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <qg:input action="buy-gatling" keys="1" />
   <qg:input action="buy-explosive" keys="2" />
+  <!-- the mouse's other buttons: the right one sells a tower, the wheel changes the one to build -->
+  <qg:input action="sell" keys="MouseRight, X" />
+  <qg:input action="other-tower" keys="WheelUp, WheelDown, Tab" />
   <qg:multiplayer players="2" delay="3" start="map" />
 
   <!-- The gatling shoots a bullet at the nearest dino in range every half
@@ -4066,6 +4070,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Back" as="Voltar" />
     <qg:phrase text="Turret 1" as="Torre 1" />
     <qg:phrase text="Turret 2" as="Torre 2" />
+    <qg:phrase text="Right click sells this tower for" as="Clique direito vende esta torre por" />
+    <qg:phrase text="Right click: sell a tower   Wheel or Tab: the other tower" as="Clique direito: vender uma torre   Roda ou Tab: a outra torre" />
 </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="TOWERS" as="TORRES" />
@@ -4088,6 +4094,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Back" as="Volver" />
     <qg:phrase text="Turret 1" as="Torre 1" />
     <qg:phrase text="Turret 2" as="Torre 2" />
+    <qg:phrase text="Right click sells this tower for" as="Clic derecho vende esta torre por" />
+    <qg:phrase text="Right click: sell a tower   Wheel or Tab: the other tower" as="Clic derecho: vender una torre   Rueda o Tab: la otra torre" />
 </qg:language>
 
   <!-- The title: alone, or two builders on two machines. -->
@@ -4129,6 +4137,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
     <qg:on-input action="buy-gatling"><q:set name="choice" value="Gatling" /></qg:on-input>
     <qg:on-input action="buy-explosive"><q:set name="choice" value="Explosive" /></qg:on-input>
+    <qg:on-input action="other-tower">
+      <q:set name="choice" value="{'Explosive' if choice == 'Gatling' else 'Gatling'}" />
+    </qg:on-input>
 
     <!-- A click: on a tower, its upgrade; on free ground, the chosen tower, if the gold is there. -->
     <qg:on-select>
@@ -4145,6 +4156,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
           <q:set name="gold" value="{gold - 70}" />
           <qg:spawn prefab="Explosive" at="cursor" />
         </q:if>
+      </q:if>
+    </qg:on-select>
+
+    <!-- A right click on a tower sells it: 25 gold, 50 upgraded. -->
+    <qg:on-select action="sell">
+      <q:if condition="{other != null and other.tag == 'tower'}">
+        <q:set name="gold" value="{gold + (50 if other.state == 'level2' else 25)}" />
+        <qg:destroy target="other" />
       </q:if>
     </qg:on-select>
 
@@ -4186,6 +4205,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:counter bind="enemies" label="Dinos" />
       <qg:text bind="choice" />
       <qg:text bind="status" />
+      <!-- the mouse over a tower: what it sells for (this machine's player's cursor) -->
+      <qg:text value="{(tr('Right click sells this tower for') + ' ' + str(50 if hovered(max(net_player(), 1)).state == 'level2' else 25)) if hovered(max(net_player(), 1)) != null and hovered(max(net_player(), 1)).tag == 'tower' else tr('Right click: sell a tower   Wheel or Tab: the other tower')}" />
     </qg:hud>
   </qg:scene>
 

@@ -21,6 +21,9 @@
 
   <qg:input action="buy-gatling" keys="1" />
   <qg:input action="buy-explosive" keys="2" />
+  <!-- the mouse's other buttons: the right one sells a tower, the wheel changes the one to build -->
+  <qg:input action="sell" keys="MouseRight, X" />
+  <qg:input action="other-tower" keys="WheelUp, WheelDown, Tab" />
   <qg:multiplayer players="2" delay="3" start="map" />
 
   <!-- The gatling shoots a bullet at the nearest dino in range every half
@@ -93,6 +96,8 @@
     <qg:phrase text="Back" as="Voltar" />
     <qg:phrase text="Turret 1" as="Torre 1" />
     <qg:phrase text="Turret 2" as="Torre 2" />
+    <qg:phrase text="Right click sells this tower for" as="Clique direito vende esta torre por" />
+    <qg:phrase text="Right click: sell a tower   Wheel or Tab: the other tower" as="Clique direito: vender uma torre   Roda ou Tab: a outra torre" />
 </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="TOWERS" as="TORRES" />
@@ -115,6 +120,8 @@
     <qg:phrase text="Back" as="Volver" />
     <qg:phrase text="Turret 1" as="Torre 1" />
     <qg:phrase text="Turret 2" as="Torre 2" />
+    <qg:phrase text="Right click sells this tower for" as="Clic derecho vende esta torre por" />
+    <qg:phrase text="Right click: sell a tower   Wheel or Tab: the other tower" as="Clic derecho: vender una torre   Rueda o Tab: la otra torre" />
 </qg:language>
 
   <!-- The title: alone, or two builders on two machines. -->
@@ -156,6 +163,9 @@
 
     <qg:on-input action="buy-gatling"><q:set name="choice" value="Gatling" /></qg:on-input>
     <qg:on-input action="buy-explosive"><q:set name="choice" value="Explosive" /></qg:on-input>
+    <qg:on-input action="other-tower">
+      <q:set name="choice" value="{'Explosive' if choice == 'Gatling' else 'Gatling'}" />
+    </qg:on-input>
 
     <!-- A click: on a tower, its upgrade; on free ground, the chosen tower, if the gold is there. -->
     <qg:on-select>
@@ -172,6 +182,14 @@
           <q:set name="gold" value="{gold - 70}" />
           <qg:spawn prefab="Explosive" at="cursor" />
         </q:if>
+      </q:if>
+    </qg:on-select>
+
+    <!-- A right click on a tower sells it: 25 gold, 50 upgraded. -->
+    <qg:on-select action="sell">
+      <q:if condition="{other != null and other.tag == 'tower'}">
+        <q:set name="gold" value="{gold + (50 if other.state == 'level2' else 25)}" />
+        <qg:destroy target="other" />
       </q:if>
     </qg:on-select>
 
@@ -213,6 +231,8 @@
       <qg:counter bind="enemies" label="Dinos" />
       <qg:text bind="choice" />
       <qg:text bind="status" />
+      <!-- the mouse over a tower: what it sells for (this machine's player's cursor) -->
+      <qg:text value="{(tr('Right click sells this tower for') + ' ' + str(50 if hovered(max(net_player(), 1)).state == 'level2' else 25)) if hovered(max(net_player(), 1)) != null and hovered(max(net_player(), 1)).tag == 'tower' else tr('Right click: sell a tower   Wheel or Tab: the other tower')}" />
     </qg:hud>
   </qg:scene>
 

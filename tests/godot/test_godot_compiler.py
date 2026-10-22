@@ -2767,3 +2767,30 @@ class TestSequencesAndRumble:
         assert '<qg:on-input> takes action= (or sequence=)' in e.message
         e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:rumble strength="2" /></qg:on-input>\n'))
         assert 'strength= 0 to 1' in e.message
+
+
+class TestMouseButtons:
+    """PLAN_GAMES_3.md, Phase 6: the right button, the wheel and hover (Towers' sell)."""
+
+    def test_an_on_select_of_another_action_and_the_wheel(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:input action="sell" keys="MouseRight" />
+  <qg:input action="turn" keys="WheelUp, WheelDown" />
+  <qg:scene name="main">
+    <q:set name="n" value="0" type="number" />
+    <qg:cursor player="1" />
+    <qg:on-select><q:set name="n" value="1" /></qg:on-select>
+    <qg:on-select action="sell"><q:set name="n" value="2" /></qg:on-select>
+    <qg:hud><qg:text value="{'over' if hovered() != null else ''}" /></qg:hud>
+  </qg:scene>
+''' + TAIL)
+        data = json.loads((out / 'game.json').read_text())
+        assert data['scenes']['main']['on_select'] == {'0': '_on_select_0', '0:sell': '_on_select_0_sell'}
+        assert {'mouse_button': 4} in data['inputs']['turn'] and {'mouse_button': 5} in data['inputs']['turn']
+        assert 'Q.hovered(self, 1)' in (out / 'scripts' / 'scene_main.gd').read_text()
+
+    def test_what_on_select_refuses(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '  <qg:scene name="main"><qg:on-select action="sell" /></qg:scene>\n' + TAIL)
+        assert '<qg:on-select action="sell">: no such action' in e.message
+        e = refuse(tmp_path, HEAD + '  <qg:input action="sell" keys="MouseRight" />\n  <qg:scene name="main">'
+                   '<qg:on-select action="sell" /><qg:on-select action="sell" /></qg:scene>\n' + TAIL)
+        assert 'two <qg:on-select> for the same player and action' in e.message

@@ -98,6 +98,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
   Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
   seven games and six refusals more.
+- Laboratory: the mouse's other buttons and hover, from Phase 6 of
+  `PLAN_GAMES_3.md`, for Towers. `<qg:on-select action=>` chooses with
+  another of the player's actions (a `qg:input` of `MouseRight` is a right
+  click on a thing); `WheelUp` and `WheelDown` in `keys=` turn the wheel into
+  an action; `hovered()` is the thing under a player's cursor. Towers sells a
+  tower with a right click, changes the tower to build with the wheel, and
+  says what the tower under the mouse sells for. Characters blocking each
+  other, the first item of the phase, needed nothing: they already stop at
+  each other and stand on each other's heads, now in a test
+  (`tests/godot/test_godot_bodies.py`), and Rally's cars bump.
 - Laboratory: multiplayer and the play protocol, Phase 5 of
   `PLAN_GAMES_3.md`. Choosing the seat: `--q-seat=N` on joining (taken, the
   joiner is turned away, and the game goes on), `seat=` on the play

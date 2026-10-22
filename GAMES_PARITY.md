@@ -142,7 +142,7 @@ declarative shape for it.
 | Triggers, and touching | `Area2D`, `body_entered`, `area_entered` | `isTrigger`, `OnTriggerEnter2D`, `OnTriggerStay2D` | `qg:zone`, `qg:exit`, a prefab that is not solid; `qg:on-collision with=` (`me`, `other`), `cooldown=` re-runs it while still touching | covered |
 | When a contact ends | `body_exited`, `area_exited` | `OnTriggerExit2D`, `OnCollisionExit2D` | `qg:on-separate with=` on a character or a prefab (not when the other is destroyed, nor on a pause) | covered |
 | The side of a contact | `KinematicCollision2D.get_normal()` | `ContactPoint2D.normal` | `side=` `top` (a stomp), `bottom` (a bump), `left`, `right` (a shield in front: Siege's ram) | covered |
-| Layers and masks | `collision_layer`, `collision_mask` (32 layers) | Layer Collision Matrix, `ContactFilter2D` | fixed: tiles and solids stop bodies; things and characters overlap and are told apart by `tag=` | partial: two characters pass through each other |
+| Layers and masks | `collision_layer`, `collision_mask` (32 layers) | Layer Collision Matrix, `ContactFilter2D` | fixed: tiles, solids and characters stop bodies (two characters stop at each other, and a platformer stands on its partner's head); things overlap and are told apart by `tag=` | partial: the layers are fixed by kind, not chosen |
 | Pushing things | `move_and_slide()` + script | script, or Dynamic bodies | `pushable="true"` on a solid prefab: a grid walker's step pushes it a cell on, when the cell beyond is free (Crates) | covered |
 | Slopes | `floor_max_angle`, `floor_snap_length` | `Rigidbody2D.Slide` and its slide-movement settings | `qg:tile shape=` slopes (Robot); `gd:floor_max_angle` | covered |
 | Collision shapes | rectangle, circle, capsule, polygon, segment | box, circle, capsule, polygon, edge, composite | `hitbox="WxH"` for bodies and things; polygons for solids and tiles | partial: no circle or capsule (Creeps' capsule is a rectangle) |
@@ -227,7 +227,7 @@ declarative shape for it.
 | Vibration | `Input.start_joy_vibration()` | `Gamepad.SetMotorSpeeds()` | `qg:rumble player= strength= seconds=`, a phone in the hand too (Arena's blast and knock-outs) | covered |
 | Mouse buttons and pointer | `InputEventMouseButton`, `get_global_mouse_position()` | `Mouse.current` | `MouseLeft`, `MouseRight`, `MouseMiddle`; `qg:cursor` (`step=`, `grid=`, `sheet=`), `cursor.x`, `cursor.y`, `cursor.col`, `cursor.row` | covered |
 | Clicking a thing | `input_event` on a `CollisionObject2D` | `OnMouseDown`, `IPointerClickHandler` | `qg:on-select` (`other` is the thing under the cursor) | covered |
-| Right-click on a thing, wheel, hover | `MOUSE_BUTTON_WHEEL_UP`, `mouse_entered` | `Mouse.scroll`, `IPointerEnterHandler` | — (`qg:on-select` answers select only) | gap |
+| Right-click on a thing, wheel, hover | `MOUSE_BUTTON_WHEEL_UP`, `mouse_entered` | `Mouse.scroll`, `IPointerEnterHandler` | `qg:on-select action=` with a `qg:input` of `MouseRight`; keys `WheelUp`, `WheelDown`; `hovered()` (Towers sells a tower, and says for how much) | covered |
 | Touch | `InputEventScreenTouch`, the mouse emulated from touch | `Touchscreen`, EnhancedTouch | a tap is a click; `qg:touch-button` and `qg:touch-stick` take a finger each | partial: no gestures |
 | On-screen buttons and sticks | `TouchScreenButton` | `OnScreenButton`, `OnScreenStick` | `qg:touch-button action=` and `qg:touch-stick` press the game's actions (strength() for the stick), on a touch screen or always (every game has them) | covered |
 | On press | `is_action_just_pressed()` | `performed` | `qg:on-input action=`; a press between two ticks is kept for the next one | covered |
@@ -422,7 +422,7 @@ declarative shape for it.
 | Game rules: health, shots, pickups | 10 | 0 | 0 | 0 | 10 |
 | AI and navigation | 9 | 0 | 1 | 1 | 11 |
 | Camera | 9 | 1 | 0 | 0 | 10 |
-| Input | 12 | 1 | 1 | 0 | 14 |
+| Input | 13 | 1 | 0 | 0 | 14 |
 | Audio | 5 | 2 | 2 | 1 | 10 |
 | Particles and visual effects | 5 | 0 | 0 | 1 | 6 |
 | Lighting, shaders and post-processing | 0 | 1 | 2 | 3 | 6 |
@@ -435,12 +435,12 @@ declarative shape for it.
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 5 | 0 | 0 | 1 | 6 |
 | Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **189** | **27** | **12** | **23** | **251** |
+| **Total** | **190** | **27** | **11** | **23** | **251** |
 
-Of 251 rows, 189 are covered and 27 partial; 12 are gaps, and 23 are left
+Of 251 rows, 190 are covered and 27 partial; 11 are gaps, and 23 are left
 out by design: three in four covered (146, 42 and 40 when the map was made;
 Phase 1 of PLAN_GAMES_3.md covered nine rows, Phase 2 twelve more, Phase 3
-nine more, Phase 4 ten more, Phase 5 four more). The gaps left gather in
+nine more, Phase 4 ten more, Phase 5 four more, Phase 6 one so far). The gaps left gather in
 audio, lighting and localization (two each), the rest of Phase 6's list. The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
@@ -469,10 +469,10 @@ above is in this list, and so are many **partial** ones.
 14. **Lines, beams and trails.** *Done: PLAN_GAMES_3.md, Phase 2.* `<qg:beam from= to= color= width=>` between two things, `trail=` on a prefab. Laser turrets (Towers' ray turret), grappling hooks, a fast ship's wake.
 15. **Click to move.** *Done: PLAN_GAMES_3.md, Phase 3.* `controller="pointer"`: the character walks, by the shortest way over the free cells, to where its `qg:cursor` selects. Point-and-click adventures, tactics.
 16. **Jump buffering.** *Done: PLAN_GAMES_3.md, Phase 2.* `buffer-frames=` on `controller="platformer"` and on `qg:jump`: a press just before landing still jumps. Every platformer.
-17. **The other mouse button, the wheel, hover.** `action=` on `qg:on-select` (`cancel` for a right-click), `MouseWheelUp` and `MouseWheelDown` in `keys=`, `qg:on-select on="hover"`. Strategy (selling a tower, as Towers' README asks), point-and-click (look or use).
+17. **The other mouse button, the wheel, hover.** *Done: PLAN_GAMES_3.md, Phase 6, in Towers: `WheelUp`/`WheelDown`, and `hovered()` for hover.* `action=` on `qg:on-select` (`cancel` for a right-click), `MouseWheelUp` and `MouseWheelDown` in `keys=`, `qg:on-select on="hover"`. Strategy (selling a tower, as Towers' README asks), point-and-click (look or use).
 18. **Dialogue choices, portraits, typewriter text.** *Done: PLAN_GAMES_3.md, Phase 3.* `<qg:choice label=>` holding actions inside a `qg:line`, `portrait=` on `qg:line`, `speed=` on `qg:dialogue`. RPGs, visual novels.
 19. **HUD layout and pictures.** *Done: PLAN_GAMES_3.md, Phase 4.* `bottom-left` and `bottom-right`, `color=` on HUD items, `if=` on `qg:hud`, and `<qg:icon sheet= frame=>` in a HUD. Every game's HUD; a title with a logo.
-20. **Characters that block each other.** `blocks="characters"` on `qg:character`. Co-op platformers (standing on a partner), sports.
+20. **Characters that block each other.** *Not a gap: PLAN_GAMES_3.md's Phase 6 found it so already.* A character is a body on the layer tiles and solids are on: two stop at each other, and a platformer stands on its partner's head (`tests/godot/test_godot_bodies.py`; Rally's cars bump). Co-op platformers, sports.
 21. **Things made of things.** *Done: PLAN_GAMES_3.md, Phase 3.* `<qg:attach target= to= dx= dy=>` (and `qg:detach`), and `extends=` on `qg:prefab`. A carried item, a turret on a tank, a family of enemies that differ in one number.
 22. **Animated tiles.** *Done: PLAN_GAMES_3.md, Phase 3.* `frames=` and `fps=` on `qg:tile`. Water, lava and torches in any tile game.
 23. **Emitters on things.** *Done: PLAN_GAMES_3.md, Phase 2.* `particles=` on a prefab or a character, kept going where it is. An engine's flame, a burning enemy, a carried torch.

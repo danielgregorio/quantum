@@ -390,6 +390,33 @@ that needs it is written, under the same rules.
 | Nine-slice images | today's menus have no frames that stretch | a game with framed dialogue boxes |
 | Music and sounds within a scene | boss music and footsteps only; `qg:music` per scene covers the rest | a boss fight in Hopper or Delve |
 
+- [x] characters that block each other: already so, found by testing it (below)
+- [x] mouse right button, wheel, hover (Towers' sell)
+- [ ] music and sounds within a scene (a boss fight)
+- [ ] positional sound
+- [ ] nine-slice; plurals, assets and fonts per language (the RPG)
+- [ ] 2D lights and shadows (Delve)
+- [ ] isometric and hexagonal maps, terrain costs (a tactics game)
+- [ ] hot reload
+
+What was found (2026-10-22): characters already block each other. A
+character is a `CharacterBody2D` on the physics layer the tiles and solids
+are on, masking it, so two stop at each other and a platformer stands on its
+partner's head; the map said they passed through. A test says it now
+(`tests/godot/test_godot_bodies.py`), and Rally's cars bump. Fighters keep
+their own rule (they do not cross on the ground), and ships pass through.
+
+What was built (2026-10-22), for Towers: the right button, the wheel and
+hover. `action=` on `qg:on-select` makes another of the player's actions
+choose with the cursor (a `qg:input` of `MouseRight` is a right click), and
+the keys `WheelUp` and `WheelDown` press an action as the wheel turns; both
+are actions, so the replay and the lockstep carry them as they carry keys.
+`hovered()` (or `hovered(2)`) is the thing under a player's cursor: the
+cursor's point travels with the input, so it is the same on every machine.
+Towers sells a tower with a right click (or X: 25 gold, 50 upgraded),
+changes the tower to build with the wheel (or Tab), and says in its HUD what
+the tower under the mouse sells for.
+
 Out by design (also in the map): rigid-body physics, which breaks the
 lockstep's determinism; shaders and post-processing, which are code; a
 scene editor, which is Godot's and Tiled's; and RPCs and node sync, which the

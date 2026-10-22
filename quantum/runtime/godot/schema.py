@@ -371,9 +371,13 @@ TAGS: Dict[str, Tag] = {
          'points': Attr('str', required=True, doc='x,y pairs separated by semicolons: 0,100; 200,100; 200,300')},
         parents=('scene',)),
     'on-select': Tag(
-        'What happens when a player presses select with their qg:cursor somewhere. Holds actions and statements; '
-        '`cursor` is where (x, y, col, row, player), `other` the thing under it, or null.',
-        {'player': Attr('int', None, doc='only this player\'s cursor (any, when not given)')},
+        'What happens when a player presses select with their qg:cursor somewhere (or another action: action= '
+        'with a qg:input of the right mouse button, MouseRight, is a right click on a thing). Holds actions and '
+        'statements; `cursor` is where (x, y, col, row, player), `other` the thing under it, or null. '
+        '`hovered()` reads the thing under a cursor at any time.',
+        {'player': Attr('int', None, doc='only this player\'s cursor (any, when not given)'),
+         'action': Attr('ident', 'select', doc='the action that chooses: select (the left button, Enter), or one '
+                                               'a qg:input declares (keys="MouseRight", "WheelUp", "WheelDown")')},
         parents=('scene',)),
     'menu': Tag(
         'A list of buttons (and text fields) over the scene. A player moves through it with up/down and '

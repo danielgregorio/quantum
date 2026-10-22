@@ -303,6 +303,19 @@ static func beam(ctx, a, b, seconds: float, color: String, width: float) -> void
 	event("beam", {"from": who(a), "to": who(b)})
 
 
+# hovered(): the thing under a player's qg:cursor, or null. The cursor's
+# point travels with the input, so it is the same on every machine.
+static func hovered(ctx, player: int):
+	var scene := _current_scene(ctx)
+	if scene == null or not "q_cursors" in scene:
+		return null
+	for cursor in scene.q_cursors:
+		if is_instance_valid(cursor) and cursor.player == player:
+			var at: Dictionary = cursor.where()
+			return thing_at(scene, "", at["x"], at["y"])
+	return null
+
+
 # qg:rumble: the player's joypad shakes, and a phone in the hand. Felt only:
 # nothing in the game depends on it. Over the network only the machine of that
 # player's seat feels it, on its own pad; on one machine, player N's is the

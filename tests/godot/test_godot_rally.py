@@ -91,6 +91,13 @@ def test_the_barrier_holds_the_grid_until_the_green_light(rally, godot):
         assert any(e['kind'] == 'destroy' for e in off['events'])
 
 
+def test_the_cars_bump(rally, godot):
+    with PlaySession(rally, binary=godot) as game:
+        _race(game)
+        met = game.act(hold=['up'], player=2, ticks=40)['state']['nodes']   # blue drives up into red
+        assert met['blue']['y'] - met['red']['y'] == pytest.approx(12, abs=0.5)   # side to side, not through
+
+
 def test_a_lap_counts_only_after_halfway(rally, godot):
     with PlaySession(rally, binary=godot) as game:
         start = _race(game)

@@ -128,7 +128,7 @@ intention:
     - "qg:on-separate (in a character or prefab) runs when it stops touching something of tag with= it touched; not when that thing is destroyed"
     - "qg:on-screen-exit (in a character or prefab, or in a scene with of= a tag) runs when it leaves the screen (the camera's view, or the scene), by side= any, top, bottom, left or right"
     - "qg:on-screen-enter runs when it comes onto the screen from outside it, by side="
-    - "qg:on-select (in a scene) runs when a player presses select with their cursor somewhere; cursor and other (the thing under it) are in reach"
+    - "qg:on-select (in a scene) runs when a player presses select with their cursor somewhere; cursor and other (the thing under it) are in reach; action= makes another action choose (a qg:input with keys=MouseRight is a right click, WheelUp and WheelDown the wheel), and hovered() is the thing under a cursor at any time (hover)"
     - "qg:on-end (in a qg:dialogue) runs after its last line; in a qg:tween, when it is done, with me the thing it moved (a tween in it plays next: a sequence)"
     - "qg:timer (in a scene) runs after= ticks once, or every= ticks from from=, count= times"
 

@@ -1016,6 +1016,24 @@
       "tags": [
         "rumble"
       ]
+    },
+    {
+      "id": "game-bad-059",
+      "intent": "A right click with no action for it",
+      "input": {
+        "natural_language": "A right click on a tower sells it, with no action declared for the right button",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:scene name=\"main\">\n    <qg:cursor player=\"1\" />\n    <qg:on-select action=\"sell\"><q:set name=\"x\" value=\"1\" /></qg:on-select>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:on-select action=\"sell\">: no such action"
+      },
+      "why_invalid": "A cursor chooses with one of the game's actions; sell is not one until a qg:input gives it a key or a button.",
+      "correction": "Declare it: <qg:input action=\"sell\" keys=\"MouseRight\" />.",
+      "tags": [
+        "on-select",
+        "action"
+      ]
     }
   ]
 }

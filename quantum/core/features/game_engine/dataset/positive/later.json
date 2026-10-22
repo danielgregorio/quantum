@@ -1,0 +1,29 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "later",
+  "description": "What the items of PLAN_GAMES_3.md's Phase 6 say, each written for the game that asked for it",
+  "examples": [
+    {
+      "id": "game-later-001",
+      "intent": "Selling with a right click",
+      "input": {
+        "natural_language": "In a tower game, a right click on a tower sells it, the wheel changes the tower to build, and pointing at a tower says what it sells for",
+        "context": {
+          "target": "godot",
+          "file": "game-later-001.q"
+        }
+      },
+      "tags": [
+        "on-select",
+        "action",
+        "hovered",
+        "cursor",
+        "input"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"sell\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"gold\" value=\"100\" type=\"number\" />\n  <qg:input action=\"sell\" keys=\"MouseRight, X\" />\n  <qg:input action=\"other-tower\" keys=\"WheelUp, WheelDown, Tab\" />\n  <qg:prefab name=\"Tower\" tag=\"tower\" sheet=\"tiles\" frame=\"140\" hitbox=\"18x18\" />\n  <qg:prefab name=\"Wall\" tag=\"tower\" sheet=\"tiles\" frame=\"2\" hitbox=\"18x18\" />\n  <qg:scene name=\"field\" width=\"320\" height=\"240\">\n    <q:set name=\"choice\" value=\"Tower\" />\n    <qg:cursor player=\"1\" grid=\"18\" sheet=\"tiles\" frame=\"140\" />\n    <qg:on-input action=\"other-tower\">\n      <q:set name=\"choice\" value=\"{'Wall' if choice == 'Tower' else 'Tower'}\" />\n    </qg:on-input>\n    <!-- a click builds; a right click sells what is under the cursor -->\n    <qg:on-select>\n      <q:if condition=\"{other == null and gold >= 20}\">\n        <q:set name=\"gold\" value=\"{gold - 20}\" />\n        <q:if condition=\"{choice == 'Tower'}\"><qg:spawn prefab=\"Tower\" at=\"cursor\" /></q:if>\n        <q:if condition=\"{choice == 'Wall'}\"><qg:spawn prefab=\"Wall\" at=\"cursor\" /></q:if>\n      </q:if>\n    </qg:on-select>\n    <qg:on-select action=\"sell\">\n      <q:if condition=\"{other != null and other.tag == 'tower'}\">\n        <q:set name=\"gold\" value=\"{gold + 10}\" />\n        <qg:destroy target=\"other\" />\n      </q:if>\n    </qg:on-select>\n    <qg:hud position=\"top-left\">\n      <qg:counter bind=\"gold\" label=\"Gold\" />\n      <qg:text value=\"{'Right click sells it for 10' if hovered() != null else choice}\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    }
+  ]
+}

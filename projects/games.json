@@ -41,7 +41,7 @@
      "check": {"scene": "title", "press": ["Enter", "Space"], "then": "level-1"}},
     {"name": "towers", "title": "Towers", "players": "2 players · network",
      "blurb": "A tower defense: turrets that shoot the nearest dino, dinos down a road in waves, gold and a base to keep. Alone or two builders over the network.",
-     "controls": "The mouse (or the arrows) points, click or Enter builds; 1 and 2 choose the turret; click a turret to upgrade it.",
+     "controls": "The mouse (or the arrows) points, click or Enter builds; 1 and 2 (or the wheel, or Tab) choose the turret; click a turret to upgrade it, right click (or X) to sell it.",
      "check": {"scene": "title", "press": ["Enter"], "then": "map"}},
     {"name": "bricks", "title": "Bricks", "players": "1–4 players · network",
      "blurb": "A brick breaker: three levels written as lines of letters, steel bricks of two hits, bomb bricks that break their neighbours, the last brick in slow motion. Alone, or two to four paddles over the network.",

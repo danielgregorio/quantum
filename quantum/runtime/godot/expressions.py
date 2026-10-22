@@ -49,6 +49,8 @@ _FUNCTIONS = {
     'talking': 'Q.talking(self)',            # a qg:dialogue is open (qg:say)
     'tr': 'Q.translate({0})',                # a text in the player's language (qg:language)
     'language': 'Q.language_name()',         # the name of the language shown, in it (English: the game's own)
+    'hovered': {0: 'Q.hovered(self, 1)',     # the thing under player 1's qg:cursor, or null (hover)
+                1: 'Q.hovered(self, {0})'},  # ...under that player's
     'has_save': {0: 'Q.has_save()',          # a qg:save is there to continue
                  1: 'Q.has_save({0})'},      # ...in that slot (qg:save slot=)
     'volume': 'Q.volume({0})',               # how loud a bus is, 0 to 100 (qg:volume, a menu's qg:slider)
