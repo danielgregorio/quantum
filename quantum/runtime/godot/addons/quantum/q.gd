@@ -13,6 +13,8 @@ var _sounds: Dictionary = {}   # name -> AudioStreamPlayer
 var cursors: Dictionary = {}
 var raw_cursor: Vector2 = Vector2.ZERO
 var tape_cursor = null   # the replay tape's pointer (Vector2), instead of the mouse
+var tape_mouse = null    # where the mouse was, as a watched session is played again (godot_watch.gd)
+var mouse_seen = null    # where the cursors last saw the mouse, which godot_watch.gd records
 var sounds_played: Array = []  # names, in order — the replay harness reads it
 
 # --- the input of the tick ---

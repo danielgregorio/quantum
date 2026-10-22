@@ -21,6 +21,7 @@ of your own anywhere: text where statements go is a compile error.
 ```bash
 quantum run game.q            # writes projects/<id>/godot/, which Godot opens, runs and exports
 quantum run game.q --check    # ...and opens it headless: any script error fails the build
+quantum run game.q --watch    # plays it; each save builds again and the game goes on where it was
 python scripts/godot.py install   # the pinned Godot, into ~/.cache/quantum/godot
 ```
 

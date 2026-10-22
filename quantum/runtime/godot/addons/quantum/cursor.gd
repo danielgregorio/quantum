@@ -40,7 +40,9 @@ func _physics_process(_delta: float) -> void:
 		if Q.tape_cursor != null:
 			_pos = Q.tape_cursor
 		else:
-			var mouse := get_global_mouse_position()
+			# the mouse; or where it was, as `quantum run --watch` plays a session again (godot_watch.gd)
+			var mouse: Vector2 = Q.tape_mouse if Q.tape_mouse != null else get_global_mouse_position()
+			Q.mouse_seen = mouse
 			if mouse != _mouse_seen:
 				_mouse_seen = mouse
 				_pos = mouse

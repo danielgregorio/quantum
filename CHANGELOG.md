@@ -98,6 +98,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
   Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
   seven games and six refusals more.
+- Laboratory: hot reload, from Phase 6 of `PLAN_GAMES_3.md`. `quantum run
+  game.q --watch` plays the game in Godot and records what is pressed; each
+  save of the .q (or of a file beside it) builds it again, and the game
+  comes back on the new build at the same tick, by playing the session's
+  inputs again quickly. A build the compiler refuses is printed and the game
+  plays on. Tested in Godot (`tests/godot/test_godot_hot_reload.py`).
 - Laboratory: Marches (`projects/marches/marches.q`), a skirmish on a map of
   hexes, turn by turn: three riders hold a keep by a river against four
   raiders. Written for Phase 6 of `PLAN_GAMES_3.md`: `shape="hex"` (or

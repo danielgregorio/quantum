@@ -397,7 +397,7 @@ that needs it is written, under the same rules.
 - [x] nine-slice; plurals, assets and fonts per language (the RPG)
 - [x] 2D lights and shadows (Delve)
 - [x] isometric and hexagonal maps, terrain costs (Marches, a tactics game)
-- [ ] hot reload
+- [x] hot reload
 
 What was found (2026-10-22): characters already block each other. A
 character is a `CharacterBody2D` on the physics layer the tiles and solids
@@ -488,6 +488,21 @@ travels end, with a `qg:on-end`; and `cost(a, b)`, what that way costs, for
 the HUD and the rules. `qg:walk` was the first name, but it is already a
 part of `ai="behavior"`. A Tiled map of hexes is not read yet, and the
 walls of a hex map cast no shadows.
+
+What was built (2026-10-22): hot reload. `quantum run game.q --watch` plays
+the game in Godot through `quantum/runtime/godot_watch.gd`, which records
+what is pressed, tick by tick, and where the mouse is (as the cursors read
+it, so a pointer the keys move goes on moving). The watcher looks at the .q
+and the files beside it twice a second; on a change it builds again, and a
+build the compiler refuses is printed while the game plays on. A new build
+asks the game to write its tape and quit; started again on the new build,
+it plays the tape again sixteen ticks a frame (the lockstep's catching up)
+and the person is back at the same tick, under the new rules. Every run
+starts from the same fresh saves, so the tape is the same game. The game
+restarts rather than swapping its scripts in place: a running scene's
+state belongs to the old rules, and the replay is what the tests already
+trust. Typing in a qg:field is not recorded yet, and a game over the
+network is not watched.
 
 Out by design (also in the map): rigid-body physics, which breaks the
 lockstep's determinism; shaders and post-processing, which are code; a

@@ -14,7 +14,7 @@
 > with Crates: nine rows more, and gaps 6, 13, 15, 18, 21, 22 and 26; Phase 4,
 > into every game: ten rows more, and gaps 9, 10, 11, 19, 29, 33 and 42;
 > Phase 5, with Rally: four rows more, and gaps 32, 35 and 39; Phase 6, a game
-> at a time: eleven rows more so far, and gaps 12, 17, 34, 36, 37, 38, 40 and 41).
+> at a time: twelve rows more, and gaps 12, 17, 34, 36, 37, 38, 40, 41 and 43).
 
 Each row is one feature a 2D game is made of, as Godot 4.4 and Unity 6 (URP
 2D with its packages: 2D Tilemap, Physics 2D, Input System, Cinemachine 3,
@@ -403,7 +403,7 @@ declarative shape for it.
 | A level editor | the TileMap editor | the Tile Palette | Tiled (`.tmx`), or CSV rows | covered |
 | Editor support | the GDScript language server | C# in Visual Studio, Rider, VS Code | `quantum-lsp` and `vscode-quantum` from `schema.py`: completion, hover, required attributes, values | covered |
 | A reference that cannot go stale | the class reference | the Scripting Reference | `docs/targets/games.md`, generated from `schema.py`; a test fails when it is stale | covered |
-| Hot reload | script and scene sync while running | domain reload; Hot Reload (third party) | — (rebuild with `quantum run`) | gap |
+| Hot reload | script and scene sync while running | domain reload; Hot Reload (third party) | `quantum run game.q --watch`: each save builds again, and the game plays the session's inputs again on the new build, quickly, to the same tick | covered |
 | Debugging | breakpoints, the remote scene tree, Visible Collision Shapes | breakpoints, the Inspector in Play Mode, gizmos | Godot's debugger on the generated GDScript; `play_view` and the `map` | partial: no breakpoint on a line of the `.q` |
 | Profiling | the profiler, the visual profiler, monitors | Profiler, Frame Debugger, Memory Profiler | Godot's, on the generated project | by design: performance is the runtime's |
 | Playing by hand, a step at a time | — | — | `quantum play rpg` (the console) | covered |
@@ -435,15 +435,15 @@ declarative shape for it.
 | Multiplayer and networking | 13 | 2 | 0 | 2 | 17 |
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 5 | 0 | 0 | 1 | 6 |
-| Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **201** | **25** | **2** | **23** | **251** |
+| Tooling | 5 | 1 | 0 | 2 | 8 |
+| **Total** | **202** | **25** | **1** | **23** | **251** |
 
-Of 251 rows, 201 are covered and 25 partial; 2 are gaps, and 23 are left
+Of 251 rows, 202 are covered and 25 partial; 1 is a gap, and 23 are left
 out by design: four in five covered (146, 42 and 40 when the map was made;
 Phase 1 of PLAN_GAMES_3.md covered nine rows, and the clock in an expression,
 its `ticks()`, counted late; Phase 2 twelve more, Phase 3 nine more, Phase 4
-ten more, Phase 5 four more, Phase 6 eleven so far, and a frame for boxes). The gaps left
-are hot reload, the last of Phase 6's list, and adaptive music. The rows
+ten more, Phase 5 four more, Phase 6 twelve, and a frame for boxes). The gap left is
+adaptive music, which no game has asked for. The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
 lockstep makes unnecessary.
@@ -497,7 +497,7 @@ above is in this list, and so are many **partial** ones.
 40. **Nine-slice pictures.** *Done: PLAN_GAMES_3.md, Phase 6, for the RPG's dialogues and fight menu.* `slice=` on `qg:spritesheet`, for boxes that stretch. Dialogue boxes, framed menus.
 41. **Isometric and hexagonal maps.** *Done: PLAN_GAMES_3.md, Phase 6, for Marches (hexes; diamonds tested, no game yet).* `shape="hex"` or `"iso"` on `qg:tileset`, with neighbours and pathfinding to match. Strategy and tactics games.
 42. **macOS builds.** *Done: PLAN_GAMES_3.md, Phase 4.* A `macOS` preset in `scripts/export-games.py`. Desktop releases.
-43. **Hot reload.** `quantum run game.q --watch`: rebuild on save and come back to the same tick from the session's tape. Whoever writes a game.
+43. **Hot reload.** *Done: PLAN_GAMES_3.md, Phase 6.* `quantum run game.q --watch`: rebuild on save and come back to the same tick from the session's tape. Whoever writes a game.
 
 ## What Quantum has that neither engine has
 
