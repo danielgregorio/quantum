@@ -2527,6 +2527,7 @@ export const gameTags: TagSchema[] = [
             { name: 'volume', description: 'decibels added (-6: about half as loud)', type: 'number', default: '0' },
             { name: 'pitch', description: '2: an octave up, 0.5: an octave down', type: 'number', default: '1' },
             { name: 'vary', description: 'a random pitch between pitch - vary and pitch + vary, each time: twenty hits that do not sound the same', type: 'number', default: '0' },
+            { name: 'at', description: 'heard from where a thing is (me, other, a character id, or a parameter holding one): softer and to one side the farther it is from the middle of the screen, silent two screens away. A thing\'s own sounds (its fire-sound, a leap\'s or a shot\'s sound=) are heard where it is', type: 'string' },
         ]
     },
     {

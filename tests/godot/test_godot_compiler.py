@@ -2823,3 +2823,26 @@ class TestMusicWithinAScene:
         assert '<qg:play> takes sound= or sounds=, one of them' in e.message
         e = refuse(tmp_path, self.scene('    <qg:on-input action="jump"><qg:play sounds="hit, boom" /></qg:on-input>\n'))
         assert '<qg:play sound="boom">: no qg:sound of that name' in e.message
+
+
+class TestPositionalSound:
+    """PLAN_GAMES_3.md, Phase 6: at= on qg:play, a sound heard from where a thing is (Hopper's bouncer)."""
+
+    def test_a_sound_from_a_thing(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />
+  <qg:sound name="clank" src="assets/kenney/audio/block.ogg" />
+  <qg:scene name="main">
+    <qg:character id="hero" controller="platformer" sheet="c" x="10" y="10" hitbox="10x10">
+      <qg:on-collision with="coin"><qg:play sound="hit" at="other" /><qg:play sounds="hit, clank" at="hero" /></qg:on-collision>
+    </qg:character>
+  </qg:scene>
+''' + TAIL)
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'Q.play("hit", 0.0, 1.0, 0.0, other)' in script
+        assert 'Q.play_one(["hit", "clank"], 0.0, 1.0, 0.0, get_node_or_null("hero"))' in script
+
+    def test_a_sound_from_nothing_there(self, tmp_path):
+        e = refuse(tmp_path, HEAD + '  <qg:sound name="hit" src="assets/kenney/audio/stomp.ogg" />\n'
+                   '  <qg:scene name="main"><qg:on-input action="jump"><qg:play sound="hit" at="foe" /></qg:on-input>'
+                   '</qg:scene>\n' + TAIL)
+        assert '<qg:play at="foe"> outside a handler that has' in e.message

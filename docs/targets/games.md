@@ -972,6 +972,7 @@ Plays a qg:sound. Directly in a scene: as the scene is entered. With volume=, pi
 | `volume` | number | `0.0` | decibels added (-6: about half as loud) |
 | `pitch` | number | `1.0` | 2: an octave up, 0.5: an octave down |
 | `vary` | number | `0.0` | a random pitch between pitch - vary and pitch + vary, each time: twenty hits that do not sound the same |
+| `at` | a name |  | heard from where a thing is (me, other, a character id, or a parameter holding one): softer and to one side the farther it is from the middle of the screen, silent two screens away. A thing's own sounds (its fire-sound, a leap's or a shot's sound=) are heard where it is |
 
 Goes inside: a handler, `qg:scene`.
 
@@ -1802,6 +1803,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:sound bus="effects" name="block" src="assets/kenney/audio/block.ogg" />
   <qg:sound bus="effects" name="powerup" src="assets/kenney/audio/powerup.ogg" />
   <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
+  <!-- the bouncer's hop: heard from where it is, to one side, softer the farther off -->
+  <qg:sound bus="effects" name="hop" src="assets/kenney/audio/jump.ogg" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="sparkle" preset="stars" color="#ffe060" />
@@ -1822,13 +1825,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:prefab name="Lift" tag="lift" sheet="kenney" frame="43" hitbox="18x8" solid="true"
              ai="shuttle" dy="-80" period="240" />
 
-  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps -->
+  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps;
+       each hop is heard from where it is, so it is heard before it is seen -->
   <qg:prefab name="Bouncer" tag="enemy" sheet="chars" frame="11" hitbox="18x18" ai="behavior" speed="36"
              turns-at="edge">
     <qg:animation name="walk" frames="11,12" fps="4" />
     <qg:behavior>
       <qg:gravity />
-      <qg:leap height="20" every="45" when="{true}" />
+      <qg:leap height="20" every="45" when="{true}" sound="hop" />
       <qg:patrol heading="left" distance="18" />
     </qg:behavior>
   </qg:prefab>

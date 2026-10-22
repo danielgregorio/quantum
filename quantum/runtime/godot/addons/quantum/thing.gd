@@ -346,7 +346,7 @@ func _fire() -> void:
 	var below := position + Vector2(0, hitbox_size.y / 2.0 + 4.0) * (-1.0 if heading == Vector2.UP else 1.0)
 	Q.spawn_at(_scene_of(), fire_prefab, below)
 	if fire_sound != "":
-		Q.play(fire_sound)
+		Q.play(fire_sound, 0.0, 1.0, 0.0, self)   # heard where it is
 
 
 # ai="path": from point to point at `speed`; at the last point it stands.
@@ -409,7 +409,7 @@ func _turret() -> void:
 			if "rotate" in shot and shot.rotate:
 				shot.call_deferred("_face_heading")
 	if fire_sound != "":
-		Q.play(fire_sound)
+		Q.play(fire_sound, 0.0, 1.0, 0.0, self)   # heard where it is
 
 
 func _scene_of() -> Node:
@@ -596,7 +596,7 @@ func _walk_and_fall(chosen: int, vx: float, delta: float) -> void:
 			_leap_next = _ticks + int(_leap["every"])
 			Q.event("leap", {"who": Q.who(self)})
 			if _leap.get("sound") != null:
-				Q.play(str(_leap["sound"]))
+				Q.play(str(_leap["sound"]), 0.0, 1.0, 0.0, self)
 	velocity.x = _spaced(Vector2(velocity.x, 0.0)).x
 	move_and_slide()
 	_bumps()
@@ -709,7 +709,7 @@ func _part_shoot(i: int, p: Dictionary) -> void:
 		if "rotate" in shot and shot.rotate:
 			shot.call_deferred("_face_heading")
 	if p.get("sound") != null:
-		Q.play(str(p["sound"]))
+		Q.play(str(p["sound"]), 0.0, 1.0, 0.0, self)
 
 
 # The nearest named character within sight, or null.

@@ -952,7 +952,11 @@ TAGS: Dict[str, Tag] = {
          'volume': Attr('float', 0.0, doc='decibels added (-6: about half as loud)'),
          'pitch': Attr('float', 1.0, doc='2: an octave up, 0.5: an octave down'),
          'vary': Attr('float', 0.0, doc='a random pitch between pitch - vary and pitch + vary, each time: '
-                                        'twenty hits that do not sound the same')},
+                                        'twenty hits that do not sound the same'),
+         'at': Attr('ident', None, doc='heard from where a thing is (me, other, a character id, or a parameter '
+                                       'holding one): softer and to one side the farther it is from the middle of '
+                                       'the screen, silent two screens away. A thing\'s own sounds (its fire-sound, '
+                                       'a leap\'s or a shot\'s sound=) are heard where it is')},
         parents=('handler', 'scene')),
     'music': Tag(
         'The music of a scene: a looping qg:sound that plays while the scene is on. Going to a scene '

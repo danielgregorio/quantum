@@ -154,7 +154,7 @@ intention:
     - "qg:watch joins a networked game at an address with no seat, to watch it (catching up on it when it has begun); the lobby has a Watch button"
     - "qg:play-animation plays an animation of a thing or character from its first frame; name='' gives it its own animations back"
     - "qg:set-tile puts a tile in a cell of the tilemap or empties it; collision and pathfinding follow; tile_at(col, row) reads a cell"
-    - "qg:play plays a qg:sound, with volume=, pitch= and vary=; directly in a scene, as it is entered; sounds= plays one of several each time (footsteps, bones)"
+    - "qg:play plays a qg:sound, with volume=, pitch= and vary=; directly in a scene, as it is entered; sounds= plays one of several each time (footsteps, bones); at= plays it from where a thing is, softer and to one side the farther from the middle of the screen, as a thing's own sounds are (a leap's, a shot's)"
     - "qg:stop stops a qg:sound; directly in a scene, as it is entered"
     - "qg:emit plays a qg:particles effect once where a thing is, or text= floats a number up from it (a damage number)"
     - "qg:beam draws a line between two things for seconds=, following them (a laser, a zap, an aiming line)"

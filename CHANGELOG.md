@@ -98,6 +98,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
   Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
   seven games and six refusals more.
+- Laboratory: positional sound, from Phase 6 of `PLAN_GAMES_3.md`, for
+  Hopper. `at=` on `qg:play` plays a sound from where a thing is: softer and
+  to one side the farther it is from the middle of the screen, silent two
+  screens away. A thing's own sounds (its `fire-sound=`, a leap's or a
+  shot's `sound=`) now come from where it is. Hopper's bouncer hops with a
+  sound, heard from its side before it is seen. The `sound` event says where
+  a sound came from.
 - Laboratory: music and sounds within a scene, from Phase 6 of
   `PLAN_GAMES_3.md`, for Delve. `qg:music` in a handler changes the music
   there and then, crossfading over `fade=`; Delve's vault has a warden, the

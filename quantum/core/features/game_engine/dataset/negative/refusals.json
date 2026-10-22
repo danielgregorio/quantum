@@ -1051,6 +1051,24 @@
       "tags": [
         "music"
       ]
+    },
+    {
+      "id": "game-bad-061",
+      "intent": "A sound from a thing the handler does not have",
+      "input": {
+        "natural_language": "A pickup sound played from the coin, in a key handler",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"ping\" src=\"assets/kenney/audio/coin.ogg\" />\n  <qg:scene name=\"main\">\n    <qg:on-input action=\"jump\"><qg:play sound=\"ping\" at=\"coin\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:play at=\"coin\"> outside a handler that has"
+      },
+      "why_invalid": "at= names a thing the handler can reach: me, other, a character id, or a parameter holding one; a key handler has none called coin.",
+      "correction": "Play it where the coin is touched: in qg:on-collision with=\"coin\", at=\"other\".",
+      "tags": [
+        "play",
+        "at"
+      ]
     }
   ]
 }

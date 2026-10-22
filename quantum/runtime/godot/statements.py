@@ -437,13 +437,20 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
             raise GameCompileError('<qg:play>: pitch= more than 0, vary= 0 or more and less than pitch=', el.line)
         if (el.get('sound') is None) == (el.get('sounds') is None):
             raise GameCompileError('<qg:play> takes sound= or sounds=, one of them', el.line)
+        at = el.get('at')
+        if at is not None and not scope.has(at):
+            raise GameCompileError(f'<qg:play at="{at}"> outside a handler that has {at!r} (me, other, a character '
+                                   f'id, or a parameter holding a thing)', el.line)
+        where = f', {scope.reference(at)}' if at is not None else ''
         if el.get('sounds') is not None:   # one of several, drawn each time
             names = [n.strip() for n in str(el.get('sounds')).split(',') if n.strip()]
             if len(names) < 2:
                 raise GameCompileError('<qg:play sounds=>: two sounds or more, separated by commas', el.line)
             script.sounds_played.extend(names)
-            return f'Q.play_one({json.dumps(names)}, {volume!r}, {pitch!r}, {vary!r})'
+            return f'Q.play_one({json.dumps(names)}, {volume!r}, {pitch!r}, {vary!r}{where})'
         script.sounds_played.append(el.get('sound'))
+        if where:
+            return f'Q.play({json.dumps(el.get("sound"))}, {volume!r}, {pitch!r}, {vary!r}{where})'
         if (volume, pitch, vary) == (0.0, 1.0, 0.0):
             return f'Q.play({json.dumps(el.get("sound"))})'
         return f'Q.play({json.dumps(el.get("sound"))}, {volume!r}, {pitch!r}, {vary!r})'

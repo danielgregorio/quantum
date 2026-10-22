@@ -38,6 +38,8 @@
   <qg:sound bus="effects" name="block" src="assets/kenney/audio/block.ogg" />
   <qg:sound bus="effects" name="powerup" src="assets/kenney/audio/powerup.ogg" />
   <qg:sound bus="effects" name="win" src="assets/kenney/audio/win.ogg" />
+  <!-- the bouncer's hop: heard from where it is, to one side, softer the farther off -->
+  <qg:sound bus="effects" name="hop" src="assets/kenney/audio/jump.ogg" />
 
   <!-- effects: only seen, the game's state never depends on them -->
   <qg:particles name="sparkle" preset="stars" color="#ffe060" />
@@ -58,13 +60,14 @@
   <qg:prefab name="Lift" tag="lift" sheet="kenney" frame="43" hitbox="18x8" solid="true"
              ai="shuttle" dy="-80" period="240" />
 
-  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps -->
+  <!-- an enemy made of parts: it hops to and fro on the snow, and over what it bumps;
+       each hop is heard from where it is, so it is heard before it is seen -->
   <qg:prefab name="Bouncer" tag="enemy" sheet="chars" frame="11" hitbox="18x18" ai="behavior" speed="36"
              turns-at="edge">
     <qg:animation name="walk" frames="11,12" fps="4" />
     <qg:behavior>
       <qg:gravity />
-      <qg:leap height="20" every="45" when="{true}" />
+      <qg:leap height="20" every="45" when="{true}" sound="hop" />
       <qg:patrol heading="left" distance="18" />
     </qg:behavior>
   </qg:prefab>

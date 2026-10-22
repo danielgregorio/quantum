@@ -393,7 +393,7 @@ that needs it is written, under the same rules.
 - [x] characters that block each other: already so, found by testing it (below)
 - [x] mouse right button, wheel, hover (Towers' sell)
 - [x] music and sounds within a scene (Delve's warden)
-- [ ] positional sound
+- [x] positional sound (Hopper's bouncer)
 - [ ] nine-slice; plurals, assets and fonts per language (the RPG)
 - [ ] 2D lights and shadows (Delve)
 - [ ] isometric and hexagonal maps, terrain costs (a tactics game)
@@ -427,6 +427,14 @@ written, so the draw (from the voices' generator, heard only) changes
 nothing a replay compares. The new music and the bones are synthesized by
 `scripts/art/delve_music.py`, which writes the old two again byte for byte.
 Layers of music that come in on the beat stay in the map.
+
+What was built (2026-10-22), for Hopper: positional sound. `at=` on
+`qg:play` plays a sound from where a thing is, and a thing's own sounds (its
+`fire-sound=`, a leap's or a shot's `sound=`) come from where it is: an
+`AudioStreamPlayer2D` at the thing's place, against the screen's camera,
+softer and to one side the farther off, silent two screens away. Hopper's
+bouncer hops with a sound, heard from the right on level 4 before it is
+close. Only heard: the `sound` event says where it came from.
 
 Out by design (also in the map): rigid-body physics, which breaks the
 lockstep's determinism; shaders and post-processing, which are code; a

@@ -1762,17 +1762,41 @@ var resimulating: bool = false   # the rollback replays old ticks: record sounds
 # pitch or a vary, it plays in a voice of its own (the same sound can then
 # overlap itself), freed when it has played. Only heard: the state records the
 # name, and the random pitch comes from a generator of its own, never the game's.
-func play(name_: String, louder: float = 0.0, pitch: float = 1.0, vary: float = 0.0) -> void:
+func play(name_: String, louder: float = 0.0, pitch: float = 1.0, vary: float = 0.0, at = null) -> void:
 	sounds_played.append(name_)
-	event("sound", {"name": name_})
+	at = _thing(at)
+	event("sound", _heard(name_, at))
 	if not resimulating:
-		_voice(name_, louder, pitch, vary)
+		_voice(name_, louder, pitch, vary, at)
 
 
-# What is heard of a sound played: as recorded, or in a voice of its own.
-func _voice(name_: String, louder: float, pitch: float, vary: float) -> void:
+# The sound event: its name, and where it was when it comes from a thing (at=).
+static func _heard(name_: String, at) -> Dictionary:
+	if at is Node2D:
+		return {"name": name_, "x": snappedf((at as Node2D).position.x, 0.1), "y": snappedf((at as Node2D).position.y, 0.1)}
+	return {"name": name_}
+
+
+# What is heard of a sound played: as recorded, or in a voice of its own. From
+# a thing (at=, a thing's own sounds), a voice where it is in the scene: softer
+# and to one side the farther it is from the middle of the screen, silent two
+# screens away. Only heard.
+func _voice(name_: String, louder: float, pitch: float, vary: float, at = null) -> void:
 	var player: AudioStreamPlayer = _sounds.get(name_)
 	if player == null:
+		return
+	if at is Node2D and is_instance_valid(at):
+		var spot := AudioStreamPlayer2D.new()
+		spot.stream = player.stream
+		spot.bus = player.bus
+		spot.volume_db = player.volume_db + louder
+		spot.pitch_scale = maxf(0.05, pitch + (_voices.randf_range(-vary, vary) if vary > 0.0 else 0.0))
+		spot.max_distance = 2.0 * float(ProjectSettings.get_setting("display/window/size/viewport_width", 256))
+		spot.position = (at as Node2D).position   # the scene's own space: it stands at the origin
+		add_child(spot)
+		spot.play()
+		var span := player.stream.get_length() if player.stream != null else 1.0
+		get_tree().create_timer(span / spot.pitch_scale + 0.1).timeout.connect(spot.queue_free)
 		return
 	if louder == 0.0 and pitch == 1.0 and vary == 0.0:
 		player.play()
@@ -1793,12 +1817,13 @@ var _voices := RandomNumberGenerator.new()   # the pitch of a voice: heard only,
 
 # qg:play sounds=: one of several, drawn by the voices' generator (heard only);
 # the state records them as written, whichever was heard.
-func play_one(names: Array, louder: float = 0.0, pitch: float = 1.0, vary: float = 0.0) -> void:
+func play_one(names: Array, louder: float = 0.0, pitch: float = 1.0, vary: float = 0.0, at = null) -> void:
 	var written := ", ".join(PackedStringArray(names))
 	sounds_played.append(written)
-	event("sound", {"name": written})
+	at = _thing(at)
+	event("sound", _heard(written, at))
 	if not resimulating and not names.is_empty():
-		_voice(names[_voices.randi_range(0, names.size() - 1)], louder, pitch, vary)
+		_voice(names[_voices.randi_range(0, names.size() - 1)], louder, pitch, vary, at)
 
 
 # qg:music: the scene's music. Another one crossfades in over `fade` seconds,

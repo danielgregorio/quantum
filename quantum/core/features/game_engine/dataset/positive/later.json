@@ -44,6 +44,26 @@
       "expected_output": {
         "quantum_code": "<q:application id=\"boss\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"level\" src=\"assets/kenney/audio/win.ogg\" loop=\"true\" bus=\"music\" />\n  <qg:sound name=\"boss\" src=\"assets/kenney/audio/powerup.ogg\" loop=\"true\" bus=\"music\" />\n  <qg:sound name=\"hit1\" src=\"assets/kenney/audio/stomp.ogg\" />\n  <qg:sound name=\"hit2\" src=\"assets/kenney/audio/block.ogg\" />\n  <qg:sound name=\"hit3\" src=\"assets/kenney/audio/hurt.ogg\" />\n  <qg:prefab name=\"Boss\" tag=\"boss\" sheet=\"people\" frame=\"18\" hitbox=\"20x22\" health=\"5\">\n    <qg:on-damage><qg:play sounds=\"hit1, hit2, hit3\" vary=\"0.1\" /></qg:on-damage>\n    <!-- the level's music back, over two seconds -->\n    <qg:on-death><qg:music sound=\"level\" fade=\"2\" /></qg:on-death>\n  </qg:prefab>\n  <qg:scene name=\"arena\" width=\"320\" height=\"240\">\n    <qg:music sound=\"level\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"120\" hitbox=\"14x14\"\n                  attack-action=\"jump\" attack-reach=\"16\">\n      <qg:on-hit with=\"boss\"><qg:damage target=\"other\" amount=\"1\" /></qg:on-hit>\n    </qg:character>\n    <qg:instance prefab=\"Boss\" name=\"boss\" x=\"260\" y=\"120\" />\n    <!-- the fight's theme, once, as the hero comes near -->\n    <qg:when condition=\"{distance(hero, boss) &lt; 120}\">\n      <qg:music sound=\"boss\" fade=\"0.5\" />\n    </qg:when>\n  </qg:scene>\n</q:application>\n"
       }
+    },
+    {
+      "id": "game-later-003",
+      "intent": "Heard before it is seen",
+      "input": {
+        "natural_language": "In a level wider than the screen, a cannon off to the right booms each time it fires, and the boom is heard from its side, softer while it is far",
+        "context": {
+          "target": "godot",
+          "file": "game-later-003.q"
+        }
+      },
+      "tags": [
+        "play",
+        "at",
+        "fire-sound",
+        "camera"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"cannon\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"boom\" src=\"assets/kenney/audio/stomp.ogg\" />\n  <qg:sound name=\"ping\" src=\"assets/kenney/audio/coin.ogg\" />\n  <qg:prefab name=\"Ball\" tag=\"ball\" sheet=\"tiles\" frame=\"151\" hitbox=\"10x10\" ai=\"fly\" heading=\"left\" speed=\"120\" />\n  <!-- a thing's own sounds come from where it is: the cannon's boom, from the right -->\n  <qg:prefab name=\"Cannon\" tag=\"cannon\" sheet=\"tiles\" frame=\"140\" hitbox=\"18x18\" ai=\"turret\" targets=\"hero\"\n             range=\"600\" fire-prefab=\"Ball\" fire-every=\"120\" fire-sound=\"boom\" />\n  <qg:scene name=\"long\" width=\"320\" height=\"180\">\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"140\" hitbox=\"14x20\">\n      <!-- and a sound played from a thing: the ball, where it hit -->\n      <qg:on-collision with=\"ball\"><qg:play sound=\"ping\" at=\"other\" /><qg:destroy target=\"other\" /></qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Cannon\" name=\"cannon\" x=\"900\" y=\"140\" />\n    <qg:camera follow=\"hero\" bounds=\"none\" />\n  </qg:scene>\n</q:application>\n"
+      }
     }
   ]
 }
