@@ -98,6 +98,20 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the pause menu of Robot, Drift and the RPG) and touch controls. Tested in
   Godot (`tests/godot/test_godot_shipping.py`); the feature's dataset has
   seven games and six refusals more.
+- Laboratory: the RPG in Russian, from Phase 6 of `PLAN_GAMES_3.md`. A
+  count's word takes the forms its language has: `tr_n(one, other, n)`, and
+  `one=`, `few=`, `many=` on a `qg:phrase` (1 зелье, 2 зелья, 5 зелий, 21
+  зелье; Polish, Czech and Slovak counted as they count, 0 singular in
+  French). `<qg:asset name= src=>` in a `qg:language` gives a sheet or a
+  sound its file in that language: the RPG's "FIGHT!" banner is drawn in each
+  of its four. `font=` on `qg:language` is a font with the letters of its
+  alphabet the game's fonts lack: every font draws them from it (the RPG's
+  Cyrillic, from Xolonium; its Latin letters stay Montserrat's). `slice=` on
+  a `qg:spritesheet` makes its first frame a frame that stretches to a box,
+  its edges as drawn: `box=` on `qg:dialogue` and `qg:menu` (the RPG's
+  dialogues and fight menu, `scripts/art/rpg_extra.py`, CC0). The RPG's HUD
+  counts "2 potions" instead of "Potions 2". Tested in Godot
+  (`tests/godot/test_godot_localized.py`, with rendered frames).
 - Laboratory: positional sound, from Phase 6 of `PLAN_GAMES_3.md`, for
   Hopper. `at=` on `qg:play` plays a sound from where a thing is: softer and
   to one side the farther it is from the middle of the screen, silent two

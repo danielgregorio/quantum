@@ -17,6 +17,15 @@ and 2007-2014 Juan Linietsky, Ariel Manzur), packed by `scripts/art/rpg.py`:
 Ulanovsky and the Montserrat project authors, under the SIL Open Font
 License 1.1 (https://openfontlicense.org).
 
+`Xolonium-Regular.ttf`, the font of the game in Russian (Montserrat has no
+Cyrillic letters), is Xolonium by Severin Meyer, under the SIL Open Font
+License 1.1 (`Xolonium-LICENSE.txt`, next to it).
+
+`frame.png` (the dialogue box's frame, a nine-slice picture) and
+`banner-en.png`, `banner-pt.png`, `banner-es.png`, `banner-ru.png` ("FIGHT!"
+in each language) are drawn for the game by `scripts/art/rpg_extra.py`, in
+the fonts above: CC0.
+
 `meadow.ogg` (the map) and `clash.ogg` (the fight) are this project's own
 music, written and synthesized by `scripts/art/rpg_music.py`, and dedicated
 to the public domain (CC0).

@@ -2846,3 +2846,76 @@ class TestPositionalSound:
                    '  <qg:scene name="main"><qg:on-input action="jump"><qg:play sound="hit" at="foe" /></qg:on-input>'
                    '</qg:scene>\n' + TAIL)
         assert '<qg:play at="foe"> outside a handler that has' in e.message
+
+
+class TestWhatTheTranslatedRpgAsked:
+    """PLAN_GAMES_3.md, Phase 6: a frame that stretches (slice=, box=), and in a qg:language a count's plural
+    forms (one= few= many=, tr_n), its own pictures and sounds (qg:asset) and a font for its alphabet (font=)."""
+
+    FRAME = '  <qg:spritesheet name="frame" src="projects/rpg/assets/frame.png" tile="48" slice="16" />\n'
+
+    def test_a_frame_for_a_dialogue_and_a_menu(self, tmp_path):
+        out = build(tmp_path, HEAD + self.FRAME + '''  <qg:spritesheet name="thin" src="projects/rpg/assets/frame.png" tile="48" slice="4, 8, 4, 8" />
+  <qg:scene name="main">
+    <qg:dialogue name="hi" box="frame"><qg:line text="Hi" /></qg:dialogue>
+    <qg:menu box="thin"><qg:button label="Go"><qg:say dialogue="hi" /></qg:button></qg:menu>
+  </qg:scene>
+''' + TAIL)
+        spec = json.loads((out / 'game.json').read_text())
+        assert spec['sheets']['frame']['slice'] == [16, 16, 16, 16] and spec['sheets']['thin']['slice'] == [4, 8, 4, 8]
+        nodes = spec['scenes']['main']['nodes']
+        assert [n.get('box') for n in nodes if n['kind'] in ('dialogue', 'menu')] == ['frame', 'thin']
+
+    def test_a_frame_that_is_not_one(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:dialogue name="hi" box="c"><qg:line text="Hi" />'
+                                  '</qg:dialogue></qg:scene>\n'))
+        assert '<qg:dialogue name="hi" box="c">: a qg:spritesheet with slice=' in e.message
+        e = refuse(tmp_path, game('  <qg:scene name="main"><qg:menu box="none"><qg:button label="Go" /></qg:menu>'
+                                  '</qg:scene>\n'))
+        assert "no qg:spritesheet or qg:tileset named 'none'" in e.message
+        e = refuse(tmp_path, game('  <qg:spritesheet name="f" src="projects/rpg/assets/frame.png" tile="48" '
+                                  'slice="24" />\n  <qg:scene name="main" />\n'))
+        assert 'edges of 24, 24, 24, 24 leave nothing to stretch in a 48x48 frame' in e.message
+        e = refuse(tmp_path, game('  <qg:spritesheet name="f" src="projects/rpg/assets/frame.png" tile="48" '
+                                  'slice="8, 8" />\n  <qg:scene name="main" />\n'))
+        assert 'its edges in pixels, 16, or left, top, right, bottom' in e.message
+
+    def test_plurals_pictures_sounds_and_a_font_in_a_language(self, tmp_path):
+        out = build(tmp_path, HEAD + '''  <qg:sound name="hello" src="assets/kenney/audio/coin.ogg" />
+  <qg:language lang="ru" name="Русский" font="projects/rpg/assets/Xolonium-Regular.ttf">
+    <qg:phrase text="potion" as="зелье" />
+    <qg:phrase text="potions" as="зелий" one="зелье" few="зелья" />
+    <qg:asset name="c" src="projects/rpg/assets/banner-ru.png" />
+    <qg:asset name="hello" src="assets/kenney/audio/jump.ogg" />
+  </qg:language>
+  <qg:language lang="pt"><qg:phrase text="potions" as="poções" one="poção" /></qg:language>
+  <qg:scene name="main">
+    <q:set name="n" value="2" type="number" />
+    <qg:hud><qg:text value="{str(n) + ' ' + tr_n('potion', 'potions', n)}" /></qg:hud>
+  </qg:scene>
+''' + TAIL)
+        spec = json.loads((out / 'game.json').read_text())
+        ru = spec['languages']['ru']
+        assert ru['plurals'] == {'potions': {'one': 'зелье', 'few': 'зелья'}} and ru['phrases']['potions'] == 'зелий'
+        assert ru['font'] == 'projects/rpg/assets/Xolonium-Regular.ttf' and 'font' not in spec['languages']['pt']
+        assert spec['sheets']['c']['srcs'] == {'ru': 'projects/rpg/assets/banner-ru.png'}
+        assert spec['sounds']['hello']['srcs'] == {'ru': 'assets/kenney/audio/jump.ogg'}
+        for f in ('projects/rpg/assets/Xolonium-Regular.ttf', 'projects/rpg/assets/banner-ru.png',
+                  'assets/kenney/audio/jump.ogg'):
+            assert (out / f).is_file()                                    # copied into the build
+        assert "Q.translate_n('potion', 'potions', " in (out / 'scripts' / 'scene_main.gd').read_text().replace('"', "'")
+
+    def test_what_a_language_has_not(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:language lang="pt"><qg:phrase text="keys" as="chaves" few="chavinhas" />'
+                                  '</qg:language>\n  <qg:scene name="main" />\n'))
+        assert "<qg:phrase few=>: a count's word in pt has no such form (its forms besides as=: one=)" in e.message
+        e = refuse(tmp_path, game('  <qg:language lang="ja"><qg:phrase text="keys" as="鍵" one="鍵" />'
+                                  '</qg:language>\n  <qg:scene name="main" />\n'))
+        assert "the same for any number" in e.message
+        e = refuse(tmp_path, game('  <qg:language lang="pt"><qg:asset name="banner" src="x.png" /></qg:language>\n'
+                                  '  <qg:scene name="main" />\n'))
+        assert '<qg:asset name="banner">: no qg:spritesheet, qg:tileset or qg:sound of that name' in e.message
+        e = refuse(tmp_path, game('  <qg:language lang="pt"><qg:asset name="c" src="projects/rpg/assets/banner-pt.png" />'
+                                  '<qg:asset name="c" src="projects/rpg/assets/banner-pt.png" /></qg:language>\n'
+                                  '  <qg:scene name="main" />\n'))
+        assert '<qg:asset name="c">: twice in lang="pt"' in e.message

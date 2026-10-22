@@ -88,7 +88,9 @@ def test_a_countdown_is_one_set_from_its_first_value_to_its_last():
 
 def test_the_games_list_says_their_languages():
     games = {g['game']: g for g in PlayTools().games()}
-    assert {name: g.get('languages') for name, g in games.items()} == {name: ['pt', 'es'] for name in games}
+    said = {name: ['pt', 'es'] for name in games}
+    said['rpg'] = ['pt', 'es', 'ru']                                     # and Russian, in another alphabet
+    assert {name: g.get('languages') for name, g in games.items()} == said
 
 
 def test_the_repository_declares_the_server():

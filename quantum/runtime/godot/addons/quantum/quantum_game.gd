@@ -87,6 +87,14 @@ func _languages(langs: Dictionary) -> void:
 	Q.languages = langs.keys()
 	for code in langs.keys():
 		Q.language_names[code] = str(langs[code].get("name", code))
+		if langs[code].has("plurals"):
+			Q.plurals[code] = langs[code]["plurals"]
+		if langs[code].has("font"):
+			var font := Q.load_font(str(langs[code]["font"]))
+			if font != null:
+				Q.language_fonts[code] = font
+	if not Q.language_fonts.is_empty():
+		Q._fonts.append(ThemeDB.fallback_font)   # the texts with no font= of their own too
 	if langs.has(wanted):
 		Q.lang = wanted
 	elif langs.has(wanted.split("_")[0]):
@@ -94,6 +102,7 @@ func _languages(langs: Dictionary) -> void:
 	else:
 		Q.lang = ""
 	TranslationServer.set_locale(Q.lang if Q.lang != "" else "en")
+	Q.language_assets()
 
 
 # Overrides for tests (several games on one machine): --q-port=N, --q-transport=websocket.

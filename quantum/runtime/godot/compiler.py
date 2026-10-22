@@ -202,6 +202,8 @@ class _Compiler:
                 tile = (tile, tile)
             sheets[name] = {'src': self._asset(el.get('src'), el.line), 'tile': list(tile),
                             'kind': el.tag}
+            if el.get('slice') is not None:
+                sheets[name]['slice'] = _slice(el.get('slice'), tile, name, el.line)
             tiles = {}
             for t in el.find_all('tile'):
                 if str(t.get('frame')) in tiles:
@@ -259,16 +261,33 @@ class _Compiler:
             code = str(lang_el.get('lang'))
             if not re.match(r'^[a-z]{2,3}(_[A-Z]{2})?$', code):
                 raise GameCompileError(f'<qg:language lang="{code}">: a language code, as pt, es or pt_BR', lang_el.line)
-            phrases = {}
+            forms = PLURAL_FORMS.get(code.split('_')[0], ('one',))
+            phrases, plurals = {}, {}
             for ph in lang_el.children:
-                if not (isinstance(ph, Element) and ph.tag == 'phrase'):
-                    raise GameCompileError('<qg:language> holds qg:phrase', getattr(ph, 'line', lang_el.line))
+                if not (isinstance(ph, Element) and ph.tag in ('phrase', 'asset')):
+                    raise GameCompileError('<qg:language> holds qg:phrase and qg:asset',
+                                           getattr(ph, 'line', lang_el.line))
+                if ph.tag == 'asset':
+                    self._language_asset(ph, code, sheets, sounds)
+                    continue
                 if ph.get('text') in phrases:
                     raise GameCompileError(f'<qg:phrase text="{ph.get("text")}">: twice in lang="{code}"', ph.line)
                 phrases[ph.get('text')] = ph.get('as')
+                kinds = {k: ph.get(k) for k in ('one', 'few', 'many') if ph.get(k) is not None}
+                for k in kinds:
+                    if k not in forms:
+                        has = ', '.join(f'{f}=' for f in forms) or 'none: a count\'s word is the same for any number'
+                        raise GameCompileError(f'<qg:phrase {k}=>: a count\'s word in {code} has no such form (its '
+                                               f'forms besides as=: {has})', ph.line)
+                if kinds:
+                    plurals[ph.get('text')] = kinds
             if self.multiplayer is not None:
                 phrases = {**LOBBY_PHRASES.get(code.split('_')[0], {}), **phrases}
             languages[code] = {'name': lang_el.get('name') or code, 'phrases': phrases}
+            if plurals:
+                languages[code]['plurals'] = plurals
+            if lang_el.get('font'):
+                languages[code]['font'] = self._asset(lang_el.get('font'), lang_el.line)
         self.languages = languages
         prefabs = {}
         self._part_targets: List[tuple] = []
@@ -704,6 +723,27 @@ class _Compiler:
                 spec.update({'action': el.get('action'), 'label': el.get('label')})
             out.append(spec)
         return out
+
+    def _language_asset(self, el: Element, code: str, sheets: dict, sounds: dict) -> None:
+        """A qg:asset: a picture or a sound of the game as it is in a language, beside its own src."""
+        name = el.get('name')
+        target = sheets.get(name) or sounds.get(name)
+        if target is None:
+            known = ', '.join(sorted({**sheets, **sounds})) or 'none'
+            raise GameCompileError(f'<qg:asset name="{name}">: no qg:spritesheet, qg:tileset or qg:sound of that '
+                                   f'name (declared: {known})', el.line)
+        srcs = target.setdefault('srcs', {})
+        if code in srcs:
+            raise GameCompileError(f'<qg:asset name="{name}">: twice in lang="{code}"', el.line)
+        srcs[code] = self._asset(el.get('src'), el.line)
+
+    @staticmethod
+    def _box(name: str, sheets: dict, where: str, line: Optional[int]) -> None:
+        """box=: a qg:spritesheet with slice=, the frame a box is drawn with."""
+        _Compiler._sheet_exists(name, sheets, line)
+        if 'slice' not in sheets[name]:
+            raise GameCompileError(f'{where} box="{name}">: a qg:spritesheet with slice= (how wide its edges are, '
+                                   f'which do not stretch)', line)
 
     @staticmethod
     def _sheet_exists(name: str, sheets: dict, line: Optional[int]) -> None:
@@ -1363,9 +1403,12 @@ class _Compiler:
                         raise GameCompileError('<qg:menu local="true"> holds only shared fields (qg:field '
                                                'shared="true"): anything else it did would happen on one machine '
                                                'and not the others', el.line)
+                if el.get('box') is not None:
+                    self._box(el.get('box'), sheets, '<qg:menu', el.line)
                 nodes.append({'kind': 'menu', 'player': el.get('player'), 'position': el.get('position'),
                               'size': el.get('size'), 'font': font, 'items': items,
                               **({'local': True} if el.get('local') else {}),
+                              **({'box': el.get('box')} if el.get('box') else {}),
                               **({'columns': el.get('columns')} if el.get('columns') > 1 else {}),
                               **({'rows': el.get('rows')} if el.get('rows') else {})})
                 if el.get('if') is not None:
@@ -1507,9 +1550,12 @@ class _Compiler:
                     self._sheet_exists(el.get('sheet'), sheets, el.line)
                 if el.get('speed') < 0:
                     raise GameCompileError('<qg:dialogue speed=>: letters a second, 0 or more', el.line)
+                if el.get('box') is not None:
+                    self._box(el.get('box'), sheets, f'<qg:dialogue name="{dname}"', el.line)
                 dialogues[dname] = {'kind': 'dialogue', 'name': dname, 'lines': lines, 'on_end': on_end,
                                     'font': font, 'size': el.get('size'),
                                     **({'speed': el.get('speed')} if el.get('speed') else {}),
+                                    **({'box': el.get('box')} if el.get('box') else {}),
                                     **({'sheet': el.get('sheet')} if el.get('sheet') else {})}
                 nodes.append(dialogues[dname])
                 self._node_elements.append(el)
@@ -1727,6 +1773,13 @@ def _el(tag: str, line: Optional[int], children=(), **attrs) -> Element:
 
 
 # What a qg:lobby shows, and the notices of a networked game (lockstep.gd), in
+# The forms a count's word takes in a language besides as= (the rest), as Q.plural_form picks them for whole
+# numbers (after CLDR): one, few and many in Russian; none where a word is the same for any number.
+PLURAL_FORMS = {**{code: ('one', 'few', 'many') for code in ('ru', 'uk', 'be', 'pl')},
+                **{code: ('one', 'few') for code in ('cs', 'sk')},
+                **{code: () for code in ('ja', 'zh', 'ko', 'vi', 'th', 'id')}}
+
+
 # the languages the repository's games speak: a game declaring one of them has
 # these phrases too (its own qg:phrase wins).
 LOBBY_PHRASES = {
@@ -1805,6 +1858,23 @@ def _expand_lobbies(children: list, multiplayer: Optional[dict], languages: bool
         out.append(_el('menu', line, buttons, font=el.get('font'), size=el.get('size')))
         out.append(_el('hud', line, [_el('text', line, value=status)], position='bottom-center', size=el.get('size')))
     return out
+
+
+def _slice(raw: str, tile: tuple, name: str, line: Optional[int]) -> list:
+    """slice=: the edges of a frame that do not stretch, left, top, right, bottom."""
+    try:
+        edges = [int(p) for p in str(raw).split(',')]
+    except ValueError:
+        edges = []
+    if len(edges) == 1:
+        edges *= 4
+    if len(edges) != 4 or min(edges) < 0:
+        raise GameCompileError('<qg:spritesheet slice=>: its edges in pixels, 16, or left, top, right, bottom '
+                               '(16, 8, 16, 8)', line)
+    if edges[0] + edges[2] >= tile[0] or edges[1] + edges[3] >= tile[1]:
+        raise GameCompileError(f'<qg:spritesheet name="{name}" slice=>: edges of {", ".join(map(str, edges))} leave '
+                               f'nothing to stretch in a {tile[0]}x{tile[1]} frame', line)
+    return edges
 
 
 def _points(raw: str, line: Optional[int]) -> list:

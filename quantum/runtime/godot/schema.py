@@ -76,10 +76,13 @@ TAGS: Dict[str, Tag] = {
          'fps': Attr('float', 4.0, doc='frames a second, with frames=')},
         parents=('tileset',)),
     'spritesheet': Tag(
-        'A sheet of equal frames for characters and items.',
+        'A sheet of equal frames for characters and items. With slice=, it is a frame that stretches to a box '
+        '(a dialogue\'s box=): its corners stay as drawn, its edges and middle stretch.',
         {'name': Attr('ident', required=True),
          'src': Attr('str', required=True),
-         'tile': Attr('tile', required=True, doc='frame size in pixels: 24, or 8x32 for frames that are not square')},
+         'tile': Attr('tile', required=True, doc='frame size in pixels: 24, or 8x32 for frames that are not square'),
+         'slice': Attr('str', None, doc='how wide its edges are, in pixels, that do not stretch: 16, or left, top, '
+                                        'right, bottom (16, 8, 16, 8); its first frame is the frame')},
         parents=('application',)),
     'input': Tag(
         'The keys of an action, instead of the defaults (arrows/WASD to move, space/Z/X to jump). '
@@ -143,14 +146,33 @@ TAGS: Dict[str, Tag] = {
         'The game\'s texts in another language: each qg:phrase gives one text as written in the game, and '
         'what it is in this language. A text with no phrase stays as written. The language is ?lang= in a '
         'web page, --q-lang= on the command line, else the system\'s, when the game has it; `tr(text)` '
-        'translates a text an expression puts together. In pt and es, a qg:lobby\'s own texts come translated.',
+        'translates a text an expression puts together, and `tr_n(one, other, n)` a count\'s word (1 potion, 2 '
+        'potions) by the language\'s plural rule. In pt and es, a qg:lobby\'s own texts come translated. A '
+        'qg:asset gives a picture or a sound drawn or spoken in the language.',
         {'lang': Attr('str', required=True, doc='a language code: pt, es, zh, pt_BR...'),
-         'name': Attr('str', '', doc='its own name for it (Português)')},
+         'name': Attr('str', '', doc='its own name for it (Português)'),
+         'font': Attr('str', None, doc='a .ttf with the letters of its alphabet that the game\'s fonts lack '
+                                       '(Cyrillic, Greek, Japanese): every text draws them from it')},
         parents=('application',)),
     'phrase': Tag(
-        'One text of the game, in a qg:language.',
+        'One text of the game, in a qg:language. The plural word of a count (`tr_n(\'potion\', \'potions\', n)`) '
+        'takes the forms its language has: in Russian, 1 зелье, 2 зелья, 5 зелий.',
         {'text': Attr('str', required=True, doc='the text exactly as the game shows it (a button, a line, a HUD text)'),
-         'as': Attr('str', required=True, doc='what it is in this language')},
+         'as': Attr('str', required=True, doc='what it is in this language; for a plural word, the form of the '
+                                               'counts the others are not (5 зелий)'),
+         'one': Attr('str', None, doc='a plural word\'s form for one (1, 21, 31 in ru, uk, be; 1 elsewhere); when '
+                                      'not given, the phrase of the word for one'),
+         'few': Attr('str', None, doc='its form for a few: 2 to 4 (22 to 24...) in ru, uk, be and pl; 2 to 4 in cs '
+                                      'and sk'),
+         'many': Attr('str', None, doc='its form for many (5 to 20, 25...) in ru, uk, be and pl; as= when not given')},
+        parents=('language',)),
+    'asset': Tag(
+        'A picture or a sound of the game as it is in a qg:language: the banner with its words in the language, a '
+        'voice. The scenes that start while the language is shown draw the picture; the sound plays from the '
+        'moment it is chosen.',
+        {'name': Attr('ident', required=True, doc='a qg:spritesheet, qg:tileset or qg:sound of the game'),
+         'src': Attr('str', required=True, doc='its file in this language, relative to the .q or a folder above it; '
+                                               'a picture has the same frame size')},
         parents=('language',)),
     'item': Tag(
         'A kind of thing the players carry: keys, gems, potions. How many they hold is the game\'s state, kept '
@@ -392,6 +414,8 @@ TAGS: Dict[str, Tag] = {
          'position': Attr('enum:top-left|top-center|top-right|center|bottom-center', 'center'),
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
          'size': Attr('int', 16, doc='font size'),
+         'box': Attr('ident', None, doc='a qg:spritesheet with slice=: the buttons are in a box drawn with it, '
+                                        'stretched (a frame)'),
          'columns': Attr('int', 1, doc='its items in a grid of so many columns: left and right move along a row'),
          'rows': Attr('int', 0, doc='how many rows show at once; the others scroll into view with the focus '
                                     '(0: all of them)')},
@@ -439,7 +463,8 @@ TAGS: Dict[str, Tag] = {
          'size': Attr('int', 24, doc='font size'),
          'speed': Attr('float', 0.0, doc='letters a second, typed in as each line shows (select shows it whole '
                                          'at once); 0: the whole line at once'),
-         'sheet': Attr('ident', None, doc='a qg:spritesheet of faces: a line\'s portrait= is a frame of it')},
+         'sheet': Attr('ident', None, doc='a qg:spritesheet of faces: a line\'s portrait= is a frame of it'),
+         'box': Attr('ident', None, doc='a qg:spritesheet with slice=: the box is drawn with it, stretched (a frame)')},
         parents=('scene',)),
     'line': Tag(
         'One line of a qg:dialogue: who says it, and what. With qg:choice inside, the player chooses (up and '

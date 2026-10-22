@@ -1304,6 +1304,10 @@ const TICK_RATE := 60.0
 var languages: Array = []   # the game's languages besides its own
 var lang: String = ""       # the one shown; "" is the game's own
 var language_names: Dictionary = {}   # each language's own name for itself (qg:language name=)
+var plurals: Dictionary = {}   # lang -> {a count's word: {one:, few:, many:}} (qg:phrase one= few= many=)
+var language_fonts: Dictionary = {}   # lang -> Font: the letters of its alphabet the game's fonts lack
+var _fonts: Array = []        # the fonts the game draws with, which take the languages' fonts as fallbacks
+var _sound_specs: Dictionary = {}   # the qg:sounds, for those with a file per language (qg:asset)
 
 
 # qg:next-language: the next of the game's languages, after its own; the
@@ -1323,6 +1327,7 @@ static func set_language(code: String) -> void:
 		return
 	q.lang = code if code in q.languages else ""
 	TranslationServer.set_locale(q.lang if q.lang != "" else "en")
+	q.language_assets()
 	var f := FileAccess.open(_language_path(), FileAccess.WRITE)
 	if f != null:
 		f.store_string(q.lang if q.lang != "" else "-")
@@ -1350,6 +1355,68 @@ static func language_name() -> String:
 
 static func translate(text) -> String:
 	return String(TranslationServer.translate(str(text)))
+
+
+# tr_n(one, other, n): a count's word in the language shown, in its form for n (1 potion, 2 potions; in
+# Russian 1 зелье, 2 зелья, 5 зелий): the phrase of other's one=, few= or many=, else the phrase of one
+# (the form for one) or of other (the rest).
+static func translate_n(one, other, n) -> String:
+	var q := _q_node()
+	var lang: String = q.lang if q != null else ""
+	var form := plural_form(lang, int(n))
+	var forms: Dictionary = q.plurals.get(lang, {}).get(str(other), {}) if q != null else {}
+	if forms.has(form):
+		return str(forms[form])
+	return translate(one if form == "one" else other)
+
+
+# The form of a count's word in a language, for a whole number (after CLDR): one, few, many or other.
+static func plural_form(lang: String, n: int) -> String:
+	n = absi(n)
+	match lang.split("_")[0]:
+		"ru", "uk", "be":
+			if n % 10 == 1 and n % 100 != 11:
+				return "one"
+			return "few" if n % 10 >= 2 and n % 10 <= 4 and (n % 100 < 12 or n % 100 > 14) else "many"
+		"pl":
+			if n == 1:
+				return "one"
+			return "few" if n % 10 >= 2 and n % 10 <= 4 and (n % 100 < 12 or n % 100 > 14) else "many"
+		"cs", "sk":
+			return "one" if n == 1 else ("few" if n >= 2 and n <= 4 else "other")
+		"fr":
+			return "one" if n <= 1 else "other"
+		"ja", "zh", "ko", "vi", "th", "id":
+			return "other"
+	return "one" if n == 1 else "other"
+
+
+# A file of the game as it is in the language shown (qg:asset in a qg:language), else its own: a sheet's
+# or a sound's src.
+static func src_of(spec: Dictionary) -> String:
+	var q := _q_node()
+	var srcs: Dictionary = spec.get("srcs", {})
+	if q != null and srcs.has(q.lang):
+		return str(srcs[q.lang])
+	return str(spec["src"])
+
+
+# What the language shown changes besides the texts: the font each of the game's fonts falls back on first
+# for a letter it lacks, and the sounds it has its own of. The pictures are the next scene's.
+func language_assets() -> void:
+	var order: Array = []
+	if language_fonts.has(lang):
+		order.append(language_fonts[lang])
+	for code in language_fonts.keys():
+		if code != lang:
+			order.append(language_fonts[code])
+	for f in _fonts:
+		f.fallbacks = order
+	for name_ in _sound_specs.keys():
+		if _sound_specs[name_].has("srcs") and _sounds.has(name_):
+			var stream := audio(src_of(_sound_specs[name_]), bool(_sound_specs[name_].get("loop", false)))
+			if stream != null:
+				_sounds[name_].stream = stream
 
 
 static func net_status() -> String:
@@ -1677,7 +1744,7 @@ static func _imported(src: String) -> Resource:
 
 # A frame of a sheet as a picture of its own (a HUD's qg:icon).
 static func frame_texture(sheet: Dictionary, frame: int) -> Texture2D:
-	var texture := texture(str(sheet["src"]))
+	var texture := texture(src_of(sheet))
 	if texture == null:
 		return null
 	var w := int(sheet["tile"][0])
@@ -1720,6 +1787,15 @@ static func audio(src: String, loop: bool) -> AudioStream:
 
 
 static func font(src: String) -> Font:
+	var loaded := load_font(src)
+	var q := _q_node()
+	if loaded != null and q != null and not q.language_fonts.is_empty() and not q._fonts.has(loaded):
+		q._fonts.append(loaded)   # a letter it lacks comes from a language's font (qg:language font=)
+		q.language_assets()
+	return loaded
+
+
+static func load_font(src: String) -> Font:
 	var res := _imported(src)
 	if res is Font:
 		return res
@@ -1727,6 +1803,21 @@ static func font(src: String) -> Font:
 	if file.load_dynamic_font(ProjectSettings.globalize_path("res://" + src)) == OK:
 		return file
 	return null
+
+
+# A frame that stretches to a box (box= of a qg:dialogue or a qg:menu): the first frame of a sheet with
+# slice=, its corners as drawn and its edges and middle stretched; what the box holds is pad pixels
+# inside its edges.
+static func frame_box(sheet: Dictionary, pad: float) -> StyleBoxTexture:
+	var box := StyleBoxTexture.new()
+	box.texture = texture(src_of(sheet))
+	box.region_rect = Rect2(0, 0, int(sheet["tile"][0]), int(sheet["tile"][1]))
+	var edges: Array = sheet["slice"]
+	var sides := [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]
+	for i in 4:
+		box.set_texture_margin(sides[i], float(edges[i]))
+		box.set_content_margin(sides[i], float(edges[i]) + pad)
+	return box
 
 
 # Quitting while a sound plays would leave its playback, and the imported
@@ -1739,8 +1830,9 @@ func _exit_tree() -> void:
 
 
 func load_sounds(sounds: Dictionary) -> void:
+	_sound_specs = sounds
 	for name_ in sounds.keys():
-		var src: String = sounds[name_]["src"]
+		var src: String = src_of(sounds[name_])
 		var stream := audio(src, bool(sounds[name_].get("loop", false)))
 		if stream == null:
 			push_warning("quantum: cannot load the sound " + src)

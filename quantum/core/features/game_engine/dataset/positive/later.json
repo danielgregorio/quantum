@@ -64,6 +64,29 @@
       "expected_output": {
         "quantum_code": "<q:application id=\"cannon\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:sound name=\"boom\" src=\"assets/kenney/audio/stomp.ogg\" />\n  <qg:sound name=\"ping\" src=\"assets/kenney/audio/coin.ogg\" />\n  <qg:prefab name=\"Ball\" tag=\"ball\" sheet=\"tiles\" frame=\"151\" hitbox=\"10x10\" ai=\"fly\" heading=\"left\" speed=\"120\" />\n  <!-- a thing's own sounds come from where it is: the cannon's boom, from the right -->\n  <qg:prefab name=\"Cannon\" tag=\"cannon\" sheet=\"tiles\" frame=\"140\" hitbox=\"18x18\" ai=\"turret\" targets=\"hero\"\n             range=\"600\" fire-prefab=\"Ball\" fire-every=\"120\" fire-sound=\"boom\" />\n  <qg:scene name=\"long\" width=\"320\" height=\"180\">\n    <qg:character id=\"hero\" controller=\"platformer\" sheet=\"people\" frame=\"0\" x=\"40\" y=\"140\" hitbox=\"14x20\">\n      <!-- and a sound played from a thing: the ball, where it hit -->\n      <qg:on-collision with=\"ball\"><qg:play sound=\"ping\" at=\"other\" /><qg:destroy target=\"other\" /></qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Cannon\" name=\"cannon\" x=\"900\" y=\"140\" />\n    <qg:camera follow=\"hero\" bounds=\"none\" />\n  </qg:scene>\n</q:application>\n"
       }
+    },
+    {
+      "id": "game-later-004",
+      "intent": "A role-playing game in Russian",
+      "input": {
+        "natural_language": "An RPG in English and Russian: its dialogues in a gold frame that stretches to the box, the HUD counting potions with the right Russian word for each number, a \"FIGHT!\" banner drawn in each language, and a font with the Cyrillic letters the game's font lacks",
+        "context": {
+          "target": "godot",
+          "file": "game-later-004.q"
+        }
+      },
+      "tags": [
+        "language",
+        "phrase",
+        "tr_n",
+        "asset",
+        "slice",
+        "box",
+        "font"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"tale\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"potions\" value=\"0\" type=\"number\" />\n  <!-- a frame whose 16-pixel edges stay as drawn while its middle stretches to the box -->\n  <qg:spritesheet name=\"frame\" src=\"projects/rpg/assets/frame.png\" tile=\"48\" slice=\"16\" />\n  <qg:spritesheet name=\"banner\" src=\"projects/rpg/assets/banner-en.png\" tile=\"480x120\" />\n  <qg:prefab name=\"Potion\" tag=\"potion\" sheet=\"tiles\" frame=\"44\" hitbox=\"12x12\" />\n  <!-- Russian: Cyrillic from Xolonium, three forms of a count's word, and the banner as drawn in Russian -->\n  <qg:language lang=\"ru\" name=\"Русский\" font=\"projects/rpg/assets/Xolonium-Regular.ttf\">\n    <qg:phrase text=\"potion\" as=\"зелье\" />\n    <qg:phrase text=\"potions\" as=\"зелий\" one=\"зелье\" few=\"зелья\" />\n    <qg:phrase text=\"A potion!\" as=\"Зелье!\" />\n    <qg:asset name=\"banner\" src=\"projects/rpg/assets/banner-ru.png\" />\n  </qg:language>\n  <qg:scene name=\"field\" width=\"640\" height=\"360\">\n    <qg:sprite sheet=\"banner\" x=\"320\" y=\"80\" />\n    <qg:character id=\"hero\" controller=\"topdown\" sheet=\"people\" frame=\"0\" x=\"80\" y=\"200\" hitbox=\"14x14\">\n      <qg:on-collision with=\"potion\">\n        <qg:destroy target=\"other\" />\n        <q:set name=\"potions\" value=\"{potions + 1}\" />\n        <qg:say dialogue=\"found\" />\n      </qg:on-collision>\n    </qg:character>\n    <qg:instance prefab=\"Potion\" x=\"160\" y=\"200\" />\n    <qg:instance prefab=\"Potion\" x=\"240\" y=\"200\" />\n    <qg:dialogue name=\"found\" box=\"frame\" size=\"20\"><qg:line text=\"A potion!\" /></qg:dialogue>\n    <!-- 1 зелье, 2 зелья, 5 зелий; 1 potion, 2 potions -->\n    <qg:hud><qg:text value=\"{str(potions) + ' ' + tr_n('potion', 'potions', potions)}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
     }
   ]
 }

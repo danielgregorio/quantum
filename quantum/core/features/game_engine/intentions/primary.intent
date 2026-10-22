@@ -41,7 +41,7 @@ intention:
       qg:sound / qg:particles        what is heard and seen
       qg:item                        what the players carry
       qg:input / qg:multiplayer      keys, and players on other machines
-      qg:language                    translations (qg:phrase inside)
+      qg:language                    translations (qg:phrase and qg:asset inside)
       qg:prefab                      kinds of things (qg:state, qg:animation, qg:behavior, handlers inside)
       qg:scene                       screens; the first is where the game starts
     </q:application>
@@ -50,13 +50,14 @@ intention:
     # --- the game's resources, directly in q:application ---
     - "qg:tileset names a sheet of square tiles that tilemaps, sprites and prefabs draw from"
     - "qg:tile (in a qg:tileset) gives one tile a shape (x,y points or none), makes it one-way, or gives it a kind: ladder, water, ice or hurt; frames= and fps= animate it (water, lava, a torch: it and the frames after it in the row, in turn)"
-    - "qg:spritesheet names a sheet of equal frames (24, or WxH) for characters and things"
+    - "qg:spritesheet names a sheet of equal frames (24, or WxH) for characters and things; slice= (16, or left, top, right, bottom) makes its first frame a frame that stretches to a box, its edges as drawn (box= of a qg:dialogue or a qg:menu)"
     - "qg:input replaces the keys of an action (or declares a new one) for a player: keyboard, joypad and mouse names"
     - "qg:multiplayer makes the game networked for players= people in lockstep (delay=, check-every=), or with rollback=; start= is the scene play begins in; transport= is enet or websocket; min-players= lets the host start sooner with fewer (qg:start-now)"
     - "qg:sound names an .ogg or .wav; loop=true makes it music"
     - "qg:particles names an effect from a preset (puff, sparks, smoke, dust, fire, rain, snow, confetti, stars) with colour, amount, lifetime, speed and size"
-    - "qg:language holds the game's texts in another language, one qg:phrase per text (text= as written, as= translated)"
-    - "qg:phrase is one translated text of a qg:language"
+    - "qg:language holds the game's texts in another language, one qg:phrase per text (text= as written, as= translated); font= is a font with the letters of its alphabet the game's fonts lack, which every text draws them from"
+    - "qg:phrase is one translated text of a qg:language; a count's word (tr_n) has the forms its language has: one=, few=, many= (Russian, Ukrainian, Belarusian, Polish; one= and few= in Czech and Slovak), as= the rest"
+    - "qg:asset (in a qg:language) is a picture or a sound of the game as it is in that language: name= a qg:spritesheet, qg:tileset or qg:sound, src= its file"
     - "qg:item declares something the players carry (a key, a gem, a heart): its picture, max=, start=, and the sound and particles of picking one up; held('name') reads how many"
     - "qg:prefab declares a kind of thing: sheet, frame, hitbox, tag (what collisions see), and how it moves with ai= (patrol, wander, chase, pathfind, fly, sway, shuttle, path, turret, behavior); solid=, one-way=, shape= make it a platform; gives= makes it a pickup; opens-with= makes it a lock; a fly prefab's walls=bounce turns off the tiles, trail= leaves a streak; spacing= keeps things of its tag apart; pushable= lets a grid walker's step push a solid one on (a crate); extends= makes it from another prefab, all of it but what it says itself; particles=, visible=, flip-v= and layer= are how it looks (a character has them too)"
 
@@ -104,13 +105,13 @@ intention:
     - "qg:text (in qg:hud) shows a string: a q:set (bind=) or an expression (value=)"
     - "qg:bar (in qg:hud) shows a number against its max: a q:set, or a fighter's id.health"
     - "qg:inventory (in qg:hud) shows the items held, each its picture and how many"
-    - "qg:menu is a list of buttons, fields, sliders and keys a player moves through with up/down and chooses with select or a click; if= shows it only while true; columns= lays it out in a grid (left and right along a row), rows= shows so many rows and scrolls the rest into view"
+    - "qg:menu is a list of buttons, fields, sliders and keys a player moves through with up/down and chooses with select or a click; if= shows it only while true; columns= lays it out in a grid (left and right along a row), rows= shows so many rows and scrolls the rest into view; box= frames it with a qg:spritesheet with slice="
     - "qg:button (in qg:menu) runs what it holds when chosen; its label= may be an expression"
     - "qg:field (in qg:menu) is a text box bound to a string q:set; typing is local to the machine, and the keys type rather than play while it has them; shared=true makes it a draft that Enter sends with the player's input, so on that tick every machine sets the state and runs what the field holds, with sender and text (names, a chat); qg:menu local=true is the menu of whoever plays at this machine, of shared fields only"
     - "qg:slider in a qg:menu is a value left and right change while it has the focus: how loud a bus is (bus=, 0 to 100, kept between runs) or a number of the state (bind=, min=, max=, step=)"
     - "qg:rebind in a qg:menu shows an action's key; chosen, the next key, mouse button or joypad button pressed becomes the action's (Escape keeps it), kept between runs; local, like typing"
     - "qg:lobby is the ready-made networked-game menu: play here, host, an address, join, cancel; options= adds a button to the game's options scene"
-    - "qg:dialogue is lines shown one at a time in a box; qg:say opens it and pauses the scene; speed= types each line in, sheet= is a qg:spritesheet of faces"
+    - "qg:dialogue is lines shown one at a time in a box; qg:say opens it and pauses the scene; speed= types each line in, sheet= is a qg:spritesheet of faces, box= a qg:spritesheet with slice= the box is framed with"
     - "qg:line is one line of a qg:dialogue: who= and text=, either may be an expression; portrait= a face beside it; qg:choice inside offers answers"
 
     # --- handlers: when something happens ---
@@ -189,7 +190,7 @@ intention:
     - "q:loop repeats a body over items= or from=/to=, with var="
     - "q:function (directly in a qg:scene, or in q:application for every scene and the prefabs) names a body of actions and statements; q:call runs it; q:return leaves it"
     - "expressions are written in braces and read state, me, other, cursor, the scene's characters by id (p1.health, hero.x), where a thing is (other.x, me.y) and the cell of the tilemap it stands in (other.col, me.row), what a body touched as it last moved (me.on_floor, me.on_wall, me.on_ceiling), and built-in functions; a field a thing does not have (hero.foo) is a compile error that lists the ones it has"
-    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at (of a layer by name too), tiled (a property of the scene's Tiled map), carrying (what of a tag a thing carries), distance, nearest, sees, held, paused, talking, tr, language, has_save (of a slot too), volume (of a bus), fullscreen, net_status, net_players, net_player, url_param, can_quit, ticks (the scene's), sin, cos, atan2 (degrees), sort; pressing, pressed_for (ticks) and strength of an action, for player 1 or another"
+    - "functions: len, str, int, float, abs, min, max, round, floor, ceil, sqrt, random (from the scene seed), count, thing_at, tile_at (of a layer by name too), tiled (a property of the scene's Tiled map), carrying (what of a tag a thing carries), distance, nearest, sees, held, paused, talking, tr, tr_n (a count's word, one or other, in its language's form for n), language, has_save (of a slot too), volume (of a bus), fullscreen, net_status, net_players, net_player, url_param, can_quit, ticks (the scene's), sin, cos, atan2 (degrees), sort; pressing, pressed_for (ticks) and strength of an action, for player 1 or another"
 
   compilation:
     input: "<q:application type=\"game\"> with qg: tags and q: statements"

@@ -48,6 +48,7 @@ _FUNCTIONS = {
     'paused': 'Q.paused(self)',              # the scene is paused (qg:pause)
     'talking': 'Q.talking(self)',            # a qg:dialogue is open (qg:say)
     'tr': 'Q.translate({0})',                # a text in the player's language (qg:language)
+    'tr_n': 'Q.translate_n({0}, {1}, {2})',   # a count's word, one or other, in the language's form for n
     'language': 'Q.language_name()',         # the name of the language shown, in it (English: the game's own)
     'hovered': {0: 'Q.hovered(self, 1)',     # the thing under player 1's qg:cursor, or null (hover)
                 1: 'Q.hovered(self, {0})'},  # ...under that player's

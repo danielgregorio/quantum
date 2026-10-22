@@ -409,7 +409,7 @@ static func forget_textures() -> void:
 
 
 static func _texture(sheet: Dictionary) -> Texture2D:
-	var src: String = sheet["src"]
+	var src := Q.src_of(sheet)   # the language's own picture, when it has one (qg:asset)
 	if _textures.has(src):
 		return _textures[src]
 	var texture := Q.texture(src)

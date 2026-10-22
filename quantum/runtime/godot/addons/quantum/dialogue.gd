@@ -46,13 +46,16 @@ func setup(spec: Dictionary, scene: Node) -> void:
 		font = Q.font(str(spec["font"]))
 	var margin := maxf(4.0, w * 0.02)
 	_panel = PanelContainer.new()
-	var box := StyleBoxFlat.new()
-	box.bg_color = Color("#5f7d8c")
-	box.border_color = Color("#b0bec5")
-	box.set_border_width_all(maxi(2, size / 8))
-	box.set_corner_radius_all(maxi(4, size / 2))
-	box.set_content_margin_all(size * 0.6)
-	_panel.add_theme_stylebox_override("panel", box)
+	if spec.get("box") != null:   # a frame of the game's, stretched (a sheet with slice=)
+		_panel.add_theme_stylebox_override("panel", Q.frame_box(scene.q_game["sheets"][spec["box"]], size * 0.3))
+	else:
+		var box := StyleBoxFlat.new()
+		box.bg_color = Color("#5f7d8c")
+		box.border_color = Color("#b0bec5")
+		box.set_border_width_all(maxi(2, size / 8))
+		box.set_corner_radius_all(maxi(4, size / 2))
+		box.set_content_margin_all(size * 0.6)
+		_panel.add_theme_stylebox_override("panel", box)
 	_panel.position = Vector2(margin, h - margin - size * 4.2)
 	_panel.size = Vector2(w - margin * 2, size * 4.2)
 	_bottom = h - margin
@@ -61,7 +64,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	if spec.get("sheet") != null and scene.q_game.get("sheets", {}).has(spec["sheet"]):
 		var sheet: Dictionary = scene.q_game["sheets"][spec["sheet"]]
 		var atlas := AtlasTexture.new()
-		atlas.atlas = Q.texture(str(sheet["src"]))
+		atlas.atlas = Q.texture(Q.src_of(sheet))
 		atlas.set_meta("q_tile", sheet["tile"])
 		_face = TextureRect.new()
 		_face.texture = atlas

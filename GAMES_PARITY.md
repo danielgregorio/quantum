@@ -13,7 +13,8 @@
 > twelve rows more, and gaps 3, 5, 8, 14, 16, 23, 24, 25, 30 and 31; Phase 3,
 > with Crates: nine rows more, and gaps 6, 13, 15, 18, 21, 22 and 26; Phase 4,
 > into every game: ten rows more, and gaps 9, 10, 11, 19, 29, 33 and 42;
-> Phase 5, with Rally: four rows more, and gaps 32, 35 and 39).
+> Phase 5, with Rally: four rows more, and gaps 32, 35 and 39; Phase 6, a game
+> at a time: seven rows more so far, and gaps 17, 34, 36, 38 and 40).
 
 Each row is one feature a 2D game is made of, as Godot 4.4 and Unity 6 (URP
 2D with its packages: 2D Tilemap, Physics 2D, Input System, Cinemachine 3,
@@ -84,7 +85,7 @@ declarative shape for it.
 | Atlases of uneven sprites, pivots | `AtlasTexture`, `region_rect`, `offset` | Sprite Atlas, automatic slicing, pivots | equal frames, centred on the hitbox; `scripts/pack-sprites.py` packs frames into a sheet; `gd:offset` on `qg:sprite` | partial: no frame of its own size or pivot |
 | A picture with no behaviour | `Sprite2D` | `SpriteRenderer` | `qg:sprite` (its `frame=` may follow an expression); `qg:scene background=` | covered |
 | Parallax backgrounds | `Parallax2D` | script | `qg:parallax sheet= scroll= repeat= y=` | covered |
-| Nine-slice and tiled sprites | `NinePatchRect`, texture repeat | `SpriteRenderer.drawMode` Sliced, Tiled | — | gap |
+| Nine-slice and tiled sprites | `NinePatchRect`, texture repeat | `SpriteRenderer.drawMode` Sliced, Tiled | `slice=` on `qg:spritesheet`: a frame that stretches to a box, `box=` on `qg:dialogue` and `qg:menu` (the RPG's) | partial: boxes only; no sliced or tiled sprite in the world |
 | Pixel-perfect scaling | stretch mode `viewport`, nearest filter | Pixel Perfect Camera (URP 2D) | always: the viewport stretches, textures are filtered nearest | covered |
 | Skeletal 2D animation | `Skeleton2D`, `Bone2D`, `Polygon2D` | 2D Animation (`SpriteSkin`, bones, 2D IK) | — | by design: rigs are authored in an editor; the language plays frames |
 | Spline shapes, masks, immediate drawing | `Path2D` + `Polygon2D`, `clip_children`, `draw_*` | SpriteShape, `SpriteMask`, `GL` | — (`qg:tile shape=`, `shape=` on a solid prefab) | by design: drawn geometry and draw calls belong to an editor and to code |
@@ -301,7 +302,7 @@ declarative shape for it.
 | A fixed tick | `_physics_process`, `physics_ticks_per_second` | `FixedUpdate`, `Time.fixedDeltaTime` | every rule runs in the 60 Hz tick | covered |
 | Timers | `Timer` | coroutines, `InvokeRepeating()`, `Awaitable.WaitForSecondsAsync()` | `qg:timer after=`, `every=`, `from=`, `count=` | covered |
 | A delay started by a handler (a power-up that runs out, a fuse) | `get_tree().create_timer()`, `await` | `Invoke()`, `WaitForSeconds` | `qg:after ticks=` or `seconds=`, `name=` to start one again; it keeps the names of its handler, waits while paused and rolls back | covered |
-| The clock in an expression | `Engine.get_physics_frames()` | `Time.time`, `Time.frameCount` | — (count ticks with a `qg:timer every="1"`) | gap |
+| The clock in an expression | `Engine.get_physics_frames()` | `Time.time`, `Time.frameCount` | `ticks()`: the ticks the scene has played, not while paused | covered |
 | Cooldowns | script | script | `cooldown=`, `fire-every=`, `every=` on `qg:shoot` and `qg:leap` | covered |
 | Pause | `SceneTree.paused`, `process_mode` | `Time.timeScale = 0` | `qg:pause`, `qg:resume`, `paused()`; menus, HUD, camera and `qg:on-input` go on; `qg:say` pauses until the last line | covered |
 | Slow motion, hit stop | `Engine.time_scale` | `Time.timeScale` | `qg:time-scale scale= seconds=`: the ticks come further apart, each the same tick, so replays and peers agree | covered |
@@ -341,9 +342,9 @@ declarative shape for it.
 | String tables, translating composed text | `Translation` (CSV, PO), `tr()` | String Tables, `LocalizedString`, Smart Strings | `qg:language lang= name=` with `qg:phrase text= as=`; `tr(text)` | covered |
 | Choosing the language | `TranslationServer.set_locale()` | `LocalizationSettings.SelectedLocale` | `?lang=`, `--q-lang=`, the system's; `qg:next-language` (kept for the next run); `language()` | covered |
 | Interface texts translated by themselves | `auto_translate_mode` | `LocalizeStringEvent` | labels, buttons and dialogue through Godot's translation; `qg:lobby`'s texts come in pt and es | covered |
-| Plurals | `tr_n()` | Smart Strings plural formatter | — | gap |
-| Localized pictures and sounds | locale remaps | Asset Tables | — | gap |
-| Fonts per language, right-to-left text | font fallbacks, `TextServer` | TextMeshPro font fallbacks | one `font=` per HUD, menu or dialogue; Godot shapes the text | partial: no font per language |
+| Plurals | `tr_n()` | Smart Strings plural formatter | `tr_n(one, other, n)`; `one=`, `few=`, `many=` on `qg:phrase`, as the language counts (the RPG's potions in Russian) | covered |
+| Localized pictures and sounds | locale remaps | Asset Tables | `qg:asset name= src=` in a `qg:language`: a sheet's or a sound's file in it (the RPG's banner) | covered |
+| Fonts per language, right-to-left text | font fallbacks, `TextServer` | TextMeshPro font fallbacks | `font=` on `qg:language`: every font falls back on it for the letters it lacks (the RPG's Cyrillic); Godot shapes the text | covered |
 | The game itself in one language | — | — | only what is shown is translated: peers in different languages play the same game, and an agent's observations carry `lang` | covered |
 
 ## 21. Multiplayer and networking
@@ -413,7 +414,7 @@ declarative shape for it.
 |---|---|---|---|---|---|
 | Scene structure and prefabs | 9 | 0 | 0 | 2 | 11 |
 | Logic and state | 9 | 0 | 0 | 2 | 11 |
-| Transform and drawing | 11 | 2 | 1 | 2 | 16 |
+| Transform and drawing | 11 | 3 | 0 | 2 | 16 |
 | Sprite animation and animation state machines | 6 | 2 | 0 | 0 | 8 |
 | Tweening, timelines and cutscenes | 4 | 1 | 0 | 0 | 5 |
 | Tilemaps | 10 | 1 | 1 | 1 | 13 |
@@ -427,21 +428,22 @@ declarative shape for it.
 | Particles and visual effects | 5 | 0 | 0 | 1 | 6 |
 | Lighting, shaders and post-processing | 0 | 1 | 2 | 3 | 6 |
 | UI | 12 | 4 | 0 | 0 | 16 |
-| Time | 6 | 0 | 1 | 1 | 8 |
+| Time | 7 | 0 | 0 | 1 | 8 |
 | Scene flow | 8 | 1 | 0 | 1 | 10 |
 | Persistence | 5 | 1 | 0 | 1 | 7 |
-| Localization | 4 | 1 | 2 | 0 | 7 |
+| Localization | 7 | 0 | 0 | 0 | 7 |
 | Multiplayer and networking | 13 | 2 | 0 | 2 | 17 |
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 5 | 0 | 0 | 1 | 6 |
 | Tooling | 4 | 1 | 1 | 2 | 8 |
-| **Total** | **193** | **25** | **10** | **23** | **251** |
+| **Total** | **197** | **25** | **6** | **23** | **251** |
 
-Of 251 rows, 193 are covered and 25 partial; 10 are gaps, and 23 are left
-out by design: three in four covered (146, 42 and 40 when the map was made;
-Phase 1 of PLAN_GAMES_3.md covered nine rows, Phase 2 twelve more, Phase 3
-nine more, Phase 4 ten more, Phase 5 four more, Phase 6 four so far). The gaps left gather in
-audio, lighting and localization (two each), the rest of Phase 6's list. The rows
+Of 251 rows, 197 are covered and 25 partial; 6 are gaps, and 23 are left
+out by design: four in five covered (146, 42 and 40 when the map was made;
+Phase 1 of PLAN_GAMES_3.md covered nine rows, and the clock in an expression,
+its `ticks()`, counted late; Phase 2 twelve more, Phase 3 nine more, Phase 4
+ten more, Phase 5 four more, Phase 6 seven so far, and a frame for boxes). The gaps left are lighting's two, hexagonal maps, terrain
+costs and hot reload (the rest of Phase 6's list), and adaptive music. The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that
 lockstep makes unnecessary.
@@ -490,9 +492,9 @@ above is in this list, and so are many **partial** ones.
 35. **Input sequences and vibration.** *Done: PLAN_GAMES_3.md, Phase 5 (Arena's blast).* `qg:on-input sequence="down, right, punch" within=` and `<qg:rumble player= strength= seconds=>`. Fighting games (motion inputs), any game on a gamepad.
 36. **Sound in place.** *Done: PLAN_GAMES_3.md, Phase 6, for Hopper's bouncer.* `at=` on `qg:play`: softer, and to one side, the farther the thing is from the middle of the screen. Large levels.
 37. **Costs per terrain.** `cost=` on `qg:tile` for `ai="pathfind"` and `qg:seek`. Strategy and tactics maps (mud, roads).
-38. **Plurals, localized assets, fonts per language.** Plural forms on `qg:phrase`, `src=` per language on a sheet or a sound, `font=` on `qg:language`. Translated games with counts, voices or a script Latin fonts lack.
+38. **Plurals, localized assets, fonts per language.** *Done: PLAN_GAMES_3.md, Phase 6, for the RPG in Russian.* Plural forms on `qg:phrase`, `src=` per language on a sheet or a sound, `font=` on `qg:language`. Translated games with counts, voices or a script Latin fonts lack.
 39. **Names and messages between players.** *Done: PLAN_GAMES_3.md, Phase 5 (Bricks' who is who).* `shared="true"` on a `qg:field`: its text travels with the inputs when it is entered, not as it is typed. Networked games that show who is who, or let the players talk.
-40. **Nine-slice pictures.** `slice=` on `qg:spritesheet`, for boxes that stretch. Dialogue boxes, framed menus.
+40. **Nine-slice pictures.** *Done: PLAN_GAMES_3.md, Phase 6, for the RPG's dialogues and fight menu.* `slice=` on `qg:spritesheet`, for boxes that stretch. Dialogue boxes, framed menus.
 41. **Isometric and hexagonal maps.** `shape="hex"` or `"iso"` on `qg:tileset`, with neighbours and pathfinding to match. Strategy and tactics games.
 42. **macOS builds.** *Done: PLAN_GAMES_3.md, Phase 4.* A `macOS` preset in `scripts/export-games.py`. Desktop releases.
 43. **Hot reload.** `quantum run game.q --watch`: rebuild on save and come back to the same tick from the session's tape. Whoever writes a game.

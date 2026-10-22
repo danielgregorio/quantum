@@ -36,8 +36,6 @@
     <qg:phrase text="UNKNOWN" as="DESCONHECIDO" />
     <qg:phrase text="OPPONENT" as="OPONENTE" />
     <qg:phrase text="PLAYER" as="JOGADOR" />
-    <qg:phrase text="Potions" as="Poções" />
-    <qg:phrase text="Keys" as="Chaves" />
     <qg:phrase text="Player" as="Jogador" />
     <qg:phrase text="Opponent" as="Oponente" />
     <qg:phrase text="Attack" as="Atacar" />
@@ -49,6 +47,12 @@
     <qg:phrase text="Full screen" as="Tela cheia" />
     <qg:phrase text="on" as="sim" />
     <qg:phrase text="off" as="não" />
+    <qg:phrase text="potion" as="poção" />
+    <qg:phrase text="potions" as="poções" />
+    <qg:phrase text="key" as="chave" />
+    <qg:phrase text="keys" as="chaves" />
+    <!-- the fight's banner, drawn in Portuguese -->
+    <qg:asset name="banner" src="assets/banner-pt.png" />
 </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Oye, es un buen momento para una pelea de JRPG, ¿no crees?" />
@@ -62,8 +66,6 @@
     <qg:phrase text="UNKNOWN" as="DESCONOCIDO" />
     <qg:phrase text="OPPONENT" as="OPONENTE" />
     <qg:phrase text="PLAYER" as="JUGADOR" />
-    <qg:phrase text="Potions" as="Pociones" />
-    <qg:phrase text="Keys" as="Llaves" />
     <qg:phrase text="Player" as="Jugador" />
     <qg:phrase text="Opponent" as="Oponente" />
     <qg:phrase text="Attack" as="Atacar" />
@@ -75,12 +77,53 @@
     <qg:phrase text="Full screen" as="Pantalla completa" />
     <qg:phrase text="on" as="sí" />
     <qg:phrase text="off" as="no" />
+    <qg:phrase text="potion" as="poción" />
+    <qg:phrase text="potions" as="pociones" />
+    <qg:phrase text="key" as="llave" />
+    <qg:phrase text="keys" as="llaves" />
+    <qg:asset name="banner" src="assets/banner-es.png" />
+</qg:language>
+  <!-- Russian: letters Montserrat has not, so a font that has them (Xolonium, assets/LICENSE.md),
+       and three plural forms: 1 зелье, 2 зелья, 5 зелий -->
+  <qg:language lang="ru" name="Русский" font="assets/Xolonium-Regular.ttf">
+    <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Эй, самое время для JRPG-драки, правда?" />
+    <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Позволь представиться: я твой ПРОТИВНИК." />
+    <qg:phrase text="Enough talking. Let's fight!" as="Хватит болтать. В бой!" />
+    <qg:phrase text="Just a key..." as="Просто ключ..." />
+    <qg:phrase text="I'll keep it anyway." as="Всё равно возьму." />
+    <qg:phrase text="A potion! In a fight, it gives back 5 life." as="Зелье! В бою оно возвращает 5 жизни." />
+    <qg:phrase text="Congratulations, you won!" as="Поздравляю, ты победил!" />
+    <qg:phrase text="Aha! I won, maybe you can try again next time." as="Ага! Я победил. Может, в следующий раз получится." />
+    <qg:phrase text="UNKNOWN" as="НЕЗНАКОМЕЦ" />
+    <qg:phrase text="OPPONENT" as="ПРОТИВНИК" />
+    <qg:phrase text="PLAYER" as="ИГРОК" />
+    <qg:phrase text="Player" as="Игрок" />
+    <qg:phrase text="Opponent" as="Противник" />
+    <qg:phrase text="Attack" as="Атака" />
+    <qg:phrase text="Defend" as="Защита" />
+    <qg:phrase text="Potion" as="Зелье" />
+    <qg:phrase text="Flee" as="Бежать" />
+    <qg:phrase text="Resume" as="Продолжить" />
+    <qg:phrase text="Music" as="Музыка" />
+    <qg:phrase text="Full screen" as="Полный экран" />
+    <qg:phrase text="on" as="вкл" />
+    <qg:phrase text="off" as="выкл" />
+    <qg:phrase text="potion" as="зелье" />
+    <qg:phrase text="potions" as="зелий" one="зелье" few="зелья" />
+    <qg:phrase text="key" as="ключ" />
+    <qg:phrase text="keys" as="ключей" one="ключ" few="ключа" />
+    <qg:asset name="banner" src="assets/banner-ru.png" />
 </qg:language>
 
   <qg:tileset name="world" src="assets/tiles.png" tile="64" />
   <qg:spritesheet name="pawns" src="assets/pawns.png" tile="64" />
   <qg:spritesheet name="fighters" src="assets/fighters.png" tile="128" />
   <qg:spritesheet name="arena" src="assets/arena.png" tile="1280x720" />
+  <!-- beyond the demo: a frame for the dialogue box that stretches to it (its 16-pixel edges stay as drawn),
+       and "FIGHT!" as the fight starts, drawn in each language (scripts/art/rpg_extra.py, CC0) -->
+  <qg:spritesheet name="frame" src="assets/frame.png" tile="48" slice="16" />
+  <qg:spritesheet name="banner" src="assets/banner-en.png" tile="480x120" />
+  <qg:prefab name="Banner" tag="banner" sheet="banner" hitbox="480x120" />
   <!-- beyond the demo: music of our own (scripts/art/rpg_music.py, CC0) -->
   <qg:sound bus="music" name="meadow" src="assets/meadow.ogg" loop="true" />
   <qg:sound bus="music" name="clash" src="assets/clash.ogg" loop="true" />
@@ -163,7 +206,7 @@
     </qg:character>
 
     <!-- dialogue/dialogue_data/*.json -->
-    <qg:dialogue name="npc" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="npc" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="UNKNOWN" text="Hey, it's a good time to have a JRPG fight, right?" />
       <qg:line who="UNKNOWN" text="Let me introduce myself, I'm your OPPONENT." />
       <qg:line who="OPPONENT" text="Enough talking. Let's fight!" />
@@ -171,24 +214,25 @@
         <qg:goto-scene name="combat" fade="0.4" />
       </qg:on-end>
     </qg:dialogue>
-    <qg:dialogue name="key" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="key" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="PLAYER" text="Just a key..." />
       <qg:line who="PLAYER" text="I'll keep it anyway." />
     </qg:dialogue>
-    <qg:dialogue name="potion" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="potion" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="PLAYER" text="A potion! In a fight, it gives back 5 life." />
     </qg:dialogue>
 
     <!-- What the player carries. -->
+    <!-- beyond the demo: "1 potion", "2 potions", in the player's language and its plural forms -->
     <qg:hud position="top-left" font="assets/montserrat_extra_bold.otf" size="24">
-      <qg:counter bind="potions" label="Potions" />
-      <qg:counter bind="keys" label="Keys" />
+      <qg:text value="{str(potions) + ' ' + tr_n('potion', 'potions', potions)}" />
+      <qg:text value="{str(keys) + ' ' + tr_n('key', 'keys', keys)}" />
     </qg:hud>
-    <qg:dialogue name="won" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="won" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="OPPONENT" text="Congratulations, you won!" />
       <qg:on-end><q:set name="outcome" value="" /></qg:on-end>
     </qg:dialogue>
-    <qg:dialogue name="lost" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="lost" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="OPPONENT" text="Aha! I won, maybe you can try again next time." />
       <qg:on-end><q:set name="outcome" value="" /></qg:on-end>
     </qg:dialogue>
@@ -245,6 +289,13 @@
     <qg:sprite sheet="fighters" frame="4" x="840" y="470" />
     <qg:sprite sheet="fighters" frame="{1 if hurt > 0 else 0}" x="440" y="420" />
     <qg:sprite sheet="fighters" frame="{3 if foe_hurt > 0 else 2}" x="840" y="420" />
+    <!-- beyond the demo: FIGHT! (in the player's language) as the scene fades in, and gone a second later -->
+    <qg:instance prefab="Banner" name="banner" x="640" y="250" />
+    <qg:timer after="60">
+      <qg:tween target="banner" property="alpha" to="0" seconds="0.5">
+        <qg:on-end><qg:destroy target="me" /></qg:on-end>
+      </qg:tween>
+    </qg:timer>
 
     <qg:hud position="top-left" font="assets/montserrat_extra_bold.otf" size="32">
       <qg:text value="{'Player'}" />
@@ -255,8 +306,8 @@
       <qg:bar bind="foe_life" max="7" width="320" height="20" color="#d81b60" />
     </qg:hud>
 
-    <!-- ui.gd: the buttons work on the player's turn. -->
-    <qg:menu position="bottom-center" font="assets/montserrat_extra_bold.otf" size="36"
+    <!-- ui.gd: the buttons work on the player's turn; beyond the demo, in the dialogues' frame. -->
+    <qg:menu position="bottom-center" font="assets/montserrat_extra_bold.otf" size="36" box="frame"
              if="{turn == 'player'}">
       <qg:button label="Attack">
         <q:set name="foe_life" value="{foe_life - 2 + foe_armor}" />

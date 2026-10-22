@@ -394,7 +394,7 @@ that needs it is written, under the same rules.
 - [x] mouse right button, wheel, hover (Towers' sell)
 - [x] music and sounds within a scene (Delve's warden)
 - [x] positional sound (Hopper's bouncer)
-- [ ] nine-slice; plurals, assets and fonts per language (the RPG)
+- [x] nine-slice; plurals, assets and fonts per language (the RPG)
 - [ ] 2D lights and shadows (Delve)
 - [ ] isometric and hexagonal maps, terrain costs (a tactics game)
 - [ ] hot reload
@@ -435,6 +435,25 @@ What was built (2026-10-22), for Hopper: positional sound. `at=` on
 softer and to one side the farther off, silent two screens away. Hopper's
 bouncer hops with a sound, heard from the right on level 4 before it is
 close. Only heard: the `sound` event says where it came from.
+
+What was built (2026-10-22), for the RPG: the game in Russian. `tr_n(one,
+other, n)` is a count's word in the language's form for n, and a
+`qg:phrase` gives the forms besides `as=` (`one=`, `few=`, `many=`) where
+the language has them: Russian, Ukrainian, Belarusian and Polish three,
+Czech and Slovak two; a form a language has not is a compile error. The
+rules are CLDR's for whole numbers (French counts 0 as one), but Portuguese
+counts 0 as Portugal does, 0 poções, where CLDR's Brazilian rule has 0 poção.
+`qg:asset` in
+a `qg:language` gives a sheet or a sound its file in that language (the
+pictures are the next scene's when the language changes; the sounds change
+at once). `font=` on `qg:language` was meant to replace the game's fonts;
+it is a fallback instead: every font draws from it the letters it lacks, so
+the RPG's Cyrillic is Xolonium's while its Latin letters stay Montserrat's,
+and the order follows the language shown. `slice=` makes a sheet's first
+frame stretch to a box (a `StyleBoxTexture`), `box=` on `qg:dialogue` and
+on `qg:menu`; a sprite sliced or tiled in the world is still not said. The
+RPG's dialogues and fight menu are framed, its HUD counts potions and keys,
+and a banner says "FIGHT!" in each language as the fight fades in.
 
 Out by design (also in the map): rigid-body physics, which breaks the
 lockstep's determinism; shaders and post-processing, which are code; a

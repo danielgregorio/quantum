@@ -100,13 +100,14 @@ Goes inside: `q:application`.
 
 ### `qg:spritesheet`
 
-A sheet of equal frames for characters and items.
+A sheet of equal frames for characters and items. With slice=, it is a frame that stretches to a box (a dialogue's box=): its corners stay as drawn, its edges and middle stretch.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `name` | a name | required |  |
 | `src` | text | required |  |
 | `tile` | tile | required | frame size in pixels: 24, or 8x32 for frames that are not square |
+| `slice` | text |  | how wide its edges are, in pixels, that do not stretch: 16, or left, top, right, bottom (16, 8, 16, 8); its first frame is the frame |
 
 Goes inside: `q:application`.
 
@@ -785,6 +786,7 @@ A list of buttons (and text fields) over the scene. A player moves through it wi
 | `position` | `top-left` / `top-center` / `top-right` / `center` / `bottom-center` | `center` |  |
 | `font` | text |  | a .ttf, relative to the .q or a folder above it |
 | `size` | integer | `16` | font size |
+| `box` | a name |  | a qg:spritesheet with slice=: the buttons are in a box drawn with it, stretched (a frame) |
 | `columns` | integer | `1` | its items in a grid of so many columns: left and right move along a row |
 | `rows` | integer | `0` | how many rows show at once; the others scroll into view with the focus (0: all of them) |
 
@@ -1448,6 +1450,17 @@ Goes inside: `qg:scene`, a handler.
 
 ## Other tags
 
+### `qg:asset`
+
+A picture or a sound of the game as it is in a qg:language: the banner with its words in the language, a voice. The scenes that start while the language is shown draw the picture; the sound plays from the moment it is chosen.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required | a qg:spritesheet, qg:tileset or qg:sound of the game |
+| `src` | text | required | its file in this language, relative to the .q or a folder above it; a picture has the same frame size |
+
+Goes inside: `qg:language`.
+
 ### `qg:choice`
 
 One answer to a qg:line: what the player reads, and what happens when it is chosen (then the next line). Holds actions and statements: a qg:say opens another dialogue, a q:set remembers the answer.
@@ -1470,6 +1483,7 @@ Lines someone says, shown one at a time in a box at the bottom of the screen (qg
 | `size` | integer | `24` | font size |
 | `speed` | number | `0.0` | letters a second, typed in as each line shows (select shows it whole at once); 0: the whole line at once |
 | `sheet` | a name |  | a qg:spritesheet of faces: a line's portrait= is a frame of it |
+| `box` | a name |  | a qg:spritesheet with slice=: the box is drawn with it, stretched (a frame) |
 
 Goes inside: `qg:scene`.
 
@@ -1504,12 +1518,13 @@ Goes inside: `qg:scene`, `qg:character`, `qg:prefab`.
 
 ### `qg:language`
 
-The game's texts in another language: each qg:phrase gives one text as written in the game, and what it is in this language. A text with no phrase stays as written. The language is ?lang= in a web page, --q-lang= on the command line, else the system's, when the game has it; `tr(text)` translates a text an expression puts together. In pt and es, a qg:lobby's own texts come translated.
+The game's texts in another language: each qg:phrase gives one text as written in the game, and what it is in this language. A text with no phrase stays as written. The language is ?lang= in a web page, --q-lang= on the command line, else the system's, when the game has it; `tr(text)` translates a text an expression puts together, and `tr_n(one, other, n)` a count's word (1 potion, 2 potions) by the language's plural rule. In pt and es, a qg:lobby's own texts come translated. A qg:asset gives a picture or a sound drawn or spoken in the language.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `lang` | text | required | a language code: pt, es, zh, pt_BR... |
 | `name` | text | `` | its own name for it (Português) |
+| `font` | text |  | a .ttf with the letters of its alphabet that the game's fonts lack (Cyrillic, Greek, Japanese): every text draws them from it |
 
 Goes inside: `q:application`.
 
@@ -1579,12 +1594,15 @@ Goes inside: `qg:scene`.
 
 ### `qg:phrase`
 
-One text of the game, in a qg:language.
+One text of the game, in a qg:language. The plural word of a count (`tr_n('potion', 'potions', n)`) takes the forms its language has: in Russian, 1 зелье, 2 зелья, 5 зелий.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
 | `text` | text | required | the text exactly as the game shows it (a button, a line, a HUD text) |
-| `as` | text | required | what it is in this language |
+| `as` | text | required | what it is in this language; for a plural word, the form of the counts the others are not (5 зелий) |
+| `one` | text |  | a plural word's form for one (1, 21, 31 in ru, uk, be; 1 elsewhere); when not given, the phrase of the word for one |
+| `few` | text |  | its form for a few: 2 to 4 (22 to 24...) in ru, uk, be and pl; 2 to 4 in cs and sk |
+| `many` | text |  | its form for many (5 to 20, 25...) in ru, uk, be and pl; as= when not given |
 
 Goes inside: `qg:language`.
 
@@ -1701,7 +1719,7 @@ Goes inside: `qg:scene`.
 
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core's. `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `tr_n()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), and `sort()` is the Core's. `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
 
 ## `gd:` attributes
 
@@ -6476,8 +6494,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="UNKNOWN" as="DESCONHECIDO" />
     <qg:phrase text="OPPONENT" as="OPONENTE" />
     <qg:phrase text="PLAYER" as="JOGADOR" />
-    <qg:phrase text="Potions" as="Poções" />
-    <qg:phrase text="Keys" as="Chaves" />
     <qg:phrase text="Player" as="Jogador" />
     <qg:phrase text="Opponent" as="Oponente" />
     <qg:phrase text="Attack" as="Atacar" />
@@ -6489,6 +6505,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Full screen" as="Tela cheia" />
     <qg:phrase text="on" as="sim" />
     <qg:phrase text="off" as="não" />
+    <qg:phrase text="potion" as="poção" />
+    <qg:phrase text="potions" as="poções" />
+    <qg:phrase text="key" as="chave" />
+    <qg:phrase text="keys" as="chaves" />
+    <!-- the fight's banner, drawn in Portuguese -->
+    <qg:asset name="banner" src="assets/banner-pt.png" />
 </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Oye, es un buen momento para una pelea de JRPG, ¿no crees?" />
@@ -6502,8 +6524,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="UNKNOWN" as="DESCONOCIDO" />
     <qg:phrase text="OPPONENT" as="OPONENTE" />
     <qg:phrase text="PLAYER" as="JUGADOR" />
-    <qg:phrase text="Potions" as="Pociones" />
-    <qg:phrase text="Keys" as="Llaves" />
     <qg:phrase text="Player" as="Jugador" />
     <qg:phrase text="Opponent" as="Oponente" />
     <qg:phrase text="Attack" as="Atacar" />
@@ -6515,12 +6535,53 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Full screen" as="Pantalla completa" />
     <qg:phrase text="on" as="sí" />
     <qg:phrase text="off" as="no" />
+    <qg:phrase text="potion" as="poción" />
+    <qg:phrase text="potions" as="pociones" />
+    <qg:phrase text="key" as="llave" />
+    <qg:phrase text="keys" as="llaves" />
+    <qg:asset name="banner" src="assets/banner-es.png" />
+</qg:language>
+  <!-- Russian: letters Montserrat has not, so a font that has them (Xolonium, assets/LICENSE.md),
+       and three plural forms: 1 зелье, 2 зелья, 5 зелий -->
+  <qg:language lang="ru" name="Русский" font="assets/Xolonium-Regular.ttf">
+    <qg:phrase text="Hey, it's a good time to have a JRPG fight, right?" as="Эй, самое время для JRPG-драки, правда?" />
+    <qg:phrase text="Let me introduce myself, I'm your OPPONENT." as="Позволь представиться: я твой ПРОТИВНИК." />
+    <qg:phrase text="Enough talking. Let's fight!" as="Хватит болтать. В бой!" />
+    <qg:phrase text="Just a key..." as="Просто ключ..." />
+    <qg:phrase text="I'll keep it anyway." as="Всё равно возьму." />
+    <qg:phrase text="A potion! In a fight, it gives back 5 life." as="Зелье! В бою оно возвращает 5 жизни." />
+    <qg:phrase text="Congratulations, you won!" as="Поздравляю, ты победил!" />
+    <qg:phrase text="Aha! I won, maybe you can try again next time." as="Ага! Я победил. Может, в следующий раз получится." />
+    <qg:phrase text="UNKNOWN" as="НЕЗНАКОМЕЦ" />
+    <qg:phrase text="OPPONENT" as="ПРОТИВНИК" />
+    <qg:phrase text="PLAYER" as="ИГРОК" />
+    <qg:phrase text="Player" as="Игрок" />
+    <qg:phrase text="Opponent" as="Противник" />
+    <qg:phrase text="Attack" as="Атака" />
+    <qg:phrase text="Defend" as="Защита" />
+    <qg:phrase text="Potion" as="Зелье" />
+    <qg:phrase text="Flee" as="Бежать" />
+    <qg:phrase text="Resume" as="Продолжить" />
+    <qg:phrase text="Music" as="Музыка" />
+    <qg:phrase text="Full screen" as="Полный экран" />
+    <qg:phrase text="on" as="вкл" />
+    <qg:phrase text="off" as="выкл" />
+    <qg:phrase text="potion" as="зелье" />
+    <qg:phrase text="potions" as="зелий" one="зелье" few="зелья" />
+    <qg:phrase text="key" as="ключ" />
+    <qg:phrase text="keys" as="ключей" one="ключ" few="ключа" />
+    <qg:asset name="banner" src="assets/banner-ru.png" />
 </qg:language>
 
   <qg:tileset name="world" src="assets/tiles.png" tile="64" />
   <qg:spritesheet name="pawns" src="assets/pawns.png" tile="64" />
   <qg:spritesheet name="fighters" src="assets/fighters.png" tile="128" />
   <qg:spritesheet name="arena" src="assets/arena.png" tile="1280x720" />
+  <!-- beyond the demo: a frame for the dialogue box that stretches to it (its 16-pixel edges stay as drawn),
+       and "FIGHT!" as the fight starts, drawn in each language (scripts/art/rpg_extra.py, CC0) -->
+  <qg:spritesheet name="frame" src="assets/frame.png" tile="48" slice="16" />
+  <qg:spritesheet name="banner" src="assets/banner-en.png" tile="480x120" />
+  <qg:prefab name="Banner" tag="banner" sheet="banner" hitbox="480x120" />
   <!-- beyond the demo: music of our own (scripts/art/rpg_music.py, CC0) -->
   <qg:sound bus="music" name="meadow" src="assets/meadow.ogg" loop="true" />
   <qg:sound bus="music" name="clash" src="assets/clash.ogg" loop="true" />
@@ -6603,7 +6664,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:character>
 
     <!-- dialogue/dialogue_data/*.json -->
-    <qg:dialogue name="npc" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="npc" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="UNKNOWN" text="Hey, it's a good time to have a JRPG fight, right?" />
       <qg:line who="UNKNOWN" text="Let me introduce myself, I'm your OPPONENT." />
       <qg:line who="OPPONENT" text="Enough talking. Let's fight!" />
@@ -6611,24 +6672,25 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <qg:goto-scene name="combat" fade="0.4" />
       </qg:on-end>
     </qg:dialogue>
-    <qg:dialogue name="key" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="key" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="PLAYER" text="Just a key..." />
       <qg:line who="PLAYER" text="I'll keep it anyway." />
     </qg:dialogue>
-    <qg:dialogue name="potion" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="potion" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="PLAYER" text="A potion! In a fight, it gives back 5 life." />
     </qg:dialogue>
 
     <!-- What the player carries. -->
+    <!-- beyond the demo: "1 potion", "2 potions", in the player's language and its plural forms -->
     <qg:hud position="top-left" font="assets/montserrat_extra_bold.otf" size="24">
-      <qg:counter bind="potions" label="Potions" />
-      <qg:counter bind="keys" label="Keys" />
+      <qg:text value="{str(potions) + ' ' + tr_n('potion', 'potions', potions)}" />
+      <qg:text value="{str(keys) + ' ' + tr_n('key', 'keys', keys)}" />
     </qg:hud>
-    <qg:dialogue name="won" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="won" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="OPPONENT" text="Congratulations, you won!" />
       <qg:on-end><q:set name="outcome" value="" /></qg:on-end>
     </qg:dialogue>
-    <qg:dialogue name="lost" font="assets/montserrat_extra_bold.otf" size="28">
+    <qg:dialogue name="lost" font="assets/montserrat_extra_bold.otf" size="28" box="frame">
       <qg:line who="OPPONENT" text="Aha! I won, maybe you can try again next time." />
       <qg:on-end><q:set name="outcome" value="" /></qg:on-end>
     </qg:dialogue>
@@ -6685,6 +6747,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:sprite sheet="fighters" frame="4" x="840" y="470" />
     <qg:sprite sheet="fighters" frame="{1 if hurt > 0 else 0}" x="440" y="420" />
     <qg:sprite sheet="fighters" frame="{3 if foe_hurt > 0 else 2}" x="840" y="420" />
+    <!-- beyond the demo: FIGHT! (in the player's language) as the scene fades in, and gone a second later -->
+    <qg:instance prefab="Banner" name="banner" x="640" y="250" />
+    <qg:timer after="60">
+      <qg:tween target="banner" property="alpha" to="0" seconds="0.5">
+        <qg:on-end><qg:destroy target="me" /></qg:on-end>
+      </qg:tween>
+    </qg:timer>
 
     <qg:hud position="top-left" font="assets/montserrat_extra_bold.otf" size="32">
       <qg:text value="{'Player'}" />
@@ -6695,8 +6764,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:bar bind="foe_life" max="7" width="320" height="20" color="#d81b60" />
     </qg:hud>
 
-    <!-- ui.gd: the buttons work on the player's turn. -->
-    <qg:menu position="bottom-center" font="assets/montserrat_extra_bold.otf" size="36"
+    <!-- ui.gd: the buttons work on the player's turn; beyond the demo, in the dialogues' frame. -->
+    <qg:menu position="bottom-center" font="assets/montserrat_extra_bold.otf" size="36" box="frame"
              if="{turn == 'player'}">
       <qg:button label="Attack">
         <q:set name="foe_life" value="{foe_life - 2 + foe_armor}" />

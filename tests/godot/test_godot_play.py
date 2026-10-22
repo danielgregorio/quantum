@@ -54,7 +54,7 @@ def test_the_game_waits_and_an_act_runs_exactly_its_ticks(rpg, godot):
         assert (start['tick'], start['scene']) == (0, 'exploration')
         assert start['state']['nodes']['player'] == {'col': 3, 'row': 4, 'x': 224.0, 'y': 288.0, 'facing': [1, 0]}
         assert {'left', 'right', 'up', 'down', 'select'} <= set(start['controls'])
-        assert PlaySession.screen(start, 'hud')['items'] == ['Potions 0', 'Keys 0']
+        assert PlaySession.screen(start, 'hud')['items'] == ['0 potions', '0 keys']
         assert game.observe()['tick'] == 0                          # observing runs nothing
         moved = game.act(hold=['right'], ticks=16)                   # a step is 15 ticks and the one that reads it
         assert (moved['tick'], moved['stopped']) == (16, 'ticks')
@@ -211,7 +211,7 @@ def test_the_game_in_the_players_language(rpg, godot):
     with PlaySession(rpg, binary=godot, lang='pt') as game:
         seen = game.observe()
         assert seen['lang'] == 'pt'
-        assert PlaySession.screen(seen, 'hud')['items'] == ['Poções 0', 'Chaves 0']
+        assert PlaySession.screen(seen, 'hud')['items'] == ['0 poções', '0 chaves']
         game.until('player.row == 7', hold=['down'])
         said = game.until('event:say', hold=['right'])
         assert PlaySession.screen(said, 'dialogue')['text'] == 'Ei, é uma boa hora para uma luta de JRPG, não acha?'

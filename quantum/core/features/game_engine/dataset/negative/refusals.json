@@ -1069,6 +1069,42 @@
         "play",
         "at"
       ]
+    },
+    {
+      "id": "game-bad-062",
+      "intent": "A plural form a language does not have",
+      "input": {
+        "natural_language": "A Portuguese count with a form for a few",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:language lang=\"pt\">\n    <qg:phrase text=\"keys\" as=\"chaves\" one=\"chave\" few=\"chavinhas\" />\n  </qg:language>\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:phrase few=>: a count's word in pt has no such form"
+      },
+      "why_invalid": "Portuguese says 1 chave and 2 chaves, nothing else: few= is a form of Russian, Ukrainian, Belarusian, Polish, Czech and Slovak.",
+      "correction": "Keep one= and as= (the rest) for Portuguese.",
+      "tags": [
+        "phrase",
+        "tr_n"
+      ]
+    },
+    {
+      "id": "game-bad-063",
+      "intent": "A box framed with a picture that does not stretch",
+      "input": {
+        "natural_language": "A dialogue box drawn with a sheet without slice=",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:spritesheet name=\"frame\" src=\"projects/rpg/assets/frame.png\" tile=\"48\" />\n  <qg:scene name=\"main\">\n    <qg:dialogue name=\"hi\" box=\"frame\"><qg:line text=\"Hello\" /></qg:dialogue>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "<qg:dialogue name=\"hi\" box=\"frame\">: a qg:spritesheet with slice="
+      },
+      "why_invalid": "A box stretches its frame to any size; without slice= nothing says which edges stay as drawn.",
+      "correction": "Say how wide the edges are: <qg:spritesheet name=\"frame\" ... slice=\"16\" />.",
+      "tags": [
+        "box",
+        "slice"
+      ]
     }
   ]
 }

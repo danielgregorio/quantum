@@ -87,6 +87,14 @@ func setup(spec: Dictionary, scene: Node) -> void:
 		holder = VBoxContainer.new()
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var start: bool = str(spec.get("position", "center")) in ["top-left", "top-right"]
+	var outer: Container = box
+	if spec.get("box") != null:   # the items in a frame of the game's, stretched (a sheet with slice=)
+		var panel := PanelContainer.new()
+		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_theme_stylebox_override("panel", Q.frame_box(scene.q_game["sheets"][spec["box"]], size * 0.5))
+		panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if start else Control.SIZE_SHRINK_CENTER
+		box.add_child(panel)
+		outer = panel
 	if spec.get("rows") != null:
 		_scroll = ScrollContainer.new()
 		_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -95,10 +103,10 @@ func setup(spec: Dictionary, scene: Node) -> void:
 		_scroll.custom_minimum_size = Vector2(0, int(spec["rows"]) * (size * 1.75 + 4))
 		_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if start else Control.SIZE_SHRINK_CENTER
 		_scroll.add_child(holder)
-		box.add_child(_scroll)
+		outer.add_child(_scroll)
 	else:
 		holder.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if start else Control.SIZE_SHRINK_CENTER
-		box.add_child(holder)
+		outer.add_child(holder)
 	var list: Container = holder
 	for item in spec.get("items", []):
 		var entry := {"spec": item, "control": null, "line": null}

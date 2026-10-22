@@ -1356,12 +1356,13 @@ export const gameTags: TagSchema[] = [
     {
         name: 'spritesheet',
         namespace: 'qg',
-        description: 'A sheet of equal frames for characters and items.',
+        description: 'A sheet of equal frames for characters and items. With slice=, it is a frame that stretches to a box (a dialogue\'s box=): its corners stay as drawn, its edges and middle stretch.',
         category: 'Game',
         attributes: [
             { name: 'name', description: '', required: true, type: 'string' },
             { name: 'src', description: '', required: true, type: 'string' },
             { name: 'tile', description: 'frame size in pixels: 24, or 8x32 for frames that are not square', required: true, type: 'string' },
+            { name: 'slice', description: 'how wide its edges are, in pixels, that do not stretch: 16, or left, top, right, bottom (16, 8, 16, 8); its first frame is the frame', type: 'string' },
         ]
     },
     {
@@ -1420,22 +1421,36 @@ export const gameTags: TagSchema[] = [
     {
         name: 'language',
         namespace: 'qg',
-        description: 'The game\'s texts in another language: each qg:phrase gives one text as written in the game, and what it is in this language. A text with no phrase stays as written. The language is ?lang= in a web page, --q-lang= on the command line, else the system\'s, when the game has it; `tr(text)` translates a text an expression puts together. In pt and es, a qg:lobby\'s own texts come translated.',
+        description: 'The game\'s texts in another language: each qg:phrase gives one text as written in the game, and what it is in this language. A text with no phrase stays as written. The language is ?lang= in a web page, --q-lang= on the command line, else the system\'s, when the game has it; `tr(text)` translates a text an expression puts together, and `tr_n(one, other, n)` a count\'s word (1 potion, 2 potions) by the language\'s plural rule. In pt and es, a qg:lobby\'s own texts come translated. A qg:asset gives a picture or a sound drawn or spoken in the language.',
         category: 'Game',
-        allowedChildren: ['qg:phrase'],
+        allowedChildren: ['qg:phrase', 'qg:asset'],
         attributes: [
             { name: 'lang', description: 'a language code: pt, es, zh, pt_BR...', required: true, type: 'string' },
             { name: 'name', description: 'its own name for it (Português)', type: 'string', default: '' },
+            { name: 'font', description: 'a .ttf with the letters of its alphabet that the game\'s fonts lack (Cyrillic, Greek, Japanese): every text draws them from it', type: 'string' },
         ]
     },
     {
         name: 'phrase',
         namespace: 'qg',
-        description: 'One text of the game, in a qg:language.',
+        description: 'One text of the game, in a qg:language. The plural word of a count (`tr_n(\'potion\', \'potions\', n)`) takes the forms its language has: in Russian, 1 зелье, 2 зелья, 5 зелий.',
         category: 'Game',
         attributes: [
             { name: 'text', description: 'the text exactly as the game shows it (a button, a line, a HUD text)', required: true, type: 'string' },
-            { name: 'as', description: 'what it is in this language', required: true, type: 'string' },
+            { name: 'as', description: 'what it is in this language; for a plural word, the form of the counts the others are not (5 зелий)', required: true, type: 'string' },
+            { name: 'one', description: 'a plural word\'s form for one (1, 21, 31 in ru, uk, be; 1 elsewhere); when not given, the phrase of the word for one', type: 'string' },
+            { name: 'few', description: 'its form for a few: 2 to 4 (22 to 24...) in ru, uk, be and pl; 2 to 4 in cs and sk', type: 'string' },
+            { name: 'many', description: 'its form for many (5 to 20, 25...) in ru, uk, be and pl; as= when not given', type: 'string' },
+        ]
+    },
+    {
+        name: 'asset',
+        namespace: 'qg',
+        description: 'A picture or a sound of the game as it is in a qg:language: the banner with its words in the language, a voice. The scenes that start while the language is shown draw the picture; the sound plays from the moment it is chosen.',
+        category: 'Game',
+        attributes: [
+            { name: 'name', description: 'a qg:spritesheet, qg:tileset or qg:sound of the game', required: true, type: 'string' },
+            { name: 'src', description: 'its file in this language, relative to the .q or a folder above it; a picture has the same frame size', required: true, type: 'string' },
         ]
     },
     {
@@ -1675,6 +1690,7 @@ export const gameTags: TagSchema[] = [
             { name: 'position', description: '', type: 'enum', values: ['top-left', 'top-center', 'top-right', 'center', 'bottom-center'], default: 'center' },
             { name: 'font', description: 'a .ttf, relative to the .q or a folder above it', type: 'string' },
             { name: 'size', description: 'font size', type: 'number', default: '16' },
+            { name: 'box', description: 'a qg:spritesheet with slice=: the buttons are in a box drawn with it, stretched (a frame)', type: 'string' },
             { name: 'columns', description: 'its items in a grid of so many columns: left and right move along a row', type: 'number', default: '1' },
             { name: 'rows', description: 'how many rows show at once; the others scroll into view with the focus (0: all of them)', type: 'number', default: '0' },
         ]
@@ -1742,6 +1758,7 @@ export const gameTags: TagSchema[] = [
             { name: 'size', description: 'font size', type: 'number', default: '24' },
             { name: 'speed', description: 'letters a second, typed in as each line shows (select shows it whole at once); 0: the whole line at once', type: 'number', default: '0' },
             { name: 'sheet', description: 'a qg:spritesheet of faces: a line\'s portrait= is a frame of it', type: 'string' },
+            { name: 'box', description: 'a qg:spritesheet with slice=: the box is drawn with it, stretched (a frame)', type: 'string' },
         ]
     },
     {

@@ -208,7 +208,7 @@ func _refresh_inventory(entry: Dictionary) -> void:
 		var spec: Dictionary = G.Q_ITEMS[item]
 		if spec.get("sheet") != null and sheets.has(spec["sheet"]):
 			var sheet: Dictionary = sheets[spec["sheet"]]
-			var texture := Q.texture(str(sheet["src"]))
+			var texture := Q.texture(Q.src_of(sheet))
 			if texture != null:
 				var w := int(sheet["tile"][0])
 				var h := int(sheet["tile"][1])
