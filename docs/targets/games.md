@@ -6869,6 +6869,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:set name="market" value="[]" type="array" />         <!-- the transfer list: {who, seller (-1: a free agent), fee, wage, left, bids} -->
   <q:set name="free_agents" value="[]" type="array" />    <!-- players of no club -->
   <q:set name="bidding" value="-1" type="number" />       <!-- the entry of the list a manager is looking at -->
+  <q:set name="today" value="[]" type="array" />          <!-- the games of the date being played: [home, away] -->
+  <q:set name="today_kind" value="league" type="string" /> <!-- league, cup or super -->
+  <q:set name="cup_round" value="0" type="number" />      <!-- the Panda Cup's next round: 0 the preliminary ... 5 the final, 6 over -->
+  <q:set name="cup_alive" value="[]" type="array" />      <!-- the clubs still in it -->
+  <q:set name="cup_ties" value="[]" type="array" />       <!-- its next round, drawn: [home, away] -->
+  <q:set name="cup_winner" value="-1" type="number" />
+  <q:set name="cup_runner" value="-1" type="number" />
+  <q:set name="super_tie" value="[]" type="array" />      <!-- the Supercup, the season's first date: [the champion, the cup's winner] -->
   <q:set name="turn" value="0" type="number" />           <!-- whose screens these are -->
   <q:set name="matchday" value="0" type="number" />       <!-- the next round, from 0 -->
   <q:set name="season" value="2026" type="number" />
@@ -7163,6 +7171,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </q:loop>
     <q:loop items="{clubs}" var="club"><q:call function="auto_lineup" args="{club}" /></q:loop>
     <q:call function="set_expectations" />
+    <q:call function="new_cup" />
+    <q:set name="super_tie" value="{[]}" />
     <q:set name="matchday" value="{0}" />
     <q:call function="prepare_round" />
     <q:set name="news" value="{[]}" />
@@ -7943,7 +7953,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:function name="kickoff">
     <q:set name="matches" value="{[]}" />
     <q:set name="orders" value="{[table_order(1), table_order(2), table_order(3), table_order(4)]}" />
-    <q:loop items="{fixtures[matchday]}" var="g">
+    <q:loop items="{today}" var="g">
       <q:set name="home" value="{clubs[g[0]]}" />
       <q:set name="away" value="{clubs[g[1]]}" />
       <!-- the tactics and the elevens were made ready after the last round (prepare_round), or by the manager since:
@@ -7952,7 +7962,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <q:if condition="{away.manager > 0}"><q:call function="fill_lineup" args="{away}" /></q:if>
       <q:loop items="{home.players + away.players}" var="p"><q:set name="p.start" value="{p.xi}" /><q:set name="p.sat" value="{p.bench}" /><q:set name="p.off" value="{''}" /><q:set name="p.booked" value="{false}" /></q:loop>
       <q:set name="order" value="{orders[home.div - 1]}" />
-      <q:set name="crowd" value="{crowd_for(home, place_in(order, g[1]), place_in(order, g[0]), random(0.85, 1.15))}" />
+      <!-- a cup's visitor of another division: by its division, the bigger the more come -->
+      <q:set name="away_place" value="{place_in(order, g[1]) if away.div == home.div else (0 if away.div < home.div else 9)}" />
+      <q:set name="crowd" value="{crowd_for(home, away_place, place_in(order, g[0]), random(0.85, 1.15) * (1.2 if today_kind != 'league' else 1))}" />
       <q:set name="fill" value="{crowd / home.capacity}" />
       <q:set name="matches" value="{matches + [ {'home': g[0], 'away': g[1], 'hg': 0, 'ag': 0, 'events': [], 'h': side(home, away, true, fill), 'a': side(away, home, false, fill), 'styles': [home.style, away.style], 'crowd': crowd, 'fill': fill, 'luck': [random(0.8, 1.2), random(0.8, 1.2)]} ]}" />
     </q:loop>
@@ -8196,14 +8208,192 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:call function="prepare_round" />
   </q:function>
 
-  <!-- every club ready for the next round: its tactics as they will start, its eleven (the gaps filled) -->
+  <!-- every club ready for the next date: its tactics as they will start, its eleven (the gaps filled) -->
   <q:function name="prepare_round">
-    <q:if condition="{matchday < 18}">
-      <q:loop items="{fixtures[matchday]}" var="g">
+    <q:if condition="{matchday < 18 or cup_due()}">
+      <q:loop items="{next_games()}" var="g">
         <q:call function="ready" args="{clubs[g[0]]}, {clubs[g[1]]}, {true}" />
         <q:call function="ready" args="{clubs[g[1]]}, {clubs[g[0]]}, {false}" />
       </q:loop>
     </q:if>
+  </q:function>
+
+  <!-- ===== The cups (decision 30): the Panda Cup, knock-out, drawn on screen; the Supercup ===== -->
+
+  <!-- a cup round after every third round of the league, the final after the last -->
+  <q:function name="cup_due">
+    <q:return value="{cup_round < 6 and matchday >= [3, 6, 9, 12, 15, 18][min(5, cup_round)]}" />
+  </q:function>
+
+  <q:function name="super_due">
+    <q:return value="{len(super_tie) == 2 and matchday == 0}" />
+  </q:function>
+
+  <q:function name="next_kind">
+    <q:return value="{'super' if super_due() else ('cup' if cup_due() else 'league')}" />
+  </q:function>
+
+  <!-- the games of the next date: the Supercup, the cup's round (drawn now if it was not), or the league's round -->
+  <q:function name="next_games">
+    <q:if condition="{super_due()}"><q:return value="{[super_tie]}" /></q:if>
+    <q:if condition="{cup_due()}">
+      <q:if condition="{len(cup_ties) == 0}"><q:call function="make_draw" /></q:if>
+      <q:return value="{cup_ties}" />
+    </q:if>
+    <q:return value="{fixtures[min(matchday, 17)]}" />
+  </q:function>
+
+  <q:function name="cup_round_name" params="k">
+    <q:return value="{tr(['Preliminary round', 'Round of 32', 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Final'][k])}" />
+  </q:function>
+
+  <q:function name="new_cup">
+    <q:set name="cup_round" value="{0}" />
+    <q:set name="cup_alive" value="{upto(len(clubs))}" />
+    <q:set name="cup_ties" value="{[]}" />
+    <q:set name="cup_winner" value="{-1}" />
+    <q:set name="cup_runner" value="{-1}" />
+  </q:function>
+
+  <!-- the draw: the preliminary round between the 4th division's ten and six of the 3rd (the others wait for the
+       round of 32), then all who are left; the club of the lower division at home, else the first drawn -->
+  <q:function name="make_draw">
+    <q:set name="pot" value="{cup_alive}" />
+    <q:if condition="{cup_round == 0}">
+      <q:set name="third" value="{in_div(3)}" />
+      <q:set name="pot" value="{in_div(4)}" />
+      <q:loop var="k" from="1" to="6"><q:set name="drawn" value="{pick(third)}" /><q:set name="third" value="{without(third, drawn)}" /><q:set name="pot" value="{pot + [drawn]}" /></q:loop>
+    </q:if>
+    <q:set name="ties" value="{[]}" />
+    <q:loop var="k" from="1" to="{floor(len(pot) / 2)}">
+      <q:set name="a" value="{pick(pot)}" />
+      <q:set name="pot" value="{without(pot, a)}" />
+      <q:set name="b" value="{pick(pot)}" />
+      <q:set name="pot" value="{without(pot, b)}" />
+      <q:set name="ties" value="{ties + [[b, a] if clubs[b].div > clubs[a].div else [a, b]]}" />
+    </q:loop>
+    <q:set name="cup_ties" value="{ties}" />
+  </q:function>
+
+  <!-- whether any manager's club plays one of these games -->
+  <q:function name="managed_in" params="games">
+    <q:loop items="{games}" var="g"><q:if condition="{clubs[g[0]].manager > 0 or clubs[g[1]].manager > 0}"><q:return value="{true}" /></q:if></q:loop>
+    <q:return value="{false}" />
+  </q:function>
+
+  <!-- the date about to be played, as the round scene reads it -->
+  <q:function name="start_date">
+    <q:set name="today_kind" value="{next_kind()}" />
+    <q:set name="today" value="{next_games()}" />
+  </q:function>
+
+  <!-- a date no manager plays, played at once: its matches minute by minute, as the live round would -->
+  <q:function name="play_unseen">
+    <q:call function="start_date" />
+    <q:call function="prepare_round" />
+    <q:set name="matches" value="{kickoff()}" />
+    <q:loop var="minute" from="1" to="90">
+      <q:loop items="{matches}" var="m"><q:call function="play_minute" args="{m}, {minute}" /></q:loop>
+    </q:loop>
+    <q:call function="finish_cup" args="{matches}" />
+  </q:function>
+
+  <!-- penalties: five each, then one each until one misses (three in four go in) -->
+  <q:function name="shootout" params="m">
+    <q:set name="h" value="{0}" />
+    <q:set name="a" value="{0}" />
+    <q:loop var="k" from="1" to="5"><q:if condition="{chance(0.75)}"><q:set name="h" value="{h + 1}" /></q:if><q:if condition="{chance(0.75)}"><q:set name="a" value="{a + 1}" /></q:if></q:loop>
+    <q:loop var="k" from="1" to="20">
+      <q:if condition="{h == a}"><q:if condition="{chance(0.75)}"><q:set name="h" value="{h + 1}" /></q:if><q:if condition="{chance(0.75)}"><q:set name="a" value="{a + 1}" /></q:if></q:if>
+    </q:loop>
+    <q:if condition="{h == a}"><q:set name="h" value="{h + 1}" /></q:if>
+    <q:set name="m.pens" value="{[h, a]}" />
+    <q:set name="m.events" value="{[ {'kind': 'pens', 'minute': 90, 'who': str(h) + '-' + str(a), 'club': clubs[m.home if h > a else m.away].short} ] + m.events}" />
+  </q:function>
+
+  <!-- a cup date's results: who goes through (on penalties after a draw), the prize of the round won, the gates and
+       the squads as after any match (no table, no wages: a date in midweek); the final makes the winner -->
+  <q:function name="finish_cup" params="matches">
+    <q:set name="out" value="{[]}" />
+    <q:set name="won" value="{[]}" />
+    <q:loop items="{matches}" var="m">
+      <q:if condition="{m.hg == m.ag}"><q:call function="shootout" args="{m}" /></q:if>
+      <q:set name="home_won" value="{m.hg > m.ag or (m.hg == m.ag and m.pens[0] > m.pens[1])}" />
+      <q:set name="winner" value="{m.home if home_won else m.away}" />
+      <q:set name="loser" value="{m.away if home_won else m.home}" />
+      <q:set name="won" value="{won + [winner]}" />
+      <q:set name="out" value="{out + [loser]}" />
+      <q:set name="home" value="{clubs[m.home]}" />
+      <q:set name="home.crowd" value="{m.crowd}" />
+      <q:set name="home.gate" value="{round(m.crowd * home.ticket * gate_share(home))}" />
+      <q:set name="home.balance" value="{home.balance + home.gate}" />
+      <q:set name="champ" value="{clubs[winner]}" />
+      <q:set name="champ.balance" value="{champ.balance + [20000, 40000, 80000, 150000, 300000, 1000000, 500000][cup_round if today_kind == 'cup' else 6]}" />
+      <q:loop items="{[[m.home, m.hg, m.ag], [m.away, m.ag, m.hg]]}" var="side">
+        <q:set name="mood" value="{ {'W': 6, 'D': 0, 'L': -6}['W' if side[0] == winner else 'L'] }" />
+        <q:loop items="{clubs[side[0]].players}" var="q"><q:set name="q.morale" value="{max(20, min(100, q.morale + mood))}" /></q:loop>
+      </q:loop>
+    </q:loop>
+    <q:loop items="{clubs}" var="c">
+      <q:loop items="{c.players}" var="q">
+        <q:set name="took_part" value="{q.xi != ''}" />
+        <q:if condition="{q.injured > 0 and q.off != 'injured'}"><q:set name="q.injured" value="{q.injured - 1}" /></q:if>
+        <q:if condition="{q.suspended > 0 and took_part}"><q:set name="q.suspended" value="{q.suspended - 1}" /></q:if>
+        <q:if condition="{q.off == 'red'}"><q:set name="q.suspended" value="{1}" /></q:if>
+        <q:if condition="{took_part}"><q:set name="q.form" value="{max(30, q.form - 10)}" /><q:set name="q.played" value="{q.played + 1}" /></q:if>
+        <q:set name="q.xi" value="{q.start}" />
+        <q:set name="q.bench" value="{q.sat}" />
+        <q:set name="q.off" value="{''}" />
+        <q:set name="q.booked" value="{false}" />
+      </q:loop>
+    </q:loop>
+    <q:set name="last" value="{matches}" />
+    <q:if condition="{today_kind == 'super'}">
+      <q:call function="said" args="{'Supercup:'}, {clubs[won[0]].name}" />
+      <q:set name="super_tie" value="{[]}" />
+      <q:else>
+        <q:if condition="{cup_round == 0}"><q:set name="cup_alive" value="{won + without_all(cup_alive, won + out)}" />
+          <q:else><q:set name="cup_alive" value="{won}" /></q:else>
+        </q:if>
+        <q:if condition="{cup_round == 5}">
+          <q:set name="cup_winner" value="{won[0]}" />
+          <q:set name="cup_runner" value="{out[0]}" />
+          <q:call function="said" args="{'The Panda Cup goes to'}, {clubs[won[0]].name}" />
+          <q:set name="cupholder" value="{clubs[won[0]]}" />
+          <q:set name="cupholder.titles" value="{cupholder.titles + 1}" />
+          <q:loop items="{managers}" var="t"><q:if condition="{t.club == won[0]}"><q:set name="t.career.titles" value="{t.career.titles + 1}" /></q:if></q:loop>
+          <q:else><q:call function="said" args="{cup_round_name(cup_round) + ':'}, {join(names_of_clubs(out[0:4]), ', ') + (' ...' if len(out) > 4 else '') + ' ' + tr('out')}" /></q:else>
+        </q:if>
+        <q:set name="cup_round" value="{cup_round + 1}" />
+        <q:set name="cup_ties" value="{[]}" />
+      </q:else>
+    </q:if>
+    <q:call function="prepare_round" />
+  </q:function>
+
+  <q:function name="without_all" params="list, gone">
+    <q:set name="kept" value="{[]}" />
+    <q:loop items="{list}" var="x"><q:if condition="{not (x in gone)}"><q:set name="kept" value="{kept + [x]}" /></q:if></q:loop>
+    <q:return value="{kept}" />
+  </q:function>
+
+  <q:function name="names_of_clubs" params="indices">
+    <q:set name="names" value="{[]}" />
+    <q:loop items="{indices}" var="k"><q:set name="names" value="{names + [clubs[k].short]}" /></q:loop>
+    <q:return value="{names}" />
+  </q:function>
+
+  <!-- after a date's results: the jobs first, then a cup date no manager plays (at once), the draw of one a manager
+       plays, the season's end, or the next date -->
+  <q:function name="after_results">
+    <q:if condition="{len(jobs) > 0}"><qg:goto-scene name="job" /><q:return value="{false}" /></q:if>
+    <q:loop var="k" from="1" to="6">
+      <q:if condition="{(cup_due() and not managed_in(next_games())) or (super_due() and not managed_in(next_games()))}"><q:call function="play_unseen" /></q:if>
+    </q:loop>
+    <q:if condition="{cup_due()}"><qg:goto-scene name="draw" /><q:return value="{false}" /></q:if>
+    <q:if condition="{matchday >= 18}"><qg:goto-scene name="season-end" /><q:return value="{false}" /></q:if>
+    <qg:goto-scene name="dashboard" />
+    <q:return value="{true}" />
   </q:function>
 
   <q:function name="result" params="club, scored, conceded">
@@ -8240,7 +8430,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:function name="new_season">
     <q:set name="orders" value="{[table_order(1), table_order(2), table_order(3), table_order(4)]}" />
     <q:set name="top" value="{top_scorers(1, 0)}" />
-    <q:set name="honours" value="{[ {'season': season, 'champions': [clubs[orders[0][0]].name, clubs[orders[1][0]].name, clubs[orders[2][0]].name, clubs[orders[3][0]].name], 'scorer': top[0].name + ' (' + top[0].club + ', ' + str(top[0].goals) + ')' if len(top) > 0 else '-'} ] + honours}" />
+    <q:set name="honours" value="{[ {'season': season, 'champions': [clubs[orders[0][0]].name, clubs[orders[1][0]].name, clubs[orders[2][0]].name, clubs[orders[3][0]].name], 'cup': clubs[cup_winner].name if cup_winner >= 0 else '-', 'scorer': top[0].name + ' (' + top[0].club + ', ' + str(top[0].goals) + ')' if len(top) > 0 else '-'} ] + honours}" />
+    <!-- the Supercup: the first division's champion against the cup's winner (its runner-up, when the champion won both) -->
+    <q:set name="super_tie" value="{[orders[0][0], cup_winner if cup_winner != orders[0][0] else cup_runner] if cup_winner >= 0 else []}" />
     <q:call function="season_verdicts" args="{orders}" />
     <q:loop var="d" from="1" to="4"><q:set name="champ" value="{clubs[orders[d - 1][0]]}" /><q:set name="champ.titles" value="{champ.titles + 1}" /></q:loop>
     <q:call function="growth" />
@@ -8273,6 +8465,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:call function="return_loans" />
     <q:call function="make_fixtures" />
     <q:call function="set_expectations" />
+    <q:call function="new_cup" />
     <q:set name="matchday" value="{0}" />
     <q:set name="champion" value="{-1}" />
     <q:call function="prepare_round" />
@@ -8360,7 +8553,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:hud x="250" y="86" box="frame" font="assets/DejaVuSansMono.ttf" size="11">
       <qg:text value="{'═══ ' + tr('NEXT MATCH') + ' ═══'}" color="#55ffff" />
       <qg:text value="{fit(clubs[g[0]].name + '  x  ' + clubs[g[1]].name, 50)}" color="#ffffff" />
-      <qg:text value="{fit(div_name(my_club().div) + ', ' + tr('round') + ' ' + str(matchday + 1) + '  (' + tr('home' if g[0] == managers[turn].club else 'away') + ')', 50)}" />
+      <qg:text value="{fit((div_name(my_club().div) + ', ' + tr('round') + ' ' + str(matchday + 1) if next_kind() == 'league' else (tr('PANDA CUP') + ', ' + cup_round_name(cup_round) if next_kind() == 'cup' else tr('SUPERCUP'))) + ('  (' + tr('home' if g[0] == managers[turn].club else 'away') + ')' if g[0] != g[1] else '  - ' + tr('no match for you')), 50)}" />
       <qg:text value="{fit(tr('Opponent:') + ' ' + str(position_of(opp)) + 'º   ' + tr('Form:') + ' ' + join(form_of(clubs[opp]), ' ') + '   ' + tr('Top scorer:') + ' ' + club_top(clubs[opp]), 50)}" />
       <qg:text value="{fit(tr('They tend to play:') + ' ' + tr(usual(clubs[opp])) + ' - ' + hint(my_club(), clubs[opp]), 50)}" />
       <qg:text value="{fit(tr('Objective:') + ' ' + objective_text(my_club()) + '   ' + my_club().formation + ' ' + tr(my_club().style), 50)}" color="#ffff55" />
@@ -8370,7 +8563,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:text value="{'═══ ' + tr('NEWS') + ' ═══'}" color="#55ffff" />
       <qg:table source="{news[0:5]}" as="n"><qg:column value="{tr(n.text) + (' ' + n.arg if n.arg != '' else '')}" width="50" /></qg:table>
     </qg:hud>
-    <qg:hud x="8" y="356" font="assets/DejaVuSansMono.ttf" size="12">
+    <qg:hud x="8" y="356" font="assets/DejaVuSansMono.ttf" size="11">
       <qg:text value="{'[F1] ' + tr('Line-up') + ' [F2] ' + tr('Tactics') + ' [F3] ' + tr('Squad') + ' [F5] ' + tr('Finances') + ' [F6] ' + tr('Market') + ' [F7] ' + tr('Table') + ' [F8] ' + tr('History')}" color="#55ffff" />
       <qg:text value="{'[ENTER] ' + tr('Ready: next manager' if turn < len(managers) - 1 else 'Play the round') + '   [ESC] ' + tr('Save and leave')}" color="#ffff55" />
     </qg:hud>
@@ -8388,6 +8581,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <qg:goto-scene name="dashboard" />
         <q:else>
           <q:set name="turn" value="{0}" />
+          <q:call function="start_date" />
           <qg:goto-scene name="round" />
         </q:else>
       </q:if>
@@ -8395,7 +8589,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:on-input action="cancel"><qg:save slot="{slot}" /><qg:goto-scene name="title" /></qg:on-input>
     <!-- the season is over: back from the table (F7 on the last results) or from a save, the season's end, never
          round 19 of 18 (it played the last match again, and again) -->
-    <qg:when condition="{matchday >= 18}"><qg:goto-scene name="season-end" /></qg:when>
+    <qg:when condition="{matchday >= 18 and not cup_due()}"><qg:goto-scene name="season-end" /></qg:when>
+    <!-- a cup date no manager plays, reached by a way other than Enter on the results (the table, a save): at once -->
+    <qg:when condition="{(cup_due() or super_due()) and not managed_in(next_games())}"><q:call function="after_results" /></qg:when>
     <qg:when condition="{len(clubs) != 40}"><qg:goto-scene name="old-save" /></qg:when>
   </qg:scene>
 
@@ -8412,7 +8608,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </qg:scene>
 
   <q:function name="next_match" params="club_index">
-    <q:loop items="{fixtures[min(matchday, 17)]}" var="g">
+    <q:loop items="{next_games()}" var="g">
       <q:if condition="{g[0] == club_index or g[1] == club_index}"><q:return value="{g}" /></q:if>
     </q:loop>
     <q:return value="{[club_index, club_index]}" />
@@ -8777,7 +8973,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- ===== F8: the history (decision 31) ===== -->
   <qg:scene name="history" width="640" height="400" background="#0000a8">
     <qg:hud x="8" y="6" box="frame" font="assets/DejaVuSansMono.ttf" size="11">
-      <qg:text value="{'═══ ' + tr('CHAMPIONS') + ' ═══   ' + fit(div_name(1), 15) + fit(div_name(2), 15) + fit(div_name(3), 15) + div_name(4)}" color="#ffff55" />
+      <qg:text value="{fit(tr('Season'), 6) + fit(div_name(1), 15) + fit(div_name(2), 15) + fit(div_name(3), 15) + fit(div_name(4), 15) + tr('PANDA CUP')}" color="#ffff55" />
       <qg:text value="{tr('No season has ended yet.') if len(honours) == 0 else ''}" color="#aaaaaa" />
       <qg:table source="{honours[0:7]}" as="h">
         <qg:column value="{str(h.season)}" width="6" color="#55ffff" />
@@ -8785,7 +8981,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <qg:column value="{h.champions[1]}" width="15" />
         <qg:column value="{h.champions[2]}" width="15" />
         <qg:column value="{h.champions[3]}" width="15" />
-        <qg:column value="{h.scorer}" width="24" color="#aaaaaa" />
+        <qg:column value="{h.cup}" width="14" color="#55ff55" />
       </qg:table>
     </qg:hud>
     <qg:hud x="8" y="170" box="frame" font="assets/DejaVuSansMono.ttf" size="11">
@@ -8882,7 +9078,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- ===== The live round: every match of it in the same minute ===== -->
   <!-- seeded by the world, the season and the round: the same game from the same world, and each round its own luck -->
-  <qg:scene name="round" width="640" height="400" background="#0000a8" seed="{world * 1000 + (season - 2026) * 18 + matchday}">
+  <qg:scene name="round" width="640" height="400" background="#0000a8" seed="{world * 1000 + (season - 2026) * 40 + matchday * 2 + (0 if today_kind == 'league' else 1)}">
     <q:set name="minute" value="0" type="number" />
     <q:set name="clock" value="0" type="number" />        <!-- ticks towards the next minute -->
     <q:set name="pace" value="2" type="number" />         <!-- 1x 2x 4x 8x 16x -->
@@ -8915,7 +9111,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:set name="clock" value="{clock % 30}" />
         <q:if condition="{minute >= 90}">
           <qg:play sound="final" />
-          <qg:after seconds="2"><q:call function="finish_round" args="{live}" /><qg:goto-scene name="results" /></qg:after>
+          <qg:after seconds="2"><q:if condition="{today_kind == 'league'}"><q:call function="finish_round" args="{live}" /><q:else><q:call function="finish_cup" args="{live}" /></q:else></q:if><qg:goto-scene name="results" /></qg:after>
         </q:if>
       </q:if>
       <q:if condition="{flash > 0}"><q:set name="flash" value="{flash - 1}" /></q:if>
@@ -8933,8 +9129,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:hud>
     <qg:hud x="400" y="100" box="frame" font="assets/DejaVuSansMono.ttf" size="13" if="{len(live) > 0}">
       <qg:text value="{'═══ ' + tr('LIVE ROUND') + ' ═══'}" color="#55ffff" />
-      <qg:text value="{div_name(clubs[live[focus].home].div)}" color="#55ffff" />
-      <qg:table source="{matches_of(clubs[live[focus].home].div)}" as="m">
+      <qg:text value="{div_name(clubs[live[focus].home].div) if today_kind == 'league' else (tr('PANDA CUP') + ', ' + cup_round_name(cup_round) if today_kind == 'cup' else tr('SUPERCUP'))}" color="#55ffff" />
+      <qg:table source="{matches_of(clubs[live[focus].home].div) if today_kind == 'league' else live[floor(focus / 8) * 8:floor(focus / 8) * 8 + 8]}" as="m">
         <qg:column value="{clubs[m.home].short}" width="4" color="{'#ffff55' if clubs[m.home].manager > 0 else '#ffffff'}" />
         <qg:column value="{str(m.hg) + ' x ' + str(m.ag)}" width="6" align="right" />
         <qg:column value="{' ' + clubs[m.away].short}" width="5" color="{'#ffff55' if clubs[m.away].manager > 0 else '#ffffff'}" />
@@ -9082,6 +9278,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </q:function>
     <!-- the table as it would be now: the first manager's club, where it was and where it is -->
     <q:function name="live_move">
+      <q:if condition="{today_kind != 'league'}"><q:return value="{''}" /></q:if>
       <q:set name="keys" value="{[]}" />
       <q:loop items="{in_div(clubs[managers[0].club].div)}" var="i">
         <q:set name="c" value="{clubs[i]}" />
@@ -9102,14 +9299,50 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </q:function>
   </qg:scene>
 
+  <!-- ===== The cup's draw, a tie at a time ===== -->
+  <qg:scene name="draw" width="640" height="400" background="#0000a8" seed="{world * 7 + season * 13 + cup_round}">
+    <q:set name="seen" value="0" type="number" />
+    <q:set name="ties" value="{next_games()}" type="array" />
+    <qg:timer every="25"><q:if condition="{seen < len(ties)}"><q:set name="seen" value="{seen + 1}" /><qg:play sound="whistle" /></q:if></qg:timer>
+    <qg:hud x="8" y="6" box="frame" font="assets/DejaVuSansMono.ttf" size="14">
+      <qg:text value="{'⚽ ' + tr('PANDA CUP') + ' - ' + cup_round_name(cup_round) + ' - ' + tr('THE DRAW')}" color="#ffff55" />
+    </qg:hud>
+    <qg:hud x="8" y="48" box="frame" font="assets/DejaVuSansMono.ttf" size="12">
+      <qg:table source="{upto(min(8, len(ties)))}" as="k">
+        <qg:column value="{tie_line(ties, k, seen)}" width="38" color="{'#ffff55' if k < seen and managed_in([ties[k]]) else '#ffffff'}" />
+      </qg:table>
+    </qg:hud>
+    <qg:hud x="324" y="48" box="frame" font="assets/DejaVuSansMono.ttf" size="12" if="{len(ties) > 8}">
+      <qg:table source="{upto(len(ties) - 8)}" as="k">
+        <qg:column value="{tie_line(ties, k + 8, seen)}" width="38" color="{'#ffff55' if k + 8 < seen and managed_in([ties[k + 8]]) else '#ffffff'}" />
+      </qg:table>
+    </qg:hud>
+    <qg:hud x="8" y="330" font="assets/DejaVuSansMono.ttf" size="12">
+      <qg:text value="{tr('The other clubs enter in the round of 32.') if cup_round == 0 else (tr('The club of the lower division plays at home.'))}" color="#aaaaaa" />
+      <qg:text value="{'[ENTER] ' + (tr('Show them all') if seen < len(ties) else tr('To the dashboard'))}" color="#55ffff" />
+    </qg:hud>
+    <qg:on-input action="select">
+      <q:if condition="{seen < len(ties)}"><q:set name="seen" value="{len(ties)}" />
+        <q:else><qg:goto-scene name="dashboard" /></q:else>
+      </q:if>
+    </qg:on-input>
+  </qg:scene>
+
+  <q:function name="tie_line" params="ties, k, seen">
+    <q:if condition="{k >= seen}"><q:return value="{fit(str(k + 1) + '.', 4) + '   ?   x   ?'}" /></q:if>
+    <q:set name="h" value="{clubs[ties[k][0]]}" />
+    <q:set name="a" value="{clubs[ties[k][1]]}" />
+    <q:return value="{fit(str(k + 1) + '.', 4) + fit(h.name + ' (' + str(h.div) + ')', 17) + 'x ' + a.name + ' (' + str(a.div) + ')'}" />
+  </q:function>
+
   <!-- ===== After the round: the results with their scorers, the manager's match, the purses ===== -->
   <qg:scene name="results" width="640" height="400" background="#0000a8">
-    <q:set name="shown" value="{clubs[managers[0].club].div}" type="number" />
+    <q:set name="shown" value="{clubs[managers[0].club].div if today_kind == 'league' else 1 + floor(max(0, match_of_last(managers[0].club)) / 5)}" type="number" />
     <qg:hud x="8" y="6" box="frame" font="assets/DejaVuSansMono.ttf" size="11">
-      <qg:text value="{'✓ ' + tr('ROUND') + ' ' + str(matchday) + ' ' + tr('PLAYED') + ' - ' + div_name(shown)}" color="#ffff55" />
-      <qg:table source="{last_of(shown)}" as="m">
+      <qg:text value="{('✓ ' + tr('ROUND') + ' ' + str(matchday) + ' ' + tr('PLAYED') + ' - ' + div_name(shown)) if today_kind == 'league' else ('✓ ' + (tr('PANDA CUP') + ', ' + cup_round_name(cup_round - 1) if today_kind == 'cup' else tr('SUPERCUP')) + (' (' + str(shown) + '/' + str(ceil(len(last) / 5)) + ')' if len(last) > 5 else ''))}" color="#ffff55" />
+      <qg:table source="{last_of(shown) if today_kind == 'league' else last[(shown - 1) * 5:shown * 5]}" as="m">
         <qg:column value="{clubs[m.home].name}" width="13" align="right" color="{'#ffff55' if clubs[m.home].manager > 0 else '#ffffff'}" />
-        <qg:column value="{str(m.hg) + ' x ' + str(m.ag)}" width="7" align="right" />
+        <qg:column value="{str(m.hg) + ' x ' + str(m.ag) + (' p' if 'pens' in m else '')}" width="7" align="right" />
         <qg:column value="{' ' + clubs[m.away].name}" width="14" color="{'#ffff55' if clubs[m.away].manager > 0 else '#ffffff'}" />
         <qg:column value="{scorers_line(m)}" width="42" color="#aaaaaa" />
       </qg:table>
@@ -9134,20 +9367,21 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </qg:table>
     </qg:hud>
     <qg:hud x="8" y="364" font="assets/DejaVuSansMono.ttf" size="13">
-      <qg:text value="{'[ENTER] ' + tr('End of the season' if matchday >= 18 else 'Next round') + '   [F7] ' + tr('Table') + '   [TAB] ' + tr('Another division')}" color="#55ffff" />
+      <qg:text value="{'[ENTER] ' + tr('End of the season' if matchday >= 18 else 'Next round') + '   [F7] ' + tr('Table') + '   [TAB] ' + tr('Another division' if today_kind == 'league' else 'More matches')}" color="#55ffff" />
     </qg:hud>
-    <qg:on-input action="other"><q:set name="shown" value="{shown % 4 + 1}" /></qg:on-input>
+    <qg:on-input action="other"><q:set name="shown" value="{shown % (4 if today_kind == 'league' else max(1, ceil(len(last) / 5))) + 1}" /></qg:on-input>
     <qg:on-input action="standings"><qg:goto-scene name="standings" /></qg:on-input>
     <qg:hud x="8" y="318" box="frame" font="assets/DejaVuSansMono.ttf" size="12" if="{len(jobs) > 0 and jobs[0].kind == 'sacked'}">
       <qg:text value="{'✖ ' + tr('SACKED') + ': ' + managers[jobs[0].who].name}" color="#ff5555" />
     </qg:hud>
-    <qg:on-input action="select">
-      <q:if condition="{len(jobs) > 0}"><qg:goto-scene name="job" />
-        <q:elseif condition="{matchday >= 18}"><qg:goto-scene name="season-end" /></q:elseif>
-        <q:else><qg:goto-scene name="dashboard" /></q:else>
-      </q:if>
-    </qg:on-input>
+    <qg:on-input action="select"><q:call function="after_results" /></qg:on-input>
   </qg:scene>
+
+  <!-- where a club's match is in the last date's list (-1: it did not play) -->
+  <q:function name="match_of_last" params="club_index">
+    <q:loop var="k" from="0" to="{len(last) - 1}"><q:if condition="{last[k].home == club_index or last[k].away == club_index}"><q:return value="{k}" /></q:if></q:loop>
+    <q:return value="{-1}" />
+  </q:function>
 
   <!-- the last round's matches of a division -->
   <q:function name="last_of" params="d">
@@ -9220,7 +9454,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:text value="{fate(managers[0].club)}" color="#ffff55" />
     </qg:hud>
     <qg:menu position="bottom-center" font="assets/DejaVuSansMono.ttf" size="14">
-      <qg:button label="New season"><q:call function="new_season" /><q:if condition="{len(jobs) > 0}"><qg:goto-scene name="job" /><q:else><qg:goto-scene name="dashboard" /></q:else></q:if></qg:button>
+      <qg:button label="New season"><q:call function="new_season" /><q:call function="after_results" /></qg:button>
       <qg:button label="To the title"><qg:save slot="{slot}" /><qg:goto-scene name="title" /></qg:button>
     </qg:menu>
   </qg:scene>
@@ -9252,9 +9486,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:function name="next_job" params="done">
     <q:if condition="{done and len(jobs) > 0}"><q:set name="jobs" value="{jobs[1:]}" /></q:if>
     <q:if condition="{len(managers) == 0}"><qg:goto-scene name="career-over" />
-      <q:elseif condition="{len(jobs) > 0}"><qg:goto-scene name="job" /></q:elseif>
-      <q:elseif condition="{matchday >= 18}"><qg:goto-scene name="season-end" /></q:elseif>
-      <q:else><qg:goto-scene name="dashboard" /></q:else>
+      <q:else><q:call function="after_results" /></q:else>
     </q:if>
   </q:function>
 
@@ -9604,6 +9836,25 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Pts/match" as="Pts/jogo" />
     <qg:phrase text="Clubs" as="Clubes" />
     <qg:phrase text="TOP SCORERS OF ALL TIME" as="ARTILHEIROS DE TODOS OS TEMPOS" />
+    <qg:phrase text="Preliminary round" as="Fase preliminar" />
+    <qg:phrase text="Round of 32" as="16 avos de final" />
+    <qg:phrase text="Round of 16" as="Oitavas de final" />
+    <qg:phrase text="Quarter-finals" as="Quartas de final" />
+    <qg:phrase text="Semi-finals" as="Semifinal" />
+    <qg:phrase text="Final" as="Final" />
+    <qg:phrase text="PANDA CUP" as="COPA PANDA" />
+    <qg:phrase text="SUPERCUP" as="SUPERCOPA" />
+    <qg:phrase text="Supercup:" as="Supercopa:" />
+    <qg:phrase text="The Panda Cup goes to" as="A Copa Panda é do" />
+    <qg:phrase text="out" as="eliminados" />
+    <qg:phrase text="no match for you" as="sem jogo para você" />
+    <qg:phrase text="THE DRAW" as="O SORTEIO" />
+    <qg:phrase text="The other clubs enter in the round of 32." as="Os outros clubes entram nos 16 avos de final." />
+    <qg:phrase text="The club of the lower division plays at home." as="O clube da divisão mais baixa joga em casa." />
+    <qg:phrase text="Show them all" as="Mostrar todos" />
+    <qg:phrase text="To the dashboard" as="Para o painel" />
+    <qg:phrase text="Season" as="Temp." />
+    <qg:phrase text="More matches" as="Mais jogos" />
   </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="    ☻  P A N D A F O O T  ☻    " as="    ☻  P A N D A F O O T  ☻    " />
@@ -9913,6 +10164,25 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Pts/match" as="Pts/partido" />
     <qg:phrase text="Clubs" as="Clubes" />
     <qg:phrase text="TOP SCORERS OF ALL TIME" as="GOLEADORES DE TODOS LOS TIEMPOS" />
+    <qg:phrase text="Preliminary round" as="Ronda previa" />
+    <qg:phrase text="Round of 32" as="Dieciseisavos" />
+    <qg:phrase text="Round of 16" as="Octavos de final" />
+    <qg:phrase text="Quarter-finals" as="Cuartos de final" />
+    <qg:phrase text="Semi-finals" as="Semifinales" />
+    <qg:phrase text="Final" as="Final" />
+    <qg:phrase text="PANDA CUP" as="COPA PANDA" />
+    <qg:phrase text="SUPERCUP" as="SUPERCOPA" />
+    <qg:phrase text="Supercup:" as="Supercopa:" />
+    <qg:phrase text="The Panda Cup goes to" as="La Copa Panda es para" />
+    <qg:phrase text="out" as="eliminados" />
+    <qg:phrase text="no match for you" as="sin partido para ti" />
+    <qg:phrase text="THE DRAW" as="EL SORTEO" />
+    <qg:phrase text="The other clubs enter in the round of 32." as="Los demás clubes entran en dieciseisavos." />
+    <qg:phrase text="The club of the lower division plays at home." as="El club de la división inferior juega en casa." />
+    <qg:phrase text="Show them all" as="Mostrar todos" />
+    <qg:phrase text="To the dashboard" as="Al panel" />
+    <qg:phrase text="Season" as="Temp." />
+    <qg:phrase text="More matches" as="Más partidos" />
   </qg:language>
 </q:application>
 ```

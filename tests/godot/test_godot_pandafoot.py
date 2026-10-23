@@ -176,12 +176,16 @@ def play_round(game):
 
 def test_a_season_keeps_the_rules_of_football(pandafoot, godot):
     """A second yellow is a red, and who is sent off, carried off or taken off does nothing more in the match;
-    three substitutions at most; who is hurt or banned misses the next match; the crowd fits the ground."""
+    three substitutions at most; who is hurt or banned misses the next match; the crowd fits the ground. The Panda
+    Cup goes on between the rounds: drawn on screen when a manager plays it, at once when none does."""
     with PlaySession(pandafoot, binary=godot) as game:
         new_game(game)
         reds = knocks = subs = 0
-        for rnd in range(18):
+        draws = []
+        rnd = 0
+        while True:
             after = play_round(game)
+            rnd += 1
             state = after['state']['game']
             for m in state['last']:
                 assert 0 < m['crowd'] <= state['clubs'][m['home']]['capacity']
@@ -189,7 +193,7 @@ def test_a_season_keeps_the_rules_of_football(pandafoot, godot):
                     events = [e for e in reversed(m['events']) if e.get('club') == short]   # in the order they came
                     gone, booked, came = set(), {}, 0
                     for e in events:
-                        if e['kind'] == 'tactic':
+                        if e['kind'] in ('tactic', 'pens'):
                             continue
                         assert e['who'] not in gone, (rnd, e)       # off the pitch: no goal, no card, no knock
                         if e['kind'] == 'card':
@@ -205,13 +209,26 @@ def test_a_season_keeps_the_rules_of_football(pandafoot, godot):
                             came += 1
                     assert came <= 3
                     subs += came
-            if state['matchday'] < 18:                                # the next match's elevens are ready
+            cup_due = state['cup_round'] < 6 and state['matchday'] >= [3, 6, 9, 12, 15, 18][min(5, int(state['cup_round']))]
+            mine = state['managers'][0]['club']
+            if state['matchday'] < 18 and not cup_due:                # the next match's elevens are ready
                 for c in state['clubs']:
                     assert len([p for p in c['players'] if p['xi']]) == 11
                     assert not [p['name'] for p in c['players'] if p['xi'] and (p['injured'] or p['suspended'])]
-                seen = game.act(tap=['select'], ticks=3)
-                if seen['scene'] == 'job':                          # sacked: the career goes on, at the first club
+            if state['matchday'] >= 18 and not (cup_due and state['cup_round'] == 5 and mine in state['cup_alive']):
+                break                                                  # the last results (a final to play aside)
+            seen = game.act(tap=['select'], ticks=3)
+            while seen['scene'] in ('job', 'draw'):
+                if seen['scene'] == 'draw':                            # the draw: all at once, then the dashboard
                     seen = game.act(tap=['select'], ticks=3)
+                    draws.append((seen['state']['game']['cup_round'], seen['state']['game']['cup_ties']))
+                seen = game.act(tap=['select'], ticks=3)              # sacked: the career goes on, at the first club
+            assert seen['scene'] == 'dashboard', seen['scene']
+        assert draws and draws[0][0] == 0                            # the preliminary round: the 4th's ten and six
+        first = draws[0][1]
+        clubs = state['clubs']
+        assert len(first) == 8 and {c for t in first for c in t} >= {i for i, c in enumerate(clubs) if c['div'] == 4}
+        assert all(clubs[h]['div'] >= clubs[a]['div'] for h, a in first)       # the lower division at home
         # after the last results, a look at the table and back: the season's end. It was the dashboard, round 19 of
         # 18, the last match again, and again (its first players could not get past it)
         assert game.act(tap=['standings'], ticks=3)['scene'] == 'standings'
@@ -232,6 +249,10 @@ def test_a_season_keeps_the_rules_of_football(pandafoot, godot):
         assert [divs.count(d) for d in (1, 2, 3, 4)] == [10] * 4
         assert again['honours'][0]['season'] == 2026
         assert again['honours'][0]['champions'][3] == clubs[tables_then[4][0]]['name']
+        cup = seen['state']['game']
+        assert cup['cup_round'] == 6 and cup['cup_winner'] >= 0                  # the final was played
+        assert again['honours'][0]['cup'] == clubs[int(cup['cup_winner'])]['name']
+        assert again['cup_round'] == 0 and len(again['cup_alive']) == 40
         assert all(sorted(c for g in r for c in g) == list(range(40)) for r in again['fixtures'])
         assert knocks > 0 and subs > 0
         assert reds > 0
@@ -387,6 +408,7 @@ def saved_then(pandafoot, godot, folder, change):
         new_game(game)
     save = folder / 'quantum-save-1.json'
     data = json.loads(save.read_text())
+    data['game']['cup_round'] = 6                                 # the cup out of the way (the season test plays it)
     change(data['game'])
     save.write_text(json.dumps(data))
 
@@ -478,9 +500,20 @@ def test_a_promoted_manager_is_offered_a_bigger_club(pandafoot, godot, tmp_path)
 
 # --- transfers (PLAN_PANDAFOOT.md Phase 2): Elifoot 2's auction of wages ---
 
+def to_dashboard(game):
+    """From the results to the dashboard, past a cup's draw (all of it at once) or a job (the first club)."""
+    seen = game.act(tap=['select'], ticks=3)
+    while seen['scene'] in ('draw', 'job'):
+        if seen['scene'] == 'draw':
+            game.act(tap=['select'], ticks=3)
+        seen = game.act(tap=['select'], ticks=3)
+    assert seen['scene'] == 'dashboard', seen['scene']
+    return seen
+
+
 def to_the_list(game):
     """From the results: the dashboard, then the transfer list (F6)."""
-    game.act(tap=['select'], ticks=3)
+    to_dashboard(game)
     return game.act(tap=['market'], ticks=3)
 
 
@@ -499,7 +532,7 @@ def test_the_list_fills_and_the_computers_clubs_trade(pandafoot, godot):
         game.act(tap=['cancel'], ticks=3)
         for _ in range(5):
             after = play_round(game)
-            game.act(tap=['select'], ticks=3)
+            to_dashboard(game)
         state = after['state']['game']
         news = [n['text'] for n in state['news']]
         assert 'Signed:' in news or 'Surprise! He took the long shot:' in news
@@ -532,9 +565,11 @@ def test_a_manager_signs_a_free_agent(pandafoot, godot):
         who = entry['who']
         assert [(b['club'], b['wage']) for b in entry['bids'] if b['club'] == 34] == [(34, round(entry['wage'] * 3))]
         game.act(tap=['cancel'], ticks=3)
-        for _ in range(3):
+        for _ in range(5):                                         # three rounds of the league (a cup date between)
             after = play_round(game)
-            game.act(tap=['select'], ticks=3)
+            to_dashboard(game)
+            if who not in [e['who'] for e in after['state']['game']['market']]:
+                break
         mine = after['state']['game']['clubs'][34]
         assert who in [p['name'] for p in mine['players']] and len(mine['players']) == 23
         assert who not in [p['name'] for p in after['state']['game']['free_agents']]

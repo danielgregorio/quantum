@@ -279,8 +279,21 @@ def _texts_read(body: List[Node]) -> List[str]:
     return out
 
 
+# The signals among the members (a function may share a signal's name: PandaFoot's ready() and Node's ready)
+NODE2D_SIGNALS = frozenset((
+    'ready', 'renamed', 'tree_entered', 'tree_exiting', 'tree_exited', 'child_entered_tree', 'child_exiting_tree',
+    'child_order_changed', 'replacing_by', 'editor_description_changed', 'editor_state_changed', 'draw',
+    'visibility_changed', 'hidden', 'item_rect_changed', 'script_changed', 'property_list_changed',
+))
+
+
 def compile_function(script: SceneScript, st: Statement) -> None:
     name = st.attrs['name']
+    if name in RESERVED_NAMES and name not in NODE2D_SIGNALS:
+        # a function named like a member every node has overrides it (draw_line is CanvasItem's): a parse error
+        # when the scene loads, the whole scene gone
+        raise GameCompileError(f'<q:function name="{name}">: {name!r} is {_member_kind(name)}; '
+                               f'the function needs another name', st.line)
     params = [p.strip() for p in st.attrs.get('params', '').split(',') if p.strip()]
     scope = script.scope().child(params)
     locals_ = local_names(st.body, scope, '<q:application>' if script.game_wide else 'the scene')

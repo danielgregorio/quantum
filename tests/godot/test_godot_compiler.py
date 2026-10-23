@@ -1440,6 +1440,22 @@ class TestWhatCreepsAsked:
 ''')
         assert "'free' is a method of every Godot object; a game state needs another name" in str(err)
 
+    def test_a_function_named_like_a_node_method(self, tmp_path):
+        # a q:function draw_line overrode CanvasItem's: the scene's script did not load (PandaFoot's cup draw); a
+        # signal's name is free for a function (ready)
+        err = refuse(tmp_path, '''<q:application id="t" type="game">
+  <q:function name="draw_line" params="k"><q:return value="{k}" /></q:function>
+  <qg:scene name="main"><qg:hud><qg:text value="{draw_line(1)}" /></qg:hud></qg:scene>
+</q:application>
+''')
+        assert '<q:function name="draw_line">: \'draw_line\' is a property of every Godot node' in str(err)
+        (tmp_path / 'ok').mkdir()
+        build(tmp_path / 'ok', '''<q:application id="t" type="game">
+  <q:function name="ready" params="k"><q:return value="{k}" /></q:function>
+  <qg:scene name="main"><qg:hud><qg:text value="{ready(1)}" /></qg:hud></qg:scene>
+</q:application>
+''')
+
 
 class TestMultiplayer:
     def test_the_declaration_and_every_players_actions(self, tmp_path):
