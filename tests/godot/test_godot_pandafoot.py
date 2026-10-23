@@ -5,6 +5,7 @@ and comes back to the dashboard with the table, the purse and the players change
 the same world; a saved game continues where it was; in Portuguese, the screens say it in Portuguese.
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -70,7 +71,8 @@ def test_a_world_is_made_from_its_number(pandafoot, godot):
     clubs = first['clubs']
     assert [len(c['players']) for c in clubs] == [22] * 40
     assert [sum(c['div'] == d for c in clubs) for d in (1, 2, 3, 4)] == [10] * 4
-    assert first['managers'] == [{'name': 'Manager 1', 'club': 34}] and clubs[34]['manager'] == 1
+    assert [(t['name'], t['club'], t['patience']) for t in first['managers']] == [('Manager 1', 34, 50)]
+    assert clubs[34]['manager'] == 1
     assert clubs[34]['div'] == 4                                      # a manager starts in the 4th division
     geniuses = [(c['div'], p['strength']) for c in clubs for p in c['players'] if p['genius']]
     hidden = [s for div, s in geniuses if div >= 3]
@@ -154,7 +156,7 @@ def test_in_portuguese(pandafoot, godot):
     with PlaySession(pandafoot, binary=godot, lang='pt') as game:
         seen = new_game(game)
         assert texts(seen)[0].endswith('Rodada 1/18  2026') and texts(seen)[1].startswith('Saldo:')
-        assert seen['state']['game']['managers'] == [{'name': 'Técnico 1', 'club': 34}]
+        assert [(t['name'], t['club']) for t in seen['state']['game']['managers']] == [('Técnico 1', 34)]
         squad = game.act(tap=['squad'], ticks=3)
         assert tables(squad)[0]['table'][:4] == ['#', 'Nome', 'Pos', 'For']
         assert {row[2].split('/')[0] for row in tables(squad)[0]['rows']} <= {'GOL', 'DEF', 'MEI', 'ATA'}
@@ -370,4 +372,101 @@ def test_any_clubs_squad_from_the_table(pandafoot, godot):
         assert back['scene'] == 'standings' and back['state']['game']['viewing'] == -1
         mine = game.act(tap=['squad'], ticks=3)
         assert texts(mine)[0].startswith('SQUAD - Lontra AC')
+        assert not [line for line in game.log if 'SCRIPT ERROR' in line]
+
+
+# --- the career (PLAN_PANDAFOOT.md Phase 2): a save made to the point, and the game continued from it ---
+
+def saved_then(pandafoot, godot, folder, change):
+    """A new game saved in `folder`, its state changed by `change(state)`, saved again for a session to continue."""
+    with PlaySession(pandafoot, binary=godot, persist_dir=folder):
+        pass
+    with PlaySession(pandafoot, binary=godot, persist_dir=folder) as game:
+        new_game(game)
+    save = folder / 'quantum-save-1.json'
+    data = json.loads(save.read_text())
+    change(data['game'])
+    save.write_text(json.dumps(data))
+
+
+def continued(game):
+    game.act(ticks=3)
+    game.act(tap=['down'], ticks=2)                            # Continue 1
+    return game.act(tap=['select'], ticks=3)
+
+
+def test_the_board_sacks_and_other_clubs_offer(pandafoot, godot, tmp_path):
+    """A board at the end of its patience, the purse deep in the red: after the round, sacked; the job: two clubs of
+    the 4th that no one manages, and the career goes on at one of them."""
+    def at_the_end(state):
+        state['managers'][0]['patience'] = 1
+        state['clubs'][34]['balance'] = -10_000_000
+    saved_then(pandafoot, godot, tmp_path, at_the_end)
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        seen = continued(game)
+        assert seen['scene'] == 'dashboard'
+        assert any('The board is losing its patience' in t for t in texts(seen))
+        after = play_round(game)
+        assert any(t.startswith('✖ SACKED: Manager 1') for t in texts(after))
+        job = game.act(tap=['select'], ticks=3)
+        assert job['scene'] == 'job' and texts(job)[0] == '✖ SACKED'
+        offers = [i['button'] for i in menus(job)[0]['items'] if i['shown']]
+        state = job['state']['game']
+        assert len(offers) == 2 and all('(4th division' in o for o in offers)
+        assert [b['button'] for b in menus(job)[1]['items'] if b['shown']] == ['End the career']
+        taken = game.act(tap=['select'], ticks=3)
+        state = taken['state']['game']
+        assert taken['scene'] == 'dashboard'
+        mine = state['managers'][0]
+        assert mine['club'] != 34 and state['clubs'][mine['club']]['manager'] == 1 and state['clubs'][34]['manager'] == 0
+        assert mine['patience'] == 50 and mine['career']['sacked'] == 1
+        assert mine['career']['clubs'] == ['Lontra AC', state['clubs'][mine['club']]['name']]
+        assert texts(taken)[0].startswith('PANDAFOOT  ' + state['clubs'][mine['club']]['name'])
+        assert not [line for line in game.log if 'SCRIPT ERROR' in line]
+
+
+def test_a_sacked_manager_can_end_the_career(pandafoot, godot, tmp_path):
+    def at_the_end(state):
+        state['managers'][0]['patience'] = 1
+        state['clubs'][34]['balance'] = -10_000_000
+    saved_then(pandafoot, godot, tmp_path, at_the_end)
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        continued(game)
+        play_round(game)
+        game.act(tap=['select'], ticks=3)                         # the job
+        for _ in range(2):                                        # down past the two offers to End the career
+            game.act(tap=['down'], ticks=2)
+        over = game.act(tap=['select'], ticks=3)
+        assert over['scene'] == 'career-over', over['scene']
+        state = over['state']['game']
+        assert state['managers'] == [] and state['retired'][0]['name'] == 'Manager 1'
+        assert any(t.startswith('═══ THE END OF THE CAREER') for t in texts(over))
+        assert game.act(tap=['select'], ticks=3)['scene'] == 'title'
+
+
+def test_a_promoted_manager_is_offered_a_bigger_club(pandafoot, godot, tmp_path):
+    """The last round, top of the 4th by far: promoted, and two clubs of the 2nd offer; staying keeps the club."""
+    def last_round_on_top(state):
+        state['matchday'] = 17
+        state['clubs'][34]['points'] = 99
+    saved_then(pandafoot, godot, tmp_path, last_round_on_top)
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        continued(game)
+        play_round(game)
+        end = game.act(tap=['select'], ticks=3)
+        assert end['scene'] == 'season-end'
+        assert any(t.startswith('Lontra AC: 1º of the 4th division, promoted!') for t in texts(end))
+        offer = game.act(tap=['select'], ticks=3)                  # New season
+        assert offer['scene'] == 'job' and texts(offer)[0] == '✉ AN OFFER'
+        state = offer['state']['game']
+        offered = state['jobs'][0]['clubs']
+        assert len(offered) == 2 and all(state['clubs'][i]['div'] == 2 and state['clubs'][i]['manager'] == 0
+                                         for i in offered)
+        assert state['clubs'][34]['div'] == 3 and state['managers'][0]['career']['ups'] == 1
+        stays = [b['button'] for b in menus(offer)[1]['items'] if b['shown']]
+        assert stays == ['Stay at Lontra AC']
+        for _ in range(2):                                         # past the two offers, to staying
+            game.act(tap=['down'], ticks=2)
+        back = game.act(tap=['select'], ticks=3)
+        assert back['scene'] == 'dashboard' and back['state']['game']['managers'][0]['club'] == 34
         assert not [line for line in game.log if 'SCRIPT ERROR' in line]
