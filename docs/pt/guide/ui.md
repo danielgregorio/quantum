@@ -430,6 +430,41 @@ e `lg` (1024 px). No console eles são contados em colunas (80, 96 e 128).
 - `hide-below` / `hide-above` escondem um elemento de um lado de um ponto de
   quebra.
 
+## Movimento {#motion}
+
+Três tipos de movimento — `fade`, `slide`, `expand` — em duas velocidades — `fast` (150 ms) e `normal`
+(250 ms, o padrão) — iguais no navegador, no desktop e no terminal:
+
+```xml
+<q:component name="Board">
+  <q:set name="moved" value="{query.moved}" default="2" type="number" />
+  <q:set name="cards" type="array" value='[{"id": 1, "title": "Fonts"}, {"id": 2, "title": "Domain"}]' />
+  <ui:window title="Board" transition="slide">
+    <q:loop items="{cards}" var="card">
+      <ui:card title="{card.title}" enter="{card.id == moved and 'slide' or ''}" />
+    </q:loop>
+    <ui:animate type="expand" speed="fast">
+      <ui:text>Opens quickly</ui:text>
+    </ui:animate>
+  </ui:window>
+</q:component>
+```
+
+**Mostra:** `Fonts` · `Domain` · `Opens quickly`
+
+- `transition` no `ui:window` (`fade` ou `slide`): a página entra assim cada vez que é mostrada.
+- `enter` em qualquer elemento, também uma expressão: o elemento entra assim quando a página é
+  mostrada; `''` é nenhum movimento. `<ui:animate type="fade|slide|expand">` faz o mesmo com o que
+  envolve.
+- O conteúdo de uma aba abre com `expand` quando o usuário troca de aba.
+- `speed="fast"` em qualquer um deles.
+
+`ui.motion: off` no `quantum.config.yaml` desliga todo movimento; o navegador também para quando o
+sistema pede movimento reduzido. Cada renderizador registra os movimentos que fez
+(`window.quantumMotions` no navegador), para um teste conferir que todas as versões se moveram igual.
+Os outros tipos do `ui:animate` (`bounce`, `scale`…) são só do navegador; nos outros, o conteúdo
+aparece sem eles.
+
 ## O conjunto do Núcleo {#the-core-set}
 
 Estes elementos são desenhados com o mesmo significado pelo navegador, pelo

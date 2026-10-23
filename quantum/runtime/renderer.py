@@ -420,6 +420,11 @@ class HTMLRenderer:
         if ui._has_tabs and not getattr(self, '_ui_tabs_done', False):
             self._ui_tabs_done = True
             drawn += TAB_JS
+        # UI-19: whether motion is on, and the record of the motions the page ran — once
+        if not getattr(self, '_ui_motion_done', False):
+            self._ui_motion_done = True
+            from quantum.runtime.ui_motion import motion_js, motion_on
+            drawn += motion_js(motion_on(getattr(self, 'config', None)))
         return css + drawn
 
     def _evaluate_condition(self, condition: str) -> bool:

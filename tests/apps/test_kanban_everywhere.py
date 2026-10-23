@@ -43,8 +43,11 @@ SCRIPT = sign_in("bruno") + [
     ("fill", "title", "Write the FAQ"),
     ("click", "Add a card"),
     ("sees", ["Card added: Write the FAQ", "To do 3"]),
+    # UI-19: the page slides in, the flash fades in, the new card opens in place — the same in every version
+    ("motions", [("slide", "normal", "page"), ("fade", "normal", "alert"), ("expand", "normal", "card")]),
     ("click_in", "Write the FAQ", "▶"),
     ("sees", ["Doing 3/3"]),
+    ("motions", [("slide", "normal", "page"), ("slide", "normal", "card")]),
     ("click_in", "Write the FAQ", "▶"),
     ("click_in", "Write the FAQ", "▶"),
     ("sees", ["Done 2"]),
@@ -55,6 +58,7 @@ SCRIPT = sign_in("bruno") + [
     ("sees", ["3 subtasks of Write the about page added.", "Pick the photo", "Ask Ana to review"]),
     # the agent says what is late, with the tool it used
     ("tab", "Ask"),
+    ("motions", [("slide", "normal", "page"), ("fade", "normal", "alert"), ("expand", "normal", "tab:Ask")]),
     ("follow", "Ask the agent"),
     ("sees", ["Set up the domain is late; Ana has it.", "late_cards()"]),
 ] + ([

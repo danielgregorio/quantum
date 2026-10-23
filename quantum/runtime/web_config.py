@@ -20,7 +20,7 @@ class ConfigError(Exception):
 _KNOWN_SECTIONS = {
     'server', 'paths', 'defaults', 'datasources', 'database', 'llm',
     'performance', 'security', 'logging', 'development', 'deploy',
-    'components', 'jobs', 'messaging', 'services', 'mail',
+    'components', 'jobs', 'messaging', 'services', 'mail', 'ui',
 }
 
 # The keys each of these sections actually has; anything else is a warning.
@@ -32,6 +32,7 @@ _KNOWN_KEYS = {
     'paths': {'components', 'static', 'logs', 'uploads', 'migrations'},
     'logging': {'level', 'format', 'console', 'file', 'filename'},
     'mail': {'host', 'port', 'username', 'password', 'tls', 'from', 'timeout'},
+    'ui': {'motion'},
 }
 
 _DATASOURCE_KEYS = {'driver', 'type', 'database', 'host', 'port', 'username', 'user', 'password', 'history'}

@@ -79,7 +79,7 @@ Task: {card[0].title}. {card[0].description}</q:prompt>
     <q:param name="card" value="{id}" type="integer" />
   </q:query>
 
-  <ui:window title="{card_result.recordCount == 1 and card[0].title or 'Card'}">
+  <ui:window title="{card_result.recordCount == 1 and card[0].title or 'Card'}" transition="slide">
     <ui:vbox gap="md" padding="lg">
       <q:if condition="card_result.recordCount == 0">
         <ui:alert variant="danger">There is no card #{id} on a board of yours.</ui:alert>
@@ -92,7 +92,7 @@ Task: {card[0].title}. {card[0].description}</q:prompt>
           <ui:text>{card[0].column_name}</ui:text>
         </ui:hbox>
         <q:if condition="flash">
-          <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}">{flash}</ui:alert>
+          <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}" enter="fade">{flash}</ui:alert>
         </q:if>
         <ui:header title="#{card[0].id} {card[0].title}" />
         <ui:text>Created {card[0].created_on}; started {card[0].started_on or '-'}; done {card[0].done_on or '-'}.</ui:text>

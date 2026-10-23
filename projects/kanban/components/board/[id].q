@@ -6,6 +6,9 @@
   <q:set name="who" value="{query.who}" default="" />
   <q:set name="label" value="{query.label}" default="" />
   <q:set name="due" value="{query.due}" default="" />
+  <!-- the card that just moved slides into its column; the one just added opens in place -->
+  <q:set name="moved" value="{query.moved}" default="0" type="number" />
+  <q:set name="added" value="{query.added}" default="0" type="number" />
 
   <!-- ===== Cards ===== -->
 
@@ -16,12 +19,12 @@
       <q:param name="board" value="{id}" type="integer" />
     </q:query>
     <q:query name="added" datasource="db">
-      INSERT INTO cards (board_id, column_id, title) VALUES (:board, :column, :title)
+      INSERT INTO cards (board_id, column_id, title) VALUES (:board, :column, :title) RETURNING id
       <q:param name="board" value="{id}" type="integer" />
       <q:param name="column" value="{first[0].id}" type="integer" />
       <q:param name="title" value="{title}" type="string" />
     </q:query>
-    <q:redirect url="/board/{id}" flash="Card added: {title}" />
+    <q:redirect url="/board/{id}?added={added[0].id}" flash="Card added: {title}" />
   </q:action>
 
   <!-- a card to another column: started when it leaves the first, done when it reaches the done column;
@@ -57,9 +60,9 @@
       <q:set name="told" value="{tellWebhook(card)}" />
     </q:if>
     <q:if condition="target[0].wip_limit and target[0].holding + 1 > target[0].wip_limit">
-      <q:redirect url="/board/{id}" flash="{target[0].name} holds {target[0].holding + 1} cards, over its limit of {target[0].wip_limit}." flashType="error" />
+      <q:redirect url="/board/{id}?moved={card}" flash="{target[0].name} holds {target[0].holding + 1} cards, over its limit of {target[0].wip_limit}." flashType="error" />
     </q:if>
-    <q:redirect url="/board/{id}" />
+    <q:redirect url="/board/{id}?moved={card}" />
   </q:action>
 
   <!-- the board's webhook, told of a card done (a failure is the flash's, never the move's) -->
@@ -262,7 +265,7 @@
     </q:agent>
   </q:if>
 
-  <ui:window title="{board_result.recordCount == 1 and board[0].name or 'Board'}">
+  <ui:window title="{board_result.recordCount == 1 and board[0].name or 'Board'}" transition="slide">
     <ui:vbox gap="md" padding="lg">
       <ui:hbox gap="md">
         <ui:link to="/">Boards</ui:link>
@@ -271,7 +274,7 @@
         <ui:link to="/logout">Sign out</ui:link>
       </ui:hbox>
       <q:if condition="flash">
-        <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}">{flash}</ui:alert>
+        <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}" enter="fade">{flash}</ui:alert>
       </q:if>
       <q:if condition="board_result.recordCount == 0">
         <ui:alert variant="danger">There is no board #{id} that you belong to.</ui:alert>
@@ -309,7 +312,7 @@
                     </q:if>
                     <q:loop items="{cards}" var="card">
                       <q:if condition="card.column_id == col.id">
-                        <ui:card title="{card.title}">
+                        <ui:card title="{card.title}" enter="{card.id == moved and 'slide' or (card.id == added and 'expand' or '')}">
                           <ui:hbox gap="sm">
                             <q:if condition="card.assignee"><ui:badge>{card.assignee}</ui:badge></q:if>
                             <q:if condition="card.due_on"><ui:badge variant="{card.late == 1 and 'danger' or 'info'}">due {card.due_on}</ui:badge></q:if>

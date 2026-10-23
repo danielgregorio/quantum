@@ -10,6 +10,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Motion, the same in every renderer (UI-19): `fade`, `slide` and `expand`,
+  `fast` (150 ms) or `normal` (250 ms). `transition=` on `ui:window` (the page
+  enters), `enter=` on any `ui:*` element, an expression too (it enters when its
+  page is shown), `ui:animate type=` with those kinds, and a tab's content that
+  expands as it opens. The browser draws them with CSS, the console with
+  Textual's animator; each records the motions it ran, and the same steps give
+  the same list. `ui.motion: off` in the config turns them off (the browser also
+  for reduced motion). The Kanban's pages slide in, its flash fades in, a card
+  just moved slides into its column and a new one opens in place.
 - `quantum run <app> --on web|desktop|tui|terminal` (UI-18): one application, its
   versions by one parameter — the browser, a window of its own, the terminal —
   served by the same runtime; `--page` and `--port`. `--on tui`, the text screen

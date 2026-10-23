@@ -140,9 +140,9 @@ def test_a_card_is_added_moved_and_done_and_the_webhook_is_told(app, forge):
         "UPDATE boards SET webhook_url = ? WHERE id = 1", (forge.url + "/hook",)).connection.commit()
     client = signed_in(app, "bruno")
     added = client.post("/board/1", data={"action": "addCard", "title": "Write the FAQ"})
-    assert added.headers["Location"] == "/board/1"
-    assert "Card added: Write the FAQ" in page_text(client.get("/board/1"))
     faq = card(project, "Write the FAQ")
+    assert added.headers["Location"] == f"/board/1?added={faq['id']}"      # it opens in place (UI-19)
+    assert "Card added: Write the FAQ" in page_text(client.get(added.headers["Location"]))
     assert faq["column"] == column(project, "To do") and faq["started"] is None
 
     client.post("/board/1", data={"action": "move", "card": faq["id"], "to": column(project, "Review")})

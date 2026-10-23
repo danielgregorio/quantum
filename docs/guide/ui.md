@@ -412,6 +412,39 @@ Layout is declared, with three breakpoints: `sm` (640 px), `md` (768 px) and
 - `ui:grid columns="1 sm:2 lg:3"`: one column, two from `sm`, three from `lg`.
 - `hide-below` / `hide-above` hide an element on one side of a breakpoint.
 
+## Motion
+
+Three kinds of motion — `fade`, `slide`, `expand` — at two speeds — `fast` (150 ms) and `normal`
+(250 ms, the default) — the same in the browser, the desktop and the terminal:
+
+```xml
+<q:component name="Board">
+  <q:set name="moved" value="{query.moved}" default="2" type="number" />
+  <q:set name="cards" type="array" value='[{"id": 1, "title": "Fonts"}, {"id": 2, "title": "Domain"}]' />
+  <ui:window title="Board" transition="slide">
+    <q:loop items="{cards}" var="card">
+      <ui:card title="{card.title}" enter="{card.id == moved and 'slide' or ''}" />
+    </q:loop>
+    <ui:animate type="expand" speed="fast">
+      <ui:text>Opens quickly</ui:text>
+    </ui:animate>
+  </ui:window>
+</q:component>
+```
+
+**Shows:** `Fonts` · `Domain` · `Opens quickly`
+
+- `transition` on `ui:window` (`fade` or `slide`): the page enters that way each time it is shown.
+- `enter` on any element, an expression too: the element enters that way when its page is shown;
+  `''` is no motion. `<ui:animate type="fade|slide|expand">` is the same around what it holds.
+- A tab's content opens with `expand` when the user changes the tab.
+- `speed="fast"` on any of them.
+
+`ui.motion: off` in `quantum.config.yaml` turns every motion off; the browser also stops them for the
+system's reduced-motion setting. Each renderer records the motions it ran (`window.quantumMotions` in the
+browser), so a test can check that every version moved the same way. `ui:animate`'s other types
+(`bounce`, `scale`…) are the browser's only; elsewhere the content shows without them.
+
 ## The core set
 
 These elements are drawn with the same meaning by the browser, the console,

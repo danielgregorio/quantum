@@ -390,6 +390,38 @@ INSERT INTO posts (title) SELECT 'Post ' || i FROM n;
 - `ui:grid columns="1 sm:2 lg:3"`：一列，从 `sm` 起两列，从 `lg` 起三列。
 - `hide-below` / `hide-above` 在断点的一侧隐藏一个元素。
 
+## 动效 {#motion}
+
+三种动效——`fade`、`slide`、`expand`——两种速度——`fast`（150 ms）和 `normal`（250 ms，默认）——
+在浏览器、桌面和终端中表现一致：
+
+```xml
+<q:component name="Board">
+  <q:set name="moved" value="{query.moved}" default="2" type="number" />
+  <q:set name="cards" type="array" value='[{"id": 1, "title": "Fonts"}, {"id": 2, "title": "Domain"}]' />
+  <ui:window title="Board" transition="slide">
+    <q:loop items="{cards}" var="card">
+      <ui:card title="{card.title}" enter="{card.id == moved and 'slide' or ''}" />
+    </q:loop>
+    <ui:animate type="expand" speed="fast">
+      <ui:text>Opens quickly</ui:text>
+    </ui:animate>
+  </ui:window>
+</q:component>
+```
+
+**Shows:** `Fonts` · `Domain` · `Opens quickly`
+
+- `ui:window` 上的 `transition`（`fade` 或 `slide`）：页面每次显示时都以这种方式进入。
+- 任何元素上的 `enter`，也可以是表达式：页面显示时该元素以这种方式进入；`''` 表示没有动效。
+  `<ui:animate type="fade|slide|expand">` 对它包住的内容做同样的事。
+- 用户切换标签页时，标签页内容以 `expand` 打开。
+- 它们都可以加 `speed="fast"`。
+
+`quantum.config.yaml` 中的 `ui.motion: off` 关闭所有动效；系统要求减少动效时浏览器也会停止。每个渲染器都会
+记录它执行过的动效（浏览器中是 `window.quantumMotions`），这样测试可以检查每个版本的动作是否一致。
+`ui:animate` 的其他类型（`bounce`、`scale`……）只属于浏览器；在其他地方，内容会直接显示，没有这些动效。
+
 ## 核心层组件集 {#the-core-set}
 
 这些元素由浏览器、终端和桌面窗口以相同的含义绘制，并且同一个测试脚本——查看、填写、勾选、

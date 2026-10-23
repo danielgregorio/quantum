@@ -1014,6 +1014,23 @@ application served by one runtime; only the renderer changes. `tui` exits with
 an error that says it is not built yet; a folder that is not an application is
 an error that says so.
 
+**UI-19** — Motion has three kinds — `fade`, `slide`, `expand` — and two
+speeds — `fast` (150 ms) and `normal` (250 ms, the default) — eased out, the
+same in every renderer. `<ui:window transition="fade|slide">`: the page enters
+that way each time it is shown; `enter="fade|slide|expand"` on any `ui:*`
+element (an expression too; `''` is none) and `<ui:animate
+type="fade|slide|expand">`: the element enters that way when its page is shown;
+a tab's content opens with `expand` when the user changes the tab; `speed=`
+sets the speed. A literal that is not one of these is a parse error; an
+expression that resolves to anything else is the page's error. Each renderer
+records the motions it ran since the page was shown, in order, as kind, speed
+and what (`page`, `tab:<title>`, the element's `id`, else its tag) — the
+browser in `window.quantumMotions`, the console in `ConsoleUI.motions` — and the
+same steps give the same list and leave every element in place, fully shown.
+`ui.motion: off` in `quantum.config.yaml` turns every motion off; the browser
+also stops them for the system's reduced-motion setting. `ui:animate`'s other
+types are the browser's; the other renderers draw the content without them.
+
 ## 11. Development
 
 **DEV-1** — With `server.debug: true`, the server records the process's last 30

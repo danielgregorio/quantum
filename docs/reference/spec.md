@@ -147,7 +147,7 @@ error that says what it got, in a statement and in markup alike, like a
 `ui:table` source ([UI-5](#UI-5)). Before a value exists, give it one:
 `<q:set name="session.cart" type="array" value="{session.cart}" default="[]"/>`.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-set"><code>&lt;q:set&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-set"><code>&lt;q:set&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a></p>
 
 ## 2a. Conditionals
 
@@ -356,7 +356,7 @@ elements and called components. Markup is only rendered: a statement inside it
 is an error ([PARSE-2](#PARSE-2)). The page's `q:function`s work in the whole page and in
 its actions, before or after where they are written.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-set"><code>&lt;q:set&gt;</code></a> · <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-function"><code>&lt;q:function&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-invoke"><code>&lt;q:invoke&gt;</code></a> · <a href="./config#cfg-components"><code>components:</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-set"><code>&lt;q:set&gt;</code></a> · <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-function"><code>&lt;q:function&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-invoke"><code>&lt;q:invoke&gt;</code></a> · <a href="./config#cfg-components"><code>components:</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a></p>
 
 <a id="EXEC-2"></a>**[EXEC-2](#EXEC-2)** — A POST with the `action` field goes through the same first three
 steps and then runs only the named `q:action` ([ACT-1](#ACT-1), [ACT-9](#ACT-9)). Ending in
@@ -572,7 +572,7 @@ newest first — when, who, action, and for an update each changed column as
 `old → new` — in the browser and the console; on a datasource without history
 it is an error.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./ui#ui-history"><code>&lt;ui:history&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-history"><code>&lt;ui:history&gt;</code></a></p>
 
 ## 6. Expressions
 
@@ -651,6 +651,8 @@ attributes, conditions, HTML text and attributes, and `ui:*` attributes — for
 every scope (`session`, `application`, `request`, `cookie`, `form`, `query`),
 alone or inside a larger expression: `{session.visits + 1}`,
 `{session.user.name}`.
+
+<p class="spec-cited">Referenced by: <a href="./config#cfg-ui"><code>ui:</code></a></p>
 
 <a id="EXPR-12"></a>**[EXPR-12](#EXPR-12)** — `urlencode(v)` makes a value safe inside a URL (spaces become `+`,
 `&`, `?`, `/` and the rest are escaped): `q:redirect url="/?q={urlencode(q)}"`.
@@ -922,7 +924,7 @@ a web request (`quantum run`) the `q:llm` waits for the answer as usual.
 `<ui:stream>` on a finished answer shows its value; for a `q:llm` that is not
 on the page it is an error.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-llm"><code>&lt;q:llm&gt;</code></a> · <a href="./cli#cli-run"><code>quantum run</code></a> · <a href="./config#cfg-llm"><code>llm:</code></a> · <a href="./ui#ui-stream"><code>&lt;ui:stream&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-llm"><code>&lt;q:llm&gt;</code></a> · <a href="./cli#cli-run"><code>quantum run</code></a> · <a href="./config#cfg-llm"><code>llm:</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-stream"><code>&lt;ui:stream&gt;</code></a></p>
 
 <a id="IA-8"></a>**[IA-8](#IA-8)** — A `q:knowledge` source is read whole or the base is not built
 ([IA-5](#IA-5)): a missing file or folder, a folder where no file matches the pattern,
@@ -1012,7 +1014,7 @@ process it stopped has ended.
 `components/` and `quantum start`. The types `game`, `terminal` and `ui`
 exist, outside the Core (Laboratory and Experimental), and are not specified.
 
-<p class="spec-cited">Referenced by: <a href="./cli#cli-start"><code>quantum start</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./cli#cli-start"><code>quantum start</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a></p>
 
 <a id="APP-2"></a>**[APP-2](#APP-2)** — The `qtest:` testing engine was removed in 0.22.
 `q:application` with `type="testing"`, and a `qtest:` tag anywhere in a file,
@@ -1042,7 +1044,7 @@ error with a suggestion. A statement inside `ui:*` is an error, as inside HTML
 ([PARSE-2](#PARSE-2)). The direct text of a `ui:*` container is content
 (`<ui:card-header>Summary</ui:card-header>`).
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-card-header"><code>&lt;ui:card-header&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-card-header"><code>&lt;ui:card-header&gt;</code></a></p>
 
 <a id="UI-2"></a>**[UI-2](#UI-2)** — The responsive layout is declared on the `ui:*` elements, with three
 breakpoints: `sm` (below 640 px), `md` (768 px) and `lg` (1024 px).
@@ -1053,7 +1055,7 @@ element; `grow="true"` makes the element take what is left of the row;
 `lg`. A breakpoint or column count outside this is an error. It applies equally
 to the served app and to the HTML generated by `quantum run --target html`.
 
-<p class="spec-cited">Referenced by: <a href="./cli#cli-run"><code>quantum run</code></a> · <a href="./ui#ui-hbox"><code>&lt;ui:hbox&gt;</code></a> · <a href="./ui#ui-grid"><code>&lt;ui:grid&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./cli#cli-run"><code>quantum run</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-hbox"><code>&lt;ui:hbox&gt;</code></a> · <a href="./ui#ui-grid"><code>&lt;ui:grid&gt;</code></a></p>
 
 <a id="UI-3"></a>**[UI-3](#UI-3)** — A renderer that is not the browser asks for the page with
 `Accept: application/vnd.quantum.view+json` and receives the view tree: the
@@ -1066,7 +1068,7 @@ with a session — login, validation, flash and redirects are the web's. In the
 terminal, [UI-2](#UI-2)'s breakpoints count columns (`sm` 80, `md` 96, `lg` 128) and a
 width in px is px/8 columns.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./cli#cli-console"><code>quantum console</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./cli#cli-console"><code>quantum console</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a></p>
 
 <a id="UI-4"></a>**[UI-4](#UI-4)** — `quantum desktop` opens the application in a system window
 (pywebview, extra `[desktop]`): it starts the application's server on a free
@@ -1077,7 +1079,7 @@ pywebview installed, the command exits with an error that says what to install.
 A page's title is the same in every renderer: the `title` of the page's first
 `ui:window` (with its expressions resolved), else the component's name.
 
-<p class="spec-cited">Referenced by: <a href="./cli#cli-desktop"><code>quantum desktop</code></a> · <a href="./ui#ui-window"><code>&lt;ui:window&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./cli#cli-desktop"><code>quantum desktop</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-window"><code>&lt;ui:window&gt;</code></a></p>
 
 <a id="UI-5"></a>**[UI-5](#UI-5)** — `<ui:table source="{rows}">` draws one row per item of the list (a
 `q:query` or an array), with the row variable set as `q:loop` sets it (`as=`,
@@ -1091,7 +1093,7 @@ table. Without any `ui:column`, the table shows one column per field of its
 rows, in the order the query returns them, with the field name as the header
 (`opened_on` → "Opened on").
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a></p>
 
 <a id="UI-6"></a>**[UI-6](#UI-6)** — Form fields open with a value: `value=` on `ui:input`, `ui:select`
 and `ui:radio` (the option with that value is chosen) and `checked=` on
@@ -1100,7 +1102,7 @@ resolves to one of them). When sent, a checked box goes as `on` and an
 unchecked one does not go, as in the browser — use `<q:param default="off">`
 in the action.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-checkbox"><code>&lt;ui:checkbox&gt;</code></a> · <a href="./ui#ui-radio"><code>&lt;ui:radio&gt;</code></a> · <a href="./ui#ui-switch"><code>&lt;ui:switch&gt;</code></a> · <a href="./ui#ui-select"><code>&lt;ui:select&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-checkbox"><code>&lt;ui:checkbox&gt;</code></a> · <a href="./ui#ui-radio"><code>&lt;ui:radio&gt;</code></a> · <a href="./ui#ui-switch"><code>&lt;ui:switch&gt;</code></a> · <a href="./ui#ui-select"><code>&lt;ui:select&gt;</code></a></p>
 
 <a id="UI-7"></a>**[UI-7](#UI-7)** — The Core set of `ui:*` is drawn with the same meaning by every
 renderer (browser, console, desktop, the Hive's screen): `window`, `hbox`, `vbox`, `grid`,
@@ -1116,7 +1118,7 @@ opens on a click in the browser as on the arrows in the console and on the scree
 only in the browser (Experimental), and the console shows that it does not draw
 them instead of drawing something else in their place.
 
-<p class="spec-cited">Referenced by: <a href="./ui#ui-window"><code>&lt;ui:window&gt;</code></a> · <a href="./ui#ui-hbox"><code>&lt;ui:hbox&gt;</code></a> · <a href="./ui#ui-vbox"><code>&lt;ui:vbox&gt;</code></a> · <a href="./ui#ui-panel"><code>&lt;ui:panel&gt;</code></a> · <a href="./ui#ui-tabpanel"><code>&lt;ui:tabpanel&gt;</code></a> · <a href="./ui#ui-tab"><code>&lt;ui:tab&gt;</code></a> · <a href="./ui#ui-grid"><code>&lt;ui:grid&gt;</code></a> · <a href="./ui#ui-section"><code>&lt;ui:section&gt;</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-formitem"><code>&lt;ui:formitem&gt;</code></a> · <a href="./ui#ui-spacer"><code>&lt;ui:spacer&gt;</code></a> · <a href="./ui#ui-scrollbox"><code>&lt;ui:scrollbox&gt;</code></a> · <a href="./ui#ui-text"><code>&lt;ui:text&gt;</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-checkbox"><code>&lt;ui:checkbox&gt;</code></a> · <a href="./ui#ui-radio"><code>&lt;ui:radio&gt;</code></a> · <a href="./ui#ui-switch"><code>&lt;ui:switch&gt;</code></a> · <a href="./ui#ui-select"><code>&lt;ui:select&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-pager"><code>&lt;ui:pager&gt;</code></a> · <a href="./ui#ui-history"><code>&lt;ui:history&gt;</code></a> · <a href="./ui#ui-stream"><code>&lt;ui:stream&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a> · <a href="./ui#ui-item"><code>&lt;ui:item&gt;</code></a> · <a href="./ui#ui-image"><code>&lt;ui:image&gt;</code></a> · <a href="./ui#ui-link"><code>&lt;ui:link&gt;</code></a> · <a href="./ui#ui-progress"><code>&lt;ui:progress&gt;</code></a> · <a href="./ui#ui-option"><code>&lt;ui:option&gt;</code></a> · <a href="./ui#ui-header"><code>&lt;ui:header&gt;</code></a> · <a href="./ui#ui-footer"><code>&lt;ui:footer&gt;</code></a> · <a href="./ui#ui-rule"><code>&lt;ui:rule&gt;</code></a> · <a href="./ui#ui-badge"><code>&lt;ui:badge&gt;</code></a> · <a href="./ui#ui-card"><code>&lt;ui:card&gt;</code></a> · <a href="./ui#ui-card-header"><code>&lt;ui:card-header&gt;</code></a> · <a href="./ui#ui-card-body"><code>&lt;ui:card-body&gt;</code></a> · <a href="./ui#ui-card-footer"><code>&lt;ui:card-footer&gt;</code></a> · <a href="./ui#ui-alert"><code>&lt;ui:alert&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-window"><code>&lt;ui:window&gt;</code></a> · <a href="./ui#ui-hbox"><code>&lt;ui:hbox&gt;</code></a> · <a href="./ui#ui-vbox"><code>&lt;ui:vbox&gt;</code></a> · <a href="./ui#ui-panel"><code>&lt;ui:panel&gt;</code></a> · <a href="./ui#ui-tabpanel"><code>&lt;ui:tabpanel&gt;</code></a> · <a href="./ui#ui-tab"><code>&lt;ui:tab&gt;</code></a> · <a href="./ui#ui-grid"><code>&lt;ui:grid&gt;</code></a> · <a href="./ui#ui-section"><code>&lt;ui:section&gt;</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-formitem"><code>&lt;ui:formitem&gt;</code></a> · <a href="./ui#ui-spacer"><code>&lt;ui:spacer&gt;</code></a> · <a href="./ui#ui-scrollbox"><code>&lt;ui:scrollbox&gt;</code></a> · <a href="./ui#ui-text"><code>&lt;ui:text&gt;</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-checkbox"><code>&lt;ui:checkbox&gt;</code></a> · <a href="./ui#ui-radio"><code>&lt;ui:radio&gt;</code></a> · <a href="./ui#ui-switch"><code>&lt;ui:switch&gt;</code></a> · <a href="./ui#ui-select"><code>&lt;ui:select&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-pager"><code>&lt;ui:pager&gt;</code></a> · <a href="./ui#ui-history"><code>&lt;ui:history&gt;</code></a> · <a href="./ui#ui-stream"><code>&lt;ui:stream&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a> · <a href="./ui#ui-item"><code>&lt;ui:item&gt;</code></a> · <a href="./ui#ui-image"><code>&lt;ui:image&gt;</code></a> · <a href="./ui#ui-link"><code>&lt;ui:link&gt;</code></a> · <a href="./ui#ui-progress"><code>&lt;ui:progress&gt;</code></a> · <a href="./ui#ui-option"><code>&lt;ui:option&gt;</code></a> · <a href="./ui#ui-header"><code>&lt;ui:header&gt;</code></a> · <a href="./ui#ui-footer"><code>&lt;ui:footer&gt;</code></a> · <a href="./ui#ui-rule"><code>&lt;ui:rule&gt;</code></a> · <a href="./ui#ui-badge"><code>&lt;ui:badge&gt;</code></a> · <a href="./ui#ui-card"><code>&lt;ui:card&gt;</code></a> · <a href="./ui#ui-card-header"><code>&lt;ui:card-header&gt;</code></a> · <a href="./ui#ui-card-body"><code>&lt;ui:card-body&gt;</code></a> · <a href="./ui#ui-card-footer"><code>&lt;ui:card-footer&gt;</code></a> · <a href="./ui#ui-alert"><code>&lt;ui:alert&gt;</code></a></p>
 
 <a id="UI-8"></a>**[UI-8](#UI-8)** — `q:application type="ui"` compiles a standalone file with the layout
 only: `--target html` (one page) and `--target textual` (a Textual app). Logic
@@ -1140,7 +1142,7 @@ shows the values sent (never of a password or file field) and each field's
 error next to it, once, like the flash. A box comes back as it was sent:
 checked if it came, unchecked if not.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./config#cfg-logging"><code>logging.file</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-radio"><code>&lt;ui:radio&gt;</code></a> · <a href="./ui#ui-select"><code>&lt;ui:select&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./config#cfg-logging"><code>logging.file</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-radio"><code>&lt;ui:radio&gt;</code></a> · <a href="./ui#ui-select"><code>&lt;ui:select&gt;</code></a></p>
 
 <a id="UI-10"></a>**[UI-10](#UI-10)** — `<q:action table="t" datasource="d">` takes its `q:param`s from the
 table's schema, read from the database (and read again when the database file
@@ -1160,7 +1162,7 @@ values of a row (a one-row query works). `table` without `datasource`, and a
 table or column that does not exist, are errors; `quantum check` ([DEV-3](#DEV-3))
 checks the table and the columns.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a></p>
 
 <a id="UI-11"></a>**[UI-11](#UI-11)** — `<ui:pager for="query">` draws, over a paginated query ([DB-2](#DB-2)), the
 previous page, the numbers around the current page (`window`, 2 by default, on
@@ -1171,7 +1173,7 @@ the current page is marked (`aria-current`). With a single page, nothing is
 drawn. In the console, the same items as links. A query that does not exist or
 is not paginated is an error; `for` is required.
 
-<p class="spec-cited">Referenced by: <a href="./ui#ui-pager"><code>&lt;ui:pager&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-pager"><code>&lt;ui:pager&gt;</code></a></p>
 
 <a id="UI-12"></a>**[UI-12](#UI-12)** — `<ui:input bind="q" search="target">` is search as you type: a GET
 form to the page itself (Enter searches without JavaScript), with the URL's
@@ -1184,7 +1186,7 @@ cursor at the end — what is typed next adds to it. A `search` without `bind`, 
 that is not a number, a search field inside a `ui:form` and a target that is
 not on the page are errors.
 
-<p class="spec-cited">Referenced by: <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a></p>
 
 <a id="UI-13"></a>**[UI-13](#UI-13)** — `<ui:table source="{query}" sort="true">` puts links on the headers
 of the columns with a `key` that change `?sort=` and `?dir=` (asc/desc; the
@@ -1204,7 +1206,7 @@ back in the cell, with the error. The rows must carry the primary key. What it
 runs shows in `/_dev`. In the console, headers are links and cells are fields
 that save on Enter.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a></p>
 
 <a id="UI-14"></a>**[UI-14](#UI-14)** — `<ui:input rows="n">` (n ≥ 2) is a multi-line field: a `<textarea>`
 in the browser, whose value is escaped, and a text area in the console. A
@@ -1215,7 +1217,7 @@ the console a file field is a note (a terminal has no file picker) and the form
 posts without it. `submit="…"` adds that button to a form that has none, also
 when the form has fields of its own.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a></p>
 
 <a id="UI-15"></a>**[UI-15](#UI-15)** — `quantum pixel` opens the application's pages on the Hive's screen,
 the console of a Quantum OS machine, the way `quantum console` opens them in
@@ -1240,7 +1242,7 @@ once in every renderer. The view tree says whether one of the page's elements
 says exactly the flash (`flashShown`); the console and the Hive's screen draw
 the flash on a line of their own only for a page where none does.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./ui#ui-alert"><code>&lt;ui:alert&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-alert"><code>&lt;ui:alert&gt;</code></a></p>
 
 <a id="UI-17"></a>**[UI-17](#UI-17)** — `<ui:tabpanel open="Network">` opens on the tab with that title, in
 every renderer; without `open`, on the first. An expression is the page's to
@@ -1250,7 +1252,7 @@ resolve: with `<q:set name="tab" value="{query.tab}" default="Machine"/>` and
 that names no tab opens the first; a literal that names no tab is a parse error
 that lists the tabs.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-set"><code>&lt;q:set&gt;</code></a> · <a href="./tags#q-redirect"><code>&lt;q:redirect&gt;</code></a> · <a href="./ui#ui-tabpanel"><code>&lt;ui:tabpanel&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-set"><code>&lt;q:set&gt;</code></a> · <a href="./tags#q-redirect"><code>&lt;q:redirect&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-tabpanel"><code>&lt;ui:tabpanel&gt;</code></a></p>
 
 <a id="UI-18"></a>**[UI-18](#UI-18)** — `quantum run <app> --on web|desktop|tui|terminal` runs the
 application in that folder (its `quantum.config.yaml`, its paths relative to
@@ -1262,6 +1264,25 @@ an error that says it is not built yet; a folder that is not an application is
 an error that says so.
 
 <p class="spec-cited">Referenced by: <a href="./cli#cli-run"><code>quantum run</code></a> · <a href="./cli#cli-start"><code>quantum start</code></a> · <a href="./cli#cli-console"><code>quantum console</code></a> · <a href="./cli#cli-desktop"><code>quantum desktop</code></a></p>
+
+<a id="UI-19"></a>**[UI-19](#UI-19)** — Motion has three kinds — `fade`, `slide`, `expand` — and two
+speeds — `fast` (150 ms) and `normal` (250 ms, the default) — eased out, the
+same in every renderer. `<ui:window transition="fade|slide">`: the page enters
+that way each time it is shown; `enter="fade|slide|expand"` on any `ui:*`
+element (an expression too; `''` is none) and `<ui:animate
+type="fade|slide|expand">`: the element enters that way when its page is shown;
+a tab's content opens with `expand` when the user changes the tab; `speed=`
+sets the speed. A literal that is not one of these is a parse error; an
+expression that resolves to anything else is the page's error. Each renderer
+records the motions it ran since the page was shown, in order, as kind, speed
+and what (`page`, `tab:<title>`, the element's `id`, else its tag) — the
+browser in `window.quantumMotions`, the console in `ConsoleUI.motions` — and the
+same steps give the same list and leave every element in place, fully shown.
+`ui.motion: off` in `quantum.config.yaml` turns every motion off; the browser
+also stops them for the system's reduced-motion setting. `ui:animate`'s other
+types are the browser's; the other renderers draw the content without them.
+
+<p class="spec-cited">Referenced by: <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-window"><code>&lt;ui:window&gt;</code></a> · <a href="./ui#ui-animate"><code>&lt;ui:animate&gt;</code></a></p>
 
 ## 11. Development
 
@@ -1300,7 +1321,7 @@ columns of a SELECT come from it with `LIMIT 0`, and the database is opened
 read-only. A datasource that does not open (missing file, unsupported driver)
 is a note, not a silent OK. The command exits with 1 if there is a problem.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-agent"><code>&lt;q:agent&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-agent"><code>&lt;q:agent&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a></p>
 
 <a id="DEV-4"></a>**[DEV-4](#DEV-4)** — `quantum start --hot-reload` watches the `paths.components` and
 `paths.static` folders, and every page it serves opens a WebSocket to it

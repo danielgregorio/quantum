@@ -5,8 +5,9 @@ tests/apps/test_settings.py and tests/apps/test_kanban_everywhere.py (one
 application in each of its versions, UI-18). A step is a tuple: ("sees", [texts]), ("does_not_see",
 [texts]), ("visit", path), ("fill", field, value), ("click", button),
 ("follow", link), ("click_in", card, button), ("follow_in", card, link),
-("tab", title), ("waits_for", text), and the parity script's own (image,
-progress, values, check, choose).
+("tab", title), ("waits_for", text), ("motions", [(kind, speed, what), ...]) — the
+motions the page ran (UI-19) —, and the parity script's own (image, progress,
+values, check, choose).
 """
 
 import asyncio
@@ -26,6 +27,10 @@ def run_script(driver, script):
         elif step == "does_not_see":
             text = driver.text()
             assert not [t for t in args[0] if t in text], f"{driver.name}: shows {args[0]}"
+        elif step == "motions":
+            # UI-19: the motions the page ran since it was shown, the same list in every renderer
+            ran = [(m["kind"], m["speed"], m["what"]) for m in driver.motions()]
+            assert ran == args[0], f"{driver.name}: ran {ran}"
         else:
             getattr(driver, step)(*args)
 
@@ -43,6 +48,9 @@ class Browser:
 
     def visit(self, path):
         self.p.goto(self.base + path)
+
+    def motions(self):
+        return self.p.evaluate("window.quantumMotions || []")
 
     def image(self, alt):
         assert self.p.locator(f'img[alt="{alt}"]').count() == 1
@@ -137,6 +145,9 @@ class Console:
             if getattr(w, "border_title", None):
                 parts.append(str(w.border_title))
         return " | ".join(parts)
+
+    def motions(self):
+        return list(self.app.motions)
 
     def image(self, alt):
         assert f"[{alt}]" in self.text()

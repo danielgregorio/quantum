@@ -33,6 +33,8 @@ Every tag below that says so also takes these ([UI-2](./spec#UI-2) for the respo
 | `class` | string |  |  |  |
 | `visible` | string |  |  |  |
 | `grow` | string |  |  |  |
+| `enter` | string |  |  |  |
+| `speed` | string |  |  |  |
 | `stack-below` | string |  |  | `sm`, `md`, `lg` |
 | `hide-below` | string |  |  | `sm`, `md`, `lg` |
 | `hide-above` | string |  |  | `sm`, `md`, `lg` |
@@ -48,10 +50,11 @@ Drawn with the same meaning by the browser, the console and the desktop ([UI-7](
 | Attribute | Type | Required | Default | Values |
 |---|---|---|---|---|
 | `title` | string |  |  |  |
+| `transition` | string |  |  |  |
 
 Also takes the [layout attributes](#layout-attributes), child elements.
 
-Specified by: [UI-4](./spec#UI-4) · [UI-7](./spec#UI-7)
+Specified by: [UI-4](./spec#UI-4) · [UI-7](./spec#UI-7) · [UI-19](./spec#UI-19)
 
 <a id="ui-hbox"></a>
 
@@ -641,6 +644,8 @@ Inside: [`ui:form`](#ui-form)
 | `direction` | string |  |  |  |
 
 Also takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-19](./spec#UI-19)
 
 <a id="ui-modal"></a>
 

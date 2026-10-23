@@ -6,7 +6,7 @@
     <q:redirect url="/login" flash="Signed out." />
   </q:action>
 
-  <ui:window title="Sign out">
+  <ui:window title="Sign out" transition="fade">
     <ui:vbox gap="md" padding="lg">
       <ui:text>Sign out of the Kanban?</ui:text>
       <ui:button on-click="signOut" variant="primary">Sign out</ui:button>

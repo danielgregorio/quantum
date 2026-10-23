@@ -37,7 +37,7 @@
     <q:param name="user" value="{session.userId}" type="integer" />
   </q:query>
 
-  <ui:window title="Kanban">
+  <ui:window title="Kanban" transition="fade">
     <ui:vbox gap="md" padding="lg">
       <ui:hbox gap="md">
         <ui:header title="Boards" />
@@ -46,7 +46,7 @@
         <ui:link to="/logout">Sign out</ui:link>
       </ui:hbox>
       <q:if condition="flash">
-        <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}">{flash}</ui:alert>
+        <ui:alert variant="{flashType == 'error' and 'danger' or 'success'}" enter="fade">{flash}</ui:alert>
       </q:if>
       <q:if condition="boards_result.recordCount == 0">
         <ui:text>No boards yet.</ui:text>

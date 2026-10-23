@@ -22,11 +22,11 @@
     <q:redirect url="/login" flash="Wrong e-mail or password." flashType="error" />
   </q:action>
 
-  <ui:window title="Kanban">
+  <ui:window title="Kanban" transition="fade">
     <ui:vbox gap="md" padding="lg" width="420">
       <ui:header title="Kanban" />
       <q:if condition="flash">
-        <ui:alert variant="{flashType == 'error' and 'danger' or 'info'}">{flash}</ui:alert>
+        <ui:alert variant="{flashType == 'error' and 'danger' or 'info'}" enter="fade">{flash}</ui:alert>
       </q:if>
       <q:if condition="query.expired">
         <ui:alert variant="info">Your session expired. Sign in again.</ui:alert>
