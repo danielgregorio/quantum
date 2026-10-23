@@ -782,6 +782,28 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: PandaFoot, what its first players found (`PLAN_PANDAFOOT.md`).
+  A second yellow is a red, and the side plays a man short; the injured are
+  carried off and a substitute comes on (three a match), and a manager makes
+  substitutions in a pause (F1); playing tires, resting rests, and a tired
+  player plays worse; a manager's eleven is kept but for its gaps, and what
+  the dashboard shows is what kicks off; a defensive style makes fewer
+  chances at both ends, so the objective to draw draws; the home side is
+  lifted by its crowd, and the crowd by the table, the visitor, the form and
+  the ticket's price (a $50 ticket no longer fills the ground); the
+  dashboard shows the eleven, the results every scorer and the manager's
+  match (crowd, gate, man of the match, cards, injuries, who misses the
+  next), the table the top scorers, the tactics the opponent's last five
+  matches; a new game no longer keeps the managers and the season of the
+  game before it (each one added a manager of the same club, and Enter
+  seemed to do nothing).
+- Laboratory: a HUD or a menu of rows is built with its scene, before the
+  scene is entered, and read the scene's computed `q:set`s as nulls (a
+  script error, a frame without its text); they read them once the scene is
+  entered, and a hidden menu reads nothing.
+- Laboratory: a menu shown (`if=`) by what another menu chose on the same
+  frame took the same key: Enter on one menu chose in the next as well. It
+  reads no key on that frame.
 - Laboratory: a `qg:state` without `frame=` showed frame 0 of the sheet; it
   keeps the prefab's (or the character's) own frame.
 - Laboratory: a character placed in a `qg:exit` as its scene starts (a door

@@ -133,7 +133,7 @@ It makes a room of its own and a link to send to a friend.
 - **Crates**: arrows or WASD step; a click walks to a cell, or into a crate beside the worker, which pushes it; walk into the foreman to talk (up, down and Enter choose an answer); R starts the room over.
 - **Rally**: red W A S D, blue the arrows (over the network, each W A S D); the barrier lifts at the green light.
 - **Marches**: click a rider, then a hex (four moves a turn); click a raider next to a rider to strike; E or End turn ends the turn.
-- **PandaFoot**: arrows and Enter in the menus; F1 line-up, F2 tactics, F3 squad, F5 finances, F7 table; Enter plays the round. In it, + and - change the speed, Space pauses (with two managers or more, a time-out), Tab shows another match, C undoes an automatic change of tactics.
+- **PandaFoot**: arrows and Enter in the menus; F1 line-up, F2 tactics, F3 squad, F5 finances, F7 table and top scorers; Enter plays the round. In it, + and - change the speed, Space pauses (with two managers or more, a time-out) and in the pause F1 makes a substitution and F2 changes the style, Tab shows another match, C undoes an automatic change of tactics.
 - **Creeps**: arrows or WASD; Space or Enter starts.
 - **Towers**: the mouse (or the arrows) points, click or Enter builds; `1` and `2` (or the wheel, or Tab) choose the turret; a click on a turret upgrades it, a right click (or X) sells it.
 - **Arena**: player 1 A/D, W jump, S crouch, J punch, K kick; player 2 the arrows, `.` punch, `/` kick. Hold away from the opponent to block. Down, forward, punch within half a second: the blast, felt on the other's joypad.

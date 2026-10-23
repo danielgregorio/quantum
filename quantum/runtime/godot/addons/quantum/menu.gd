@@ -67,6 +67,10 @@ var _row_box: StyleBoxFlat = null # a row of a list, and the focused one
 var _row_lit: StyleBoxFlat = null
 
 
+var _hidden := false   # if= hid it on a frame before
+static var _chose_on := -1   # the physics frame a menu last chose on
+
+
 func setup(spec: Dictionary, scene: Node) -> void:
 	_scene = scene
 	player = int(spec.get("player", 1))
@@ -237,8 +241,8 @@ func _button(item: Dictionary) -> Button:
 
 # source=: the rows read again; a button for each, made again when how many there are changes.
 func _sync_rows() -> void:
-	if _rows_method == null:
-		return
+	if _rows_method == null or ("q_entered" in _scene and not _scene.q_entered):
+		return   # before the scene is entered, its computed q:sets (what the rows read) are not set yet
 	_rows = _scene.call(_rows_method)
 	if _rows.size() == _items.size():
 		return
@@ -449,7 +453,12 @@ func _physics_process(_delta: float) -> void:
 		return
 	if not active():
 		_pointer_seen = null   # a pointer that moved while it was away does not choose when it comes back
+		_hidden = true
 		return
+	if _hidden:
+		_hidden = false
+		if _chose_on == Engine.get_physics_frames():
+			return   # shown by what another menu chose on this frame (if="{...}"): that key is not for it
 	_sync_rows()
 	var shown := _shown_indices()
 	if shown.is_empty():
@@ -584,6 +593,7 @@ func _input(event: InputEvent) -> void:
 
 func _choose(i: int) -> void:
 	focus = i
+	_chose_on = Engine.get_physics_frames()
 	var spec: Dictionary = _items[i]["spec"]
 	Q.event("choose", quantum_view()["items"][i])
 	if spec["kind"] == "button":
@@ -612,7 +622,11 @@ func _process(_delta: float) -> void:
 
 
 func _refresh() -> void:
+	if "q_entered" in _scene and not _scene.q_entered:
+		return   # built before the scene is entered: its computed q:sets are not set yet
 	visible = active()
+	if not visible:
+		return   # what a hidden menu shows is read when it shows (if="{subbing}" guards its source)
 	_sync_rows()
 	var lit := _keys or _peers().size() <= 1   # the focus shows on the menu that has the keys
 	for i in _items.size():

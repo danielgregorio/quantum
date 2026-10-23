@@ -154,3 +154,55 @@ def test_the_hud_is_placed_in_its_box_and_coloured_by_the_state(godot, project, 
     assert texts[' 12'] == 'Color(1, 1, 0, 1)' and texts['  3'] == 'null'   # only when goals > 5
     assert texts['Name    '] == 'null' and 'Carla Cr' in texts               # the heading; a cut name
     assert texts['    -$2,500'] == 'Color(0.333333, 1, 0.333333, 1)'          # a column's own colour
+
+
+ENTERED = '''<q:application id="entered" type="game">
+  <q:set name="pairs" value="[[1, 2], [3, 4]]" type="array" />
+  <q:set name="chosen" value="[]" type="array" />
+  <qg:scene name="first" width="320" height="240">
+    <q:set name="pair" value="{pairs[1]}" type="array" />
+    <q:set name="step" value="0" type="number" />
+    <qg:hud x="10" y="10" size="10"><qg:text value="{'Sum ' + str(pair[0] + pair[1])}" /></qg:hud>
+    <qg:menu x="10" y="60" source="{[pair[0], pair[1]]}" as="n" size="10" if="{step == 0}">
+      <qg:button label="{'Pick ' + str(n)}"><q:set name="chosen" value="{chosen + [n]}" /><q:set name="step" value="{1}" /></qg:button>
+    </qg:menu>
+    <qg:menu x="10" y="60" source="{[10, 20]}" as="n" size="10" if="{step == 1}">
+      <qg:button label="{'Then ' + str(n)}"><q:set name="chosen" value="{chosen + [n]}" /><q:set name="step" value="{0}" /></qg:button>
+    </qg:menu>
+  </qg:scene>
+</q:application>
+'''
+
+
+@pytest.fixture(scope='module')
+def entered(godot, tmp_path_factory) -> Path:
+    from quantum.core.parser import QuantumParser
+    from quantum.runtime.godot import compile_game
+    src = tmp_path_factory.mktemp('entered') / 'entered.q'
+    src.write_text(ENTERED, encoding='utf-8')
+    out = Path(compile_game(QuantumParser(use_cache=False).parse_file(str(src)), str(src.parent / 'godot'),
+                            source_dir=str(REPO)))
+    assert check_project(out, binary=godot) == []
+    return out
+
+
+def test_a_scene_is_drawn_once_its_computed_state_is_set(godot, entered):
+    """The HUD and a menu of rows are built with the scene, before it is entered: they read its computed
+    q:sets (pair, from the game's state) only once they have their values, never a null."""
+    with PlaySession(entered, binary=godot) as game:
+        seen = game.act(ticks=2)
+        assert hud(seen) == ['Sum 7']
+        assert labels(menus(seen)[0]) == ['Pick 3', 'Pick 4']
+        assert not [line for line in game.log if 'SCRIPT ERROR' in line], game.log
+
+
+def test_a_menu_shown_by_a_key_does_not_take_that_key(godot, entered):
+    """Enter on the first menu shows the second (if=) in the same tick: the second waits for a key of its own."""
+    with PlaySession(entered, binary=godot) as game:
+        game.act(ticks=2)
+        first = game.act(tap=['select'], ticks=2)
+        assert first['state']['game']['chosen'] == [3]
+        assert labels([m for m in menus(first) if m['shown']][0]) == ['Then 10', 'Then 20']
+        second = game.act(tap=['down'], ticks=2)
+        second = game.act(tap=['select'], ticks=2)
+        assert second['state']['game']['chosen'] == [3, 20]

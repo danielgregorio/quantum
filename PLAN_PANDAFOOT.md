@@ -1,6 +1,7 @@
 # PandaFoot — a football manager in the game language
 
-> Status: approved 2026-10-22, the four phases below. Phase 1 done the same day; Phase 2 next.
+> Status: approved 2026-10-22, the four phases below. Phase 1 done the same day; what its first players
+> found fixed on 2026-10-23, when the phases were reordered: the club (Phase 2) before the online round (Phase 3).
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The game's design is [danielgregorio/pandafoot](https://github.com/danielgregorio/pandafoot)'s
 > `GAME_DESIGN.md` (v0.2, with the decisions of 2026-10-22), and its numbers are checked there by
@@ -130,12 +131,85 @@ from the game (it agrees with the game within a tenth of a goal), and to the des
   $130.000 and $1 a seat; the hidden genius is paid as a small club pays, for his traits, since no
   one knows yet what he is (as a genius he cost a small club more than it earns).
 
-Not in Phase 1, and felt: the same squads every season (no transfers, no ageing: Phase 3), so the
+Not in Phase 1, and felt: the same squads every season (no transfers, no growth: Phase 2), so the
 big clubs take most titles of a world; a club whose wages outrun its income sinks deeper every season
-with nothing to stop it (the crisis and bankruptcy are Phase 3); a manager who never touches the eleven
+with nothing to stop it (the crisis and bankruptcy are Phase 2); a manager who never touches the eleven
 tires it, and the agent's club finishes anywhere from 2nd to 10th.
 
-## Phase 2 — The live round online
+### What its first players found (2026-10-23)
+
+Two people played Phase 1 on the site for an evening and sent what they found. What Phase 1 promised and did
+not do was fixed at once; the rest (above all: the money does nothing) is Phase 2.
+
+| They found | Now |
+|---|---|
+| A player could take two yellow cards and play on; one took three in a match | A booked player is more careful, and a second yellow is a red: he leaves, the side plays a man short (8% weaker), and he misses the next match. The yellows of a red do not count towards a ban of three |
+| An injured player played on, and could be booked | He is carried off; the best of the bench for his place comes on, three at most, else the side plays a man short. He misses the matches the knock says (a knock of one missed none) |
+| No substitutions | In a pause (Space, alone; a time-out with others), F1: who comes off, then who comes on, three a match |
+| Resting players did not rest | Playing tires (form -14 a match) and a week rests everyone (+8): a player who plays every match goes from 100 to the 30s, and a tired one plays up to a fifth worse and gets hurt more. A good player left out is not unhappy when he was tired. The computer rests its own |
+| The rested came back by themselves | A manager's eleven is kept: only who cannot play, or a place the formation no longer has, is filled again. The tactics and the elevens are made ready after each round, so what the dashboard shows is what kicks off (the kick-off picked the objective again and the formation with it) |
+| The tactic to draw always lost, even at home; tactics did not help much | A defensive style slows the match for both sides (fewer chances, fewer goals, more draws), an attacking one speeds it up. A manager's objective starts against the style the opponent tends to start with (Draw counters an attacking side, sits back against the others), and the automatic changes keep their purpose (Draw holds a draw late instead of opening up). The computer plays its objective's own style, as Elifoot's did, so it can be read and beaten: when every club read the other, the weaker side countered the stronger every time and won a match in three |
+| Home or away made little difference; how many came made none | The home side is lifted by its ground (8%) and by its crowd (up to 25% more with the ground full) |
+| A $50 ticket and the ground still full | The crowd comes by the table, the visitor, the form and a star in the eleven, and a dearer ticket keeps people away (at $30 two in five come, at $50 one in five): the finances say how many would come at the price |
+| The number of fans was not shown | The live round shows the crowd, and the results the crowd, the share of the ground and the gate |
+| The squad was hidden behind a key; the players hardly showed | The dashboard shows the eleven and the bench, with their form and who cannot play. The results show every match's scorers, and of the manager's: the man of the match, who was booked, sent off, hurt and came on, and who misses the next match |
+| No top scorers | The table (F7) has the top scorers; the season's end, the top scorer |
+| The information before the match made no sense: "what scouts?" | The news of the hidden genius are rumours (no scouts in the game). Before the match: the opponent's place, form and top scorer, the style it tends to start with and what beats it; on F2, its last five matches with the style each started with, as the design's pre-match history |
+| The game froze after three years, even in a new game | A new game kept the old one's managers and season: each new game added a manager of the same club, and Enter on the dashboard passed to the next manager's dashboard, the same screen. A new game starts from nothing. The browser played five seasons in a row without stopping (headless Chromium, through the play bridge) |
+
+The language: a HUD or a menu of rows is built with its scene, before the scene is entered, and read a
+computed `q:set` (`next_match(...)`) as a null (a script error in the log, a frame without its text); they
+read the scene once it is entered, and a hidden menu reads nothing. And a menu shown (`if="{...}"`) by what
+another menu chose on the same frame took that same key: Enter on who comes off chose who comes on as well.
+It reads no key on that frame (a menu shown by anything else, a turn of a fight, reads the key at once).
+
+**The playtest again**, 20 seasons by the agent with the same plan:
+
+| Measure | Target | Phase 1 | Now |
+|---|---|---|---|
+| Goals a match | 2.3 to 3.2 | 2.43 | 2.60 |
+| Home, draw, away | (football: about 45 / 27 / 28) | 41 / 26 / 33 | 48 / 23 / 29 |
+| A club weaker by 3 or more wins | a fifth to a quarter | 22% | 21% (draws 23%) |
+| The champion is not the strongest club | a third of the seasons or more | 16 of 20 | 16 of 20 (the big clubs 18 titles, a middle one 2) |
+| The hidden genius outscores everyone else of the small clubs | yes | 16 of 20 | 15 of 20 |
+| A top-half club goes from black to red in a season | never | once in 100 | once in 100 |
+| Cards, reds, knocks a match | (football: about 3.5 yellows, a red in five or six matches) | 3.6 yellows, no reds | 3.45 yellows, 0.18 reds, 0.28 knocks and as many substitutions |
+| The ground full | | 70% at any price | 69% at $15 |
+
+The model of the match engine (`pf_model2`) found where the new engine made the weaker side win a match in
+three: not the fatigue, the crowd or the luck, but the objectives reading each other. When every club picked
+its style against the other's tendency, the weaker side countered the stronger every time (Counter-attack
+against Attacking: +15%), and the stronger had no answer in its objective. Only a manager's objectives read
+the opponent now; the computer's can be read, and that is what the tactics screen is for.
+
+## Phase 2 — The club
+
+Approved 2026-10-23, before the online round (Phase 3): its first players wanted the rest of the club first.
+"The money does nothing", "you can't buy or sell", "few clubs", "no one is ever sacked", "the best club is
+too easy", "the players never get better": what makes a career, as in Elifoot.
+
+- **Four divisions of ten**: 40 clubs, home and away (18 rounds), two up and two down; strength, squads and
+  grounds by division; TV and sponsorship by division (the design's quotas).
+- **The career, as in Elifoot**: a manager starts at a small club of the fourth division; good seasons bring
+  offers from bigger clubs, a bad run or a broken purse gets the manager sacked (the board's patience, by
+  what the club expects of its place) — and an offer from another club, or the end of the career.
+- **Transfers, as Elifoot 2's auction**: players put on the list by their clubs and by the managers, bids
+  that rise in turns between the managers and the computer's clubs, the design's acceptance draw (80%+
+  accepts, under 20% refuses, between them a draw); selling; free agents and their fee; paying in
+  instalments.
+- **The ground**: seats grown by works that take months, and its health (the design's).
+- **Players who grow without ageing**: a season of playing, playing well and with morale makes a player
+  stronger; one left out for long loses a little. No age and no retirement, as the design keeps it simple.
+- **Records**: the managers' ranking (titles, promotions, points a match, seasons, clubs), the clubs'
+  (titles, an all-time table), the top scorers of each division and of all time.
+- **The crisis and bankruptcy** (the design's), and a cup if the calendar has room for it.
+
+Playtest: five seasons from the fourth division, by the agent and by people; how often a club of the fourth
+climbs, how often a manager is sacked and offered a job, how often the hidden genius is found and sold, and
+whether the auction's long shots ("Romário topou o Náutico!") come often enough to be stories and rarely
+enough to be news.
+
+## Phase 3 — The live round online
 
 The design's default room: two to eight managers on their own machines (the lockstep, its seats,
 watchers and relay rooms). Expected: **a screen of one's own** while the round is prepared (each
@@ -146,15 +220,6 @@ match of the round like the others), watchers.
 
 Playtest: a round with the agent in two seats and a person in another; time-outs and the horn feel
 right (not too many, not too few); the round's length with three time-outs each.
-
-## Phase 3 — The rest of the club
-
-Transfers (the salary auction with the acceptance draw, free agents and their signing fee, paying
-in instalments), the stadium's health and its works, the financial crisis and bankruptcy, four
-divisions with promotion and relegation, a cup, the calendar of both. Playtest: five seasons
-from the fourth division; how often a lower club climbs; how often the hidden Gênio is found and
-sold; whether the auction's long shots ("Romário topou o Náutico!") come often enough to be stories
-and rarely enough to be news.
 
 ## Phase 4 — The asynchronous room
 
