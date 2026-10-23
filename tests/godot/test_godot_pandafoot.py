@@ -283,9 +283,14 @@ def test_the_results_say_who_scored_and_who_came(pandafoot, godot):
         assert any(t.startswith('═══ YOUR MATCH ═══') for t in shown)
         assert any(t.startswith('Crowd: ') for t in shown) and any(t.startswith('Man of the match: ') for t in shown)
         goals = sum(m['hg'] + m['ag'] for m in after['state']['game']['last'])
+        clubs = after['state']['game']['clubs']
         for m, row in zip(after['state']['game']['last'], tables(after)[0]['rows']):
-            if len(row[3]) < 50:                                  # a line that fits: every goal in it
-                assert row[3].count('′') == m['hg'] + m['ag'], row
+            sides = [[f"{e['who']} {int(e['minute'])}′" for e in reversed(m['events'])
+                      if e['kind'] == 'goal' and e['club'] == clubs[c]['short']] for c in (m['home'], m['away'])]
+            full = ', '.join(sides[0]) + ' / ' + ', '.join(sides[1]) if sides[0] or sides[1] else ''
+            assert len(sides[0]) == m['hg'] and len(sides[1]) == m['ag']
+            shown = full.strip()                                  # as a table cell reads, without its padding
+            assert shown.startswith(row[3]) and (row[3] == shown or len(full) > 42), (row, full)   # cut at 42
         assert goals > 0
         standings = game.act(tap=['standings'], ticks=3)
         assert '═══ TOP SCORERS ═══' in texts(standings)
