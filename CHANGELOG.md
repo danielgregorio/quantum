@@ -854,6 +854,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   matches; a new game no longer keeps the managers and the season of the
   game before it (each one added a manager of the same club, and Enter
   seemed to do nothing).
+- Laboratory: PandaFoot, what its players found on a second evening
+  (`PLAN_PANDAFOOT.md`). After the last round, a look at the table (F7) and
+  Esc went to the dashboard, round 19 of 18, the last match again and again:
+  the season's end comes, from there and from a save. No two players of the
+  world share a name (a Bambuzinho played for three clubs). The crowd varies
+  with the day as well as the table, the form and the price: the finances say
+  about how many would come, a range. A match shows its shots (on target), the
+  ball and who is pressing as it is played, and the results the shots of the
+  manager's. The table is a menu: Enter on a club shows its squad (a genius
+  hidden in a small club stays unmarked).
 - Laboratory: a HUD or a menu of rows is built with its scene, before the
   scene is entered, and read the scene's computed `q:set`s as nulls (a
   script error, a frame without its text); they read them once the scene is
