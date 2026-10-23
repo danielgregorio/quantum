@@ -10,6 +10,39 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: PandaFoot 2.0, the club (Phase 2 of `PLAN_PANDAFOOT.md`), what
+  its players asked for over two evenings. Four divisions of ten (40 clubs,
+  18 rounds), two up and two down, strength, grounds, TV and sponsorship by
+  division; a manager starts at a small club of the 4th. A career: the board
+  expects a place and loses its patience with a bad run or a broken purse, a
+  sacked manager is offered clubs below or ends the career, good seasons
+  bring offers from bigger clubs. The transfer list (F6) as Elifoot 2's
+  auction: players listed by their clubs and the managers (S), bids that rise
+  in turns against the computer's clubs, the design's acceptance draw, free
+  agents for a fee, payment in instalments (I) and loans to the season's
+  end. Players grow with a season of playing well and lose a little left
+  out; a season of goals makes a forward a Star; the squad and the dashboard
+  mark a club's three best. Grounds wear and grow by works that take months;
+  the crisis stops buying and costs points and the best player, and a
+  bankrupt club goes down. The history (F8): champions of each division and
+  cup, the managers' ranking, the top scorers of each season and of all
+  time. The Panda Cup, knock-out across the divisions and drawn on screen
+  before each round, and the Supercup. A save of the first PandaFoot cannot
+  be continued, and the game says so.
+- Laboratory: a web page from a game. `<qg:open-url href=>` opens an address
+  in the player's browser: a new tab when the game runs in a browser, the
+  system's browser elsewhere (a changelog, the game's page, its credits).
+  Only `http://` and `https://`: another written address is a compile error,
+  and one an expression gives opens nothing. Played by an agent (the play
+  protocol, a replay) it opens nothing, and an `open-url` event says the
+  address (`tests/godot/test_godot_open_url.py`).
+- Laboratory: PandaFoot's version, always in view, and what changed in it
+  (asked for by its players). The title and the dashboard's corner show the
+  version, and "What's new" on the title opens the game's changelog in the
+  player's language (`projects/pandafoot/CHANGELOG.md`, `.pt.md`, `.es.md`).
+  `scripts/export-games.py` makes a game's `CHANGELOG.md` and its
+  translations its page, `games/<name>/changelog/` (and `changelog/<lang>/`),
+  linked from the games page.
 - Motion, the same in every renderer (UI-19): `fade`, `slide` and `expand`,
   `fast` (150 ms) or `normal` (250 ms). `transition=` on `ui:window` (the page
   enters), `enter=` on any `ui:*` element, an expression too (it enters when its
@@ -814,6 +847,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Breaking
 
+- Laboratory: a game state or a `q:function` named like what every Godot
+  object has (`free`, `get`, `connect`), or a function named like a method
+  of every node (`draw_line`), is a compile error that says so: the state
+  broke the scripts that read it, and the function replaced the engine's
+  own, so the scene did not load. A function may share a signal's name
+  (`ready`).
 - `require_role` on a `q:action` was accepted and ignored: the action ran for
   anyone who could open the page. It is enforced now (AUTH-8).
 - `{…}` in the SQL of a `<q:source type="query">` is a parse error (IA-10): it

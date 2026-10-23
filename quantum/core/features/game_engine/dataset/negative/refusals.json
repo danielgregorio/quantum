@@ -1320,6 +1320,57 @@
         "scene",
         "seed"
       ]
+    },
+    {
+      "id": "game-bad-076",
+      "intent": "A link to a file",
+      "input": {
+        "natural_language": "A button that opens a file of the computer",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:scene name=\"main\">\n    <qg:menu><qg:button label=\"Notes\"><qg:open-url href=\"file:///home/notes.txt\" /></qg:button></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "an http:// or https:// address"
+      },
+      "why_invalid": "qg:open-url opens web pages only: a file, a script or a bare name is not one.",
+      "correction": "href=\"https://example.com/notes/\".",
+      "tags": [
+        "open-url"
+      ]
+    },
+    {
+      "id": "game-bad-077",
+      "intent": "A function named like a method of every node",
+      "input": {
+        "natural_language": "A function draw_line that writes a line of a table",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <q:function name=\"draw_line\" params=\"k\"><q:return value=\"{k}\" /></q:function>\n  <qg:scene name=\"main\"><qg:hud><qg:text value=\"{draw_line(1)}\" /></qg:hud></qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'draw_line' is a property of every Godot node; the function needs another name"
+      },
+      "why_invalid": "The function would override the node's own draw_line and the scene's script would not load.",
+      "correction": "<q:function name=\"table_line\" ...>.",
+      "tags": [
+        "function"
+      ]
+    },
+    {
+      "id": "game-bad-078",
+      "intent": "A state named like a method of every object",
+      "input": {
+        "natural_language": "The free agents of a football manager in a state named free",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <q:set name=\"free\" value=\"[]\" type=\"array\" />\n  <qg:scene name=\"main\"><qg:hud><qg:text value=\"{len(free)}\" /></qg:hud></qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "'free' is a method of every Godot object; a game state needs another name"
+      },
+      "why_invalid": "Object.free() is every object's: the scripts that read the state would read the method.",
+      "correction": "<q:set name=\"free_agents\" .../>.",
+      "tags": [
+        "set"
+      ]
     }
   ]
 }

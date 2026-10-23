@@ -24,12 +24,30 @@ from quantum.runtime.godot.model import Element, Node, Statement
 
 _INDENT = '\t'
 
+# What every Godot object has, from Object itself (the class table starts at Node): a state named `free` was
+# Object.free() to the scripts that read it, and PandaFoot's free agents a number.
+OBJECT_MEMBERS = frozenset((
+    'add_user_signal', 'call', 'call_deferred', 'callv', 'can_translate_messages', 'cancel_free', 'connect',
+    'disconnect', 'emit_signal', 'free', 'get', 'get_class', 'get_incoming_connections', 'get_indexed',
+    'get_instance_id', 'get_meta', 'get_meta_list', 'get_method_argument_count', 'get_method_list',
+    'get_property_list', 'get_script', 'get_signal_connection_list', 'get_signal_list', 'get_translation_domain',
+    'has_connections', 'has_meta', 'has_method', 'has_signal', 'has_user_signal', 'is_blocking_signals', 'is_class',
+    'is_connected', 'is_queued_for_deletion', 'notification', 'notify_property_list_changed', 'property_can_revert',
+    'property_get_revert', 'remove_meta', 'remove_user_signal', 'set', 'set_block_signals', 'set_deferred',
+    'set_indexed', 'set_message_translation', 'set_meta', 'set_script', 'set_translation_domain', 'to_string',
+    'property_list_changed', 'script_changed',
+))
+
 # Names a scene script may not declare: what every Node2D already has (its
 # properties, methods and signals, from Godot's own reference — a variable
 # named like one is a GDScript error), and what the runtime's scripts use.
 RESERVED_NAMES = frozenset((
     'self', 'rng', 'state', 'health', 'tag', 'speed', 'velocity', 'heading', 'player',
-)) | gdprops.members_of('Node2D')
+)) | gdprops.members_of('Node2D') | OBJECT_MEMBERS
+
+
+def _member_kind(name: str) -> str:
+    return 'a method of every Godot object' if name in OBJECT_MEMBERS else 'a property of every Godot node'
 
 
 @dataclass
@@ -132,8 +150,7 @@ def declare_state(script: SceneScript, st: Statement) -> None:
     if name in script.game_state:
         raise GameCompileError(f'{name!r} is already the game\'s state (a q:set in <q:application>)', st.line)
     if name in RESERVED_NAMES:
-        raise GameCompileError(
-            f'{name!r} is a property of every Godot node; a game state needs another name', st.line)
+        raise GameCompileError(f'{name!r} is {_member_kind(name)}; a game state needs another name', st.line)
     type_name = st.attrs.get('type', 'string')
     if type_name not in GD_TYPES:
         raise GameCompileError(
@@ -208,7 +225,7 @@ def local_names(body: List[Node], scope: Scope, home: str = 'the scene') -> List
     for name in out:
         if name in RESERVED_NAMES:
             line = next((n.line for n in _sets(body) if n.attrs['name'] == name), None)
-            raise GameCompileError(f'{name!r} is a property of every Godot node; a variable needs another name', line)
+            raise GameCompileError(f'{name!r} is {_member_kind(name)}; a variable needs another name', line)
     # a variable set and never read is a misspelt state, not a variable
     read = _texts_read(body)
     for name in out:
@@ -262,8 +279,21 @@ def _texts_read(body: List[Node]) -> List[str]:
     return out
 
 
+# The signals among the members (a function may share a signal's name: PandaFoot's ready() and Node's ready)
+NODE2D_SIGNALS = frozenset((
+    'ready', 'renamed', 'tree_entered', 'tree_exiting', 'tree_exited', 'child_entered_tree', 'child_exiting_tree',
+    'child_order_changed', 'replacing_by', 'editor_description_changed', 'editor_state_changed', 'draw',
+    'visibility_changed', 'hidden', 'item_rect_changed', 'script_changed', 'property_list_changed',
+))
+
+
 def compile_function(script: SceneScript, st: Statement) -> None:
     name = st.attrs['name']
+    if name in RESERVED_NAMES and name not in NODE2D_SIGNALS:
+        # a function named like a member every node has overrides it (draw_line is CanvasItem's): a parse error
+        # when the scene loads, the whole scene gone
+        raise GameCompileError(f'<q:function name="{name}">: {name!r} is {_member_kind(name)}; '
+                               f'the function needs another name', st.line)
     params = [p.strip() for p in st.attrs.get('params', '').split(',') if p.strip()]
     scope = script.scope().child(params)
     locals_ = local_names(st.body, scope, '<q:application>' if script.game_wide else 'the scene')
@@ -787,6 +817,13 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         return f'Q.set_fullscreen(bool({compile_expression(el.get("on"), scope, el.line)}))'
     if el.tag == 'next-language':
         return 'Q.next_language()'
+    if el.tag == 'open-url':
+        href = str(el.get('href')).strip()
+        if is_expression(href):
+            return f'Q.open_url({compile_expression(href, scope, el.line)})'
+        if not re.match(r'https?://\S+$', href):
+            raise GameCompileError(f'<qg:open-url href="{href}">: an http:// or https:// address', el.line)
+        return f'Q.open_url({json.dumps(href)})'
     if el.tag == 'checkpoint':
         at = el.get('at')
         if not scope.has(at):

@@ -911,6 +911,20 @@ static func can_quit() -> bool:
 	return not OS.has_feature("web")
 
 
+# qg:open-url: a web address in the player's browser (a new tab in a browser), http and https only. Under the
+# play protocol or a replay it opens nothing: the event says what it would have opened.
+static func open_url(url) -> void:
+	var address := str(url)
+	if not (address.begins_with("http://") or address.begins_with("https://")):
+		push_warning("quantum: qg:open-url opens http:// and https:// addresses, not " + address.left(40))
+		return
+	event("open-url", {"url": address})
+	var q := _q_node()
+	if q != null and q.no_quit:
+		return
+	OS.shell_open(address)
+
+
 static func quit() -> void:
 	event("quit")
 	var q := _q_node()

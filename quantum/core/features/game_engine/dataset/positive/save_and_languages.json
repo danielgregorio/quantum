@@ -46,6 +46,27 @@
         "tr",
         "next-language"
       ]
+    },
+    {
+      "id": "game-news-001",
+      "intent": "The version always in view, and a link to what is new",
+      "input": {
+        "natural_language": "A title screen that shows the game's version in a corner, as every screen does, and a button that opens the changelog page in the browser, in the player's language",
+        "context": {
+          "target": "godot",
+          "file": "game-news-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"news\" type=\"game\">\n  <qg:language lang=\"pt\" name=\"Português\">\n    <qg:phrase text=\"What's new\" as=\"Novidades\" />\n  </qg:language>\n  <q:function name=\"game_version\"><q:return value=\"{'2.0'}\" /></q:function>\n  <qg:scene name=\"title\" width=\"320\" height=\"180\">\n    <qg:hud position=\"bottom-right\">\n      <qg:text value=\"{'v' + game_version()}\" />\n    </qg:hud>\n    <qg:menu>\n      <qg:button label=\"Play\"><qg:goto-scene name=\"main\" /></qg:button>\n      <qg:button label=\"{tr('What\\'s new') + ' (v' + game_version() + ')'}\">\n        <qg:open-url href=\"{'https://example.com/game/changelog/' + ('pt/' if language() == 'Português' else '')}\" />\n      </qg:button>\n    </qg:menu>\n  </qg:scene>\n  <qg:scene name=\"main\" width=\"320\" height=\"180\">\n    <qg:hud position=\"bottom-right\"><qg:text value=\"{'v' + game_version()}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The version is a function, not the state: a save of an older version does not bring its number back. The button opens the changelog in a new tab in a browser, in the system's browser elsewhere; played by an agent it opens nothing and the \"open-url\" event says the address."
+      },
+      "tags": [
+        "open-url",
+        "menu",
+        "button",
+        "language"
+      ]
     }
   ]
 }
