@@ -10,6 +10,31 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- `q:endpoint`, a component's REST API (API-1 to API-6), brought forward from
+  `PLAN_PLATFORMS.md` for PandaFoot's beta reports. A component with
+  `<q:endpoint method="POST">` answers JSON: its `q:param`s come from the JSON
+  body (the query string for `GET` and `DELETE`) and are checked as an
+  action's, a refusal is `422` with each field's error, `q:respond json=
+  status=` answers (`204` without it), a method without an endpoint is `405`,
+  roles and guards refuse with `401` and `403`, and a failure is `500` in
+  JSON. `origins=` names the sites whose pages may call it (the browser's
+  preflight answered), `limit="10/minute"` counts each caller's calls
+  (`429` with `Retry-After`) and `maxsize=` refuses a larger body (`413`).
+  The guide's page: `docs/guide/endpoints.md`.
+- `server.proxies` (CFG-4): behind so many reverse proxies, a request's
+  address, scheme and host are the ones the proxy received, so `limit=`
+  counts each caller.
+- `${NAME}` in a `q:invoke` credential (`authToken`, `authUsername`,
+  `authPassword`, a `q:header`'s value) is the environment variable, read when
+  the call is made and never put in a variable (INV-3); unset, the call fails
+  and says so (with `onerror="continue"`, `<name>_result` says why).
+- `base64(v)` in expressions (EXPR-18), for an API that takes a file's content.
+- `projects/beta-reports`: where the games' beta reports land, written in
+  Quantum. `POST /api/reports` keeps a report in SQLite and tells the forge:
+  an issue of the repository, the save attached as a file of its branch. A
+  container and its compose file for a homelab behind HTTPS
+  (`projects/beta-reports/README.md`); tested against a forge of the test
+  (`tests/apps/test_beta_reports.py`) and, as an image, in CI.
 - Laboratory: PandaFoot 2.1, the beta, and reports from inside the game. "Report
   a bug or suggest" on the title, or F9 on the dashboard, opens the beta's
   report form in the browser filled in with the kind and where the game is
@@ -857,6 +882,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Breaking
 
+- An attribute that is one expression and a dictionary, `{ {'id': 1} }`, is
+  the dictionary (EXPR-17); it was left as the text. A JSON object written as
+  text, `{"board": "{name}"}`, is still text with expressions in it (EXPR-4).
+- `PATCH` reaches a page's `q:action` (it was `405` before any code ran), and
+  `OPTIONS` is answered by the server: `204` with `Allow`, and for an endpoint
+  the preflight of API-4.
 - Laboratory: a game state or a `q:function` named like what every Godot
   object has (`free`, `get`, `connect`), or a function named like a method
   of every node (`draw_line`), is a compile error that says so: the state

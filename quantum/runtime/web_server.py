@@ -21,7 +21,7 @@ import secrets
 # Fix imports
 
 from quantum.core.parser import QuantumParser, QuantumParseError
-from quantum.core.ast_nodes import ActionNode
+from quantum.core.ast_nodes import ActionNode, EndpointNode
 from werkzeug.exceptions import HTTPException
 from quantum.runtime.component import ComponentRuntime
 from quantum.runtime.executors.control_flow.redirect_executor import PageRedirect
@@ -134,6 +134,13 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
         # — had no size limit at all.
         self.app.config['MAX_CONTENT_LENGTH'] = (
             (self.config.get('security') or {}).get('max_content_length') or 16 * 1024 * 1024)
+        # CFG-4: behind so many reverse proxies (the homelab's, a host's), the caller's address, scheme and
+        # host are the ones the last proxy was given (X-Forwarded-*): an endpoint's limit= counts each
+        # caller, not the proxy, and its origins= compare against this server's public address (API-5).
+        proxies = int((self.config.get('server') or {}).get('proxies') or 0)
+        if proxies > 0:
+            from werkzeug.middleware.proxy_fix import ProxyFix
+            self.app.wsgi_app = ProxyFix(self.app.wsgi_app, x_for=proxies, x_proto=proxies, x_host=proxies)
 
         self.parser = QuantumParser()
         self.template_cache: Dict[str, Any] = {}  # AST cache
@@ -162,7 +169,9 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
     def _setup_routes(self):
         """Setup Flask routes for serving .q components"""
 
-        @self.app.route('/', methods=['GET', 'POST', 'PUT', 'DELETE'])
+        # PATCH reaches an action and an endpoint (it was refused before either); OPTIONS is answered by
+        # _serve_component: a browser's question before calling an endpoint from another site (API-4)
+        @self.app.route('/', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
         def index():
             """Serve index.q or show welcome page"""
             return self._serve_component('index')
@@ -176,7 +185,7 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
                 static_dir = os.path.abspath(static_dir)
             return send_from_directory(static_dir, filepath)
 
-        @self.app.route('/<path:component_path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
+        @self.app.route('/<path:component_path>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'])
         def dynamic_route(component_path):
             """Dynamically serve any .q component"""
             # Remove .q extension if provided
@@ -437,6 +446,13 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
                 # Cache if enabled
                 if cache_enabled:
                     self.template_cache[cache_key] = ast
+
+            # API-1: a component with q:endpoint is an API: it answers JSON, its refusals included
+            if any(isinstance(s, EndpointNode) for s in (getattr(ast, 'statements', None) or [])):
+                from quantum.runtime.endpoint_handler import serve_endpoint
+                return serve_endpoint(self, ast, path_params)
+            if request.method == 'OPTIONS':
+                return Response(status=204, headers={'Allow': 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS'})
 
             # Phase G: Authentication & Security - Check authorization
             if 'quantum_session' not in session:

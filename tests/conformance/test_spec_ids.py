@@ -13,7 +13,7 @@ import pathlib
 import re
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-ID = re.compile(r'\b(PARSE|RET|LOOP|IF|FN|ACT|ROUTE|COMP|DB|SET|AUTH|DATA|IA|EXPR|INV|RUN|SCOPE|ERR|CFG|APP|SVC|UI|EXEC|DEV|FILE|MAIL|TEST)-(\d+)\b')
+ID = re.compile(r'\b(PARSE|RET|LOOP|IF|FN|ACT|ROUTE|COMP|DB|SET|AUTH|DATA|IA|EXPR|INV|RUN|SCOPE|ERR|CFG|APP|SVC|UI|EXEC|DEV|FILE|MAIL|TEST|API)-(\d+)\b')
 
 
 def spec_ids():

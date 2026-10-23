@@ -379,6 +379,62 @@ to the next page, once ([ACT-3](#ACT-3)). The messages of the traps of this orde
 
 <p class="spec-cited">Referenced by: <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a></p>
 
+## 3d. A component's API (`q:endpoint`)
+
+<a id="API-1"></a>**[API-1](#API-1)** — A component with `q:endpoint` is an API: each HTTP method it has an
+endpoint for (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) runs that endpoint, and
+everything it answers is JSON. The endpoint's `q:param`s come from the body, a
+JSON object (or a form's fields), or from the query string for a `GET` or a
+`DELETE` without a body, and are validated as an action's ([ACT-2](#ACT-2)): a refusal is
+`422` with `{"error": "invalid", "message", "fields"}`, each field that failed
+by its name. A body that is not JSON is `400`, one of another type `415`. What
+was sent is `body`; the route's segments are variables, set last ([ROUTE-2](#ROUTE-2)). A
+method without an endpoint is `405` with `Allow`; `HEAD` answers as `GET`. Two
+endpoints of one method, an endpoint inside another tag, and a component with
+both `q:endpoint` and `q:action` are parse errors.
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a></p>
+
+<a id="API-2"></a>**[API-2](#API-2)** — `q:respond json="{…}" status="201"` is what the endpoint answers:
+the value of `json=` as JSON (an attribute that is one expression may be a
+dictionary, [EXPR-17](#EXPR-17)), with the status (200 by default); without `json=` there is
+no body. It ends the endpoint, as a return does; it is written in the endpoint
+or in a `q:if` in it, and anywhere else it is a parse error. An endpoint that
+ends without one answers `204`. `q:redirect` and `q:flash` in an endpoint are
+parse errors: it answers JSON.
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-redirect"><code>&lt;q:redirect&gt;</code></a> · <a href="./tags#q-flash"><code>&lt;q:flash&gt;</code></a></p>
+
+<a id="API-3"></a>**[API-3](#API-3)** — An endpoint is protected as a page is: the component's
+`require_auth`, `require_role` and `require_permission`, the endpoint's own
+`require_role=`, and the component's guards ([AUTH-6](#AUTH-6)), which run before it. The
+refusals are JSON: `401` when no one is signed in, `403` when the one signed in
+may not, or a guard redirects.
+
+<a id="API-4"></a>**[API-4](#API-4)** — A browser's page on another site may call an endpoint only when its
+`origins=` names that site (`origins="https://example.com, https://b.example"`,
+or `*` for any): another site's request is `403` with `{"error": "origin"}`
+before anything runs. To an allowed site the answer carries
+`Access-Control-Allow-Origin` with its origin, and an `OPTIONS` asking first
+(a preflight) is answered with the methods and `Content-Type` it may send. A
+request without an `Origin` (a game on the desktop, a script) and one from this
+server's own pages go on. Credentials are never allowed across sites.
+
+<a id="API-5"></a>**[API-5](#API-5)** — `limit="10/minute"` (per `second`, `minute`, `hour` or `day`) lets
+one address call the endpoint so many times in that time: one more is `429`
+with `Retry-After`, before anything runs. The count is kept by the server's
+process. `maxsize="64kb"` refuses a larger body with `413` before reading it;
+without it, `security.max_content_length` applies ([CFG-2](#CFG-2)). Behind a reverse
+proxy, `server.proxies` makes the address the caller's ([CFG-4](#CFG-4)).
+
+<p class="spec-cited">Referenced by: <a href="./config#cfg-security"><code>security:</code></a> · <a href="./config#cfg-security"><code>security.max_content_length</code></a> · <a href="./config#cfg-server"><code>server:</code></a> · <a href="./config#cfg-server"><code>server.proxies</code></a></p>
+
+<a id="API-6"></a>**[API-6](#API-6)** — A failure in an endpoint's statements is `500` with
+`{"error": "server"}`, never a page; the message is in the answer only with
+`server.debug`, and always in the log, with its traceback ([DEV-1](#DEV-1)).
+
+<p class="spec-cited">Referenced by: <a href="./config#cfg-server"><code>server:</code></a> · <a href="./config#cfg-server"><code>server.debug</code></a></p>
+
 ## 4. Authentication
 
 <a id="AUTH-1"></a>**[AUTH-1](#AUTH-1)** — A component with `require_auth="true"` is only served to a session
@@ -681,6 +737,16 @@ also takes a list and an index, or tested with `'k' in d`.
 
 <p class="spec-cited">Referenced by: <a href="./functions#fn-get"><code>get()</code></a></p>
 
+<a id="EXPR-17"></a>**[EXPR-17](#EXPR-17)** — An attribute that is one expression may be a dictionary written
+in place: `{ {'id': 1, 'tags': ['a']} }` is the dictionary, not the text,
+quotes and nesting respected. A JSON object written as text
+(`{"board": "{name}"}`) is not one: its expressions are found inside it ([EXPR-4](#EXPR-4)).
+
+<a id="EXPR-18"></a>**[EXPR-18](#EXPR-18)** — `base64(v)` is the text in base64, of its UTF-8: what an API asks
+for a file's content (a forge's `contents`).
+
+<p class="spec-cited">Referenced by: <a href="./functions#fn-base64"><code>base64()</code></a></p>
+
 ## 6a. Types in `q:set`
 
 <a id="ERR-1"></a>**[ERR-1](#ERR-1)** — The `type` of `q:set` converts the value like this: `number` keeps
@@ -772,6 +838,14 @@ message says the response is not JSON, with its `Content-Type` and the start of
 the body; the request is not repeated.
 
 <p class="spec-cited">Referenced by: <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-invoke"><code>&lt;q:invoke&gt;</code></a> · <a href="./tags#q-data"><code>&lt;q:data&gt;</code></a> · <a href="./tags#q-mail"><code>&lt;q:mail&gt;</code></a> · <a href="./tags#q-llm"><code>&lt;q:llm&gt;</code></a> · <a href="./tags#q-knowledge"><code>&lt;q:knowledge&gt;</code></a> · <a href="./tags#q-agent"><code>&lt;q:agent&gt;</code></a></p>
+
+<a id="INV-3"></a>**[INV-3](#INV-3)** — In a credential of `q:invoke` (`authToken`, `authUsername`,
+`authPassword`, a `q:header`'s value), `${NAME}` is the environment variable
+`NAME`, read when the call is made: a secret stays out of the program and never
+enters an expression, so no page can show it. A variable that is not set is an
+error that names it ([INV-2](#INV-2)), never an empty credential.
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-invoke"><code>&lt;q:invoke&gt;</code></a> · <a href="./tags#q-header"><code>&lt;q:header&gt;</code></a></p>
 
 ## 7a. Declared services
 
@@ -975,14 +1049,22 @@ warned about in the log when the configuration is loaded, with the key's name.
 
 <p class="spec-cited">Referenced by: <a href="./config#cfg-performance"><code>performance:</code></a> · <a href="./config#cfg-security"><code>security:</code></a> · <a href="./config#cfg-security"><code>security.max_content_length</code></a></p>
 
-<a id="CFG-3"></a>**[CFG-3](#CFG-3)** — The keys of `server` (`port`, `host`, `debug`, `reload`), `paths`
+<a id="CFG-3"></a>**[CFG-3](#CFG-3)** — The keys of `server` (`port`, `host`, `debug`, `reload`, `proxies`), `paths`
 (`components`, `static`, `logs`, `uploads`, `migrations`), `logging` (`level`,
 `format`, `console`, `file`, `filename`) and `mail` ([MAIL-1](#MAIL-1)) have effect:
 `logging.format` is the format of log lines, and `paths.migrations` is the
 folder `quantum migrate` uses. A key outside these lists is warned about when
 the configuration is loaded, as in [CFG-2](#CFG-2).
 
-<p class="spec-cited">Referenced by: <a href="./cli#cli-migrate"><code>quantum migrate</code></a> · <a href="./config#cfg-components"><code>components:</code></a> · <a href="./config#cfg-logging"><code>logging:</code></a> · <a href="./config#cfg-logging"><code>logging.console</code></a> · <a href="./config#cfg-logging"><code>logging.file</code></a> · <a href="./config#cfg-logging"><code>logging.filename</code></a> · <a href="./config#cfg-logging"><code>logging.format</code></a> · <a href="./config#cfg-logging"><code>logging.level</code></a> · <a href="./config#cfg-mail"><code>mail:</code></a> · <a href="./config#cfg-mail"><code>mail.host</code></a> · <a href="./config#cfg-mail"><code>mail.port</code></a> · <a href="./config#cfg-paths"><code>paths:</code></a> · <a href="./config#cfg-paths"><code>paths.components</code></a> · <a href="./config#cfg-paths"><code>paths.logs</code></a> · <a href="./config#cfg-paths"><code>paths.migrations</code></a> · <a href="./config#cfg-paths"><code>paths.static</code></a> · <a href="./config#cfg-paths"><code>paths.uploads</code></a> · <a href="./config#cfg-server"><code>server:</code></a> · <a href="./config#cfg-server"><code>server.debug</code></a> · <a href="./config#cfg-server"><code>server.host</code></a> · <a href="./config#cfg-server"><code>server.port</code></a> · <a href="./config#cfg-server"><code>server.reload</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./cli#cli-migrate"><code>quantum migrate</code></a> · <a href="./config#cfg-components"><code>components:</code></a> · <a href="./config#cfg-logging"><code>logging:</code></a> · <a href="./config#cfg-logging"><code>logging.console</code></a> · <a href="./config#cfg-logging"><code>logging.file</code></a> · <a href="./config#cfg-logging"><code>logging.filename</code></a> · <a href="./config#cfg-logging"><code>logging.format</code></a> · <a href="./config#cfg-logging"><code>logging.level</code></a> · <a href="./config#cfg-mail"><code>mail:</code></a> · <a href="./config#cfg-mail"><code>mail.host</code></a> · <a href="./config#cfg-mail"><code>mail.port</code></a> · <a href="./config#cfg-paths"><code>paths:</code></a> · <a href="./config#cfg-paths"><code>paths.components</code></a> · <a href="./config#cfg-paths"><code>paths.logs</code></a> · <a href="./config#cfg-paths"><code>paths.migrations</code></a> · <a href="./config#cfg-paths"><code>paths.static</code></a> · <a href="./config#cfg-paths"><code>paths.uploads</code></a> · <a href="./config#cfg-server"><code>server:</code></a> · <a href="./config#cfg-server"><code>server.debug</code></a> · <a href="./config#cfg-server"><code>server.host</code></a> · <a href="./config#cfg-server"><code>server.port</code></a> · <a href="./config#cfg-server"><code>server.proxies</code></a> · <a href="./config#cfg-server"><code>server.reload</code></a></p>
+
+<a id="CFG-4"></a>**[CFG-4](#CFG-4)** — `server.proxies: 1` says a reverse proxy stands in front (`2`, two):
+a request's address, scheme and host are then the ones the proxy received
+(`X-Forwarded-For`, `-Proto`, `-Host`), so an endpoint's `limit=` counts each
+caller and `origins=` compares against the public address ([API-4](#API-4), [API-5](#API-5)).
+Without it, those headers are ignored: a caller could write them.
+
+<p class="spec-cited">Referenced by: <a href="./config#cfg-server"><code>server:</code></a></p>
 
 ## 9. Running (`quantum run`)
 

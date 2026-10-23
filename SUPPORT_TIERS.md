@@ -48,6 +48,7 @@ page, and a line in `FEATURE_STATUS.md`.
 | `q:query` | Parameterised SQL — `q:param` required, injection impossible by construction; pagination, schema check (`quantum check`), history (DB-11) |
 | `q:transaction` | Queries that commit or roll back together (DB-4) |
 | `q:action` | Form handler, with `q:redirect` and `q:flash`; rules from `q:param` checked on the server and shown next to each field |
+| `q:endpoint` | A component's REST API, with `q:respond`: JSON in and out, the same `q:param` rules, roles and guards, other sites by `origins=`, `limit=` and `maxsize=` (API-1…API-6) |
 | `q:invoke` | Call a function, a component or an HTTP service |
 | `q:data` | Import and transform CSV/JSON/XML |
 | `q:import` / `q:slot` | Component composition |

@@ -288,6 +288,54 @@ processes (`gunicorn --workers 4`), each process has its own. `flash` applies
 to the next page, once (ACT-3). The messages of the traps of this order
 (PARSE-2, ACT-9, AUTH-6) point to the guide's "How a page runs" page.
 
+## 3d. A component's API (`q:endpoint`)
+
+**API-1** — A component with `q:endpoint` is an API: each HTTP method it has an
+endpoint for (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) runs that endpoint, and
+everything it answers is JSON. The endpoint's `q:param`s come from the body, a
+JSON object (or a form's fields), or from the query string for a `GET` or a
+`DELETE` without a body, and are validated as an action's (ACT-2): a refusal is
+`422` with `{"error": "invalid", "message", "fields"}`, each field that failed
+by its name. A body that is not JSON is `400`, one of another type `415`. What
+was sent is `body`; the route's segments are variables, set last (ROUTE-2). A
+method without an endpoint is `405` with `Allow`; `HEAD` answers as `GET`. Two
+endpoints of one method, an endpoint inside another tag, and a component with
+both `q:endpoint` and `q:action` are parse errors.
+
+**API-2** — `q:respond json="{…}" status="201"` is what the endpoint answers:
+the value of `json=` as JSON (an attribute that is one expression may be a
+dictionary, EXPR-17), with the status (200 by default); without `json=` there is
+no body. It ends the endpoint, as a return does; it is written in the endpoint
+or in a `q:if` in it, and anywhere else it is a parse error. An endpoint that
+ends without one answers `204`. `q:redirect` and `q:flash` in an endpoint are
+parse errors: it answers JSON.
+
+**API-3** — An endpoint is protected as a page is: the component's
+`require_auth`, `require_role` and `require_permission`, the endpoint's own
+`require_role=`, and the component's guards (AUTH-6), which run before it. The
+refusals are JSON: `401` when no one is signed in, `403` when the one signed in
+may not, or a guard redirects.
+
+**API-4** — A browser's page on another site may call an endpoint only when its
+`origins=` names that site (`origins="https://example.com, https://b.example"`,
+or `*` for any): another site's request is `403` with `{"error": "origin"}`
+before anything runs. To an allowed site the answer carries
+`Access-Control-Allow-Origin` with its origin, and an `OPTIONS` asking first
+(a preflight) is answered with the methods and `Content-Type` it may send. A
+request without an `Origin` (a game on the desktop, a script) and one from this
+server's own pages go on. Credentials are never allowed across sites.
+
+**API-5** — `limit="10/minute"` (per `second`, `minute`, `hour` or `day`) lets
+one address call the endpoint so many times in that time: one more is `429`
+with `Retry-After`, before anything runs. The count is kept by the server's
+process. `maxsize="64kb"` refuses a larger body with `413` before reading it;
+without it, `security.max_content_length` applies (CFG-2). Behind a reverse
+proxy, `server.proxies` makes the address the caller's (CFG-4).
+
+**API-6** — A failure in an endpoint's statements is `500` with
+`{"error": "server"}`, never a page; the message is in the answer only with
+`server.debug`, and always in the log, with its traceback (DEV-1).
+
 ## 4. Authentication
 
 **AUTH-1** — A component with `require_auth="true"` is only served to a session
@@ -530,6 +578,14 @@ second, a probability outside 0–1 and an empty list are errors.
 read with `get(d, 'k', default)` (`default` is `null` when left out), which
 also takes a list and an index, or tested with `'k' in d`.
 
+**EXPR-17** — An attribute that is one expression may be a dictionary written
+in place: `{ {'id': 1, 'tags': ['a']} }` is the dictionary, not the text,
+quotes and nesting respected. A JSON object written as text
+(`{"board": "{name}"}`) is not one: its expressions are found inside it (EXPR-4).
+
+**EXPR-18** — `base64(v)` is the text in base64, of its UTF-8: what an API asks
+for a file's content (a forge's `contents`).
+
 ## 6a. Types in `q:set`
 
 **ERR-1** — The `type` of `q:set` converts the value like this: `number` keeps
@@ -605,6 +661,12 @@ reason, like `q:query`. With `onerror="continue"` execution goes on:
 `responseFormat="json"`, a response that is not JSON is such a failure: the
 message says the response is not JSON, with its `Content-Type` and the start of
 the body; the request is not repeated.
+
+**INV-3** — In a credential of `q:invoke` (`authToken`, `authUsername`,
+`authPassword`, a `q:header`'s value), `${NAME}` is the environment variable
+`NAME`, read when the call is made: a secret stays out of the program and never
+enters an expression, so no page can show it. A variable that is not set is an
+error that names it (INV-2), never an empty credential.
 
 ## 7a. Declared services
 
@@ -772,12 +834,18 @@ body: above it the answer is `413`. In `security` and `performance`, a key the
 engine does not implement (`csrf_protection`, `rate_limiting`, `cors_*`…) is
 warned about in the log when the configuration is loaded, with the key's name.
 
-**CFG-3** — The keys of `server` (`port`, `host`, `debug`, `reload`), `paths`
+**CFG-3** — The keys of `server` (`port`, `host`, `debug`, `reload`, `proxies`), `paths`
 (`components`, `static`, `logs`, `uploads`, `migrations`), `logging` (`level`,
 `format`, `console`, `file`, `filename`) and `mail` (MAIL-1) have effect:
 `logging.format` is the format of log lines, and `paths.migrations` is the
 folder `quantum migrate` uses. A key outside these lists is warned about when
 the configuration is loaded, as in CFG-2.
+
+**CFG-4** — `server.proxies: 1` says a reverse proxy stands in front (`2`, two):
+a request's address, scheme and host are then the ones the proxy received
+(`X-Forwarded-For`, `-Proto`, `-Host`), so an endpoint's `limit=` counts each
+caller and `origins=` compares against the public address (API-4, API-5).
+Without it, those headers are ignored: a caller could write them.
 
 ## 9. Running (`quantum run`)
 

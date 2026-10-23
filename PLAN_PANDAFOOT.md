@@ -288,8 +288,8 @@ ours, on the owner's homelab, behind its own HTTPS.
 
 | Phase | What | Done when |
 |---|---|---|
-| 1 | `q:endpoint` (Core): a component's endpoint per method, `q:param`s from the JSON body validated as an action's, `q:respond json= status=`, its guards, the origins allowed, a size and a rate limit | its SPEC rule, tests against a real server, the guide's page |
-| 2 | The receiver (`projects/beta-reports/`) and its kit for the homelab (a container, the settings) | a report posted is kept, its issue opened at a fake forge, the owner's page lists it |
+| 1 | `q:endpoint` (Core): a component's endpoint per method, `q:param`s from the JSON body validated as an action's, `q:respond json= status=`, its guards, the origins allowed, a size and a rate limit | **done**: SPEC.md API-1 to API-6 (with EXPR-17, EXPR-18, INV-3, CFG-4), `tests/conformance/test_endpoints.py`, `docs/guide/endpoints.md` |
+| 2 | The receiver (`projects/beta-reports/`) and its kit for the homelab (a container, the settings) | **done**: a report posted is kept, its save and its issue told to a fake forge (`tests/apps/test_beta_reports.py`), the image built and fed a report in CI; the owner reads the issues (a page of the receiver's own can come later) |
 | 3 | The game language: `qg:post`, `qg:overlay`, a button on every scene, `focused()`, the state as a save | Godot tests, a game posting to a receiver started by the test |
 | 4 | PandaFoot 2.1: the [!], the panel, the reports kept until sent | the game, a receiver and a fake forge in one test: a report from the dashboard becomes an issue |
 | 5 | On the homelab, and the reading | the owner's address in the game, a report of the owner's read in a digest |

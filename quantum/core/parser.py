@@ -15,7 +15,7 @@ from quantum.core.ast_nodes import (
     QuantumNode, ComponentNode, ApplicationNode, JobNode,
     QuantumParam, QuantumReturn, QuantumRoute,
     DispatchEventNode, OnEventNode, HTMLNode, TextNode, DocTypeNode, CommentNode, ImportNode, SlotNode, ComponentCallNode,
-    ActionNode, FlashNode
+    ActionNode, FlashNode, EndpointNode, RespondNode, RedirectNode
 )
 # Import feature AST nodes from their respective modules
 from quantum.core.features.conditionals.src.ast_node import IfNode
@@ -72,7 +72,7 @@ def _create_parser_registry(parser: 'QuantumParser') -> ParserRegistry:
         HTMLParser, ComponentCallParser,
     )
     # New modular parsers (Phase 2 - Operation Guillotine)
-    from quantum.core.parsers.forms import ActionParser, RedirectParser, FlashParser
+    from quantum.core.parsers.forms import ActionParser, RedirectParser, FlashParser, EndpointParser, RespondParser
     from quantum.core.parsers.composition import ImportParser, SlotParser
     from quantum.core.parsers.functions import FunctionParser
     from quantum.core.parsers.events import DispatchEventParser
@@ -126,6 +126,8 @@ def _create_parser_registry(parser: 'QuantumParser') -> ParserRegistry:
         ActionParser(parser),
         RedirectParser(parser),
         FlashParser(parser),
+        EndpointParser(parser),
+        RespondParser(parser),
         # Component Composition
         ImportParser(parser),
         SlotParser(parser),
@@ -674,8 +676,60 @@ class QuantumParser:
         self._check_statements_in_markup(component)
         self._check_flash_in_actions(component)
         self._check_guards(component)
+        self._check_endpoints(component)
 
         return component
+
+    def _check_endpoints(self, component: ComponentNode) -> None:
+        """API-1, API-2: a component's API. Its endpoints are its own statements, one for each method; a
+        component with endpoints answers JSON, so it has no q:action, and an endpoint neither redirects
+        nor sets a flash; q:respond is an endpoint's."""
+        endpoints = [s for s in component.statements if isinstance(s, EndpointNode)]
+        seen = set()
+        for endpoint in endpoints:
+            if endpoint.method in seen:
+                raise _at(QuantumParseError(
+                    f'<q:component name="{component.name}"> has two <q:endpoint method="{endpoint.method}">: '
+                    f'one endpoint a method (API-1)'), endpoint)
+            seen.add(endpoint.method)
+        if endpoints and any(isinstance(s, ActionNode) for s in component.statements):
+            raise _at(QuantumParseError(
+                f'<q:component name="{component.name}"> has q:endpoint and q:action: a component with '
+                f'endpoints is an API and answers JSON; put the form\'s q:action in a page (API-1)'), endpoints[0])
+
+        def walk(nodes, endpoint, direct=True):
+            for node in nodes or []:
+                if isinstance(node, EndpointNode):
+                    if endpoint is not None or node not in endpoints:
+                        raise _at(QuantumParseError(
+                            f'<q:endpoint method="{node.method}"> in <q:component name="{component.name}"> '
+                            f'is inside another tag: an endpoint is a statement of the component (API-1)'), node)
+                    walk(node.body, node)
+                    continue
+                if isinstance(node, RespondNode) and endpoint is None:
+                    raise _at(QuantumParseError(
+                        f'<q:respond> in <q:component name="{component.name}"> is outside a q:endpoint: '
+                        f'it is what an endpoint answers (API-2)'), node)
+                if isinstance(node, RespondNode) and not direct:
+                    raise _at(QuantumParseError(
+                        f'<q:respond> in <q:endpoint method="{endpoint.method}"> is inside a tag that is not '
+                        f'q:if: it answers from the endpoint itself or from a q:if in it (API-2)'), node)
+                if isinstance(node, (RedirectNode, FlashNode)) and endpoint is not None:
+                    tag = 'q:redirect' if isinstance(node, RedirectNode) else 'q:flash'
+                    raise _at(QuantumParseError(
+                        f'<{tag}> in <q:endpoint method="{endpoint.method}">: an endpoint answers JSON with '
+                        f'q:respond; it neither redirects nor sets a flash (API-2)'), node)
+                if isinstance(node, IfNode):
+                    walk(node.if_body, endpoint, direct)
+                    for block in node.elseif_blocks:
+                        walk(block.get('body', []), endpoint, direct)
+                    walk(node.else_body, endpoint, direct)
+                    continue
+                for attribute in ('body', 'children'):
+                    value = getattr(node, attribute, None)
+                    walk(value if isinstance(value, list) else None, endpoint, False)
+
+        walk(component.statements, None)
 
     def _check_guards(self, component: ComponentNode) -> None:
         """AUTH-6: a guard of a page with actions reads only what exists before the page runs.

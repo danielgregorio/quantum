@@ -209,6 +209,12 @@ def _urlencode(v) -> str:
     return quote_plus('' if v is None else str(v))
 
 
+def _base64(v) -> str:
+    """EXPR-18: a text in base64 (of its UTF-8), as an API asks for a file's content: a forge's."""
+    import base64
+    return base64.b64encode(('' if v is None else str(v)).encode('utf-8')).decode('ascii')
+
+
 # -- chance (EXPR-15) -------------------------------------------------------
 
 _rng = _random_module.SystemRandom()
@@ -275,6 +281,7 @@ STDLIB = {
     'contains': _contains,
     'slugify': _slugify,
     'urlencode': _urlencode,
+    'base64': _base64,
     # collections
     'get': _get,
     'len': _len,

@@ -1,0 +1,29 @@
+# The beta's reports (PLAN_PANDAFOOT.md, "The beta's reports"): where the games' reports land. Each is kept in
+# SQLite and told to the forge: an issue of the repository, the save a file of its branch (the settings table,
+# in the database, says which forge, repository and branch).
+#
+#   quantum migrate up                       # data/reports.db
+#   GITHUB_TOKEN=... quantum start           # http://127.0.0.1:8095/api/reports, to try it
+#
+# On the homelab: the container (Dockerfile and compose.yaml beside this file), behind the reverse proxy that
+# gives it HTTPS (README.md). GITHUB_TOKEN is a fine-grained token of the repository alone, with Issues and
+# Contents read and write; it is read from the environment when a report is told (INV-3), never from here.
+
+server:
+  port: 8095
+  host: 127.0.0.1         # behind gunicorn in the container, whose bind is the real one
+  debug: false
+  reload: false
+  proxies: 1              # behind the homelab's reverse proxy: each player's address is counted (CFG-4)
+
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  reports:
+    driver: sqlite
+    database: ./data/reports.db
+
+security:
+  max_content_length: 5242880   # 5 MB: a report and its save; the endpoint takes 4 (maxsize=)

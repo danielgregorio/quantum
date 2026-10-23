@@ -136,6 +136,11 @@ Native target can then leave.
 
 ## Later — `q:endpoint`: a REST API in the Core
 
+> Brought forward on 2026-10-23 for PandaFoot's beta reports (`PLAN_PANDAFOOT.md`) and built as designed below,
+> with what that first API needed: the sites whose pages may call it (`origins=`), `limit=` and `maxsize=`,
+> JSON refusals, a credential from the environment (INV-3) and `server.proxies` (SPEC.md API-1 to API-6, CFG-4,
+> EXPR-17). Still to come: `/api/openapi.json` and `quantum check` knowing the endpoints; the Kanban's API.
+
 ```xml
 <!-- components/api/cards.q: GET and POST /api/cards -->
 <q:component name="cards">
