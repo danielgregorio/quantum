@@ -1,4 +1,4 @@
-"""PandaFoot (projects/pandafoot/pandafoot.q, PLAN_PANDAFOOT.md Phase 1) played through the play protocol.
+"""PandaFoot (projects/pandafoot/pandafoot.q, PLAN_PANDAFOOT.md) played through the play protocol.
 
 A manager starts a game in a world of a number, looks at the screens a key away, plays a live round at 16x
 and comes back to the dashboard with the table, the purse and the players changed; the same number makes
@@ -43,7 +43,7 @@ def tables(obs):
 
 
 def new_game(game, club=4):
-    """From the title: a new game, the world as it is (7), one manager of `club`, started."""
+    """From the title: a new game, the world as it is (7), one manager of the 4th division's `club`-th club, started."""
     game.act(ticks=3)
     game.act(tap=['select'], ticks=3)                       # Novo jogo
     for _ in range(3 + club):                               # past the world, the slot and the name, to the club
@@ -68,18 +68,25 @@ def test_a_world_is_made_from_its_number(pandafoot, godot):
     first, again = worlds
     assert first['clubs'] == again['clubs'] and first['fixtures'] == again['fixtures']
     clubs = first['clubs']
-    assert [len(c['players']) for c in clubs] == [22] * 10
-    assert first['managers'] == [{'name': 'Manager 1', 'club': 4}] and clubs[4]['manager'] == 1
-    geniuses = [(c['level'], p['strength']) for c in clubs for p in c['players'] if p['genius']]
-    assert len(geniuses) == 3 and sum(1 for level, s in geniuses if level == 3 and 40 <= s <= 42) == 1
+    assert [len(c['players']) for c in clubs] == [22] * 40
+    assert [sum(c['div'] == d for c in clubs) for d in (1, 2, 3, 4)] == [10] * 4
+    assert first['managers'] == [{'name': 'Manager 1', 'club': 34}] and clubs[34]['manager'] == 1
+    assert clubs[34]['div'] == 4                                      # a manager starts in the 4th division
+    geniuses = [(c['div'], p['strength']) for c in clubs for p in c['players'] if p['genius']]
+    hidden = [s for div, s in geniuses if div >= 3]
+    assert 3 <= len(geniuses) <= 5 and len(hidden) == 1 and 40 <= hidden[0] <= 42
+    assert all(div == 1 for div, s in geniuses if div < 3)
     names = [p['name'] for c in clubs for p in c['players']]        # no two players of the world share a name
-    assert len(set(names)) == len(names) == 220
+    assert len(set(names)) == len(names) == 880
+    strength = {d: sum(p['strength'] for c in clubs if c['div'] == d for p in c['players']) / 220 for d in (1, 2, 3, 4)}
+    assert strength[1] > strength[2] > strength[3] > strength[4]
     rounds = first['fixtures']
-    assert len(rounds) == 18 and all(len(r) == 5 for r in rounds)
+    assert len(rounds) == 18 and all(len(r) == 20 for r in rounds)
     pairs = sorted(tuple(g) for r in rounds for g in r)
-    assert len(pairs) == 90 == len(set(pairs))                  # each club at home and away to each other once
+    assert len(pairs) == 360 == len(set(pairs))                 # each club at home and away to each other once
+    assert all(clubs[h]['div'] == clubs[a]['div'] for h, a in pairs)  # of its own division
     for r in rounds:
-        assert sorted(c for g in r for c in g) == list(range(10))
+        assert sorted(c for g in r for c in g) == list(range(40))
 
 
 def test_the_screens_are_a_key_away(pandafoot, godot):
@@ -114,9 +121,9 @@ def test_a_live_round_changes_the_table_the_purses_and_the_players(pandafoot, go
         after = game.until("scene == 'results'", max_ticks=600)
         assert after['stopped'] == 'condition'
         state = after['state']['game']
-        assert state['matchday'] == 1 and len(state['last']) == 5
+        assert state['matchday'] == 1 and len(state['last']) == 20
         clubs = state['clubs']
-        assert sum(c['played'] for c in clubs) == 10 and sum(c['gf'] for c in clubs) == sum(c['ga'] for c in clubs)
+        assert sum(c['played'] for c in clubs) == 40 and sum(c['gf'] for c in clubs) == sum(c['ga'] for c in clubs)
         assert sum(c['points'] for c in clubs) == sum(2 if m['hg'] == m['ag'] else 3 for m in state['last'])
         goals = sum(m['hg'] + m['ag'] for m in state['last'])
         assert sum(p['goals'] for c in clubs for p in c['players']) == goals
@@ -147,7 +154,7 @@ def test_in_portuguese(pandafoot, godot):
     with PlaySession(pandafoot, binary=godot, lang='pt') as game:
         seen = new_game(game)
         assert texts(seen)[0].endswith('Rodada 1/18  2026') and texts(seen)[1].startswith('Saldo:')
-        assert seen['state']['game']['managers'] == [{'name': 'Técnico 1', 'club': 4}]
+        assert seen['state']['game']['managers'] == [{'name': 'Técnico 1', 'club': 34}]
         squad = game.act(tap=['squad'], ticks=3)
         assert tables(squad)[0]['table'][:4] == ['#', 'Nome', 'Pos', 'For']
         assert {row[2].split('/')[0] for row in tables(squad)[0]['rows']} <= {'GOL', 'DEF', 'MEI', 'ATA'}
@@ -206,7 +213,22 @@ def test_a_season_keeps_the_rules_of_football(pandafoot, godot):
         assert game.act(tap=['standings'], ticks=3)['scene'] == 'standings'
         seen = game.act(tap=['cancel'], ticks=3)
         assert seen['scene'] == 'season-end'
-        assert game.act(tap=['select'], ticks=3)['state']['game']['matchday'] == 0     # New season
+        clubs = seen['state']['game']['clubs']
+
+        def table(d):
+            return sorted((i for i, c in enumerate(clubs) if c['div'] == d),
+                          key=lambda i: (-clubs[i]['points'], -(clubs[i]['gf'] - clubs[i]['ga']), -clubs[i]['gf'], i))
+        tables_then = {d: table(d) for d in (1, 2, 3, 4)}
+        again = game.act(tap=['select'], ticks=3)['state']['game']                    # New season
+        assert again['matchday'] == 0 and again['season'] == 2027
+        divs = [c['div'] for c in again['clubs']]
+        for d in (1, 2, 3):                                                      # two up and two down
+            assert [divs[i] for i in tables_then[d][8:]] == [d + 1, d + 1]
+            assert [divs[i] for i in tables_then[d + 1][:2]] == [d, d]
+        assert [divs.count(d) for d in (1, 2, 3, 4)] == [10] * 4
+        assert again['honours'][0]['season'] == 2026
+        assert again['honours'][0]['champions'][3] == clubs[tables_then[4][0]]['name']
+        assert all(sorted(c for g in r for c in g) == list(range(40)) for r in again['fixtures'])
         assert knocks > 0 and subs > 0
         assert reds > 0
 
@@ -292,7 +314,9 @@ def test_the_results_say_who_scored_and_who_came(pandafoot, godot):
         assert any(t.startswith('Crowd: ') for t in shown) and any(t.startswith('Man of the match: ') for t in shown)
         goals = sum(m['hg'] + m['ag'] for m in after['state']['game']['last'])
         clubs = after['state']['game']['clubs']
-        for m, row in zip(after['state']['game']['last'], tables(after)[0]['rows']):
+        mine = [m for m in after['state']['game']['last'] if clubs[m['home']]['div'] == clubs[34]['div']]
+        assert len(mine) == len(tables(after)[0]['rows']) == 5                   # the manager's division's five
+        for m, row in zip(mine, tables(after)[0]['rows']):
             sides = [[f"{e['who']} {int(e['minute'])}′" for e in reversed(m['events'])
                       if e['kind'] == 'goal' and e['club'] == clubs[c]['short']] for c in (m['home'], m['away'])]
             full = ', '.join(sides[0]) + ' / ' + ', '.join(sides[1]) if sides[0] or sides[1] else ''
@@ -340,7 +364,7 @@ def test_any_clubs_squad_from_the_table(pandafoot, godot):
         club = squad['state']['game']['clubs'][int(squad['state']['game']['viewing'])]
         assert texts(squad)[0].startswith('SQUAD - ' + club['name']) and club['name'] in rows[2]
         assert len(tables(squad)[0]['rows']) == 22
-        if club['level'] == 3:
+        if club['div'] >= 3:
             assert not [r for r in tables(squad)[0]['rows'] if '◆' in r[4]]
         back = game.act(tap=['cancel'], ticks=3)
         assert back['scene'] == 'standings' and back['state']['game']['viewing'] == -1
