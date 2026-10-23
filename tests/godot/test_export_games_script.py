@@ -158,6 +158,8 @@ def test_a_game_with_a_changelog_has_its_page_in_each_language(tmp_path):
         (tmp_path / name / 'index.html').write_text('x')
     index = eg.write_index(tmp_path).read_text(encoding='utf-8')
     assert 'href="pandafoot/changelog/">What\'s new</a>' in index and 'pong/changelog/' not in index
+    assert index.count('class="badge beta"') == 1                  # a game in beta says so (games.json's stage)
+    assert '<h2>PandaFoot</h2><span class="badge beta">Beta</span>' in index
     folder = tmp_path / 'pandafoot' / 'changelog'
     en, es, pt = ((folder / sub / 'index.html').read_text(encoding='utf-8') for sub in ('', 'es', 'pt'))
     assert '<html lang="pt">' in pt and '<h1 id="novidades-do-pandafoot">Novidades do PandaFoot</h1>' in pt

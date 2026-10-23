@@ -242,6 +242,7 @@ main {{ max-width: 1180px; margin: 0 auto; padding: 24px 16px 56px;
 .title h2 {{ margin: 0; font-size: 1.25rem; }}
 .badge {{ font-size: .75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px;
   padding: 1px 8px; white-space: nowrap; }}
+.badge.beta {{ color: var(--accent); border-color: var(--accent); margin-right: auto; }}
 .blurb {{ margin: 0; }}
 .keys {{ margin: 0; color: var(--muted); font-size: .875rem; }}
 .links {{ margin-top: auto; padding-top: 6px; display: flex; flex-wrap: wrap; gap: 8px; }}
@@ -730,12 +731,14 @@ def write_index(out_root: Path) -> Path:
         links.append(f'<a class="source" href="{name}/source/">View the source</a>')
         if write_changelog(name, g['title'], folder):
             links.append(f'<a href="{name}/changelog/">What\'s new</a>')
+        # a game still being tried by its players (projects/games.json's "stage": "beta")
+        stage = f'<span class="badge beta">{html.escape(g["stage"].title())}</span>' if g.get('stage') else ''
         img = (f'<a class="shot" href="{name}/"><img src="{name}/screenshot.png" alt="{html.escape(g["title"])}" '
                f'loading="lazy"></a>') if shot.is_file() else ''
         cards.append(f"""<article class="card" id="{name}">
 {img}
 <div class="body">
-<div class="title"><h2>{html.escape(g['title'])}</h2><span class="badge">{html.escape(g['players'])}</span></div>
+<div class="title"><h2>{html.escape(g['title'])}</h2>{stage}<span class="badge">{html.escape(g['players'])}</span></div>
 <p class="blurb">{html.escape(g['blurb'])}</p>
 <p class="keys">{html.escape(g['controls'])}</p>
 <div class="links">{' '.join(links)}</div>

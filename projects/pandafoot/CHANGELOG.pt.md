@@ -3,6 +3,13 @@
 A versão que você joga está na tela de título e no canto do painel. Cada versão abaixo diz o que mudou para
 quem joga; como foi feito está no [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
+## 2.1 — O beta (2026-10-23)
+
+- **O PandaFoot está em beta.** A versão diz isso no título e no canto do painel.
+- **Relatar um bug ou sugerir, de dentro do jogo.** "Relatar bug ou sugerir" no título, ou F9 no painel: um
+  formulário abre no navegador já preenchido com onde o jogo está (a versão, o mundo, a temporada, a rodada, o seu
+  clube); você só escreve o que aconteceu, ou a sua ideia. Todo relato é lido, e o que ele mudar aparece aqui.
+
 ## 2.0 — O clube (2026-10-23)
 
 - **Quatro divisões de dez clubes.** 40 clubes, turno e returno, dois sobem e dois descem a cada temporada.

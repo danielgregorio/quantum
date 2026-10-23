@@ -325,7 +325,7 @@ declarative shape for it.
 | Groups | `add_to_group()`, `get_nodes_in_group()` | Tags (one per object), layers | `tag=`; `count()`, `with=`, `qg:on-death of=` | covered |
 | One action on every thing of a group | `call_group()` | `FindGameObjectsWithTag()` + a loop | `qg:for-each tag= var=` | covered |
 | Quitting | `get_tree().quit()` | `Application.Quit()` | `qg:quit`, `can_quit()` (false in a browser) | covered |
-| Opening a web page (a changelog, a store page) | `OS.shell_open()` | `Application.OpenURL()` | `qg:open-url href=` (http and https only; in a browser, a new tab) | covered |
+| Opening a web page (a changelog, a store page, a form filled in) | `OS.shell_open()`, `String.uri_encode()` | `Application.OpenURL()`, `UnityWebRequest.EscapeURL()` | `qg:open-url href=` (http and https only; in a browser, a new tab), `url_encode(text)` | covered |
 | Loading screens, async loading | `ResourceLoader.load_threaded_request()` | `LoadSceneAsync()` | — | by design: small games; loading is the runtime's job |
 | Window size and fullscreen | `DisplayServer.window_set_mode()` | `Screen.fullScreenMode` | the window from the first scene's size; `qg:fullscreen`, `fullscreen()`, kept between runs | covered |
 

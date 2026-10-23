@@ -1798,7 +1798,7 @@ Goes inside: `qg:scene`.
 
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. A `q:set` directly in a scene whose value is computed (a function, the game's state, `random()`) is set as the scene is entered, after its seed, in the order written. `<q:set name="team.points">` sets a field of a record in place (in the list that holds it too), and `index=` an item of a list or a key of a dictionary. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `tr_n()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `cost()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`, `pick()`, `chance()`, `join()`, `fit()`, `thousands()`, `repeat()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), `sort()`, `pick()`, `chance()` and `join()` are the Core's, `fit(v, width)` cuts or pads a text to a column (`fit(v, width, 'right')` for numbers), `thousands(n, '.')` writes 1.500.000 and `repeat(text, n)` a bar. `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. A `q:set` directly in a scene whose value is computed (a function, the game's state, `random()`) is set as the scene is entered, after its seed, in the order written. `<q:set name="team.points">` sets a field of a record in place (in the list that holds it too), and `index=` an item of a list or a key of a dictionary. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `tr_n()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `cost()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`, `pick()`, `chance()`, `join()`, `fit()`, `thousands()`, `repeat()`, `url_encode()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), `sort()`, `pick()`, `chance()` and `join()` are the Core's, `fit(v, width)` cuts or pads a text to a column (`fit(v, width, 'right')` for numbers), `thousands(n, '.')` writes 1.500.000, `repeat(text, n)` a bar and `url_encode(text)` puts a text into a web address (`qg:open-url`, a form's link with what to fill in). `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
 
 ## `gd:` attributes
 
@@ -6896,6 +6896,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:set name="last" value="[]" type="array" />           <!-- the last round's matches, for its results -->
   <q:set name="champion" value="-1" type="number" />
   <q:set name="viewing" value="-1" type="number" />       <!-- the club whose squad is shown, from the table (-1: the manager's) -->
+  <q:set name="came_from" value="title" type="string" />  <!-- the screen a beta report goes back to: title or dashboard -->
 
   <!-- the numbers of the design, in one place; the names are names in every language -->
   <q:set name="club_names" value='["Panda FC", "Bambu United", "Urso Polar", "Tigre Branco", "Leão Dourado", "Onça Pintada", "Gavião Real", "Lobo Guará", "Jacaré FC", "Arara Azul", "Coala City", "Pinguim FC", "Capivara EC", "Tucano FC", "Raposa EC", "Coruja AC", "Falcão United", "Boto Rosa", "Cervo FC", "Zebra City", "Tamanduá", "Jaguatirica", "Mico-Leão", "Tatu-Bola", "Quati AC", "Peixe-Boi", "Ouriço FC", "Preguiça EC", "Flamingo FC", "Pelicano EC", "Sabiá United", "Gambá City", "Lhama FC", "Canguru AC", "Lontra AC", "Tartaruga", "Camelo FC", "Esquilo EC", "Marreco AC", "Siri FC"]' type="array" />
@@ -6930,17 +6931,34 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:input action="slower" keys="Minus, KpSubtract" />
   <qg:input action="undo" keys="C" />        <!-- undo an automatic change of tactics -->
   <qg:input action="auto" keys="A" />        <!-- the line-up picked by the computer -->
+  <qg:input action="report" keys="F9" />     <!-- the beta: a bug or a suggestion, in the report form -->
 
   <!-- ===== Little helpers ===== -->
 
   <!-- the version a player sees on the title and the dashboard: a function, not the state, so a save of an older
        version does not bring its number back. What each version changed: CHANGELOG.md beside this file (and
        CHANGELOG.pt.md, CHANGELOG.es.md), on the site at games/pandafoot/changelog/ -->
-  <q:function name="game_version"><q:return value="{'2.0'}" /></q:function>
+  <q:function name="game_version"><q:return value="{'2.1'}" /></q:function>
 
   <!-- that page, in the player's language -->
   <q:function name="changelog_url">
     <q:return value="{'https://quantumframework.net/games/pandafoot/changelog/' + ('pt/' if language() == 'Português' else ('es/' if language() == 'Español' else ''))}" />
+  </q:function>
+
+  <!-- the beta's reports: the owner's form (a Google Form), opened filled in with the kind and where the game is, so
+       the player writes only what happened. The kinds are the form's own words; the fields are the form's, from its
+       prefilled link -->
+  <q:function name="report_url" params="kind">
+    <q:return value="{'https://docs.google.com/forms/d/e/FORM_ID/viewform?usp=pp_url&entry.KIND_ID=' + url_encode(kind) + '&entry.CONTEXT_ID=' + url_encode(report_context())}" />
+  </q:function>
+
+  <!-- where the game is, in a line: enough to find the season and the round again in the same world -->
+  <q:function name="report_context">
+    <q:set name="where" value="{'PandaFoot ' + game_version() + ' beta; ' + language() + '; ' + ('desktop' if can_quit() else 'browser') + '; screen ' + came_from}" />
+    <q:if condition="{len(managers) == 0 or len(clubs) != 40}"><q:return value="{where + '; no game in progress'}" /></q:if>
+    <q:set name="t" value="{managers[min(turn, len(managers) - 1)]}" />
+    <q:set name="c" value="{clubs[t.club]}" />
+    <q:return value="{where + '; world ' + str(world) + ', season ' + str(season) + ', round ' + str(matchday) + '/18, next ' + next_kind() + '; ' + t.name + ' at ' + c.name + ' (division ' + str(c.div) + ', ' + str(position_of(t.club)) + 'th, ' + money(c.balance) + '); ' + str(len(managers)) + ' manager(s)'}" />
   </q:function>
 
   <!-- a new game starts from nothing: no managers, the first season (a game played before leaves nothing behind) -->
@@ -8496,23 +8514,52 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- The title: a new game, one of the three saved, the options. -->
   <qg:scene name="title" width="640" height="400" background="#0000a8">
-    <qg:hud x="160" y="60" box="frame" font="assets/DejaVuSansMono.ttf" size="16">
+    <qg:hud x="160" y="40" box="frame" font="assets/DejaVuSansMono.ttf" size="16">
       <qg:text value="{'    ☻  P A N D A F O O T  ☻    '}" color="#ffff55" />
       <qg:text value="{'  one manager, one league, the ball  '}" color="#55ffff" />
     </qg:hud>
-    <qg:menu x="200" y="170" font="assets/DejaVuSansMono.ttf" size="14" box="frame">
+    <qg:menu x="200" y="140" font="assets/DejaVuSansMono.ttf" size="14" box="frame">
       <qg:button label="New game"><q:call function="reset_game" /><qg:goto-scene name="new-game" /></qg:button>
       <qg:button label="{tr('Continue') + ' 1'}" if="{has_save(1)}"><qg:continue slot="1" /></qg:button>
       <qg:button label="{tr('Continue') + ' 2'}" if="{has_save(2)}"><qg:continue slot="2" /></qg:button>
       <qg:button label="{tr('Continue') + ' 3'}" if="{has_save(3)}"><qg:continue slot="3" /></qg:button>
       <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('What\'s new') + ' (v' + game_version() + ')'}"><qg:open-url href="{changelog_url()}" /></qg:button>
+      <qg:button label="Report a bug or suggest"><q:set name="came_from" value="{'title'}" /><qg:goto-scene name="report" /></qg:button>
       <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
     </qg:menu>
     <qg:hud position="bottom-right" font="assets/DejaVuSansMono.ttf" size="11">
-      <qg:text value="{'PandaFoot v' + game_version()}" color="#aaaaaa" />
+      <qg:text value="{'PandaFoot v' + game_version() + ' beta'}" color="#aaaaaa" />
     </qg:hud>
   </qg:scene>
+
+  <!-- the beta's reports: a bug, a suggestion or anything else, in the form; back where the player came from -->
+  <qg:scene name="report" width="640" height="400" background="#0000a8">
+    <q:set name="sent" value="false" type="boolean" />
+    <qg:hud x="16" y="16" box="frame" font="assets/DejaVuSansMono.ttf" size="14">
+      <qg:text value="{'BETA - ' + tr('REPORT A BUG OR SUGGEST')}" color="#ffff55" />
+      <qg:text value="{tr('A form opens in your browser, already filled in')}" />
+      <qg:text value="{tr('with where the game is (version, world, round).')}" />
+      <qg:text value="{tr('You only write what happened, or your idea.')}" />
+      <qg:text value="{tr('Every report is read. Thank you!')}" color="#55ffff" />
+    </qg:hud>
+    <qg:menu x="16" y="170" font="assets/DejaVuSansMono.ttf" size="14" box="frame">
+      <qg:button label="Report a bug"><qg:open-url href="{report_url('Bug')}" /><q:set name="sent" value="{true}" /></qg:button>
+      <qg:button label="Suggest something"><qg:open-url href="{report_url('Sugestão')}" /><q:set name="sent" value="{true}" /></qg:button>
+      <qg:button label="Something else"><qg:open-url href="{report_url('Outro')}" /><q:set name="sent" value="{true}" /></qg:button>
+      <qg:button label="Back"><q:call function="report_back" /></qg:button>
+    </qg:menu>
+    <qg:hud x="16" y="330" font="assets/DejaVuSansMono.ttf" size="14" if="{sent}">
+      <qg:text value="{tr('The form is open in your browser.')}" color="#55ff55" />
+    </qg:hud>
+    <qg:on-input action="cancel"><q:call function="report_back" /></qg:on-input>
+  </qg:scene>
+
+  <q:function name="report_back">
+    <q:if condition="{came_from == 'dashboard'}"><qg:goto-scene name="dashboard" />
+      <q:else><qg:goto-scene name="title" /></q:else>
+    </q:if>
+  </q:function>
 
   <!-- A new game: the world's number, the save, the managers and their clubs. -->
   <qg:scene name="new-game" width="640" height="400" background="#0000a8">
@@ -8589,10 +8636,10 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:hud>
     <qg:hud x="6" y="358" font="assets/DejaVuSansMono.ttf" size="10">
       <qg:text value="{'[F1] ' + tr('Line-up') + ' [F2] ' + tr('Tactics') + ' [F3] ' + tr('Squad') + ' [F5] ' + tr('Finances') + ' [F6] ' + tr('Market') + ' [F7] ' + tr('Table') + ' [F8] ' + tr('History')}" color="#55ffff" />
-      <qg:text value="{'[ENTER] ' + tr('Ready: next manager' if turn < len(managers) - 1 else 'Play the round') + '   [ESC] ' + tr('Save and leave')}" color="#ffff55" />
+      <qg:text value="{'[ENTER] ' + tr('Ready: next manager' if turn < len(managers) - 1 else 'Play the round') + '   [ESC] ' + tr('Save and leave') + '   [F9] ' + tr('Report')}" color="#ffff55" />
     </qg:hud>
     <qg:hud position="bottom-right" font="assets/DejaVuSansMono.ttf" size="10">
-      <qg:text value="{'v' + game_version()}" color="#aaaaaa" />
+      <qg:text value="{'v' + game_version() + ' beta'}" color="#aaaaaa" />
     </qg:hud>
     <qg:on-input action="lineup"><qg:goto-scene name="lineup" /></qg:on-input>
     <qg:on-input action="tactics"><qg:goto-scene name="tactics" /></qg:on-input>
@@ -8601,6 +8648,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:on-input action="standings"><qg:goto-scene name="standings" /></qg:on-input>
     <qg:on-input action="market"><qg:goto-scene name="market" /></qg:on-input>
     <qg:on-input action="history"><qg:goto-scene name="history" /></qg:on-input>
+    <qg:on-input action="report"><q:set name="came_from" value="{'dashboard'}" /><qg:goto-scene name="report" /></qg:on-input>
     <qg:on-input action="select">
       <q:if condition="{not lineup_ok(my_club())}"><q:call function="fill_lineup" args="{my_club()}" /></q:if>
       <q:if condition="{turn < len(managers) - 1}">
@@ -9563,6 +9611,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Options" as="Opções" />
     <qg:phrase text="Quit" as="Sair" />
     <qg:phrase text="What's new" as="Novidades" />
+    <qg:phrase text="Report a bug or suggest" as="Relatar bug ou sugerir" />
+    <qg:phrase text="REPORT A BUG OR SUGGEST" as="RELATAR UM BUG OU SUGERIR" />
+    <qg:phrase text="A form opens in your browser, already filled in" as="Um formulário abre no navegador, já preenchido" />
+    <qg:phrase text="with where the game is (version, world, round)." as="com onde o jogo está (versão, mundo, rodada)." />
+    <qg:phrase text="You only write what happened, or your idea." as="Você só escreve o que aconteceu, ou a sua ideia." />
+    <qg:phrase text="Every report is read. Thank you!" as="Todo relato é lido. Obrigado!" />
+    <qg:phrase text="Report a bug" as="Relatar um bug" />
+    <qg:phrase text="Suggest something" as="Sugerir algo" />
+    <qg:phrase text="Something else" as="Outra coisa" />
+    <qg:phrase text="The form is open in your browser." as="O formulário abriu no navegador." />
+    <qg:phrase text="Report" as="Relatar" />
     <qg:phrase text="NEW GAME" as="NOVO JOGO" />
     <qg:phrase text="Managers:" as="Técnicos:" />
     <qg:phrase text="World no." as="Mundo nº" />
@@ -9892,6 +9951,17 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Options" as="Opciones" />
     <qg:phrase text="Quit" as="Salir" />
     <qg:phrase text="What's new" as="Novedades" />
+    <qg:phrase text="Report a bug or suggest" as="Reportar un error o sugerir" />
+    <qg:phrase text="REPORT A BUG OR SUGGEST" as="REPORTAR UN ERROR O SUGERIR" />
+    <qg:phrase text="A form opens in your browser, already filled in" as="Un formulario se abre en el navegador, ya rellenado" />
+    <qg:phrase text="with where the game is (version, world, round)." as="con dónde está el juego (versión, mundo, jornada)." />
+    <qg:phrase text="You only write what happened, or your idea." as="Solo escribes lo que pasó, o tu idea." />
+    <qg:phrase text="Every report is read. Thank you!" as="Se lee cada reporte. ¡Gracias!" />
+    <qg:phrase text="Report a bug" as="Reportar un error" />
+    <qg:phrase text="Suggest something" as="Sugerir algo" />
+    <qg:phrase text="Something else" as="Otra cosa" />
+    <qg:phrase text="The form is open in your browser." as="El formulario se abrió en el navegador." />
+    <qg:phrase text="Report" as="Reportar" />
     <qg:phrase text="NEW GAME" as="NUEVA PARTIDA" />
     <qg:phrase text="Managers:" as="Técnicos:" />
     <qg:phrase text="World no." as="Mundo n.º" />

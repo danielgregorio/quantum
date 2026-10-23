@@ -4,7 +4,8 @@
 > found fixed on 2026-10-23, when the phases were reordered: the club (Phase 2) before the online round (Phase 3);
 > what they found on a second evening fixed the same day, and what they asked for added to Phase 2. Phase 2
 > done the same evening (version 2.0, with its version in view and its changelog), played by the agent for
-> fifteen seasons; next, what people find playing it.
+> fifteen seasons; next, what people find playing it: 2.1 is the beta, with reports from inside the game (a
+> form, read four times a day).
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The game's design is [danielgregorio/pandafoot](https://github.com/danielgregorio/pandafoot)'s
 > `GAME_DESIGN.md` (v0.2, with the decisions of 2026-10-22), and its numbers are checked there by

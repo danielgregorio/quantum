@@ -129,6 +129,13 @@ static func repeat(text, n) -> String:
 	return str(text).repeat(maxi(0, int(n)))
 
 
+# url_encode(text): the text as a part of a web address, every character but
+# letters, digits and - _ . ~ written %XX of its UTF-8 bytes (a club's name in
+# a form's link, for qg:open-url).
+static func url_encode(text) -> String:
+	return to_str(text).uri_encode()
+
+
 # join(list), join(list, sep): the items as text, as the Core's join.
 static func join(v, sep = ", ") -> String:
 	var parts := PackedStringArray()

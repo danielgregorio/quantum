@@ -3,6 +3,14 @@
 The version you play is on the title screen and in the dashboard's corner. Each version below says what
 changed for whoever plays it; how it was built is in [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
+## 2.1 — The beta (2026-10-23)
+
+- **PandaFoot is in beta.** The version says so on the title and in the dashboard's corner.
+- **Report a bug or suggest, from the game.** "Report a bug or suggest" on the title, or F9 on the dashboard: a
+  form opens in the browser already filled in with where the game is (the version, the world, the season, the
+  round, your club); you only write what happened, or your idea. Every report is read, and what it changes comes
+  here.
+
 ## 2.0 — The club (2026-10-23)
 
 - **Four divisions of ten clubs.** 40 clubs, home and away, two up and two down each season. A new manager

@@ -67,7 +67,7 @@
      "blurb": "A skirmish on a map of hexes, turn by turn: three riders hold the keep by the river against four raiders from the east. A forest or a ford costs two moves, the hills and the marsh three; the river and the rocks stop everyone.",
      "controls": "Click a rider, then a hex: it rides there by the cheapest way, four moves a turn. Click a raider next to a rider to strike. E or End turn: the raiders ride.",
      "check": {"scene": "title", "press": ["Enter"], "then": "field"}},
-    {"name": "pandafoot", "title": "PandaFoot", "players": "1 to 4 players · one machine",
+    {"name": "pandafoot", "title": "PandaFoot", "stage": "beta", "players": "1 to 4 players · one machine",
      "blurb": "A football manager after Elifoot 2, on a text screen of the DOS days: four divisions of ten, a career from a small club of the fourth, an auction for every player, a cup drawn on screen. Pick the eleven, the objective and the style, then watch the whole round live, every match in the same minute. Somewhere in a small club plays a hidden genius.",
      "controls": "Arrows and Enter in the menus; F1 line-up, F2 tactics, F3 squad, F5 finances, F6 the transfer list (S sells, I pays in instalments), F7 table and top scorers, F8 history. In the round: + and - for the speed, Space to pause (then F1 for a substitution, F2 for another style), Tab for another match, C to undo an automatic change.",
      "check": {"scene": "title", "press": ["Enter"], "then": "new-game"}},

@@ -175,7 +175,7 @@ def test_the_version_is_in_view_and_whats_new_opens_its_changelog(pandafoot, god
     for lang, page in (('en', ''), ('pt', 'pt/'), ('es', 'es/')):
         with PlaySession(pandafoot, binary=godot, lang=lang) as game:
             title = game.act(ticks=3)
-            assert f'PandaFoot v{version}' in texts(title)
+            assert f'PandaFoot v{version} beta' in texts(title)
             buttons = [i['button'] for i in menus(title)[0]['items'] if i['shown']]
             k = next(i for i, b in enumerate(buttons) if b.endswith(f'(v{version})'))
             for _ in range(k):
@@ -187,7 +187,40 @@ def test_the_version_is_in_view_and_whats_new_opens_its_changelog(pandafoot, god
             if lang == 'en':
                 for _ in range(k):
                     game.act(tap=['up'], ticks=2)
-                assert f'v{version}' in texts(new_game(game))
+                assert f'v{version} beta' in texts(new_game(game))
+
+
+def test_a_beta_report_opens_the_form_filled_in(pandafoot, godot):
+    """The beta's reports: on the title and with F9 on the dashboard, a bug, a suggestion or anything else opens the
+    owner's form, filled in with the kind (the form's own word) and where the game is, written into the address;
+    back, the player is where they were."""
+    with PlaySession(pandafoot, binary=godot) as game:
+        title = game.act(ticks=3)
+        buttons = [i['button'] for i in menus(title)[0]['items'] if i['shown']]
+        for _ in range(buttons.index('Report a bug or suggest')):
+            game.act(tap=['down'], ticks=2)
+        report = game.act(tap=['select'], ticks=3)
+        assert report['scene'] == 'report'
+        assert [i['button'] for i in menus(report)[0]['items']] == ['Report a bug', 'Suggest something',
+                                                                     'Something else', 'Back']
+        game.act(tap=['down'], ticks=2)
+        opened = game.act(tap=['select'], ticks=3)                  # a suggestion, with no game in progress
+        url, = [e['url'] for e in opened['events'] if e['kind'] == 'open-url']
+        assert url.startswith('https://docs.google.com/forms/') and '=Sugest%C3%A3o&' in url
+        assert url.endswith('PandaFoot%202.1%20beta%3B%20English%3B%20desktop%3B%20screen%20title%3B%20no%20game%20'
+                            'in%20progress')
+        assert 'The form is open in your browser.' in texts(opened)
+        assert game.act(tap=['cancel'], ticks=3)['scene'] == 'title'
+        new_game(game)
+        assert game.act(tap=['report'], ticks=3)['scene'] == 'report'   # F9 on the dashboard
+        opened = game.act(tap=['select'], ticks=3)                      # a bug
+        url, = [e['url'] for e in opened['events'] if e['kind'] == 'open-url']
+        assert '=Bug&' in url
+        assert ('screen%20dashboard%3B%20world%207%2C%20season%202026%2C%20round%200%2F18%2C%20next%20league%3B%20'
+                'Manager%201%20at%20Lontra%20AC%20%28division%204%2C') in url
+        for _ in range(3):
+            game.act(tap=['down'], ticks=2)
+        assert game.act(tap=['select'], ticks=3)['scene'] == 'dashboard'   # Back
 
 
 # --- what the first people to play it found (PLAN_PANDAFOOT.md, the fixes of 2026-10-23) ---

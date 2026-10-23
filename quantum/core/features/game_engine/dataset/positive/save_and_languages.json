@@ -67,6 +67,27 @@
         "button",
         "language"
       ]
+    },
+    {
+      "id": "game-report-001",
+      "intent": "A bug report from inside the game, with what it was doing",
+      "tags": [
+        "open-url",
+        "menu",
+        "button",
+        "function"
+      ],
+      "input": {
+        "natural_language": "Buttons that open the game's report form in the browser, already filled in with the kind of report and where the player was (the version, the world, the club, the language), so a player only writes what happened",
+        "context": {
+          "target": "godot",
+          "file": "game-report-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"report\" type=\"game\">\n  <q:set name=\"world\" value=\"7\" type=\"number\" />\n  <q:set name=\"club\" value=\"Onça Pintada\" type=\"string\" />\n  <q:function name=\"report_url\" params=\"kind\">\n    <q:return value=\"{'https://example.com/forms/report?kind=' + url_encode(kind) + '&context=' + url_encode('v1.0; world ' + str(world) + '; ' + club + '; ' + language())}\" />\n  </q:function>\n  <qg:scene name=\"title\" width=\"320\" height=\"180\">\n    <qg:menu>\n      <qg:button label=\"Report a bug\"><qg:open-url href=\"{report_url('Bug')}\" /></qg:button>\n      <qg:button label=\"Suggest something\"><qg:open-url href=\"{report_url('Sugestão')}\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "url_encode() writes each text as a part of the address (a space as %20, the ç of Onça as %C3%A7, an & as %26), so the form receives it whole. The button opens the form in a new tab in a browser, in the system's browser elsewhere; played by an agent it opens nothing and the \"open-url\" event says the address."
+      }
     }
   ]
 }

@@ -10,6 +10,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: PandaFoot 2.1, the beta, and reports from inside the game. "Report
+  a bug or suggest" on the title, or F9 on the dashboard, opens the beta's
+  report form in the browser filled in with the kind and where the game is
+  (the version, the world, the season, the round, the club, the language),
+  so a player writes only what happened; the title and the dashboard say
+  "beta", and so does the games page (`"stage": "beta"` in
+  `projects/games.json`).
+- Laboratory: `url_encode(text)` in a game's expressions: a text as a part of
+  a web address (a space as `%20`, a `ç` as `%C3%A7`, an `&` as `%26`), for a
+  form's link with what to fill in (`qg:open-url`).
 - Laboratory: PandaFoot 2.0, the club (Phase 2 of `PLAN_PANDAFOOT.md`), what
   its players asked for over two evenings. Four divisions of ten (40 clubs,
   18 rounds), two up and two down, strength, grounds, TV and sponsorship by
