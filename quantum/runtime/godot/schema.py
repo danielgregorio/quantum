@@ -297,7 +297,10 @@ TAGS: Dict[str, Tag] = {
         {'name': Attr('ident', required=True),
          'width': Attr('int', 256), 'height': Attr('int', 224),
          'background': Attr('color', '#000000'),
-         'seed': Attr('int', 0, doc='the random seed; the same seed gives the same game'),
+         'seed': Attr('expr', '0', doc='the random seed, a number or an expression of the game\'s state read as the '
+                                      'scene is entered (a world\'s number); the same seed gives the same game, so a '
+                                      'scene entered again and again draws the same each time unless its seed is '
+                                      'read from the state (seed="{round}")'),
          'save': Attr('bool', False, doc='entering the scene saves the game to continue here (qg:save), '
                       'as a room of an adventure does'),
          'y-sort': Attr('bool', False, doc='characters and things are drawn by how low they stand, the lower in '
@@ -426,6 +429,12 @@ TAGS: Dict[str, Tag] = {
                                           'game); it holds only shared fields, whose texts reach the others'),
          'if': Attr('expr', None, doc='shown, and choosable, only while this is true: paused(), a q:set...'),
          'position': Attr('enum:top-left|top-center|top-right|center|bottom-center', 'center'),
+         'x': Attr('int', None, doc='with y=, its top-left corner on the screen, in pixels (in place of position=)'),
+         'y': Attr('int', None),
+         'source': Attr('expr', None, doc='a list: the menu holds one qg:button, and shows it once for each row of '
+                                          'it, read every frame (a squad to choose from, the clubs, a shop\'s goods); '
+                                          'the row is as= in its label=, if= and what it runs'),
+         'as': Attr('ident', None, doc='with source=: the name of the row'),
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
          'size': Attr('int', 16, doc='font size'),
          'box': Attr('ident', None, doc='a qg:spritesheet with slice=: the buttons are in a box drawn with it, '
@@ -576,10 +585,31 @@ TAGS: Dict[str, Tag] = {
         'Text and pictures over the game.',
         {'position': Attr('enum:top-left|top-center|top-right|center|bottom-left|bottom-center|bottom-right',
                           'top-left'),
+         'x': Attr('int', None, doc='with y=, its top-left corner on the screen, in pixels (in place of position=): '
+                                    'a panel of a screen laid out by hand'),
+         'y': Attr('int', None),
+         'box': Attr('ident', None, doc='a qg:spritesheet with slice=: what it shows is in a box drawn with it, '
+                                        'stretched (a frame)'),
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
          'size': Attr('int', 8, doc='the font size of its items, unless an item says otherwise'),
          'if': Attr('expr', None, doc='shown only while this is true')},
         parents=('scene',)),
+    'table': Tag(
+        'Rows from the state in the HUD, a line each, in columns: a squad, a league table, a shop, the '
+        'best scores. source= is read every frame; each qg:column is an expression of the row (as=). '
+        'With a monospaced font the columns line up as on a text screen.',
+        {'source': Attr('expr', required=True, doc='a list: of records, numbers, texts'),
+         'as': Attr('ident', required=True, doc='the name of the row in the columns\' expressions'),
+         'rows': Attr('int', 0, doc='at most so many rows shown, from the first (0: all of them)')},
+        parents=('hud',)),
+    'column': Tag(
+        'A column of a qg:table: its heading and, for each row, what it shows.',
+        {'value': Attr('expr', required=True, doc='an expression of the row'),
+         'label': Attr('str', '', doc='its heading (a table whose columns have none has no heading row)'),
+         'width': Attr('int', 8, doc='how many characters wide: a longer text is cut, a shorter one padded'),
+         'align': Attr('enum:left|right', 'left', doc='right: numbers'),
+         'color': Attr('str', None, doc='#rrggbb, or an expression of the row giving one (red when negative)')},
+        parents=('table',)),
     'icon': Tag(
         'A picture in the HUD: a frame of a sheet (a heart before the hearts, a logo on a title).',
         {'sheet': Attr('ident', required=True, doc='a qg:spritesheet or qg:tileset'),
@@ -599,7 +629,8 @@ TAGS: Dict[str, Tag] = {
         {'bind': Attr('ident', None, doc='a q:set of the scene (or value=)'),
          'value': Attr('expr', None, doc='an expression, read every frame (or bind=)'),
          'size': Attr('int', None, doc='font size'),
-         'color': Attr('color', None, doc='its colour (#rrggbb)')},
+         'color': Attr('str', None, doc='its colour: #rrggbb, or an expression giving one, read every frame '
+                                        '(red when a balance is below zero)')},
         parents=('hud',)),
     'on-collision': Tag(
         'What happens when this character or prefab touches something. Holds actions and statements; '

@@ -102,6 +102,94 @@ static func slice(v, start, end):
 	return (v as Array).slice(s, e)
 
 
+# fit(v, width), fit(v, width, 'right'): the text of v cut or padded to so many
+# characters, for a column of a text screen (a name, then a number lined up).
+static func fit(v, width, align = "left") -> String:
+	var text := to_str(v)
+	var w := maxi(0, int(width))
+	if text.length() > w:
+		return text.substr(0, w)
+	return text.lpad(w) if str(align) == "right" else text.rpad(w)
+
+
+# thousands(n), thousands(n, '.'): a whole number with its thousands apart
+# (1500000 as 1,500,000; as 1.500.000 with '.').
+static func thousands(n, sep = ",") -> String:
+	var v := roundi(float(n))
+	var digits := str(absi(v))
+	var out := ""
+	while digits.length() > 3:
+		out = str(sep) + digits.substr(digits.length() - 3) + out
+		digits = digits.substr(0, digits.length() - 3)
+	return ("-" if v < 0 else "") + digits + out
+
+
+# repeat(text, n): the text n times (a bar of blocks, a line of ═).
+static func repeat(text, n) -> String:
+	return str(text).repeat(maxi(0, int(n)))
+
+
+# join(list), join(list, sep): the items as text, as the Core's join.
+static func join(v, sep = ", ") -> String:
+	var parts := PackedStringArray()
+	if v is Array:
+		for item in v:
+			parts.append(to_str(item))
+	return str(sep).join(parts)
+
+
+# A list of rows (a qg:table's, a menu's source=): a list as it is, a
+# dictionary's values, nothing for anything else.
+static func rows(v) -> Array:
+	if v is Array:
+		return v
+	if v is Dictionary:
+		return (v as Dictionary).values()
+	return []
+
+
+# pick(list): one of its items at random, from the scene's seeded source (null
+# for an empty list); chance(p): true with probability p (0 to 1). As the
+# Core's, and as random() the same seed gives the same draws.
+static func pick(ctx, v):
+	if not (v is Array) or (v as Array).is_empty():
+		return null
+	var scene = _seeded(ctx)
+	if scene == null:
+		return v[0]
+	return v[scene.rng.randi_range(0, v.size() - 1)]
+
+
+static func chance(ctx, p) -> bool:
+	var scene = _seeded(ctx)
+	if scene == null:
+		return false
+	return scene.rng.randf() < float(p)
+
+
+static func _seeded(ctx):
+	if ctx != null and ("rng" in ctx):
+		return ctx
+	var scenes: Array = Engine.get_main_loop().get_nodes_in_group("q_scene")
+	return scenes[0] if scenes.size() > 0 else null
+
+
+# q:set index=: a list's item (a whole number) or a dictionary's key, in place.
+static func set_at(container, key, value) -> void:
+	if container is Array:
+		var i := int(key)
+		if i < 0:
+			i += (container as Array).size()
+		if i >= 0 and i < (container as Array).size():
+			container[i] = value
+		else:
+			push_error("quantum: index %d is outside the list (%d items)" % [int(key), (container as Array).size()])
+	elif container is Dictionary:
+		container[key] = value
+	else:
+		push_error("quantum: q:set index= sets an item of a list or a key of a dictionary")
+
+
 # gd: attributes: properties of the Godot node a tag became, as game.json
 # carries them ({name: {type, value}}), set as they are — nothing is
 # interpreted here; the compiler checked them against Godot's reference.
@@ -199,10 +287,7 @@ static func deflect_to(node, dx: float, dy: float) -> void:
 # source, so the same seed gives the same game. `ctx` is the scene script
 # (self in its handlers) or P (a prefab handler): then the current scene's.
 static func random(ctx, a: float, b: float) -> float:
-	var scene = ctx
-	if ctx == null or not ("rng" in ctx):
-		var scenes: Array = Engine.get_main_loop().get_nodes_in_group("q_scene")
-		scene = scenes[0] if scenes.size() > 0 else null
+	var scene = _seeded(ctx)
 	if scene == null:
 		return a
 	return scene.rng.randf_range(a, b)

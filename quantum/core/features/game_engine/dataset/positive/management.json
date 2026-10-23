@@ -1,0 +1,92 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "management",
+  "description": "What PLAN_PANDAFOOT.md's Phase 1 says, each written for the screens of a management game",
+  "examples": [
+    {
+      "id": "game-management-001",
+      "intent": "Squad screen",
+      "input": {
+        "natural_language": "A football manager's squad screen: a framed panel of the players in columns, the names cut to their column, the strength yellow for the best, the wages as money, the balance red when below zero",
+        "context": {
+          "target": "godot",
+          "file": "game-management-001.q"
+        }
+      },
+      "tags": [
+        "hud",
+        "table",
+        "column",
+        "text",
+        "spritesheet"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"squad\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <qg:spritesheet name=\"frame\" src=\"projects/pandafoot/assets/frame.png\" tile=\"24\" slice=\"8\" />\n  <q:set name=\"balance\" value=\"-25000\" type=\"number\" />\n  <q:set name=\"players\" value=\"{[ {'name': 'Rafael Moreira', 'pos': 'MF', 'strength': 49, 'salary': 58580}, {'name': 'Foguete', 'pos': 'FW', 'strength': 41, 'salary': 22290}, {'name': 'Tatu', 'pos': 'DF', 'strength': 32, 'salary': 16531} ]}\" type=\"array\" />\n  <q:function name=\"money\" params=\"n\">\n    <q:return value=\"{('-$' if n < 0 else '$') + thousands(abs(round(n)), '.')}\" />\n  </q:function>\n  <qg:scene name=\"squad\" width=\"640\" height=\"400\" background=\"#0000a8\">\n    <!-- an 80 by 25 text screen: a monospaced font, panels where they go -->\n    <qg:hud x=\"8\" y=\"8\" box=\"frame\" font=\"projects/pandafoot/assets/DejaVuSansMono.ttf\" size=\"13\">\n      <qg:text value=\"{'SQUAD   ' + str(len(players)) + ' players'}\" color=\"#ffff55\" />\n      <qg:table source=\"{players}\" as=\"p\">\n        <qg:column label=\"Name\" value=\"{p.name}\" width=\"12\" />\n        <qg:column label=\"Pos\" value=\"{p.pos}\" width=\"4\" />\n        <qg:column label=\"Str\" value=\"{p.strength}\" width=\"3\" align=\"right\" color=\"{'#ffff55' if p.strength >= 42 else '#ffffff'}\" />\n        <qg:column label=\"Salary\" value=\"{money(p.salary)}\" width=\"9\" align=\"right\" />\n      </qg:table>\n    </qg:hud>\n    <qg:hud x=\"8\" y=\"370\" font=\"projects/pandafoot/assets/DejaVuSansMono.ttf\" size=\"13\">\n      <qg:text value=\"{'Balance: ' + fit(money(balance), 12, 'right')}\" color=\"{'#55ff55' if balance >= 0 else '#ff5555'}\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-management-002",
+      "intent": "Shop of rows",
+      "input": {
+        "natural_language": "A shop: a button for each of the goods in a list, only those not sold out; buying one takes one from its stock and counts how many of it were bought",
+        "context": {
+          "target": "godot",
+          "file": "game-management-002.q"
+        }
+      },
+      "tags": [
+        "menu",
+        "button",
+        "hud",
+        "text",
+        "set"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"shop\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"gold\" value=\"100\" type=\"number\" />\n  <q:set name=\"goods\" value=\"{[ {'name': 'Potion', 'price': 10, 'stock': 3}, {'name': 'Rope', 'price': 4, 'stock': 1}, {'name': 'Lamp', 'price': 25, 'stock': 0} ]}\" type=\"array\" />\n  <q:set name=\"bought\" value=\"{ {} }\" />\n  <qg:scene name=\"shop\" width=\"320\" height=\"240\">\n    <qg:menu x=\"16\" y=\"40\" source=\"{goods}\" as=\"g\" size=\"12\">\n      <!-- one button, shown for each row; the row is g in its label, its if= and what it runs -->\n      <qg:button label=\"{fit(g.name, 8) + fit(g.price, 4, 'right') + '  x' + str(g.stock)}\" if=\"{g.stock > 0}\">\n        <q:if condition=\"{gold >= g.price}\">\n          <q:set name=\"gold\" value=\"{gold - g.price}\" />\n          <q:set name=\"g.stock\" value=\"{g.stock - 1}\" />\n          <q:set name=\"bought\" index=\"{g.name}\" value=\"{(bought[g.name] if g.name in bought else 0) + 1}\" />\n        </q:if>\n      </qg:button>\n    </qg:menu>\n    <qg:hud position=\"top-right\"><qg:text value=\"{'Gold ' + str(gold)}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-management-003",
+      "intent": "World from its number",
+      "input": {
+        "natural_language": "A new world made from its number: the same number gives the same clubs, drawn as the scene is entered; a little name generator, and the strongest club announced",
+        "context": {
+          "target": "godot",
+          "file": "game-management-003.q"
+        }
+      },
+      "tags": [
+        "scene",
+        "function",
+        "set",
+        "loop",
+        "hud",
+        "text"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"world\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"world\" value=\"7\" type=\"number\" />\n  <q:set name=\"clubs\" value=\"[]\" type=\"array\" />\n  <q:function name=\"club_name\">\n    <q:if condition=\"{chance(0.3)}\"><q:return value=\"{pick(['Real', 'Atlético', 'Sporting']) + ' ' + pick(['Panda', 'Bambu', 'Coala'])}\" /></q:if>\n    <q:return value=\"{pick(['Panda', 'Bambu', 'Coala', 'Lontra']) + ' ' + pick(['FC', 'EC', 'United'])}\" />\n  </q:function>\n  <q:function name=\"strongest\">\n    <q:set name=\"top\" value=\"{clubs[0]}\" />\n    <q:loop items=\"{clubs}\" var=\"c\"><q:if condition=\"{c.power > top.power}\"><q:set name=\"top\" value=\"{c}\" /></q:if></q:loop>\n    <q:return value=\"{top}\" />\n  </q:function>\n  <!-- seed= an expression: the world's number, read as the scene is entered -->\n  <qg:scene name=\"draw\" width=\"320\" height=\"240\" seed=\"{world}\">\n    <q:set name=\"drawn\" value=\"{[club_name(), club_name(), club_name()]}\" type=\"array\" />\n    <q:set name=\"clubs\" value=\"{[ {'name': drawn[0], 'power': round(random(20, 50))}, {'name': drawn[1], 'power': round(random(20, 50))}, {'name': drawn[2], 'power': round(random(20, 50))} ]}\" />\n    <qg:hud position=\"top-left\">\n      <qg:text value=\"{'World ' + str(world) + ': ' + join(drawn, ', ')}\" />\n      <qg:text value=\"{repeat('=', 20)}\" />\n      <qg:text value=\"{'The favourite: ' + strongest().name}\" />\n    </qg:hud>\n    <qg:on-input action=\"select\"><q:set name=\"world\" value=\"{world + 1}\" /><qg:goto-scene name=\"draw\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-management-004",
+      "intent": "A form beside a list",
+      "input": {
+        "natural_language": "A new game's form: the settings in one menu and the clubs to choose in another beside it; down from the last setting goes on into the clubs, and the start button below them",
+        "context": {
+          "target": "godot",
+          "file": "game-management-004.q"
+        }
+      },
+      "tags": [
+        "menu",
+        "slider",
+        "field",
+        "button"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"newgame\" type=\"game\">\n  <qg:tileset name=\"tiles\" src=\"assets/kenney/tilemap_packed.png\" tile=\"18\" />\n  <qg:spritesheet name=\"people\" src=\"assets/kenney/tilemap-characters_packed.png\" tile=\"24\" />\n  <q:set name=\"world\" value=\"1\" type=\"number\" />\n  <q:set name=\"who\" value=\"\" />\n  <q:set name=\"club\" value=\"-1\" type=\"number\" />\n  <q:set name=\"names\" value='[\"Panda FC\", \"Bambu United\", \"Coala City\"]' type=\"array\" />\n  <qg:scene name=\"new-game\" width=\"640\" height=\"400\">\n    <!-- menus shown together are one column for the keys, in this order -->\n    <qg:menu x=\"16\" y=\"40\" size=\"13\">\n      <qg:slider label=\"World\" bind=\"world\" min=\"1\" max=\"999\" step=\"1\" />\n      <qg:field label=\"Manager\" bind=\"who\" />\n    </qg:menu>\n    <qg:menu x=\"340\" y=\"40\" source=\"{[0, 1, 2]}\" as=\"i\" size=\"13\">\n      <qg:button label=\"{('> ' if club == i else '  ') + names[i]}\"><q:set name=\"club\" value=\"{i}\" /></qg:button>\n    </qg:menu>\n    <qg:menu x=\"16\" y=\"330\" size=\"13\">\n      <qg:button label=\"Start\" if=\"{club >= 0}\"><qg:goto-scene name=\"league\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n  <qg:scene name=\"league\" />\n</q:application>\n"
+      }
+    }
+  ]
+}

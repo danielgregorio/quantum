@@ -9,6 +9,7 @@ harness (`_q_state`).
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from dataclasses import dataclass, field
@@ -88,6 +89,9 @@ class SceneScript:
                      tiled=self.tiled_props)
 
     enter: List[Node] = field(default_factory=list)   # statements directly in the scene: run on enter
+    # a scene's q:sets whose value= is computed (a function, the game's state, random()): (name, GDScript),
+    # set in order as the scene is entered, after its random source is seeded and before what it runs
+    computed: List[tuple] = field(default_factory=list)
 
     def source(self) -> str:
         lines = ['extends "res://addons/quantum/quantum_scene.gd"',
@@ -95,9 +99,12 @@ class SceneScript:
         for var in self.state.values():
             lines.append(f'var {var.name}: {var.gd_type} = {var.initial}')
         lines.append('')
-        if self.enter:
+        if self.enter or self.computed:
             lines.append('func _q_enter() -> void:')
-            lines.append(compile_block(self.enter, self.scope(), self, 1).rstrip('\n'))
+            for name, code in self.computed:
+                lines.append(f'{_INDENT}{name} = {code}')
+            if self.enter:
+                lines.append(compile_block(self.enter, self.scope(), self, 1).rstrip('\n'))
             lines.append('')
         lines.append('func _q_state() -> Dictionary:')
         if self.state:
@@ -134,6 +141,11 @@ def declare_state(script: SceneScript, st: Statement) -> None:
     value = st.attrs.get('value', st.attrs.get('default'))
     if value is not None and is_expression(value):
         initial = compile_expression(value, script.scope(), st.line)
+        if script.name != 'game' and not _constant(value):
+            # computed as the scene is entered: seeded, and with the game's state as it is then
+            script.computed.append((name, initial))
+            initial = gdscript_literal({'number': '0', 'boolean': 'false', 'array': '[]'}.get(type_name, ''), type_name) \
+                if 'type' in st.attrs else 'null'
     else:
         if value is None:
             value = {'number': '0', 'boolean': 'false', 'array': '[]'}.get(type_name, '')
@@ -145,6 +157,18 @@ def declare_state(script: SceneScript, st: Statement) -> None:
     if persist and script.name != 'game':
         raise GameCompileError('saved= is for the game state (a q:set in <q:application>)', st.line)
     script.state[name] = StateVar(name, type_name, initial, st.line, persist, typed='type' in st.attrs)
+
+
+def _constant(value: str) -> bool:
+    """{3}, {[]}, {'text'}, {null}: an expression that is a value already, the same whenever it is read."""
+    inner = value.strip()[1:-1].strip()
+    if inner in ('null', 'true', 'false'):
+        return True
+    try:
+        ast.literal_eval(inner)
+        return True
+    except (ValueError, SyntaxError):
+        return False
 
 
 def _literal_type(value: str) -> str:
@@ -159,6 +183,9 @@ def _literal_type(value: str) -> str:
         return 'string'
 
 
+_NAME_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+
+
 def local_names(body: List[Node], scope: Scope, home: str = 'the scene') -> List[str]:
     """The names a q:set in the body gives that no q:set of the scene or the game declared: the
     function's (or the handler's) own variables, local to the call — they never clash with another
@@ -168,7 +195,7 @@ def local_names(body: List[Node], scope: Scope, home: str = 'the scene') -> List
     def walk(nodes: List[Node]) -> None:
         for n in nodes:
             if isinstance(n, Statement):
-                if n.kind == 'set' and n.attrs.get('index') is None:
+                if n.kind == 'set' and n.attrs.get('index') is None and '.' not in n.attrs['name']:
                     name = n.attrs['name']
                     if not scope.has(name) and name not in out:
                         out.append(name)
@@ -180,11 +207,13 @@ def local_names(body: List[Node], scope: Scope, home: str = 'the scene') -> List
     walk(body)
     for name in out:
         if name in RESERVED_NAMES:
-            raise GameCompileError(f'{name!r} is a property of every Godot node; a variable needs another name', None)
+            line = next((n.line for n in _sets(body) if n.attrs['name'] == name), None)
+            raise GameCompileError(f'{name!r} is a property of every Godot node; a variable needs another name', line)
     # a variable set and never read is a misspelt state, not a variable
     read = _texts_read(body)
     for name in out:
-        mentioned = re.compile(rf'(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])')
+        # the name itself, not a field of that name (m.luck is not luck)
+        mentioned = re.compile(rf'(?<![A-Za-z0-9_.]){re.escape(name)}(?![A-Za-z0-9_])')
         if not any(mentioned.search(text) for text in read):
             line = next((n.line for n in _sets(body) if n.attrs['name'] == name), None)
             raise GameCompileError(
@@ -220,7 +249,8 @@ def _texts_read(body: List[Node]) -> List[str]:
     for n in body:
         if isinstance(n, Statement):
             for key, value in n.attrs.items():
-                if not (n.kind == 'set' and key == 'name'):
+                # a q:set's name is what it sets, not what it reads; but setting a field or an item reads the record
+                if not (n.kind == 'set' and key == 'name' and '.' not in str(value) and 'index' not in n.attrs):
                     out.append(str(value))
             out.extend(_texts_read(n.body))
             for b in n.branches:
@@ -341,14 +371,19 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
     st = node
     if st.kind == 'set':
         name = st.attrs['name']
-        if not scope.has(name):
+        path = name.split('.')   # name="team.points": a field of a record, set in place
+        if not all(_NAME_RE.match(part) for part in path):
+            raise GameCompileError(f'<q:set name="{name}">: a name, or a field of one (team.points)', st.line)
+        if not scope.has(path[0]):
             raise GameCompileError(
-                f'{name!r} is not declared: declare it with <q:set name="{name}" .../> in the scene', st.line)
+                f'{path[0]!r} is not declared: declare it with <q:set name="{path[0]}" .../> in the scene', st.line)
+        if len(path) > 1 and (path[0] in scope.things or scope.is_node(path[0])):
+            raise GameCompileError(f'<q:set name="{name}">: {path[0]} is a thing or a character; what it has is '
+                                   f'changed by its actions (qg:put, qg:velocity, qg:damage...)', st.line)
+        target = '.'.join([scope.reference(path[0])] + path[1:])
         value = st.attrs.get('value')
         if value is None:
             raise GameCompileError('<q:set> in a handler needs value=', st.line)
-        if st.attrs.get('index') is not None and not scope.has(name):
-            raise GameCompileError(f'<q:set name="{name}" index=>: {name!r} is not an array of the scene', st.line)
         if is_expression(value):
             rhs = compile_expression(value, scope, st.line)
         elif st.attrs.get('index') is not None:
@@ -356,9 +391,10 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
         else:
             var = script.state.get(name) or script.game_state.get(name)
             rhs = gdscript_literal(value, var.type if var else _literal_type(value))
-        if st.attrs.get('index') is not None:   # one element of an array: <q:set name="board" index="{i}" .../>
-            return [f'{ind}{scope.reference(name)}[int({compile_expression(st.attrs["index"], scope, st.line)})] = {rhs}']
-        return [f'{ind}{scope.reference(name)} = {rhs}']
+        if st.attrs.get('index') is not None:
+            # an item of a list, <q:set name="board" index="{i}" .../>, or a key of a dictionary (index="{name}")
+            return [f'{ind}Q.set_at({target}, {compile_expression(st.attrs["index"], scope, st.line)}, {rhs})']
+        return [f'{ind}{target} = {rhs}']
     if st.kind == 'if':
         out = [f'{ind}if {compile_expression(st.attrs["condition"], scope, st.line)}:']
         out.append(compile_block(st.body, scope, script, depth + 1).rstrip('\n'))
@@ -371,6 +407,9 @@ def _compile_node(node: Node, scope: Scope, script: SceneScript, depth: int) -> 
         return out
     if st.kind == 'loop':
         var = st.attrs['var']
+        if scope.has_local(var):
+            raise GameCompileError(f'<q:loop var="{var}">: {var!r} is a parameter or a variable here already; '
+                                   f'the loop\'s needs another name', st.line)
         inner = scope.child([var])
         if 'items' in st.attrs:
             head = f'{ind}for {var} in {compile_expression(st.attrs["items"], scope, st.line)}:'

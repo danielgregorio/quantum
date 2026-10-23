@@ -1563,7 +1563,7 @@ export const gameTags: TagSchema[] = [
             { name: 'width', description: '', type: 'number', default: '256' },
             { name: 'height', description: '', type: 'number', default: '224' },
             { name: 'background', description: '', type: 'string', default: '#000000' },
-            { name: 'seed', description: 'the random seed; the same seed gives the same game', type: 'number', default: '0' },
+            { name: 'seed', description: 'the random seed, a number or an expression of the game\'s state read as the scene is entered (a world\'s number); the same seed gives the same game, so a scene entered again and again draws the same each time unless its seed is read from the state (seed="{round}")', type: 'expression', default: '0' },
             { name: 'save', description: 'entering the scene saves the game to continue here (qg:save), as a room of an adventure does', type: 'boolean', default: 'false' },
             { name: 'y-sort', description: 'characters and things are drawn by how low they stand, the lower in front: depth seen from above (a layer= still comes first)', type: 'boolean', default: 'false' },
             { name: 'ambient', description: 'a dark scene: the light where no qg:light reaches (#000000 is black, #ffffff as drawn); its solid tiles cast the shadows of the lights with shadows="true"', type: 'string' },
@@ -1692,6 +1692,10 @@ export const gameTags: TagSchema[] = [
             { name: 'local', description: 'the menu of whoever plays at this machine (its seat, in a networked game); it holds only shared fields, whose texts reach the others', type: 'boolean', default: 'false' },
             { name: 'if', description: 'shown, and choosable, only while this is true: paused(), a q:set...', type: 'expression' },
             { name: 'position', description: '', type: 'enum', values: ['top-left', 'top-center', 'top-right', 'center', 'bottom-center'], default: 'center' },
+            { name: 'x', description: 'with y=, its top-left corner on the screen, in pixels (in place of position=)', type: 'number' },
+            { name: 'y', description: '', type: 'number' },
+            { name: 'source', description: 'a list: the menu holds one qg:button, and shows it once for each row of it, read every frame (a squad to choose from, the clubs, a shop\'s goods); the row is as= in its label=, if= and what it runs', type: 'expression' },
+            { name: 'as', description: 'with source=: the name of the row', type: 'string' },
             { name: 'font', description: 'a .ttf, relative to the .q or a folder above it', type: 'string' },
             { name: 'size', description: 'font size', type: 'number', default: '16' },
             { name: 'box', description: 'a qg:spritesheet with slice=: the buttons are in a box drawn with it, stretched (a frame)', type: 'string' },
@@ -1917,12 +1921,40 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'Text and pictures over the game.',
         category: 'Game',
-        allowedChildren: ['qg:icon', 'qg:counter', 'qg:text', 'qg:inventory', 'qg:bar'],
+        allowedChildren: ['qg:table', 'qg:icon', 'qg:counter', 'qg:text', 'qg:inventory', 'qg:bar'],
         attributes: [
             { name: 'position', description: '', type: 'enum', values: ['top-left', 'top-center', 'top-right', 'center', 'bottom-left', 'bottom-center', 'bottom-right'], default: 'top-left' },
+            { name: 'x', description: 'with y=, its top-left corner on the screen, in pixels (in place of position=): a panel of a screen laid out by hand', type: 'number' },
+            { name: 'y', description: '', type: 'number' },
+            { name: 'box', description: 'a qg:spritesheet with slice=: what it shows is in a box drawn with it, stretched (a frame)', type: 'string' },
             { name: 'font', description: 'a .ttf, relative to the .q or a folder above it', type: 'string' },
             { name: 'size', description: 'the font size of its items, unless an item says otherwise', type: 'number', default: '8' },
             { name: 'if', description: 'shown only while this is true', type: 'expression' },
+        ]
+    },
+    {
+        name: 'table',
+        namespace: 'qg',
+        description: 'Rows from the state in the HUD, a line each, in columns: a squad, a league table, a shop, the best scores. source= is read every frame; each qg:column is an expression of the row (as=). With a monospaced font the columns line up as on a text screen.',
+        category: 'Game',
+        allowedChildren: ['qg:column'],
+        attributes: [
+            { name: 'source', description: 'a list: of records, numbers, texts', required: true, type: 'expression' },
+            { name: 'as', description: 'the name of the row in the columns\' expressions', required: true, type: 'string' },
+            { name: 'rows', description: 'at most so many rows shown, from the first (0: all of them)', type: 'number', default: '0' },
+        ]
+    },
+    {
+        name: 'column',
+        namespace: 'qg',
+        description: 'A column of a qg:table: its heading and, for each row, what it shows.',
+        category: 'Game',
+        attributes: [
+            { name: 'value', description: 'an expression of the row', required: true, type: 'expression' },
+            { name: 'label', description: 'its heading (a table whose columns have none has no heading row)', type: 'string', default: '' },
+            { name: 'width', description: 'how many characters wide: a longer text is cut, a shorter one padded', type: 'number', default: '8' },
+            { name: 'align', description: 'right: numbers', type: 'enum', values: ['left', 'right'], default: 'left' },
+            { name: 'color', description: '#rrggbb, or an expression of the row giving one (red when negative)', type: 'string' },
         ]
     },
     {
@@ -1958,7 +1990,7 @@ export const gameTags: TagSchema[] = [
             { name: 'bind', description: 'a q:set of the scene (or value=)', type: 'string' },
             { name: 'value', description: 'an expression, read every frame (or bind=)', type: 'expression' },
             { name: 'size', description: 'font size', type: 'number' },
-            { name: 'color', description: 'its colour (#rrggbb)', type: 'string' },
+            { name: 'color', description: 'its colour: #rrggbb, or an expression giving one, read every frame (red when a balance is below zero)', type: 'string' },
         ]
     },
     {

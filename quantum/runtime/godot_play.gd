@@ -60,7 +60,8 @@ var held: Dictionary = {}     # pressed by "press", until a "release"
 var until_start: Dictionary = {}
 var ended := false
 var q: Node = null              # the Q autoload, which records the events
-var vars_before: Dictionary = {}  # the variables after the last tick, for the "set" events
+var vars_before: Dictionary = {}  # the variables after the last tick, as JSON, for the "set" events
+var vars_hash: Dictionary = {}    # ...and their hashes: a variable is written out again only when it changed
 var scene_before := ""
 var map_sent := ""               # the scene whose map the agent has
 var log := {}                    # tick -> the input changes made on it: the session as a replay tape
@@ -394,16 +395,27 @@ func _tick() -> void:
 
 # A variable of the scene or the game that changed on the tick just run is a
 # "set" event; a scene change is reported by the runtime ("scene") instead.
+# A list or a record changed in place (team.points) is a change too: what each variable was is kept as
+# its JSON, not as the list itself, and a whole world (a league's players) is hashed each tick, not written.
 func _note_sets() -> void:
 	var now := _vars()
 	var name_ := _scene_name()
-	if name_ == scene_before and q != null and q.tracing:
-		for k in now.keys():
-			if vars_before.has(k) and JSON.stringify(now[k]) != JSON.stringify(vars_before[k]):
-				var e := {"kind": "set", "name": k, "from": vars_before[k], "to": now[k], "tick": ticks - 1}
-				if q.events.size() < 500:
-					q.events.append(e)
-	vars_before = now
+	var tracing: bool = name_ == scene_before and q != null and q.tracing
+	var hashes := {}
+	var texts := {}
+	for k in now.keys():
+		hashes[k] = hash(now[k])
+		if vars_hash.get(k) == hashes[k] and vars_before.has(k):
+			texts[k] = vars_before[k]
+			continue
+		texts[k] = JSON.stringify(now[k])
+		if tracing and vars_before.has(k) and texts[k] != vars_before[k]:
+			var e := {"kind": "set", "name": k, "from": JSON.parse_string(vars_before[k]), "to": now[k],
+				"tick": ticks - 1}
+			if q.events.size() < 500:
+				q.events.append(e)
+	vars_before = texts
+	vars_hash = hashes
 	scene_before = name_
 
 

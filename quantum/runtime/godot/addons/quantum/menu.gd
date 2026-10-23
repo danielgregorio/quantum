@@ -31,6 +31,18 @@ extends CanvasLayer
 # columns= lays the items out in a grid (left and right move along a row,
 # unless a slider has the focus); rows= shows so many rows at once, and the
 # rest scroll into view with the focus.
+#
+# A menu of rows (source= and as=) has one button, shown once for each row of
+# a list of the state, read every tick: its label, its if= and what it runs
+# are of the row (a player of the squad, a club to manage). The buttons are
+# made again when the number of rows changes. x= and y= put the menu's top-left
+# corner on the screen, in place of position=.
+#
+# Menus of the same player shown at once (a form and a list beside it) are one
+# column for the keys, in the scene's order: one has the keys, down from its
+# last item goes to the next one's first, up from its first to the previous
+# one's last, and the pointer moving onto an item (or a click on one) brings
+# the keys to its menu. Alone, a menu's last item goes round to its first.
 
 var player: int = 1
 var local_menu: bool = false      # qg:menu local="true": this machine's seat's
@@ -43,6 +55,16 @@ var _if_method = null             # qg:menu if=: the menu is there only while it
 var _waiting: int = -1            # the key (qg:rebind) waiting for the next key pressed, or -1
 var _columns: int = 1
 var _scroll: ScrollContainer = null
+var _rows_method = null           # source=: the method that reads the rows
+var _rows: Array = []             # the rows, as read last
+var _row_spec: Dictionary = {}    # the button shown for each row
+var _list: Container = null       # where the rows' buttons go
+var _font: Font = null
+var _size: int = 16
+var _keys: bool = false           # of the menus of its player shown at once, this one has the keys
+var _skip: bool = false           # the keys came on this tick, from a menu before it: that tap is spent
+var _row_box: StyleBoxFlat = null # a row of a list, and the focused one
+var _row_lit: StyleBoxFlat = null
 
 
 func setup(spec: Dictionary, scene: Node) -> void:
@@ -57,7 +79,11 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	var w: int = ProjectSettings.get_setting("display/window/size/viewport_width", 256)
 	var h: int = ProjectSettings.get_setting("display/window/size/viewport_height", 224)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	match str(spec.get("position", "center")):
+	var placed: bool = spec.get("xy") != null   # x= and y=: its top-left corner
+	match "xy" if placed else str(spec.get("position", "center")):
+		"xy":
+			box.position = Vector2(float(spec["xy"][0]), float(spec["xy"][1]))
+			box.alignment = BoxContainer.ALIGNMENT_BEGIN
 		"top-left":
 			box.position = Vector2(4, 4)
 		"top-right":
@@ -75,6 +101,17 @@ func setup(spec: Dictionary, scene: Node) -> void:
 	if spec.get("font") != null:
 		font = Q.font(str(spec["font"]))
 	var size := int(spec.get("size", 16))
+	_font = font
+	_size = size
+	_rows_method = spec.get("rows_method")
+	if _rows_method != null:   # a list's rows: lines of text, the focused one lit
+		_row_box = StyleBoxFlat.new()
+		_row_box.bg_color = Color(0, 0, 0, 0)
+		_row_box.set_content_margin_all(1)
+		_row_box.content_margin_left = 3
+		_row_box.content_margin_right = 3
+		_row_lit = _row_box.duplicate()
+		_row_lit.bg_color = Color(1, 1, 1, 0.2)
 	# the items: a column, or a grid of columns=; in a box that scrolls when rows= says how many show
 	_columns = int(spec.get("columns", 1))
 	var holder: Container
@@ -85,8 +122,10 @@ func setup(spec: Dictionary, scene: Node) -> void:
 		holder = grid
 	else:
 		holder = VBoxContainer.new()
+		if _rows_method != null:
+			holder.add_theme_constant_override("separation", 0)
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var start: bool = str(spec.get("position", "center")) in ["top-left", "top-right"]
+	var start: bool = placed or str(spec.get("position", "center")) in ["top-left", "top-right"]
 	var outer: Container = box
 	if spec.get("box") != null:   # the items in a frame of the game's, stretched (a sheet with slice=)
 		var panel := PanelContainer.new()
@@ -100,7 +139,10 @@ func setup(spec: Dictionary, scene: Node) -> void:
 		_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 		_scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_scroll.custom_minimum_size = Vector2(0, int(spec["rows"]) * (size * 1.75 + 4))
+		var line := size * 1.75 + 4   # a button's height
+		if _rows_method != null:
+			line = ceilf((font if font != null else ThemeDB.fallback_font).get_height(size)) + 2
+		_scroll.custom_minimum_size = Vector2(0, int(spec["rows"]) * line)
 		_scroll.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if start else Control.SIZE_SHRINK_CENTER
 		_scroll.add_child(holder)
 		outer.add_child(_scroll)
@@ -108,6 +150,12 @@ func setup(spec: Dictionary, scene: Node) -> void:
 		holder.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if start else Control.SIZE_SHRINK_CENTER
 		outer.add_child(holder)
 	var list: Container = holder
+	if _rows_method != null:
+		_row_spec = spec["items"][0]
+		_list = holder
+		_sync_rows()
+		_refresh()
+		return
 	for item in spec.get("items", []):
 		var entry := {"spec": item, "control": null, "line": null}
 		if item["kind"] == "slider" or item["kind"] == "rebind":
@@ -140,13 +188,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			_items.append(entry)
 			continue
 		if item["kind"] == "button":
-			var b := Button.new()
-			b.focus_mode = Control.FOCUS_NONE
-			b.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-			b.text = str(item.get("label", ""))
-			_style(b, font, size)
-			Q.apply_gd(b, item.get("gd"))
+			var b := _button(item)
 			list.add_child(b)
 			entry["control"] = b
 		else:
@@ -174,6 +216,42 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			entry["line"] = line
 		_items.append(entry)
 	_refresh()
+
+
+func _button(item: Dictionary) -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if _rows_method != null:   # a list's rows: each as wide as the widest, its text from the left
+		b.size_flags_horizontal = Control.SIZE_FILL
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		for look in ["normal", "hover", "pressed", "disabled", "focus"]:
+			b.add_theme_stylebox_override(look, _row_box)
+	else:
+		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	b.text = str(item.get("label", ""))
+	_style(b, _font, _size)
+	Q.apply_gd(b, item.get("gd"))
+	return b
+
+
+# source=: the rows read again; a button for each, made again when how many there are changes.
+func _sync_rows() -> void:
+	if _rows_method == null:
+		return
+	_rows = _scene.call(_rows_method)
+	if _rows.size() == _items.size():
+		return
+	for entry in _items:
+		_list.remove_child(entry["control"])
+		entry["control"].queue_free()
+	_items.clear()
+	for i in _rows.size():
+		var b := _button(_row_spec)
+		_list.add_child(b)
+		_items.append({"spec": _row_spec, "control": b, "line": null})
+	if focus >= _items.size():
+		focus = maxi(0, _items.size() - 1)
 
 
 func _style(c: Control, font: Font, size: int) -> void:
@@ -258,8 +336,15 @@ func _stop_editing() -> void:
 func _shown(i: int) -> bool:
 	var spec: Dictionary = _items[i]["spec"]
 	if spec.get("if_method") != null:
-		return bool(_scene.call(spec["if_method"]))
+		return bool(_scene.call(spec["if_method"], _rows[i]) if _rows_method != null else _scene.call(spec["if_method"]))
 	return true
+
+
+func _label(i: int) -> String:
+	var spec: Dictionary = _items[i]["spec"]
+	if spec.get("label_method") == null:
+		return str(spec.get("label", ""))
+	return str(_scene.call(spec["label_method"], _rows[i]) if _rows_method != null else _scene.call(spec["label_method"]))
 
 
 func _shown_indices() -> Array:
@@ -281,13 +366,13 @@ func _item_at(p: Vector2) -> int:
 # What a player sees of it (the play protocol, PLAN_PLAY_PROTOCOL.md): its
 # buttons and fields as shown, which are choosable, and which has the focus.
 func quantum_view() -> Dictionary:
+	_sync_rows()
 	var items := []
 	for i in _items.size():
 		var spec: Dictionary = _items[i]["spec"]
 		var item := {"shown": _shown(i)}
 		if spec["kind"] == "button":
-			item["button"] = Q.translate(_scene.call(spec["label_method"])) if spec.get("label_method") != null \
-				else Q.translate(spec.get("label", ""))
+			item["button"] = Q.translate(_label(i))
 		elif spec["kind"] == "slider":
 			item["slider"] = Q.translate(spec.get("label", ""))
 			item["value"] = _slider_value(spec)
@@ -303,6 +388,8 @@ func quantum_view() -> Dictionary:
 				item["sending"] = _items[i]["pending"]
 		items.append(item)
 	var view := {"kind": "menu", "player": player, "shown": active(), "focus": focus, "items": items}
+	if not _keys and _peers().size() > 1:
+		view["keys"] = false   # another menu of its player, shown with it, has them
 	if _scroll != null:
 		view["scroll"] = _scroll.scroll_vertical   # pixels scrolled down (rows=)
 	return view
@@ -310,13 +397,43 @@ func quantum_view() -> Dictionary:
 
 # For the rollback.
 func q_save() -> Dictionary:
-	return {"f": focus, "ps": _pointer_seen, "e": _editing}
+	return {"f": focus, "ps": _pointer_seen, "e": _editing, "k": _keys, "s": _skip}
 
 
 func q_load(d: Dictionary) -> void:
 	focus = d["f"]
 	_pointer_seen = d["ps"]
 	_editing = d["e"]
+	_keys = d["k"]
+	_skip = d["s"]
+
+
+# The menus of this player shown now in the scene, in its order (this one among them when it is shown).
+func _peers() -> Array:
+	var out := []
+	if not is_inside_tree():
+		return out   # being built
+	for m in get_tree().get_nodes_in_group("q_menu"):
+		if m.get_parent() == get_parent() and m.player == player and m.active() and not m._shown_indices().is_empty():
+			out.append(m)
+	return out
+
+
+func _take(peers: Array) -> void:
+	for m in peers:
+		m._keys = false
+	_keys = true
+
+
+# Down from the last item, up from the first: the keys go to the next menu (or the previous).
+func _pass(peers: Array, step: int) -> void:
+	var at := peers.find(self)
+	var next = peers[(at + step + peers.size()) % peers.size()]
+	_keys = false
+	next._keys = true
+	next._skip = peers.find(next) > at   # it reads this tick's keys after this one: not this tap again
+	var shown: Array = next._shown_indices()
+	next.focus = shown[0] if step > 0 else shown[shown.size() - 1]
 
 
 func active() -> bool:
@@ -333,11 +450,22 @@ func _physics_process(_delta: float) -> void:
 	if not active():
 		_pointer_seen = null   # a pointer that moved while it was away does not choose when it comes back
 		return
+	_sync_rows()
 	var shown := _shown_indices()
 	if shown.is_empty():
 		return
 	if not focus in shown:
 		focus = shown[0]
+	var peers := _peers()
+	var holder = null
+	for m in peers:
+		if m._keys:
+			if holder == null:
+				holder = m
+			else:
+				m._keys = false
+	if holder == null:
+		peers[0]._keys = true   # the first menu shown has the keys until they move
 	var pointer = Q.cursors.get(player)
 	if pointer != null:
 		if _pointer_seen == null:
@@ -347,12 +475,29 @@ func _physics_process(_delta: float) -> void:
 			var hit := _item_at(pointer)
 			if hit >= 0:
 				focus = hit
+				if not _keys:
+					_take(peers)
+	if not _keys:
+		var clicked := Q.tapped(_a("select")) and Q.held(_a("click")) and pointer != null and _item_at(pointer) >= 0
+		if not clicked:
+			return
+		_take(peers)   # a click on one of its items: the keys come here, and the item is chosen
+	if _skip:
+		_skip = false
+		return
 	var at := shown.find(focus)
 	var sliding: bool = _items[focus]["spec"]["kind"] == "slider"
 	var moved := int(Q.tapped(_a("right"))) - int(Q.tapped(_a("left")))
+	var several := peers.size() > 1
 	if Q.tapped(_a("down")):
+		if several and at + _columns >= shown.size():
+			_pass(peers, 1)
+			return
 		focus = shown[(at + _columns) % shown.size()] if _columns > 1 else shown[(at + 1) % shown.size()]
 	elif Q.tapped(_a("up")):
+		if several and at - _columns < 0:
+			_pass(peers, -1)
+			return
 		focus = shown[(at - _columns + shown.size() * _columns) % shown.size()] if _columns > 1 \
 			else shown[(at - 1 + shown.size()) % shown.size()]
 	elif moved != 0 and sliding:
@@ -370,7 +515,12 @@ func _physics_process(_delta: float) -> void:
 			else:
 				_choose(target)
 	if _scroll != null:
-		_scroll.ensure_control_visible.call_deferred(_items[focus]["control"])
+		_see_focus.call_deferred()
+
+
+func _see_focus() -> void:
+	if focus < _items.size() and is_instance_valid(_items[focus]["control"]):
+		_scroll.ensure_control_visible(_items[focus]["control"])
 
 
 func _slider_value(spec: Dictionary) -> float:
@@ -438,7 +588,10 @@ func _choose(i: int) -> void:
 	Q.event("choose", quantum_view()["items"][i])
 	if spec["kind"] == "button":
 		if _scene.has_method(spec["handler"]):
-			_scene.call(spec["handler"], null, null)
+			if _rows_method != null:
+				_scene.call(spec["handler"], _rows[i])   # the row of the button chosen
+			else:
+				_scene.call(spec["handler"], null, null)
 	elif spec["kind"] == "rebind":
 		_waiting = i
 	elif spec["kind"] == "slider":
@@ -460,13 +613,15 @@ func _process(_delta: float) -> void:
 
 func _refresh() -> void:
 	visible = active()
+	_sync_rows()
+	var lit := _keys or _peers().size() <= 1   # the focus shows on the menu that has the keys
 	for i in _items.size():
 		var entry: Dictionary = _items[i]
 		var spec: Dictionary = entry["spec"]
 		var c: Control = entry["control"]
 		c.visible = _shown(i)
 		if spec["kind"] == "button" and spec.get("label_method") != null:
-			(c as Button).text = str(_scene.call(spec["label_method"]))
+			(c as Button).text = _label(i)
 		if spec["kind"] == "field" and _editing != i:
 			var value := str(entry.get("pending", _read(spec["bind"], spec.get("game", false))))
 			if entry["line"].text != value:
@@ -477,4 +632,8 @@ func _refresh() -> void:
 			entry["value"].text = str(int(v)) if v == floorf(v) else str(snappedf(v, 0.01))
 		if spec["kind"] == "rebind":
 			entry["value"].text = "..." if _waiting == i else Q.key_name(spec["action"])
-		c.modulate = Color(1, 1, 1) if i == focus else Color(0.62, 0.62, 0.62)
+		c.modulate = Color(1, 1, 1) if i == focus and lit else Color(0.62, 0.62, 0.62)
+		if _rows_method != null:
+			var box: StyleBoxFlat = _row_lit if i == focus and lit else _row_box
+			if c.get_theme_stylebox("normal") != box:
+				c.add_theme_stylebox_override("normal", box)

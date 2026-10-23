@@ -1595,7 +1595,7 @@ class TestWhatChessAsked:
 '''))
         script = (out / 'scripts' / 'scene_main.gd').read_text()
         assert ('func swap_first(i):\n\tvar held = null\n\tvar flag = null\n\tvar n = null\n'
-                '\theld = board[0]\n\tflag = true\n\tn = 3.0\n\tboard[int(0)] = board[i]\n\tboard[int(i)] = "x"\n'
+                '\theld = board[0]\n\tflag = true\n\tn = 3.0\n\tQ.set_at(board, 0, board[i])\n\tQ.set_at(board, i, "x")\n'
                 '\treturn (held if flag else n)\n') in script
         assert 'var held' not in script.split('func swap_first')[0]      # the scene's state has no `held`
 
@@ -1696,7 +1696,9 @@ class TestLobby:
         assert menu['items'][2] == {'kind': 'field', 'bind': 'lobby_address', 'label': 'Address', 'max_length': 64, 'game': False}
         assert hud['position'] == 'bottom-center' and 'value_method' in hud['items'][0]
         script = (out / 'scripts' / 'scene_title.gd').read_text()
-        assert 'var lobby_address: Variant = Q.url_param("join", "10.0.0.2:9000")' in script
+        # read as the scene is entered, as every computed value of a scene's q:set
+        assert 'var lobby_address: Variant = null' in script
+        assert '\tlobby_address = Q.url_param("join", "10.0.0.2:9000")' in script
         assert '\tQ.net_host(9000)\n' in script and '\tQ.net_join(lobby_address)\n' in script
         assert '\tQ.net_watch(lobby_address)\n' in script                 # no seat: to watch
         assert 'Q.goto_scene(self, "play")' in script
@@ -3012,3 +3014,81 @@ class TestHexesAndCosts:
         e = refuse(tmp_path, HEAD + self.LAND + '  <qg:scene name="main"><qg:tilemap tileset="land" src="projects/crates/rooms/dock.tmx" />'
                    '</qg:scene>\n' + TAIL)
         assert 'a Tiled map of hexes or diamonds is not read yet' in e.message
+
+
+class TestManagementScreens:
+    """PandaFoot's screens (PLAN_PANDAFOOT.md, Phase 1): tables, menus of rows, placed HUDs, records set in place."""
+
+    def scene(self, body: str, head: str = '') -> str:
+        return game(head + '  <qg:scene name="main">\n    <q:set name="team" value="[]" type="array" />\n'
+                    + body + '\n  </qg:scene>\n')
+
+    def test_a_table_a_menu_of_rows_and_a_placed_hud(self, tmp_path):
+        out = build(tmp_path, self.scene(
+            '<qg:hud x="8" y="16"><qg:text value="{len(team)}" color="{\'#ff0000\' if len(team) > 2 else \'#ffffff\'}" />'
+            '<qg:table source="{team}" as="p" rows="5"><qg:column label="Name" value="{p.name}" width="12" />'
+            '<qg:column value="{p.goals}" width="3" align="right" color="#FFFF00" /></qg:table></qg:hud>'
+            '<qg:menu x="8" y="100" source="{team}" as="p"><qg:button label="{p.name}" if="{p.goals > 0}">'
+            '<q:set name="p.goals" value="{p.goals + 1}" /></qg:button></qg:menu>'))
+        spec = json.loads((out / 'game.json').read_text())
+        hud, menu = [n for n in spec['scenes']['main']['nodes'] if n['kind'] in ('hud', 'menu')]
+        assert hud['xy'] == [8, 16] and menu['xy'] == [8, 100] and menu['rows_method'] == '_q_menu_1_rows'
+        assert hud['items'][0]['color_method'] == '_q_text_1'   # and its value, _q_text_2
+        table = hud['items'][1]
+        assert table == {'kind': 'table', 'source': '_q_table_3', 'rows': 5, 'columns': [
+            {'label': 'Name', 'width': 12, 'align': 'left', 'value': '_q_table_3_0'},
+            {'label': '', 'width': 3, 'align': 'right', 'value': '_q_table_3_1', 'color': '#ffff00'}]}
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _q_table_3_0(p):\n\treturn Q.to_str(p.name)' in script
+        assert 'func _on_menu_1_button_0(p) -> void:\n\tp.goals = (p.goals + 1)' in script
+        assert 'func _q_menu_1_if_0(p):\n\treturn (p.goals > 0)' in script
+
+    def test_text_functions_and_a_dictionary_key(self, tmp_path):
+        out = build(tmp_path, self.scene(
+            '<q:set name="tally" value="{ {} }" /><qg:on-input action="jump">'
+            '<q:set name="tally" index="{\'a\'}" value="{fit(\'x\', 3) + thousands(1000, \'.\') + repeat(\'-\', 2) '
+            '+ join(team) + str(pick(team)) + str(chance(0.5))}" /></qg:on-input>'))
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert ('Q.set_at(tally, "a", (((((Q.fit("x", 3) + Q.thousands(1000, ".")) + Q.repeat("-", 2)) + '
+                'Q.join(team)) + Q.to_str(Q.pick(self, team))) + Q.to_str(Q.chance(self, 0.5))))') in script
+
+    def test_a_scene_seeded_by_the_state_and_its_state_computed_as_it_is_entered(self, tmp_path):
+        out = build(tmp_path, game('  <q:set name="world" value="7" type="number" />\n'
+                                   '  <qg:scene name="main" seed="{world * 10}">\n'
+                                   '    <q:set name="roll" value="{random(1, 6)}" type="number" />\n'
+                                   '    <q:set name="lives" value="{3}" type="number" />\n  </qg:scene>\n'))
+        spec = json.loads((out / 'game.json').read_text())['scenes']['main']
+        assert (spec['seed'], spec['seed_method']) == (0, '_q_seed')
+        script = (out / 'scripts' / 'scene_main.gd').read_text()
+        assert 'func _q_seed():\n\treturn int((G.world * 10))' in script
+        assert 'var roll: float = 0.0\n' in script and 'var lives: float = 3\n' in script   # a constant from the start
+        assert 'func _q_enter() -> void:\n\troll = Q.random(self, 1, 6)' in script        # after the seed
+
+    @pytest.mark.parametrize('body,message', [
+        ('<qg:hud x="8"><qg:text value="{1}" /></qg:hud>', '<qg:hud>: x= and y= go together'),
+        ('<qg:menu y="8"><qg:button label="a" /></qg:menu>', '<qg:menu>: x= and y= go together'),
+        ('<qg:hud><qg:table source="{team}" as="p" /></qg:hud>', '<qg:table> needs at least one qg:column'),
+        ('<qg:hud><qg:table source="{team}" as="p"><qg:column value="{p}" width="0" /></qg:table></qg:hud>',
+         '<qg:column width=>: 1 character or more'),
+        ('<qg:hud><qg:table source="{team}" as="p"><qg:column value="{p}" color="red" /></qg:table></qg:hud>',
+         '<qg:column color="red">: a colour #rrggbb, or an expression ({...}) giving one'),
+        ('<qg:hud><qg:text value="{1}" color="#12345" /></qg:hud>', '<qg:text color="#12345">'),
+        ('<qg:menu source="{team}"><qg:button label="a" /></qg:menu>', 'source= and as= go together'),
+        ('<qg:menu source="{team}" as="p"><qg:button label="a" /><qg:button label="b" /></qg:menu>',
+         '<qg:menu source=> holds one qg:button, shown once for each row'),
+        ('<qg:on-input action="jump"><q:set name="club.points" value="{1}" /></qg:on-input>',
+         "'club' is not declared"),
+        ('<qg:on-input action="jump"><q:set name="team..x" value="{1}" /></qg:on-input>',
+         '<q:set name="team..x">: a name, or a field of one (team.points)'),
+        ('<q:function name="f"><q:set name="c" value="{1}" /><q:loop items="{team}" var="c">'
+         '<q:set name="team" value="{[c]}" /></q:loop></q:function>',
+         '<q:loop var="c">: \'c\' is a parameter or a variable here already'),
+        ('<qg:hud><qg:text value="{team.def}" /></qg:hud>',
+         "'def' is a word of the language: name the field otherwise"),
+    ])
+    def test_what_it_refuses(self, tmp_path, body, message):
+        assert message in refuse(tmp_path, self.scene(body)).message
+
+    def test_a_seed_is_a_number_or_an_expression(self, tmp_path):
+        e = refuse(tmp_path, game('  <qg:scene name="main" seed="seven" />\n'))
+        assert '<qg:scene seed="seven">: a whole number, or an expression ({...}) giving one' in e.message
