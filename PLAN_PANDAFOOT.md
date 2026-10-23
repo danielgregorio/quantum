@@ -4,8 +4,8 @@
 > found fixed on 2026-10-23, when the phases were reordered: the club (Phase 2) before the online round (Phase 3);
 > what they found on a second evening fixed the same day, and what they asked for added to Phase 2. Phase 2
 > done the same evening (version 2.0, with its version in view and its changelog), played by the agent for
-> fifteen seasons; next, what people find playing it: 2.1 is the beta, with reports from inside the game (a
-> form, read four times a day).
+> fifteen seasons; next, what people find playing it: 2.1 is the beta, with reports from inside the game, kept by
+> a server of ours (below, "The beta's reports"), and read four times a day.
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The game's design is [danielgregorio/pandafoot](https://github.com/danielgregorio/pandafoot)'s
 > `GAME_DESIGN.md` (v0.2, with the decisions of 2026-10-22), and its numbers are checked there by
@@ -264,6 +264,37 @@ To tune once people have played (none is a bug): the cup's giant-killing (a thir
 six or seven); free agents of first-division strength who sign for the fourth for no fee (the fourth's market was
 meant to be free agents, not these); an offer after a promotion that skips a division (from the third to the first);
 the computer's clubs that never build; a hidden genius nobody else ever finds.
+
+## The beta's reports
+
+Decided with the owner on 2026-10-23: PandaFoot is a beta, and its players report from inside the game, as World
+of Warcraft's betas have them do: no form of a third party, no account to make. A report lands on a server of
+ours, on the owner's homelab, behind its own HTTPS.
+
+- **In the game**: a [!] in the corner of every screen, and F9. It opens a panel over the screen, which waits
+  under it: a bug or a suggestion, the text, and "attach my game" (the save, so a bug is played again exactly).
+  The game adds where it is: the screen, the option the cursor was on, the version, the world, the season, the
+  round, the club. Sent: "Report no. 12 sent. Thank you!"; without the network, kept and sent later.
+- **The receiver, written in Quantum** (`projects/beta-reports/`): `POST /api/reports` keeps each report in
+  SQLite with its save and opens an issue in the private danielgregorio/pandafoot (the token only on the server);
+  a page for the owner lists them. A request's size and rate are limited, and only the game's site may post from
+  a browser.
+- **The language**: `q:endpoint` in the Core, as `PLAN_PLATFORMS.md` designs it under "Later", brought forward
+  for this; in the game language, `qg:post` (a request from the game, in the browser and on the desktop), a panel
+  over any scene (`qg:overlay`: GAMES_PARITY.md's gap "Overlays and additive scenes"), a button on every scene,
+  `focused()` (the option the cursor is on) and the game's state as its save, to attach.
+- **Reading them**: four times a day the agent reads the new issues, groups them, plays the bugs on their saves,
+  and brings the owner a digest to discuss. What a report changes goes into the game's changelog.
+
+| Phase | What | Done when |
+|---|---|---|
+| 1 | `q:endpoint` (Core): a component's endpoint per method, `q:param`s from the JSON body validated as an action's, `q:respond json= status=`, its guards, the origins allowed, a size and a rate limit | its SPEC rule, tests against a real server, the guide's page |
+| 2 | The receiver (`projects/beta-reports/`) and its kit for the homelab (a container, the settings) | a report posted is kept, its issue opened at a fake forge, the owner's page lists it |
+| 3 | The game language: `qg:post`, `qg:overlay`, a button on every scene, `focused()`, the state as a save | Godot tests, a game posting to a receiver started by the test |
+| 4 | PandaFoot 2.1: the [!], the panel, the reports kept until sent | the game, a receiver and a fake forge in one test: a report from the dashboard becomes an issue |
+| 5 | On the homelab, and the reading | the owner's address in the game, a report of the owner's read in a digest |
+
+The form of 2.1's first draft (a Google Form, opened filled in) gives way to this; `url_encode()` stays.
 
 ## Phase 3 — The live round online
 
