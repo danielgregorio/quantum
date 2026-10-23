@@ -1676,7 +1676,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when a player presses select with their qg:cursor somewhere (or another action: action= with a qg:input of the right mouse button, MouseRight, is a right click on a thing). Holds actions and statements; `cursor` is where (x, y, col, row, player), `other` the thing under it, or null. `hovered()` reads the thing under a cursor at any time.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'player', description: 'only this player\'s cursor (any, when not given)', type: 'number' },
             { name: 'action', description: 'the action that chooses: select (the left button, Enter), or one a qg:input declares (keys="MouseRight", "WheelUp", "WheelDown")', type: 'string', default: 'select' },
@@ -1709,7 +1709,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A button of a qg:menu. What it holds runs when it is chosen: actions and statements, like a handler.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'label', description: 'its text, or an expression ({...}) read every frame', required: true, type: 'string' },
             { name: 'if', description: 'shown, and choosable, only while this is true', type: 'expression' },
@@ -1720,7 +1720,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A text box of a qg:menu, bound to a string state: what is typed is the state. Typing is local to the machine (an address) — the lockstep does not carry it. A shared field (shared="true") is a draft until Enter sends it: the text goes with the player\'s input for a tick, and on that tick, on every machine of a networked game, it becomes the bound state and what the field holds runs, with `sender` (the seat that sent it) and `text` — names, a short chat. While a field is typed in, the keys type and play nothing.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'bind', description: 'a q:set of the scene or the game', required: true, type: 'string' },
             { name: 'label', description: 'text before the box', type: 'string', default: '' },
@@ -1787,7 +1787,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'One answer to a qg:line: what the player reads, and what happens when it is chosen (then the next line). Holds actions and statements: a qg:say opens another dialogue, a q:set remembers the answer.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'label', description: 'what it says, or an expression ({...})', required: true, type: 'string' },
             { name: 'if', description: 'offered only when this is true as the line shows', type: 'expression' },
@@ -1798,7 +1798,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when a qg:dialogue has shown its last line, or when a qg:tween is done (the last of its repeats; `me` is the thing it moved, and another tween in it plays after: a sequence). Holds actions and statements.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
         ]
     },
@@ -1807,7 +1807,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this character or prefab stops touching something it touched: a plate stepped off, a door that closes behind. Holds actions and statements; `me` is the one that touched, `other` what it touched. Not when the other is destroyed: it left nothing.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'with', description: 'the tag of what it stops touching', required: true, type: 'string' },
         ]
@@ -1817,7 +1817,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this character or prefab leaves the screen: the camera\'s view, or the scene when it has no camera. In a scene, with of=, when any thing of that tag does (`other` is the thing). Holds actions and statements; it runs in the game\'s tick, the same on every peer.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'of', description: 'scene: the tag', type: 'string' },
             { name: 'side', description: 'the edge it left by', type: 'enum', values: ['any', 'top', 'bottom', 'left', 'right'], default: 'any' },
@@ -1828,7 +1828,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this character or prefab comes onto the screen from outside it (one placed on the screen has not come onto it). In a scene, with of=, when any thing of that tag does.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'of', description: 'scene: the tag', type: 'string' },
             { name: 'side', description: 'the edge it came in by', type: 'enum', values: ['any', 'top', 'bottom', 'left', 'right'], default: 'any' },
@@ -1999,7 +1999,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this character or prefab touches something. Holds actions and statements; `me` is the toucher, `other` what it touched. In a prefab, only the game state is in reach.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'with', description: 'the tag of what it touches', required: true, type: 'string' },
             { name: 'side', description: 'top: landing on it; bottom: hitting it from below; left: hitting it from its left (it is to the right); right: from its right. A side handler runs before the "any" one, which then does not', type: 'enum', values: ['any', 'top', 'bottom', 'left', 'right'], default: 'any' },
@@ -2011,7 +2011,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this prefab takes qg:damage and lives (`me.health` is what is left).',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
         ]
     },
@@ -2020,7 +2020,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this prefab\'s health reaches 0, before it goes. In a scene, with of=, when any thing of that tag dies there.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'of', description: 'scene: the tag', type: 'string' },
         ]
@@ -2063,7 +2063,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'Runs its handler when a condition turns true: a wave beaten (`count(\'enemy\') == 0`), a room solved, a score reached. The condition is read at the start of every tick, from the scene\'s first, after the qg:afters due then (not while the scene is paused); the handler runs on the tick it is first true, and again only after it has been false. Holds actions and statements.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'condition', description: 'an expression of the scene\'s state', required: true, type: 'expression' },
         ]
@@ -2073,7 +2073,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'Runs its handler after so many ticks, or every so many ticks, in this scene.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'after', description: 'ticks from entering the scene, once', type: 'number' },
             { name: 'every', description: 'ticks between runs, from entering the scene (or from=)', type: 'number' },
@@ -2128,7 +2128,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when the player presses an action in this scene, or lets it go (on="release"); or, with sequence=, when a player presses several in order in a short time — a special move: "down, forward, punch" holds on the tick punch is pressed, if down and then forward were pressed before it within within= ticks (other presses between them do not matter, and the presses it uses are used up). "forward" and "back" are right and left as that player\'s character faces. Holds actions and statements.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'action', description: 'a default action, or one a qg:input declares; or sequence=', type: 'string' },
             { name: 'on', description: 'press: as it goes down; release: as it is let go', type: 'enum', values: ['press', 'release'], default: 'press' },
@@ -2142,7 +2142,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this character\'s swing (attack-action) reaches something. Holds actions and statements.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'with', description: 'the tag of what it hits', required: true, type: 'string' },
         ]
@@ -2152,7 +2152,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this character falls below the tilemap. Holds actions and statements.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
         ]
     },
@@ -2365,7 +2365,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens while this character touches a tile of a kind (qg:tile kind=): stands on it, is in it, or bumps it. Holds actions and statements; `me` is the character. Without a cooldown, once as it comes to touch one; with one, again each time the cooldown runs out while it still does.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'kind', description: '', required: true, type: 'enum', values: ['ladder', 'water', 'ice', 'hurt'] },
             { name: 'cooldown', description: 'ticks before it may run again while still touching', type: 'number', default: '0' },
@@ -2376,7 +2376,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when an animation of this character or prefab with loop="false" has played to its last frame. Holds actions and statements; `me` is whose animation it is.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'name', description: 'the animation', required: true, type: 'string' },
         ]
@@ -2386,7 +2386,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when this fighter\'s health reaches 0. Holds actions and statements; `me` is the loser, `other` the winner.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
         ]
     },
@@ -2417,7 +2417,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'What happens when a character bumps this prefab (opens-with=) without the item. Holds actions and statements; `me` is the locked thing, `other` the character.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
         ]
     },
@@ -2446,7 +2446,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'Runs what it holds once for every thing of a tag in the scene, in the scene\'s order, with var= naming the thing: freeze every enemy, break the bricks near a bomb. The things are those there as it starts; one destroyed meanwhile is skipped.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'tag', description: 'the things\' tag', required: true, type: 'string' },
             { name: 'var', description: 'the name of each thing in turn (a target=, an expression)', type: 'string', default: 'it' },
@@ -2508,7 +2508,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'Runs what it holds later, so many ticks (or seconds) after the handler reached it: a power-up that runs out, a bomb\'s fuse, a pause before the next serve. It counts the game\'s ticks, so a replay and every peer see the same; it waits while the scene is paused, and goes with the scene. The names it reads (me, other, a loop variable, a parameter) are what they were as it started; a thing gone by then is null, and an action on it does nothing.',
         category: 'Game',
-        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
+        allowedChildren: ['qg:give', 'qg:take', 'qg:for-each', 'qg:camera-to', 'qg:attach', 'qg:detach', 'qg:beam', 'qg:after', 'qg:time-scale', 'qg:open-url', 'qg:quit', 'qg:watch', 'qg:start-now', 'qg:reset-items', 'qg:destroy', 'qg:bounce', 'qg:play-animation', 'qg:play', 'qg:music', 'qg:stop', 'qg:respawn', 'qg:deflect', 'qg:become', 'qg:spawn', 'qg:swap', 'qg:checkpoint', 'qg:damage', 'qg:burst', 'qg:rumble', 'qg:shake', 'qg:tween', 'qg:travel', 'qg:velocity', 'qg:set-tile', 'qg:emit', 'qg:put', 'qg:host', 'qg:join', 'qg:leave', 'qg:pause', 'qg:resume', 'qg:say', 'qg:goto-scene', 'qg:save', 'qg:next-language', 'qg:continue', 'qg:volume', 'qg:fullscreen'],
         attributes: [
             { name: 'ticks', description: 'how many ticks from now (60 a second)', type: 'expression' },
             { name: 'seconds', description: 'or how many seconds, rounded to ticks', type: 'expression' },
@@ -2523,6 +2523,15 @@ export const gameTags: TagSchema[] = [
         attributes: [
             { name: 'scale', description: '0.25: four times slower; 1: as usual; up to 4', required: true, type: 'number' },
             { name: 'seconds', description: 'seconds as the player sees them, then back to 1 (0: until another qg:time-scale)', type: 'number', default: '0' },
+        ]
+    },
+    {
+        name: 'open-url',
+        namespace: 'qg',
+        description: 'Opens a web address in the player\'s browser: a new tab when the game runs in a browser, the system\'s browser elsewhere (a changelog, the game\'s page, its credits). Only http:// and https:// addresses. When an agent plays it (the play protocol, a replay) it opens nothing: the "open-url" event says what it would have opened.',
+        category: 'Game',
+        attributes: [
+            { name: 'href', description: 'the address, or an expression ({...}) that gives one', required: true, type: 'string' },
         ]
     },
     {

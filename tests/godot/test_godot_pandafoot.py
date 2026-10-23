@@ -6,6 +6,7 @@ the same world; a saved game continues where it was; in Portuguese, the screens 
 """
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -160,6 +161,33 @@ def test_in_portuguese(pandafoot, godot):
         squad = game.act(tap=['squad'], ticks=3)
         assert tables(squad)[0]['table'][:4] == ['#', 'Nome', 'Pos', 'For']
         assert {row[2].split('/')[0] for row in tables(squad)[0]['rows']} <= {'GOL', 'DEF', 'MEI', 'ATA'}
+
+
+def test_the_version_is_in_view_and_whats_new_opens_its_changelog(pandafoot, godot):
+    """The version on the title and in the dashboard's corner, and "What's new" on the title opening the
+    changelog's page in the player's language (asked for on the second evening). The newest version of each
+    changelog is the game's."""
+    source = (PROJECTS / 'pandafoot' / 'pandafoot.q').read_text(encoding='utf-8')
+    version = re.search(r'<q:function name="game_version"><q:return value="\{.([0-9.]+).\}" />', source).group(1)
+    for log in ('CHANGELOG.md', 'CHANGELOG.pt.md', 'CHANGELOG.es.md'):
+        text = (PROJECTS / 'pandafoot' / log).read_text(encoding='utf-8')
+        assert re.search(r'^## (\S+)', text, re.M).group(1) == version, log
+    for lang, page in (('en', ''), ('pt', 'pt/'), ('es', 'es/')):
+        with PlaySession(pandafoot, binary=godot, lang=lang) as game:
+            title = game.act(ticks=3)
+            assert f'PandaFoot v{version}' in texts(title)
+            buttons = [i['button'] for i in menus(title)[0]['items'] if i['shown']]
+            k = next(i for i, b in enumerate(buttons) if b.endswith(f'(v{version})'))
+            for _ in range(k):
+                game.act(tap=['down'], ticks=2)
+            opened = game.act(tap=['select'], ticks=3)
+            assert [e['url'] for e in opened['events'] if e['kind'] == 'open-url'] == [
+                f'https://quantumframework.net/games/pandafoot/changelog/{page}']
+            assert opened['scene'] == 'title'
+            if lang == 'en':
+                for _ in range(k):
+                    game.act(tap=['up'], ticks=2)
+                assert f'v{version}' in texts(new_game(game))
 
 
 # --- what the first people to play it found (PLAN_PANDAFOOT.md, the fixes of 2026-10-23) ---

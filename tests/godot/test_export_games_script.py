@@ -147,3 +147,36 @@ def test_with_a_relay_each_networked_game_can_be_played_online(tmp_path, monkeyp
     page = eg.write_index(tmp_path).read_text(encoding='utf-8')
     online = {name for name in eg.games() if f'data-game="{name}" data-relay="wss://relay.example"' in page}
     assert online == {'arena', 'bricks', 'chess', 'delve', 'pong', 'rally', 'siege', 'towers'}   # with qg:multiplayer
+
+
+def test_a_game_with_a_changelog_has_its_page_in_each_language(tmp_path):
+    eg = load()
+    assert list(eg.changelogs('pandafoot')) == ['en', 'es', 'pt']           # CHANGELOG.md, then its translations
+    assert eg.changelogs('pong') == {}
+    for name in eg.games():
+        (tmp_path / name).mkdir()
+        (tmp_path / name / 'index.html').write_text('x')
+    index = eg.write_index(tmp_path).read_text(encoding='utf-8')
+    assert 'href="pandafoot/changelog/">What\'s new</a>' in index and 'pong/changelog/' not in index
+    folder = tmp_path / 'pandafoot' / 'changelog'
+    en, es, pt = ((folder / sub / 'index.html').read_text(encoding='utf-8') for sub in ('', 'es', 'pt'))
+    assert '<html lang="pt">' in pt and '<h1 id="novidades-do-pandafoot">Novidades do PandaFoot</h1>' in pt
+    assert '<a class="play" href="../../">' in pt and '<a class="play" href="../">' in en
+    assert 'href="../../changelog/" hreflang="en"' in pt and 'href="../changelog/pt/" hreflang="pt"' in en
+    assert 'hreflang="pt" aria-current="page"' in pt
+    # the translations say every version the English page says, in its order
+    versions = [re.findall(r'<h2 id="[^"]*">([0-9.]+) ', page) for page in (en, es, pt)]
+    assert versions[0] == versions[1] == versions[2] and len(versions[0]) >= 4
+    # where the game's "What's new" goes is where the pages are
+    source = (REPO / 'projects' / 'pandafoot' / 'pandafoot.q').read_text(encoding='utf-8')
+    assert "'https://quantumframework.net/games/pandafoot/changelog/' + ('pt/'" in source and "('es/'" in source
+
+
+def test_a_changelog_is_written_in_a_little_markdown():
+    eg = load()
+    assert eg.markdown('# What\'s new\n\nA **bold** `code` and [a link](https://example.com/a).\nOn.\n\n'
+                       '## 1.0 — First\n- one\n  goes on\n- two <b>\nAfter.\n') == (
+        '<h1 id="what-s-new">What&#x27;s new</h1>\n'
+        '<p>A <strong>bold</strong> <code>code</code> and <a href="https://example.com/a">a link</a>. On.</p>\n'
+        '<h2 id="1-0-first">1.0 — First</h2>\n<ul>\n<li>one goes on</li>\n<li>two &lt;b&gt;</li>\n</ul>\n<p>After.</p>')
+    assert eg.markdown('[x](javascript:alert(1))') == '<p>[x](javascript:alert(1))</p>'     # a web address only

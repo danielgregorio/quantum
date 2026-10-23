@@ -47,7 +47,8 @@ ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'c
            'damage', 'burst', 'shake', 'deflect', 'stop', 'put', 'host', 'join', 'leave', 'pause', 'resume',
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
-           'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble', 'music', 'travel')
+           'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble', 'music', 'travel',
+           'open-url')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -987,6 +988,12 @@ TAGS: Dict[str, Tag] = {
         {'scale': Attr('float', required=True, doc='0.25: four times slower; 1: as usual; up to 4'),
          'seconds': Attr('float', 0.0, doc='seconds as the player sees them, then back to 1 (0: until another '
                                            'qg:time-scale)')},
+        parents=('handler',)),
+    'open-url': Tag(
+        'Opens a web address in the player\'s browser: a new tab when the game runs in a browser, the system\'s '
+        'browser elsewhere (a changelog, the game\'s page, its credits). Only http:// and https:// addresses. When an '
+        'agent plays it (the play protocol, a replay) it opens nothing: the "open-url" event says what it would have opened.',
+        {'href': Attr('str', required=True, doc='the address, or an expression ({...}) that gives one')},
         parents=('handler',)),
     'quit': Tag(
         'Ends the game: the window closes. In a browser there is nothing to quit to and it does nothing; '

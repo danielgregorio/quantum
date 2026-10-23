@@ -154,6 +154,7 @@ intention:
     - "qg:for-each runs what it holds once for every thing of tag= in the scene, var= naming each (damage every enemy near a bomb)"
     - "qg:time-scale runs the whole game slower or faster (scale=), for seconds= or until changed; each tick stays the same tick, so replays and peers agree"
     - "qg:quit closes the game (not in a browser: can_quit() says whether it would)"
+    - "qg:open-url opens a web page in the player's browser (a new tab in a browser): a changelog, the game's page; only http:// and https://, and nothing when an agent plays (the open-url event)"
     - "qg:after runs what it holds ticks= or seconds= later (a power-up that runs out, a fuse), with the names of its handler as they were; name= restarts one still waiting"
     - "qg:when in a scene runs its handler when condition= turns true (a wave beaten: count('enemy') == 0), read at the start of every tick, once until it has been false again"
     - "qg:start-now: the host starts the networked game with the players there, once min-players= are"

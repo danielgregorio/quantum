@@ -16,7 +16,9 @@ docs/public/games/manifest.json lists what was built, and
 docs/public/games/index.html is the page that shows every game with its
 screenshot, what it is, its keys and its links (from projects/games.json),
 and docs/public/games/<name>/source/ the page of each game's source;
-docs/targets/play.md links them. The Deploy Docs workflow runs this before the
+a game with a projects/<name>/CHANGELOG.md (and CHANGELOG.<lang>.md, its
+translations) gets docs/public/games/<name>/changelog/ (and changelog/<lang>/),
+the page its "What's new" opens; docs/targets/play.md links them. The Deploy Docs workflow runs this before the
 site is built; nothing here is committed.
 
 Templates: --install-templates downloads Godot's archive for the pinned
@@ -564,6 +566,137 @@ def write_source(name: str, title: str, folder: Path) -> Path:
     return page
 
 
+CHANGELOG_PAGE = """<!doctype html>
+<html lang="{lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{heading}</title>
+<meta name="description" content="{heading}: what each version of {title} changed.">
+<style>
+:root {{ --bg: #0f1020; --card: #1a1b33; --text: #ecebf5; --muted: #a9a8c3; --accent: #7c6cff; --line: #2b2c4d; }}
+@media (prefers-color-scheme: light) {{
+  :root {{ --bg: #f4f4fb; --card: #ffffff; --text: #1b1b2f; --muted: #5d5d78; --accent: #5a48f0; --line: #dcdcec; }}
+}}
+* {{ box-sizing: border-box; }}
+body {{ margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }}
+main {{ max-width: 760px; margin: 0 auto; padding: 28px 16px 56px; }}
+nav {{ display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: .875rem; }}
+nav a {{ padding: 4px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--text);
+  text-decoration: none; }}
+nav a:hover, nav a[aria-current="page"] {{ border-color: var(--accent); }}
+nav a.play {{ background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }}
+h1 {{ margin: 18px 0 8px; font-size: 1.75rem; }}
+h2 {{ margin: 32px 0 8px; font-size: 1.25rem; padding-top: 16px; border-top: 1px solid var(--line); }}
+h2:first-of-type {{ border-top: 0; }}
+p {{ margin: 8px 0; }}
+ul {{ margin: 8px 0; padding-left: 22px; }}
+li {{ margin: 4px 0; }}
+a {{ color: var(--accent); }}
+code {{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; }}
+</style>
+</head>
+<body>
+<main>
+<nav><a class="play" href="{root}">&#9654; {title}</a> {languages}</nav>
+{body}
+</main>
+</body>
+</html>
+"""
+
+CHANGELOG_LANGUAGES = {'en': 'English', 'pt': 'Português', 'es': 'Español'}
+
+
+def _inline(text: str) -> str:
+    """A line of the changelog: **bold**, `code` and [a link](address), the rest escaped."""
+    out, pos = [], 0
+    for m in re.finditer(r'\*\*(.+?)\*\*|`([^`]+)`|\[([^\]]+)\]\((https?://[^)\s]+)\)', text):
+        out.append(html.escape(text[pos:m.start()]))
+        if m.group(1) is not None:
+            out.append(f'<strong>{_inline(m.group(1))}</strong>')
+        elif m.group(2) is not None:
+            out.append(f'<code>{html.escape(m.group(2))}</code>')
+        else:
+            out.append(f'<a href="{html.escape(m.group(4))}">{html.escape(m.group(3))}</a>')
+        pos = m.end()
+    out.append(html.escape(text[pos:]))
+    return ''.join(out)
+
+
+def markdown(text: str) -> str:
+    """The little Markdown a changelog is written in, as HTML: # and ## headings, - lists (an item goes on in
+    the indented lines under it), paragraphs, **bold**, `code` and [links](https://...)."""
+    blocks, para, items = [], [], []
+
+    def close():
+        if para:
+            blocks.append(f'<p>{_inline(" ".join(para))}</p>')
+            para.clear()
+        if items:
+            blocks.append('<ul>\n' + '\n'.join(f'<li>{_inline(i)}</li>' for i in items) + '\n</ul>')
+            items.clear()
+
+    for line in text.splitlines():
+        heading = re.match(r'(#{1,3}) +(.*)', line)
+        if heading:
+            close()
+            level = len(heading.group(1))
+            ident = re.sub(r'[^a-z0-9]+', '-', heading.group(2).lower()).strip('-')
+            blocks.append(f'<h{level} id="{ident}">{_inline(heading.group(2).strip())}</h{level}>')
+        elif re.match(r'[-*] ', line):
+            if para:
+                close()
+            items.append(line[2:].strip())
+        elif line.startswith(' ') and items and line.strip():
+            items[-1] += ' ' + line.strip()
+        elif not line.strip():
+            close()
+        else:
+            if items:
+                close()
+            para.append(line.strip())
+    close()
+    return '\n'.join(blocks)
+
+
+def changelogs(name: str) -> dict:
+    """A game's changelogs by language: CHANGELOG.md is English, CHANGELOG.pt.md Portuguese, and so on."""
+    project = REPO / 'projects' / name
+    found = {}
+    for path in sorted(project.glob('CHANGELOG*.md')):
+        m = re.fullmatch(r'CHANGELOG(?:\.([a-z]{2}))?\.md', path.name)
+        if m:
+            found[m.group(1) or 'en'] = path
+    return dict(sorted(found.items(), key=lambda kv: (kv[0] != 'en', kv[0]))) if 'en' in found else {}
+
+
+def write_changelog(name: str, title: str, folder: Path) -> list:
+    """<name>/changelog/index.html from the game's CHANGELOG.md, and <name>/changelog/<lang>/ from each of
+    its translations, each linking the others: the page the game's "What's new" opens (qg:open-url)."""
+    pages = []
+    found = changelogs(name)
+    for lang, path in found.items():
+        out = folder / 'changelog' / ('' if lang == 'en' else lang)
+        out.mkdir(parents=True, exist_ok=True)
+        up = '../' if lang == 'en' else '../../'
+        text = path.read_text(encoding='utf-8')
+        heading = re.search(r'^# +(.+)$', text, re.M)
+        others = []
+        for other in found:
+            href = up + 'changelog/' + ('' if other == 'en' else other + '/')
+            current = ' aria-current="page"' if other == lang else ''
+            others.append(f'<a href="{href}" hreflang="{other}"{current}>{CHANGELOG_LANGUAGES.get(other, other)}</a>')
+        page = out / 'index.html'
+        page.write_text(CHANGELOG_PAGE.format(
+            lang=lang, title=html.escape(title), root=up, languages=' '.join(others) if len(found) > 1 else '',
+            heading=html.escape(heading.group(1).strip() if heading else title), body=markdown(text)),
+            encoding='utf-8')
+        pages.append(page)
+    return pages
+
+
 def write_index(out_root: Path) -> Path:
     """games/index.html: every game that is built under out_root, in the order of projects/games.json.
 
@@ -595,6 +728,8 @@ def write_index(out_root: Path) -> Path:
             links.append(f'<a href="{name}/{name}-android.apk">Android</a>')
         write_source(name, g['title'], folder)
         links.append(f'<a class="source" href="{name}/source/">View the source</a>')
+        if write_changelog(name, g['title'], folder):
+            links.append(f'<a href="{name}/changelog/">What\'s new</a>')
         img = (f'<a class="shot" href="{name}/"><img src="{name}/screenshot.png" alt="{html.escape(g["title"])}" '
                f'loading="lazy"></a>') if shot.is_file() else ''
         cards.append(f"""<article class="card" id="{name}">

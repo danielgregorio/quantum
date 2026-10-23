@@ -817,6 +817,13 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         return f'Q.set_fullscreen(bool({compile_expression(el.get("on"), scope, el.line)}))'
     if el.tag == 'next-language':
         return 'Q.next_language()'
+    if el.tag == 'open-url':
+        href = str(el.get('href')).strip()
+        if is_expression(href):
+            return f'Q.open_url({compile_expression(href, scope, el.line)})'
+        if not re.match(r'https?://\S+$', href):
+            raise GameCompileError(f'<qg:open-url href="{href}">: an http:// or https:// address', el.line)
+        return f'Q.open_url({json.dumps(href)})'
     if el.tag == 'checkpoint':
         at = el.get('at')
         if not scope.has(at):

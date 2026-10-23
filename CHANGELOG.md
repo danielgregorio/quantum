@@ -10,6 +10,26 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: a web page from a game. `<qg:open-url href=>` opens an address
+  in the player's browser: a new tab when the game runs in a browser, the
+  system's browser elsewhere (a changelog, the game's page, its credits).
+  Only `http://` and `https://`: another written address is a compile error,
+  and one an expression gives opens nothing. Played by an agent (the play
+  protocol, a replay) it opens nothing, and an `open-url` event says the
+  address (`tests/godot/test_godot_open_url.py`).
+- Laboratory: PandaFoot's version, always in view, and what changed in it
+  (asked for by its players). The title and the dashboard's corner show the
+  version, and "What's new" on the title opens the game's changelog in the
+  player's language (`projects/pandafoot/CHANGELOG.md`, `.pt.md`, `.es.md`).
+  `scripts/export-games.py` makes a game's `CHANGELOG.md` and its
+  translations its page, `games/<name>/changelog/` (and `changelog/<lang>/`),
+  linked from the games page.
+- Laboratory: a game state or a `q:function` named like what every Godot
+  object has (`free`, `get`, `connect`), or a function named like a method
+  of every node (`draw_line`), is a compile error that says so: the state
+  broke the scripts that read it, and the function replaced the engine's
+  own, so the scene did not load. A function may share a signal's name
+  (`ready`).
 - Motion, the same in every renderer (UI-19): `fade`, `slide` and `expand`,
   `fast` (150 ms) or `normal` (250 ms). `transition=` on `ui:window` (the page
   enters), `enter=` on any `ui:*` element, an expression too (it enters when its

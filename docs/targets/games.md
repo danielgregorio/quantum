@@ -1472,6 +1472,16 @@ A thing travels to a place by the cheapest way over the scene's qg:tilemap (qg:t
 
 Goes inside: a handler.
 
+### `qg:open-url`
+
+Opens a web address in the player's browser: a new tab when the game runs in a browser, the system's browser elsewhere (a changelog, the game's page, its credits). Only http:// and https:// addresses. When an agent plays it (the play protocol, a replay) it opens nothing: the "open-url" event says what it would have opened.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `href` | text | required | the address, or an expression ({...}) that gives one |
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:asset`
@@ -6923,6 +6933,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- ===== Little helpers ===== -->
 
+  <!-- the version a player sees on the title and the dashboard: a function, not the state, so a save of an older
+       version does not bring its number back. What each version changed: CHANGELOG.md beside this file (and
+       CHANGELOG.pt.md, CHANGELOG.es.md), on the site at games/pandafoot/changelog/ -->
+  <q:function name="game_version"><q:return value="{'2.0'}" /></q:function>
+
+  <!-- that page, in the player's language -->
+  <q:function name="changelog_url">
+    <q:return value="{'https://quantumframework.net/games/pandafoot/changelog/' + ('pt/' if language() == 'Português' else ('es/' if language() == 'Español' else ''))}" />
+  </q:function>
+
   <!-- a new game starts from nothing: no managers, the first season (a game played before leaves nothing behind) -->
   <q:function name="reset_game">
     <q:set name="managers" value="{[]}" />
@@ -8486,8 +8506,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:button label="{tr('Continue') + ' 2'}" if="{has_save(2)}"><qg:continue slot="2" /></qg:button>
       <qg:button label="{tr('Continue') + ' 3'}" if="{has_save(3)}"><qg:continue slot="3" /></qg:button>
       <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
+      <qg:button label="{tr('What\'s new') + ' (v' + game_version() + ')'}"><qg:open-url href="{changelog_url()}" /></qg:button>
       <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
     </qg:menu>
+    <qg:hud position="bottom-right" font="assets/DejaVuSansMono.ttf" size="11">
+      <qg:text value="{'PandaFoot v' + game_version()}" color="#aaaaaa" />
+    </qg:hud>
   </qg:scene>
 
   <!-- A new game: the world's number, the save, the managers and their clubs. -->
@@ -8563,9 +8587,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:text value="{'═══ ' + tr('NEWS') + ' ═══'}" color="#55ffff" />
       <qg:table source="{news[0:5]}" as="n"><qg:column value="{tr(n.text) + (' ' + n.arg if n.arg != '' else '')}" width="50" /></qg:table>
     </qg:hud>
-    <qg:hud x="8" y="356" font="assets/DejaVuSansMono.ttf" size="11">
+    <qg:hud x="6" y="358" font="assets/DejaVuSansMono.ttf" size="10">
       <qg:text value="{'[F1] ' + tr('Line-up') + ' [F2] ' + tr('Tactics') + ' [F3] ' + tr('Squad') + ' [F5] ' + tr('Finances') + ' [F6] ' + tr('Market') + ' [F7] ' + tr('Table') + ' [F8] ' + tr('History')}" color="#55ffff" />
       <qg:text value="{'[ENTER] ' + tr('Ready: next manager' if turn < len(managers) - 1 else 'Play the round') + '   [ESC] ' + tr('Save and leave')}" color="#ffff55" />
+    </qg:hud>
+    <qg:hud position="bottom-right" font="assets/DejaVuSansMono.ttf" size="10">
+      <qg:text value="{'v' + game_version()}" color="#aaaaaa" />
     </qg:hud>
     <qg:on-input action="lineup"><qg:goto-scene name="lineup" /></qg:on-input>
     <qg:on-input action="tactics"><qg:goto-scene name="tactics" /></qg:on-input>
@@ -9535,6 +9562,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Options" as="Opções" />
     <qg:phrase text="Quit" as="Sair" />
+    <qg:phrase text="What's new" as="Novidades" />
     <qg:phrase text="NEW GAME" as="NOVO JOGO" />
     <qg:phrase text="Managers:" as="Técnicos:" />
     <qg:phrase text="World no." as="Mundo nº" />
@@ -9863,6 +9891,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="Continue" as="Continuar" />
     <qg:phrase text="Options" as="Opciones" />
     <qg:phrase text="Quit" as="Salir" />
+    <qg:phrase text="What's new" as="Novedades" />
     <qg:phrase text="NEW GAME" as="NUEVA PARTIDA" />
     <qg:phrase text="Managers:" as="Técnicos:" />
     <qg:phrase text="World no." as="Mundo n.º" />
