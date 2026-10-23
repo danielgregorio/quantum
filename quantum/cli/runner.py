@@ -312,6 +312,7 @@ Examples:
   quantum admin                    # Start the Quantum Admin
   quantum console                  # The application's pages in the terminal
   quantum desktop                  # The application's pages in a desktop window
+  quantum run my-app --on desktop  # An application in one of its versions: web, desktop, terminal
   quantum check                    # Pages parse, SQL compiles, query fields exist
   quantum test                     # Run the app's *.test.q tests
   quantum run game.q               # Build a Godot 4 project
@@ -344,8 +345,13 @@ Examples:
     subparsers = parser.add_subparsers(dest='command', help='Command to execute')
 
     # Run command
-    run_parser = subparsers.add_parser('run', help='Execute a .q file')
-    run_parser.add_argument('file', help='.q file to execute')
+    run_parser = subparsers.add_parser('run', help='Execute a .q file, or run an application in one of its versions (--on)')
+    run_parser.add_argument('file', help='.q file to execute, or with --on the application (its folder)')
+    run_parser.add_argument('--on', choices=['web', 'desktop', 'tui', 'terminal'],
+                            help="The application's version: web (the browser), desktop (a window of its own), "
+                                 'tui (a text screen drawn by Godot) or terminal (UI-18)')
+    run_parser.add_argument('--page', default='/', help='With --on desktop or terminal: the page to open (default: /)')
+    run_parser.add_argument('--port', type=int, help='With --on web: the port (overrides the config)')
     run_parser.add_argument('--debug', action='store_true', help='Debug mode')
     run_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
     run_parser.add_argument('--target', type=_ui_target, choices=['html', 'textual', 'mobile'], default='html',
@@ -547,6 +553,13 @@ def main():
         if not args.file:
             print("[ERROR] File argument is required for 'run' command")
             print("Usage: quantum run <file.q>")
+            sys.exit(1)
+
+        if getattr(args, 'on', None):       # an application, in one of its versions (UI-18)
+            from quantum.cli.platforms import run_on
+            sys.exit(run_on(args.file, args.on, args.page, args.port))
+        if os.path.isdir(args.file):
+            print(f"[ERROR] {args.file} is a folder: an application runs with --on web|desktop|tui|terminal")
             sys.exit(1)
 
         if getattr(args, 'watch', False):   # a game, played while its .q is edited

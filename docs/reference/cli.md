@@ -20,11 +20,14 @@ The `quantum` command. Every command takes `-h` / `--help`. The Guide explains t
 
 ## `quantum run`
 
-Execute a .q file.
+Execute a .q file, or run an application in one of its versions (--on).
 
 | Argument | Meaning | Default | Values |
 |---|---|---|---|
-| `file` | .q file to execute |  |  |
+| `file` | .q file to execute, or with --on the application (its folder) |  |  |
+| `--on` | The application's version: web (the browser), desktop (a window of its own), tui (a text screen drawn by Godot) or terminal ([UI-18](./spec#UI-18)) |  | `web`, `desktop`, `tui`, `terminal` |
+| `--page` | With --on desktop or terminal: the page to open (default: /) | `/` |  |
+| `--port` | With --on web: the port (overrides the config) |  |  |
 | `--debug` | Debug mode |  |  |
 | `--config` | Config file | `quantum.config.yaml` |  |
 | `--target` | UI target (for type="ui" apps): html, textual, or mobile | `html` | `html`, `textual`, `mobile` |
@@ -32,7 +35,7 @@ Execute a .q file.
 | `--check` | For a game: after the build, open the Godot project headless and fail on any script error (needs Godot; `python scripts/godot.py install`) |  |  |
 | `--watch` | For a game: play it in Godot, and each time the .q (or a file beside it) is saved, build again and go on where the game was, under the new build |  |  |
 
-Specified by: [IA-7](./spec#IA-7) · [CFG-1](./spec#CFG-1) · [UI-0](./spec#UI-0) · [UI-2](./spec#UI-2) · [UI-8](./spec#UI-8)
+Specified by: [IA-7](./spec#IA-7) · [CFG-1](./spec#CFG-1) · [UI-0](./spec#UI-0) · [UI-2](./spec#UI-2) · [UI-8](./spec#UI-8) · [UI-18](./spec#UI-18)
 
 <a id="cli-start"></a>
 
@@ -48,7 +51,7 @@ Start web server.
 | `--hot-reload` | Reload the open pages when a component or static file changes |  |  |
 | `--hot-reload-port` | WebSocket port for --hot-reload (default 35729) |  |  |
 
-Specified by: [ROUTE-1](./spec#ROUTE-1) · [CFG-1](./spec#CFG-1) · [APP-1](./spec#APP-1) · [DEV-1](./spec#DEV-1) · [DEV-4](./spec#DEV-4) · [TEST-1](./spec#TEST-1)
+Specified by: [ROUTE-1](./spec#ROUTE-1) · [CFG-1](./spec#CFG-1) · [APP-1](./spec#APP-1) · [UI-18](./spec#UI-18) · [DEV-1](./spec#DEV-1) · [DEV-4](./spec#DEV-4) · [TEST-1](./spec#TEST-1)
 
 <a id="cli-stop"></a>
 
@@ -69,7 +72,7 @@ Open the application's pages in the terminal.
 | `[path]` | Page to open (default: /) | `/` |  |
 | `--config` | Config file | `quantum.config.yaml` |  |
 
-Specified by: [UI-3](./spec#UI-3) · [UI-15](./spec#UI-15)
+Specified by: [UI-3](./spec#UI-3) · [UI-15](./spec#UI-15) · [UI-18](./spec#UI-18)
 
 <a id="cli-pixel"></a>
 
@@ -122,7 +125,7 @@ Open the application's pages in a desktop window.
 | `--width` | Window width (default: 1024) | `1024` |  |
 | `--height` | Window height (default: 720) | `720` |  |
 
-Specified by: [UI-4](./spec#UI-4) · [UI-8](./spec#UI-8)
+Specified by: [UI-4](./spec#UI-4) · [UI-8](./spec#UI-8) · [UI-18](./spec#UI-18)
 
 <a id="cli-play"></a>
 

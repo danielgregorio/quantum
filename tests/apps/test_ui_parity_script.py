@@ -22,6 +22,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.apps.ui_drivers import Browser, run_console_script, run_script
+
 SHOWCASE = Path(__file__).resolve().parent / "showcase"
 OS_DIR = Path(__file__).resolve().parents[2] / "os"
 
@@ -81,68 +83,7 @@ def url(tmp_path, monkeypatch):
     logging.disable(logging.NOTSET)
 
 
-def run_script(driver, script):
-    for step, *args in script:
-        if step == "sees":
-            text = driver.text()
-            missing = [t for t in args[0] if t not in text]
-            assert not missing, f"{driver.name}: does not show {missing}"
-        elif step == "does_not_see":
-            text = driver.text()
-            assert not [t for t in args[0] if t in text], f"{driver.name}: shows {args[0]}"
-        else:
-            getattr(driver, step)(*args)
-
-
 # -- browser ------------------------------------------------------------------
-
-class Browser:
-    name = "browser"
-
-    def __init__(self, page):
-        self.p = page
-
-    def text(self):
-        return self.p.inner_text("body")
-
-    def image(self, alt):
-        assert self.p.locator(f'img[alt="{alt}"]').count() == 1
-
-    def progress(self, ident, value):
-        assert float(self.p.get_attribute(f"#{ident}", "value")) == value
-
-    def values(self, expected):
-        for field, value in expected.items():
-            if isinstance(value, bool):
-                assert self.p.is_checked(f'input[name="{field}"]') is value, field
-            elif self.p.locator(f'input[type="radio"][name="{field}"]').count():
-                assert self.p.locator(f'input[name="{field}"]:checked').get_attribute("value") == value
-            else:
-                assert self.p.input_value(f'[name="{field}"]') == value, field
-
-    def fill(self, field, value):
-        self.p.fill(f'[name="{field}"]', value)
-
-    def check(self, field, on):
-        box = self.p.locator(f'input[name="{field}"]')
-        if box.is_checked() != on:
-            # As a user does: click the label (the switch hides the box).
-            self.p.locator("label", has=box).click()
-        assert box.is_checked() is on
-
-    def choose(self, field, value):
-        if self.p.locator(f'select[name="{field}"]').count():
-            self.p.select_option(f'select[name="{field}"]', value)
-        else:
-            self.p.check(f'input[name="{field}"][value="{value}"]', force=True)
-
-    def click(self, label):
-        with self.p.expect_navigation():
-            self.p.get_by_role("button", name=label, exact=True).click()
-
-    def tab(self, title):
-        self.p.locator(".q-tab-header", has_text=title).click()
-
 
 def test_the_script_in_the_browser(url):
     # UI-7
@@ -165,76 +106,6 @@ def test_the_script_in_the_browser(url):
 
 # -- console ------------------------------------------------------------------
 
-class Console:
-    name = "console"
-
-    def __init__(self, app, pilot):
-        self.app, self.pilot = app, pilot
-
-    def _visible(self, w):
-        return all(getattr(n, "display", True) for n in [w, *w.ancestors])
-
-    def _field(self, name, types):
-        return [w for w in self.app.query(types) if getattr(w, "_quantum_name", None) == name][0]
-
-    def text(self):
-        from textual.widgets import Button, Checkbox, RadioButton, Static, Tab
-        parts = []
-        for w in self.app.query("*"):
-            if not self._visible(w):
-                continue
-            if isinstance(w, (Checkbox, RadioButton)):
-                parts.append(str(w.label))
-            elif isinstance(w, Button):
-                parts.append(str(w.label))
-            elif isinstance(w, Tab):
-                parts.append(str(w.label))
-            elif isinstance(w, Static):
-                parts.append(str(w.render()))
-            if getattr(w, "border_title", None):
-                parts.append(str(w.border_title))
-        return " | ".join(parts)
-
-    def image(self, alt):
-        assert f"[{alt}]" in self.text()
-
-    def progress(self, ident, value):
-        from textual.widgets import ProgressBar
-        assert self.app.query_one(f"#{ident}", ProgressBar).progress == value
-
-    def values(self, expected):
-        from textual.widgets import RadioSet
-        for field, value in expected.items():
-            w = self._field(field, "Input, Select, Checkbox, Switch, RadioSet")
-            if isinstance(w, RadioSet):
-                assert str(w.pressed_button.label) == value, field
-            else:
-                assert w.value == value, field
-
-    def fill(self, field, value):
-        self._field(field, "Input").value = value
-
-    def check(self, field, on):
-        self._field(field, "Checkbox, Switch").value = on
-
-    def choose(self, field, value):
-        from textual.widgets import RadioButton, RadioSet
-        w = self._field(field, "Select, RadioSet")
-        if isinstance(w, RadioSet):
-            [b for b in w.query(RadioButton) if str(b.label) == value][0].value = True
-        else:
-            w.value = value
-
-    def click(self, label):
-        from textual.widgets import Button
-        [b for b in self.app.query(Button) if str(b.label) == label][0].press()
-
-    def tab(self, title):
-        from textual.widgets import TabbedContent, TabPane
-        tabs = self.app.query_one(TabbedContent)
-        tabs.active = [p for p in tabs.query(TabPane) if str(p._title) == title][0].id
-
-
 def test_the_script_in_the_console(url):
     # UI-7
     from quantum.runtime.ui_console import ConsoleUI
@@ -244,14 +115,7 @@ def test_the_script_in_the_console(url):
         app = ConsoleUI(url)
         async with app.run_test(size=(160, 120)) as pilot:
             await page_loaded(app, pilot)
-            driver = Console(app, pilot)
-            for step in SCRIPT:
-                before = app.pages_loaded
-                run_script(driver, [step])
-                if step[0] == "click":          # a click posts an action: wait for ITS page
-                    await page_loaded(app, pilot, before)
-                else:
-                    await pilot.pause()
+            await run_console_script(app, pilot, SCRIPT)
 
     asyncio.run(main())
 

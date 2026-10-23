@@ -1252,6 +1252,17 @@ that lists the tabs.
 
 <p class="spec-cited">Referenced by: <a href="./tags#q-set"><code>&lt;q:set&gt;</code></a> · <a href="./tags#q-redirect"><code>&lt;q:redirect&gt;</code></a> · <a href="./ui#ui-tabpanel"><code>&lt;ui:tabpanel&gt;</code></a></p>
 
+<a id="UI-18"></a>**[UI-18](#UI-18)** — `quantum run <app> --on web|desktop|tui|terminal` runs the
+application in that folder (its `quantum.config.yaml`, its paths relative to
+it) in one of its versions: `web` is `quantum start` (`--port` overrides the
+port), `desktop` is `quantum desktop` ([UI-4](#UI-4)) and `terminal` is `quantum console`
+([UI-3](#UI-3)), on the page `--page` names (`/` by default). The versions are one
+application served by one runtime; only the renderer changes. `tui` exits with
+an error that says it is not built yet; a folder that is not an application is
+an error that says so.
+
+<p class="spec-cited">Referenced by: <a href="./cli#cli-run"><code>quantum run</code></a> · <a href="./cli#cli-start"><code>quantum start</code></a> · <a href="./cli#cli-console"><code>quantum console</code></a> · <a href="./cli#cli-desktop"><code>quantum desktop</code></a></p>
+
 ## 11. Development
 
 <a id="DEV-1"></a>**[DEV-1](#DEV-1)** — With `server.debug: true`, the server records the process's last 30

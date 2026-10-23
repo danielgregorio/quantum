@@ -68,6 +68,22 @@ quantum desktop /reports   # another page, --width/--height to size the window
 El título de la ventana es el `title` del primer `ui:window` — el mismo título
 que muestran la pestaña del navegador y la consola.
 
+### Un parámetro {#one-parameter}
+
+La aplicación entera, en la versión que pidas — pásale la carpeta de la aplicación:
+
+```bash
+quantum run projects/kanban --on web        # the browser (quantum start)
+quantum run projects/kanban --on desktop    # a window of its own (quantum desktop)
+quantum run projects/kanban --on terminal   # the terminal (quantum console)
+```
+
+`--page /board/1` abre en otra página, `--port` fija el puerto de la web. `--on tui`, una pantalla de
+texto dibujada por Godot, está en camino (`PLAN_PLATFORMS.md`) y lo dice hasta entonces. El Kanban
+del repositorio ejecuta un mismo guion — entrar, mover tarjetas, las subtareas de la IA, importar
+issues, un lector que no cambia nada — en todas las versiones, en el CI
+(`tests/apps/test_kanban_everywhere.py`).
+
 ## Los eventos son acciones {#events-are-actions}
 
 Un botón o un formulario no llama código en el navegador: envía datos a un

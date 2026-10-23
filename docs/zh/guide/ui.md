@@ -61,6 +61,21 @@ quantum desktop /reports   # another page, --width/--height to size the window
 
 窗口的标题是第一个 `ui:window` 的 `title`——与浏览器标签页和终端显示的标题相同。
 
+### 一个参数 {#one-parameter}
+
+整个应用，按你要的版本运行——传入应用的文件夹：
+
+```bash
+quantum run projects/kanban --on web        # the browser (quantum start)
+quantum run projects/kanban --on desktop    # a window of its own (quantum desktop)
+quantum run projects/kanban --on terminal   # the terminal (quantum console)
+```
+
+`--page /board/1` 打开另一个页面，`--port` 设置 web 的端口。`--on tui`（由 Godot 绘制的文本屏幕）
+正在开发中（`PLAN_PLATFORMS.md`），在那之前会如实说明。仓库里的 Kanban 在 CI 中用同一个脚本——登录、
+移动卡片、AI 拆分的子任务、导入 issue、一个什么都不能改的查看者——跑遍每个版本
+（`tests/apps/test_kanban_everywhere.py`）。
+
 ## 事件就是动作 {#events-are-actions}
 
 按钮或表单不会在浏览器中调用代码：它向页面的一个 `q:action` 提交数据。动作校验、完成工作

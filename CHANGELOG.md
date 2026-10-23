@@ -10,6 +10,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- `quantum run <app> --on web|desktop|tui|terminal` (UI-18): one application, its
+  versions by one parameter — the browser, a window of its own, the terminal —
+  served by the same runtime; `--page` and `--port`. `--on tui`, the text screen
+  drawn by Godot, says it is not built yet (`PLAN_PLATFORMS.md`, Phase 3). The
+  Kanban runs one script in every version in CI
+  (`tests/apps/test_kanban_everywhere.py`); the drivers it shares with the UI
+  parity script are `tests/apps/ui_drivers.py`.
 - Kanban (`projects/kanban`), the application `PLAN_PLATFORMS.md` proves the
   platforms with (Phase 1): boards of columns of cards in SQLite, a limit of
   cards in progress that a column says when it is passed, filters by who,

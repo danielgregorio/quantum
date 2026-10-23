@@ -1005,6 +1005,15 @@ resolve: with `<q:set name="tab" value="{query.tab}" default="Machine"/>` and
 that names no tab opens the first; a literal that names no tab is a parse error
 that lists the tabs.
 
+**UI-18** — `quantum run <app> --on web|desktop|tui|terminal` runs the
+application in that folder (its `quantum.config.yaml`, its paths relative to
+it) in one of its versions: `web` is `quantum start` (`--port` overrides the
+port), `desktop` is `quantum desktop` (UI-4) and `terminal` is `quantum console`
+(UI-3), on the page `--page` names (`/` by default). The versions are one
+application served by one runtime; only the renderer changes. `tui` exits with
+an error that says it is not built yet; a folder that is not an application is
+an error that says so.
+
 ## 11. Development
 
 **DEV-1** — With `server.debug: true`, the server records the process's last 30
