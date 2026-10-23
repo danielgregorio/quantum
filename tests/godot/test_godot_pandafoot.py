@@ -403,6 +403,7 @@ def test_the_board_sacks_and_other_clubs_offer(pandafoot, godot, tmp_path):
     def at_the_end(state):
         state['managers'][0]['patience'] = 1
         state['clubs'][34]['balance'] = -10_000_000
+        state['clubs'][34]['expect'] = 1                          # a board that wanted the title: no round pleases it
     saved_then(pandafoot, godot, tmp_path, at_the_end)
     with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
         seen = continued(game)
@@ -431,6 +432,7 @@ def test_a_sacked_manager_can_end_the_career(pandafoot, godot, tmp_path):
     def at_the_end(state):
         state['managers'][0]['patience'] = 1
         state['clubs'][34]['balance'] = -10_000_000
+        state['clubs'][34]['expect'] = 1                          # a board that wanted the title: no round pleases it
     saved_then(pandafoot, godot, tmp_path, at_the_end)
     with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
         continued(game)
@@ -594,3 +596,109 @@ def test_a_loan_comes_back_with_the_new_season(pandafoot, godot, tmp_path):
         back = [p for p in state['clubs'][entry['seller']]['players'] if p['name'] == entry['who']]
         assert back and back[0]['loan'] == -1
         assert not [line for line in game.log if 'SCRIPT ERROR' in line]
+
+
+# --- the club's seasons (PLAN_PANDAFOOT.md Phase 2): growth, the ground, the crisis, the history ---
+
+def test_the_season_makes_the_players(pandafoot, godot, tmp_path):
+    """A forward who played and scored all season grows and becomes a Star; one who hardly played loses a point; the
+    goals go into those of all time; the history (F8) has the season's champions and the manager's title."""
+    def a_season_of_goals(state):
+        state['matchday'] = 17
+        state['clubs'][34]['points'] = 99
+        squad = state['clubs'][34]['players']
+        scorer = next(p for p in squad if p['xi'] == 'FW')
+        scorer.update(apps=15, morale=90, goals=14)
+        idle = next(p for p in squad if p['xi'] == '' and not p['bench'])
+        idle.update(apps=0, strength=20)
+        state['test'] = {'scorer': scorer['name'], 'strength': scorer['strength'], 'idle': idle['name'],
+                         'idle_strength': idle['strength']}
+    saved_then(pandafoot, godot, tmp_path, a_season_of_goals)
+    marks = json.loads((tmp_path / 'quantum-save-1.json').read_text())['game']['test']
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        continued(game)
+        play_round(game)
+        game.act(tap=['select'], ticks=3)                          # the season's end
+        seen = game.act(tap=['select'], ticks=3)                   # New season (and an offer: stay)
+        if seen['scene'] == 'job':
+            game.act(tap=['down'], ticks=2)
+            game.act(tap=['down'], ticks=2)
+            seen = game.act(tap=['select'], ticks=3)
+        squad = {p['name']: p for p in seen['state']['game']['clubs'][34]['players']}
+        scorer, idle = squad[marks['scorer']], squad[marks['idle']]
+        assert scorer['strength'] - marks['strength'] in (2, 3) and 'Star' in scorer['traits']
+        assert scorer['total'] >= 14 and scorer['goals'] == 0 and scorer['apps'] == 0
+        assert idle['strength'] == marks['idle_strength'] - 1
+        assert 'A star is born:' in [n['text'] for n in seen['state']['game']['news']]
+        history = game.act(tap=['history'], ticks=3)
+        assert history['scene'] == 'history'
+        rows = tables(history)
+        assert rows[0]['rows'][0][:5] == ['2026', *seen['state']['game']['honours'][0]['champions']]
+        assert rows[0]['rows'][0][4] == 'Lontra AC'
+        assert rows[1]['rows'][0][0] == 'Manager 1' and rows[1]['rows'][0][2] == '1'
+        assert not [line for line in game.log if 'SCRIPT ERROR' in line]
+
+
+def test_the_ground_wears_and_is_rebuilt(pandafoot, godot, tmp_path):
+    """A home match wears the ground; maintenance mends it at $3 a seat; works due at the month's end open the new
+    stand, the ground as new."""
+    def works_due(state):
+        state['matchday'] = 3                                      # this round ends the month
+        club = state['clubs'][34]
+        club.update(health=80, works=4, adding=2000, balance=5_000_000)
+        state['test'] = {'capacity': club['capacity']}
+    saved_then(pandafoot, godot, tmp_path, works_due)
+    capacity = json.loads((tmp_path / 'quantum-save-1.json').read_text())['game']['test']['capacity']
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        continued(game)
+        after = play_round(game)
+        club = after['state']['game']['clubs'][34]
+        assert club['works'] == 0 and club['adding'] == 0 and club['capacity'] == capacity + 2000
+        assert club['health'] == 100
+        game.act(tap=['select'], ticks=3)
+        finances = game.act(tap=['finances'], ticks=3)
+        assert any(t.startswith('Health:') and t.endswith('100%') for t in texts(finances))
+        buttons = [i['button'] for i in menus(finances)[0]['items'] if i['shown']]
+        assert not any(b.startswith('Maintenance') for b in buttons)              # nothing to mend
+    with PlaySession(pandafoot, binary=godot) as game:
+        before = new_game(game)['state']['game']['clubs'][34]
+        after = play_round(game)['state']['game']
+        mine = [m for m in after['last'] if 34 in (m['home'], m['away'])][0]
+        club = after['clubs'][34]
+        if mine['home'] == 34:
+            assert club['health'] < before['health']
+            assert club['gate'] == round(mine['crowd'] * club['ticket'] * (1.0 if before['health'] >= 90 else 0.97))
+        else:
+            assert club['health'] == before['health']
+
+
+def test_the_crisis_bites(pandafoot, godot, tmp_path):
+    """Three million in the red at the month's end: six points off, once, and the best player on the list."""
+    def deep_in_debt(state):
+        state['matchday'] = 3
+        state['clubs'][34]['balance'] = -3_000_000
+    saved_then(pandafoot, godot, tmp_path, deep_in_debt)
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        seen = continued(game)
+        assert any('GRAVE' in t for t in texts(seen))
+        after = play_round(game)
+        state = after['state']['game']
+        club = state['clubs'][34]
+        assert club['fined'] == 2026 and club['points'] in (-6, -5, -3)          # the round's 0, 1 or 3, less 6
+        best = max(club['players'], key=lambda p: p['strength'])
+        assert best['name'] in [e['who'] for e in state['market'] if e['seller'] == 34]
+        assert 'Six points off for the debts:' in [n['text'] for n in state['news']]
+
+
+def test_a_bankrupt_club_sacks_its_manager(pandafoot, godot, tmp_path):
+    def broke(state):
+        state['matchday'] = 3
+        state['clubs'][34]['balance'] = -9_000_000
+    saved_then(pandafoot, godot, tmp_path, broke)
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        continued(game)
+        after = play_round(game)
+        state = after['state']['game']
+        assert state['clubs'][34]['bankrupt'] and state['clubs'][34]['balance'] >= -1_000_000
+        assert state['jobs'] and state['jobs'][0]['kind'] == 'sacked'
+        assert game.act(tap=['select'], ticks=3)['scene'] == 'job'

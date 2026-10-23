@@ -6903,6 +6903,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:input action="finances" keys="F5" />
   <qg:input action="standings" keys="F7" />
   <qg:input action="market" keys="F6" />
+  <qg:input action="history" keys="F8" />
   <qg:input action="sell" keys="S" />         <!-- the market: a player of one's own on the list, or off it -->
   <qg:input action="plan" keys="I" />         <!-- a bid: paid at once, or in instalments -->
   <qg:input action="pause" keys="Space, P" />
@@ -7063,7 +7064,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </q:function>
 
   <q:function name="new_player" params="strength, pos, num, taken">
-    <q:set name="p" value="{ {'name': player_name(taken), 'num': num, 'pos': pos, 'sec': secondary(strength, pos), 'strength': strength, 'traits': traits_for(strength, pos), 'genius': false, 'morale': 70, 'form': 100, 'salary': 0, 'goals': 0, 'yellows': 0, 'reds': 0, 'injured': 0, 'suspended': 0, 'xi': '', 'bench': false, 'played': 0, 'booked': false, 'off': '', 'start': '', 'sat': false, 'loan': -1} }" />
+    <q:set name="p" value="{ {'name': player_name(taken), 'num': num, 'pos': pos, 'sec': secondary(strength, pos), 'strength': strength, 'traits': traits_for(strength, pos), 'genius': false, 'morale': 70, 'form': 100, 'salary': 0, 'goals': 0, 'yellows': 0, 'reds': 0, 'injured': 0, 'suspended': 0, 'xi': '', 'bench': false, 'played': 0, 'booked': false, 'off': '', 'start': '', 'sat': false, 'loan': -1, 'apps': 0, 'total': 0} }" />
     <q:set name="p.salary" value="{salary_of(p)}" />
     <q:return value="{p}" />
   </q:function>
@@ -7087,7 +7088,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <q:set name="names" value="{names + [p.name]}" />
     </q:loop>
     <q:set name="capacity" value="{round(random([30000, 15000, 8000, 5000][div - 1], [50000, 30000, 15000, 8000][div - 1]) / 500) * 500}" />
-    <q:return value="{ {'name': club_names[i], 'short': club_short[i], 'div': div, 'players': players, 'capacity': capacity, 'ticket': 15, 'balance': random([500000, 200000, 50000, 10000][div - 1], [2000000, 800000, 300000, 100000][div - 1]), 'points': 0, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 'gf': 0, 'ga': 0, 'form': [], 'manager': 0, 'formation': '4-4-2', 'style': 'Balanced', 'objective': 'Auto', 'plan': 'Draw', 'reactions': [], 'gate': 0, 'crowd': 0, 'wages': 0, 'history': [], 'expect': 5, 'debts': []} }" />
+    <q:return value="{ {'name': club_names[i], 'short': club_short[i], 'div': div, 'players': players, 'capacity': capacity, 'ticket': 15, 'balance': random([500000, 200000, 50000, 10000][div - 1], [2000000, 800000, 300000, 100000][div - 1]), 'points': 0, 'played': 0, 'won': 0, 'drawn': 0, 'lost': 0, 'gf': 0, 'ga': 0, 'form': [], 'manager': 0, 'formation': '4-4-2', 'style': 'Balanced', 'objective': 'Auto', 'plan': 'Draw', 'reactions': [], 'gate': 0, 'crowd': 0, 'wages': 0, 'history': [], 'expect': 5, 'debts': [], 'health': round(random(70, 100)), 'works': 0, 'adding': 0, 'titles': 0, 'fined': 0, 'bankrupt': false} }" />
   </q:function>
 
   <!-- the world's geniuses, three to five: the best of two to four clubs of the first division, and one hidden in the
@@ -7468,7 +7469,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:loop items="{sort(keys, true)}" var="key">
       <q:set name="b" value="{e.bids[key[1]]}" />
       <q:set name="buyer" value="{clubs[b.club]}" />
-      <q:if condition="{len(buyer.players) < 30 and buyer.balance >= (e.fee if b.plan == 'cash' else 0.3 * e.fee)}">
+      <q:if condition="{len(buyer.players) < 30 and crisis(buyer) < 2 and buyer.balance >= (e.fee if b.plan == 'cash' else 0.3 * e.fee)}">
         <q:set name="yes" value="{acceptance(p, e.seller, b.club, b.wage)}" />
         <q:if condition="{yes.chance >= 80 or (yes.chance >= 20 and chance(yes.chance / 100))}">
           <q:call function="transfer" args="{e}, {p}, {b}, {yes.chance}" />
@@ -7590,6 +7591,125 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:loop items="{e.bids}" var="b"><q:if condition="{b.wage > best}"><q:set name="best" value="{b.wage}" /></q:if></q:loop>
     <q:set name="mine" value="{bid_by(e, managers[turn].club)}" />
     <q:return value="{fit(e.who, 16) + fit(tr(e.pos), 4) + fit(str(e.str), 4, 'right') + '  ' + fit(clubs[e.seller].short if e.seller >= 0 else tr('free'), 6) + fit(money(e.fee) if e.fee > 0 else '-', 13, 'right') + fit(money(e.wage), 10, 'right') + fit(money(best) if best > 0 else '-', 10, 'right') + fit(str(e.left), 4, 'right') + (' ✓' if mine else '')}" />
+  </q:function>
+
+  <!-- ===== The ground (GAME_DESIGN: the stadium system) ===== -->
+
+  <!-- how much of the gate a ground's health lets in: all of it from 90, 97% from 70, 87% from 50, 70% from 30, half
+       below -->
+  <q:function name="gate_share" params="club">
+    <q:return value="{1.0 if club.health >= 90 else (0.97 if club.health >= 70 else (0.87 if club.health >= 50 else (0.7 if club.health >= 30 else 0.5)))}" />
+  </q:function>
+
+  <!-- the seats a ground can open: all of them from 50, nine in ten from 30, seven from 15, else half -->
+  <q:function name="open_seats" params="club">
+    <q:return value="{round(club.capacity * (1.0 if club.health >= 50 else (0.9 if club.health >= 30 else (0.7 if club.health >= 15 else 0.5))))}" />
+  </q:function>
+
+  <q:function name="health_word" params="h">
+    <q:return value="{tr('spotless') if h >= 90 else (tr('needs care') if h >= 70 else (tr('run down') if h >= 50 else tr('critical')))}" />
+  </q:function>
+
+  <!-- the works: maintenance, $3 a seat, 20 points of health at once; an expansion, a quarter more seats at $250 each,
+       three months (twelve rounds), the ground new when it is done (health over 60 to start it) -->
+  <q:function name="maintenance_cost" params="club">
+    <q:return value="{club.capacity * 3}" />
+  </q:function>
+
+  <q:function name="expansion_cost" params="club">
+    <q:return value="{round(club.capacity / 4 / 500) * 500 * 250}" />
+  </q:function>
+
+  <q:function name="maintain" params="club">
+    <q:if condition="{club.balance >= maintenance_cost(club) and club.health < 100}">
+      <q:set name="club.balance" value="{club.balance - maintenance_cost(club)}" />
+      <q:set name="club.health" value="{min(100, club.health + 20)}" />
+    </q:if>
+  </q:function>
+
+  <q:function name="expand" params="club">
+    <q:if condition="{club.works == 0 and club.health > 60 and club.balance >= expansion_cost(club)}">
+      <q:set name="club.balance" value="{club.balance - expansion_cost(club)}" />
+      <q:set name="club.adding" value="{round(club.capacity / 4 / 500) * 500}" />
+      <q:set name="club.works" value="{12}" />
+    </q:if>
+  </q:function>
+
+  <!-- ===== The crisis (GAME_DESIGN: financial crisis and bankruptcy) ===== -->
+
+  <!-- 0 in the black; 1 an alert (to -$500.000); 2 the crisis (to -$2M): no buying, the squad's morale falls; 3 grave
+       (to -$5M): six points off once a season and the best player auctioned; 4 bankruptcy -->
+  <q:function name="crisis" params="club">
+    <q:return value="{0 if club.balance >= 0 else (1 if club.balance >= -500000 else (2 if club.balance >= -2000000 else (3 if club.balance >= -5000000 else 4)))}" />
+  </q:function>
+
+  <q:function name="crisis_text" params="club">
+    <q:return value="{['', tr('Watch the finances!'), tr('CRISIS: no buying'), tr('GRAVE: points off, best sold'), tr('BANKRUPT')][crisis(club)]}" />
+  </q:function>
+
+  <!-- a club's month: its ground wears and its works go on, the computer keeps its ground up, and the crisis bites -->
+  <q:function name="month_of" params="ci">
+    <q:set name="club" value="{clubs[ci]}" />
+    <q:set name="club.health" value="{max(0, club.health - 0.2)}" />
+    <q:if condition="{club.works > 0}">
+      <q:set name="club.works" value="{max(0, club.works - 4)}" />
+      <q:if condition="{club.works == 0}">
+        <q:set name="club.capacity" value="{club.capacity + club.adding}" />
+        <q:set name="club.adding" value="{0}" />
+        <q:set name="club.health" value="{100}" />
+        <q:if condition="{club.manager > 0}"><q:call function="said" args="{'The new stand is open:'}, {club.name + ', ' + thousands(club.capacity, '.') + ' ' + tr('seats')}" /></q:if>
+      </q:if>
+    </q:if>
+    <q:if condition="{club.manager == 0 and club.health < 60 and club.balance >= 2 * maintenance_cost(club)}"><q:call function="maintain" args="{club}" /></q:if>
+    <q:set name="level" value="{crisis(club)}" />
+    <q:if condition="{level >= 2}"><q:loop items="{club.players}" var="q"><q:set name="q.morale" value="{max(20, q.morale - 5)}" /></q:loop></q:if>
+    <q:if condition="{level >= 3 and club.fined != season}">
+      <q:set name="club.points" value="{club.points - 6}" />
+      <q:set name="club.fined" value="{season}" />
+      <q:call function="said" args="{'Six points off for the debts:'}, {club.name}" />
+      <q:set name="top" value="{best(club.players)}" />
+      <q:if condition="{not listed(top.name) and len(club.players) > 16}"><q:call function="list_player" args="{ci}, {top}, {value_of(top) * 0.8}" /></q:if>
+    </q:if>
+    <q:if condition="{level >= 4}">
+      <q:call function="said" args="{'Bankrupt: rescued, and down a division:'}, {club.name}" />
+      <q:set name="club.balance" value="{0}" />
+      <q:set name="club.debts" value="{[]}" />
+      <q:set name="club.bankrupt" value="{true}" />
+      <q:loop var="mi" from="0" to="{len(managers) - 1}">
+        <q:if condition="{managers[mi].club == ci and not sacked_already(mi)}"><q:call function="sack" args="{mi}" /></q:if>
+      </q:loop>
+    </q:if>
+  </q:function>
+
+  <!-- ===== The season makes the players (decisions 23 and 32) ===== -->
+
+  <!-- who played most of the season and kept his spirit grows (one, two with sixteen matches, three with ten goals);
+       who hardly played loses one; twelve goals make a forward or a midfielder a Star. No age, no retirement -->
+  <q:function name="growth">
+    <q:loop items="{clubs}" var="c">
+      <q:set name="better" value="{[]}" />
+      <q:loop items="{c.players}" var="q">
+        <q:set name="grow" value="{(1 + (1 if q.apps >= 16 else 0) + (1 if q.goals >= 10 else 0)) if q.apps >= 12 and q.morale >= 60 else (-1 if q.apps < 4 and q.strength > 15 else 0)}" />
+        <q:set name="q.strength" value="{max(1, min(50, q.strength + grow))}" />
+        <q:if condition="{grow > 0}"><q:set name="better" value="{better + [q.name + ' +' + str(grow)]}" /></q:if>
+        <q:if condition="{q.goals >= 12 and q.pos != 'GK' and not ('Star' in q.traits)}">
+          <q:set name="q.traits" value="{q.traits + ['Star']}" />
+          <q:call function="said" args="{'A star is born:'}, {q.name + ' (' + c.short + ', ' + str(q.goals) + ' ' + tr('goals') + ')'}" />
+        </q:if>
+        <q:set name="q.total" value="{q.total + q.goals}" />
+        <q:set name="q.apps" value="{0}" />
+      </q:loop>
+      <q:if condition="{c.manager > 0 and len(better) > 0}"><q:call function="said" args="{'Better this season:'}, {join(better[0:4], ', ')}" /></q:if>
+    </q:loop>
+  </q:function>
+
+  <!-- a club's three best: the strongest, the fitter first of the same strength -->
+  <q:function name="best_three" params="club">
+    <q:set name="keys" value="{[]}" />
+    <q:loop items="{club.players}" var="q"><q:set name="keys" value="{keys + [[q.strength, q.form, q.name]]}" /></q:loop>
+    <q:set name="out" value="{[]}" />
+    <q:loop items="{sort(keys, true)[0:3]}" var="k"><q:set name="out" value="{out + [k[2]]}" /></q:loop>
+    <q:return value="{out}" />
   </q:function>
 
   <!-- ===== The line-up ===== -->
@@ -7805,7 +7925,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="star" value="{false}" />
     <q:loop items="{eleven(home)}" var="p"><q:if condition="{'Star' in p.traits}"><q:set name="star" value="{true}" /></q:if></q:loop>
     <q:set name="want" value="{max(0.15, want + (0.12 if star else 0))}" />
-    <q:return value="{min(home.capacity, round(home.capacity * want * day * (15 / home.ticket) ** 1.3))}" />
+    <q:return value="{min(open_seats(home), round(home.capacity * want * day * (15 / home.ticket) ** 1.3))}" />
   </q:function>
 
   <!-- a side of a match: its club, attack and defence with its style; the counter-tactics lift or sink both; the
@@ -8035,7 +8155,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <q:set name="home" value="{clubs[m.home]}" />
       <q:set name="away" value="{clubs[m.away]}" />
       <q:set name="home.crowd" value="{m.crowd}" />
-      <q:set name="home.gate" value="{m.crowd * home.ticket}" />
+      <q:set name="home.gate" value="{round(m.crowd * home.ticket * gate_share(home))}" />
+      <!-- a match wears the ground: half a point, half again with it full, a third again when the side lost -->
+      <q:set name="home.health" value="{max(0, home.health - 0.5 * (1.5 if m.fill >= 0.9 else 1) * (1.3 if m.hg < m.ag else 1))}" />
       <q:set name="home.balance" value="{home.balance + home.gate}" />
       <q:set name="away.gate" value="{0}" />
       <q:set name="home.history" value="{([ {'vs': away.short, 'home': true, 'style': m.styles[0], 'gf': m.hg, 'ga': m.ag} ] + home.history)[0:5]}" />
@@ -8051,7 +8173,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         <q:if condition="{p.suspended > 0}"><q:set name="p.suspended" value="{p.suspended - 1}" /></q:if>
         <q:if condition="{p.off == 'red'}"><q:set name="p.suspended" value="{1}" /></q:if>
         <q:if condition="{p.yellows >= 3}"><q:set name="p.suspended" value="{1}" /><q:set name="p.yellows" value="{0}" /></q:if>
-        <q:if condition="{played}"><q:set name="p.played" value="{p.played + 1}" /></q:if>
+        <q:if condition="{played}"><q:set name="p.played" value="{p.played + 1}" /><q:set name="p.apps" value="{p.apps + 1}" /></q:if>
         <q:set name="p.form" value="{max(30, min(100, p.form + 8 - (14 if played else 0)))}" />   <!-- a week: everyone recovers, who played tires -->
         <q:set name="p.xi" value="{p.start}" />   <!-- the eleven as it started: a manager's comes back to it -->
         <q:set name="p.bench" value="{p.sat}" />
@@ -8063,6 +8185,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <q:if condition="{matchday % 4 == 3}">                            <!-- the month's end: TV, sponsorship, costs, by division -->
         <q:set name="c.balance" value="{c.balance + tv_of(c) + sponsor_of(c, place_in(orders[c.div - 1], i)) - costs_of(c)}" />
         <q:call function="pay_instalments" args="{c}" />
+        <q:call function="month_of" args="{i}" />
       </q:if>
     </q:loop>
     <q:set name="last" value="{matches}" />
@@ -8119,10 +8242,20 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="top" value="{top_scorers(1, 0)}" />
     <q:set name="honours" value="{[ {'season': season, 'champions': [clubs[orders[0][0]].name, clubs[orders[1][0]].name, clubs[orders[2][0]].name, clubs[orders[3][0]].name], 'scorer': top[0].name + ' (' + top[0].club + ', ' + str(top[0].goals) + ')' if len(top) > 0 else '-'} ] + honours}" />
     <q:call function="season_verdicts" args="{orders}" />
+    <q:loop var="d" from="1" to="4"><q:set name="champ" value="{clubs[orders[d - 1][0]]}" /><q:set name="champ.titles" value="{champ.titles + 1}" /></q:loop>
+    <q:call function="growth" />
     <q:set name="was" value="{[]}" />
     <q:loop items="{managers}" var="t"><q:set name="was" value="{was + [clubs[t.club].div]}" /></q:loop>
+    <!-- a club rescued from bankruptcy ends its division last: it goes down -->
+    <q:loop var="ci" from="0" to="{len(clubs) - 1}">
+      <q:set name="broke" value="{clubs[ci]}" />
+      <q:if condition="{broke.bankrupt}">
+        <q:set name="orders" index="{broke.div - 1}" value="{without(orders[broke.div - 1], ci) + [ci]}" />
+        <q:set name="broke.bankrupt" value="{false}" />
+      </q:if>
+    </q:loop>
     <q:loop var="d" from="1" to="3">
-      <q:loop items="{[orders[d - 1][8], orders[d - 1][9]]}" var="down"><q:set name="moved" value="{clubs[down]}" /><q:set name="moved.div" value="{d + 1}" /></q:loop>
+      <q:loop items="{[orders[d - 1][len(orders[d - 1]) - 2], orders[d - 1][len(orders[d - 1]) - 1]]}" var="down"><q:set name="moved" value="{clubs[down]}" /><q:set name="moved.div" value="{d + 1}" /></q:loop>
       <q:loop items="{[orders[d][0], orders[d][1]]}" var="up"><q:set name="moved" value="{clubs[up]}" /><q:set name="moved.div" value="{d}" /></q:loop>
     </q:loop>
     <q:loop var="mi" from="0" to="{len(managers) - 1}">
@@ -8218,7 +8351,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:text value="{tr('LINE-UP') + ' ' + my_club().formation + '  (' + str(len(eleven(my_club()))) + '/11)'}" color="#55ffff" />
       <qg:table source="{lineup_rows(my_club())[0:16]}" as="p">
         <qg:column label="Pos" value="{tr(p.xi) if p.xi != '' else tr('res')}" width="4" color="{'#ffffff' if p.xi != '' else '#aaaaaa'}" />
-        <qg:column label="Name" value="{p.name}" width="15" color="{'#ff55ff' if p.genius else ('#ffffff' if p.xi != '' else '#aaaaaa')}" />
+        <qg:column label="Name" value="{p.name}" width="15" color="{'#ff55ff' if p.genius else ('#ffff55' if p.name in best_three(my_club()) else ('#ffffff' if p.xi != '' else '#aaaaaa'))}" />
         <qg:column label="Str" value="{p.strength}" width="3" align="right" />
         <qg:column label="Form" value="{p.form}" width="5" align="right" color="{form_color(p)}" />
         <qg:column label="Fit" value="{state_of(p)}" width="3" color="{'#55ff55' if available(p) else '#ff5555'}" />
@@ -8231,14 +8364,14 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:text value="{fit(tr('Opponent:') + ' ' + str(position_of(opp)) + 'º   ' + tr('Form:') + ' ' + join(form_of(clubs[opp]), ' ') + '   ' + tr('Top scorer:') + ' ' + club_top(clubs[opp]), 50)}" />
       <qg:text value="{fit(tr('They tend to play:') + ' ' + tr(usual(clubs[opp])) + ' - ' + hint(my_club(), clubs[opp]), 50)}" />
       <qg:text value="{fit(tr('Objective:') + ' ' + objective_text(my_club()) + '   ' + my_club().formation + ' ' + tr(my_club().style), 50)}" color="#ffff55" />
-      <qg:text value="{('⚠ ' + tr('The line-up is not complete (F1)')) if not lineup_ok(my_club()) else (('⚠ ' + tr('The board is losing its patience')) if managers[turn].patience < 20 else (tr('The board expects:') + ' ' + str(my_club().expect) + 'º'))}" color="{'#ff5555' if not lineup_ok(my_club()) or managers[turn].patience < 20 else '#aaaaaa'}" />
+      <qg:text value="{('⚠ ' + tr('The line-up is not complete (F1)')) if not lineup_ok(my_club()) else (('⚠ ' + tr('The board is losing its patience')) if managers[turn].patience < 20 else (('⚠ ' + crisis_text(my_club())) if crisis(my_club()) > 0 else (tr('The board expects:') + ' ' + str(my_club().expect) + 'º')))}" color="{'#ff5555' if not lineup_ok(my_club()) or crisis(my_club()) > 0 or managers[turn].patience < 20 else '#aaaaaa'}" />
     </qg:hud>
     <qg:hud x="250" y="238" box="frame" font="assets/DejaVuSansMono.ttf" size="11">
       <qg:text value="{'═══ ' + tr('NEWS') + ' ═══'}" color="#55ffff" />
       <qg:table source="{news[0:5]}" as="n"><qg:column value="{tr(n.text) + (' ' + n.arg if n.arg != '' else '')}" width="50" /></qg:table>
     </qg:hud>
     <qg:hud x="8" y="356" font="assets/DejaVuSansMono.ttf" size="12">
-      <qg:text value="{'[F1] ' + tr('Line-up') + ' [F2] ' + tr('Tactics') + ' [F3] ' + tr('Squad') + ' [F5] ' + tr('Finances') + ' [F6] ' + tr('Market') + ' [F7] ' + tr('Table')}" color="#55ffff" />
+      <qg:text value="{'[F1] ' + tr('Line-up') + ' [F2] ' + tr('Tactics') + ' [F3] ' + tr('Squad') + ' [F5] ' + tr('Finances') + ' [F6] ' + tr('Market') + ' [F7] ' + tr('Table') + ' [F8] ' + tr('History')}" color="#55ffff" />
       <qg:text value="{'[ENTER] ' + tr('Ready: next manager' if turn < len(managers) - 1 else 'Play the round') + '   [ESC] ' + tr('Save and leave')}" color="#ffff55" />
     </qg:hud>
     <qg:on-input action="lineup"><qg:goto-scene name="lineup" /></qg:on-input>
@@ -8247,6 +8380,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:on-input action="finances"><qg:goto-scene name="finances" /></qg:on-input>
     <qg:on-input action="standings"><qg:goto-scene name="standings" /></qg:on-input>
     <qg:on-input action="market"><qg:goto-scene name="market" /></qg:on-input>
+    <qg:on-input action="history"><qg:goto-scene name="history" /></qg:on-input>
     <qg:on-input action="select">
       <q:if condition="{not lineup_ok(my_club())}"><q:call function="fill_lineup" args="{my_club()}" /></q:if>
       <q:if condition="{turn < len(managers) - 1}">
@@ -8349,7 +8483,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:text value="{tr('SQUAD') + ' - ' + shown_club().name + '   (' + str(position_of(shown_index())) + 'º, ' + str(len(shown_club().players)) + ' ' + tr('players, wages') + ' ' + money(payroll(shown_club())) + tr('/month') + ')'}" color="#ffff55" />
       <qg:table source="{shown_club().players}" as="p">
         <qg:column label="#" value="{p.num}" width="2" align="right" />
-        <qg:column label="Name" value="{p.name}" width="17" />
+        <qg:column label="Name" value="{p.name}" width="17" color="{'#ffff55' if p.name in best_three(shown_club()) else '#ffffff'}" />
         <qg:column label="Pos" value="{positions(p)}" width="11" />
         <qg:column label="Str" value="{p.strength}" width="3" align="right" color="{'#ff55ff' if known_genius(p) else ('#ffff55' if p.strength >= 42 else '#ffffff')}" />
         <qg:column label="Traits" value="{marks(p) if known_genius(p) or not p.genius else marks(p)[1:]}" width="6" color="#ff55ff" />
@@ -8602,7 +8736,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:text value="{fit(tr('Your offer a month:'), 22) + money(round(e.wage * pct / 100)) + '  (' + str(pct) + '%)'}" color="#55ffff" />
       <qg:text value="{fit(tr('Paid:'), 22) + (tr('all at once') if plan == 'cash' else tr('30% now, 7 months of 10%')) + '   [I]'}" color="#55ffff" />
       <qg:text value="{fit(tr('He would come:'), 22) + str(acceptance(p, e.seller, managers[turn].club, round(e.wage * pct / 100)).chance) + '%  (' + acceptance(p, e.seller, managers[turn].club, round(e.wage * pct / 100)).why + ')'}" color="#ffff55" />
-      <qg:text value="{'⚠ ' + tr('Not enough money for that') if my_club().balance < (e.fee if plan == 'cash' else 0.3 * e.fee) else ''}" color="#ff5555" />
+      <qg:text value="{('⚠ ' + tr('In crisis, the club cannot buy')) if crisis(my_club()) >= 2 else (('⚠ ' + tr('Not enough money for that')) if my_club().balance < (e.fee if plan == 'cash' else 0.3 * e.fee) else '')}" color="#ff5555" />
     </qg:hud>
     <qg:menu x="8" y="230" font="assets/DejaVuSansMono.ttf" size="13" box="frame">
       <qg:slider label="Wage %" bind="pct" min="100" max="300" step="5" />
@@ -8640,6 +8774,74 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </q:if>
   </q:function>
 
+  <!-- ===== F8: the history (decision 31) ===== -->
+  <qg:scene name="history" width="640" height="400" background="#0000a8">
+    <qg:hud x="8" y="6" box="frame" font="assets/DejaVuSansMono.ttf" size="11">
+      <qg:text value="{'═══ ' + tr('CHAMPIONS') + ' ═══   ' + fit(div_name(1), 15) + fit(div_name(2), 15) + fit(div_name(3), 15) + div_name(4)}" color="#ffff55" />
+      <qg:text value="{tr('No season has ended yet.') if len(honours) == 0 else ''}" color="#aaaaaa" />
+      <qg:table source="{honours[0:7]}" as="h">
+        <qg:column value="{str(h.season)}" width="6" color="#55ffff" />
+        <qg:column value="{h.champions[0]}" width="15" />
+        <qg:column value="{h.champions[1]}" width="15" />
+        <qg:column value="{h.champions[2]}" width="15" />
+        <qg:column value="{h.champions[3]}" width="15" />
+        <qg:column value="{h.scorer}" width="24" color="#aaaaaa" />
+      </qg:table>
+    </qg:hud>
+    <qg:hud x="8" y="170" box="frame" font="assets/DejaVuSansMono.ttf" size="11">
+      <qg:text value="{'═══ ' + tr('THE MANAGERS') + ' ═══'}" color="#ffff55" />
+      <qg:table source="{managers_ranking()}" as="r">
+        <qg:column label="Name" value="{r.name}" width="14" />
+        <qg:column label="Seasons" value="{r.career.seasons}" width="8" align="right" />
+        <qg:column label="Titles" value="{r.career.titles}" width="7" align="right" />
+        <qg:column label="Up" value="{r.career.ups}" width="4" align="right" />
+        <qg:column label="Pts/match" value="{fit(str(round(r.career.points * 100 / max(1, r.career.matches)) / 100.0), 5, 'right')}" width="10" align="right" />
+        <qg:column label="Clubs" value="{join(r.career.clubs, ', ')}" width="22" color="#aaaaaa" />
+      </qg:table>
+    </qg:hud>
+    <qg:hud x="8" y="270" box="frame" font="assets/DejaVuSansMono.ttf" size="11">
+      <qg:text value="{'═══ ' + tr('TOP SCORERS OF ALL TIME') + ' ═══'}" color="#ffff55" />
+      <qg:table source="{all_time_scorers(5)}" as="t">
+        <qg:column value="{t.goals}" width="4" align="right" color="#ffff55" />
+        <qg:column value="{t.name}" width="18" color="{'#ff55ff' if t.genius else '#ffffff'}" />
+        <qg:column value="{t.club}" width="5" />
+      </qg:table>
+    </qg:hud>
+    <qg:hud x="440" y="270" font="assets/DejaVuSansMono.ttf" size="12">
+      <qg:text value="{'[ESC] ' + tr('Back')}" color="#55ffff" />
+    </qg:hud>
+    <qg:on-input action="cancel"><qg:goto-scene name="dashboard" /></qg:on-input>
+  </qg:scene>
+
+  <!-- the managers, in play and retired, by titles, then points a match -->
+  <q:function name="managers_ranking">
+    <q:set name="all" value="{managers + retired}" />
+    <q:set name="keys" value="{[]}" />
+    <q:loop var="k" from="0" to="{len(all) - 1}"><q:set name="keys" value="{keys + [[all[k].career.titles, all[k].career.points / max(1, all[k].career.matches), 100 - k]]}" /></q:loop>
+    <q:set name="out" value="{[]}" />
+    <q:loop items="{sort(keys, true)[0:6]}" var="key"><q:set name="out" value="{out + [all[100 - key[2]]]}" /></q:loop>
+    <q:return value="{out}" />
+  </q:function>
+
+  <!-- the goals of all time: the seasons ended and this one's -->
+  <q:function name="all_time_scorers" params="n">
+    <q:set name="keys" value="{[]}" />
+    <q:loop var="ci" from="0" to="{len(clubs) - 1}">
+      <q:loop var="pk" from="0" to="{len(clubs[ci].players) - 1}">
+        <q:set name="q" value="{clubs[ci].players[pk]}" />
+        <q:if condition="{q.total + q.goals > 0}"><q:set name="keys" value="{keys + [[q.total + q.goals, 100000 - ci * 100 - pk]]}" /></q:if>
+      </q:loop>
+    </q:loop>
+    <q:set name="out" value="{[]}" />
+    <q:loop items="{sort(keys, true)[0:n]}" var="key">
+      <q:set name="at" value="{int(100000 - key[1])}" />
+      <q:set name="his" value="{clubs[int(floor(at / 100))]}" />
+      <q:set name="who" value="{his.players[at % 100]}" />
+      <q:set name="out" value="{out + [ {'name': who.name, 'goals': key[0], 'genius': who.genius, 'club': his.short} ]}" />
+    </q:loop>
+    <q:return value="{out}" />
+  </q:function>
+
   <!-- ===== F5: finances ===== -->
   <qg:scene name="finances" width="640" height="400" background="#0000a8">
     <q:set name="g" value="{next_match(managers[turn].club)}" />
@@ -8658,14 +8860,21 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:text value="{fit(tr('Ticket:'), 26) + fit(money(my_club().ticket), 14, 'right')}" color="#ffff55" />
       <qg:text value="{fit(tr('Crowd at this price:'), 26) + fit(thousands(crowd_for(my_club(), position_of(opp) - 1, position_of(managers[turn].club) - 1, 0.85), '.') + '-' + thousands(crowd_for(my_club(), position_of(opp) - 1, position_of(managers[turn].club) - 1, 1.15), '.'), 14, 'right')}" color="#ffff55" />
     </qg:hud>
-    <qg:hud x="200" y="296" font="assets/DejaVuSansMono.ttf" size="12">
-      <qg:text value="{tr('A dearer ticket keeps people away:')}" color="#55ffff" />
+    <qg:hud x="366" y="8" box="frame" font="assets/DejaVuSansMono.ttf" size="12">
+      <qg:text value="{tr('THE GROUND')}" color="#ffff55" />
+      <qg:text value="{fit(tr('Health:'), 9) + blocks(my_club().health, 10) + ' ' + str(round(my_club().health)) + '%'}" color="{'#55ff55' if my_club().health >= 70 else ('#ffff55' if my_club().health >= 50 else '#ff5555')}" />
+      <qg:text value="{health_word(my_club().health) + ', ' + tr('gate') + ' ' + str(round(gate_share(my_club()) * 100)) + '%'}" />
+      <qg:text value="{(tr('Works:') + ' +' + thousands(my_club().adding, '.') + ' ' + tr('seats') + ', ' + str(my_club().works) + ' ' + tr('rounds')) if my_club().works > 0 else tr('No works going on')}" />
+      <qg:text value="{crisis_text(my_club())}" color="#ff5555" />
+      <qg:text value="{tr('A dearer ticket keeps people away;')}" color="#55ffff" />
       <qg:text value="{tr('a full ground lifts the side')}" color="#55ffff" />
       <qg:text value="{tr('(up to a quarter more at home).')}" color="#55ffff" />
     </qg:hud>
-    <qg:menu x="8" y="290" font="assets/DejaVuSansMono.ttf" size="13">
+    <qg:menu x="8" y="290" columns="2" font="assets/DejaVuSansMono.ttf" size="13">
       <qg:button label="{tr('Ticket') + ' +$1'}"><q:call function="ticket" args="{my_club()}, {1}" /></qg:button>
       <qg:button label="{tr('Ticket') + ' -$1'}"><q:call function="ticket" args="{my_club()}, {-1}" /></qg:button>
+      <qg:button label="{tr('Maintenance') + ' (' + money(maintenance_cost(my_club())) + ')'}" if="{my_club().health < 100}"><q:call function="maintain" args="{my_club()}" /></qg:button>
+      <qg:button label="{tr('A quarter more seats') + ' (' + money(expansion_cost(my_club())) + ')'}" if="{my_club().works == 0 and my_club().health > 60}"><q:call function="expand" args="{my_club()}" /></qg:button>
       <qg:button label="Back"><qg:goto-scene name="dashboard" /></qg:button>
     </qg:menu>
     <qg:on-input action="cancel"><qg:goto-scene name="dashboard" /></qg:on-input>
@@ -8907,7 +9116,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     </qg:hud>
     <qg:hud x="8" y="126" box="frame" font="assets/DejaVuSansMono.ttf" size="12" if="{my_last() != null}">
       <qg:text value="{'═══ ' + tr('YOUR MATCH') + ' ═══  ' + clubs[my_last().home].name + ' ' + str(my_last().hg) + ' x ' + str(my_last().ag) + ' ' + clubs[my_last().away].name}" color="#55ffff" />
-      <qg:text value="{tr('Crowd:') + ' ' + thousands(my_last().crowd, '.') + ' (' + str(round(my_last().fill * 100)) + '%)   ' + tr('Gate:') + ' ' + money(my_last().crowd * clubs[my_last().home].ticket) + ' (' + clubs[my_last().home].short + ')'}" />
+      <qg:text value="{tr('Crowd:') + ' ' + thousands(my_last().crowd, '.') + ' (' + str(round(my_last().fill * 100)) + '%)   ' + tr('Gate:') + ' ' + money(clubs[my_last().home].gate) + ' (' + clubs[my_last().home].short + ')'}" />
       <qg:text value="{fit(tr('Man of the match:') + ' ' + man_of_match(my_last()), 52) + '  ' + shots_line(my_last())}" color="#ffff55" />
       <qg:text value="{fit(tr('Booked:') + ' ' + names_of(my_last(), 'card') + '   ' + tr('Sent off:') + ' ' + names_of(my_last(), 'red'), 84)}" />
       <qg:text value="{fit(tr('Injured:') + ' ' + names_of(my_last(), 'knock') + '   ' + tr('Came on:') + ' ' + names_of(my_last(), 'sub'), 84)}" />
@@ -9364,6 +9573,37 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="ON THE LIST" as="NA LISTA" />
     <qg:phrase text="on loan" as="emprestado" />
     <qg:phrase text="On the list / off it" as="Na lista / fora dela" />
+    <qg:phrase text="spotless" as="impecável" />
+    <qg:phrase text="needs care" as="precisa de atenção" />
+    <qg:phrase text="run down" as="degradado" />
+    <qg:phrase text="critical" as="crítico" />
+    <qg:phrase text="Watch the finances!" as="Atenção com as finanças!" />
+    <qg:phrase text="CRISIS: no buying" as="CRISE: sem compras" />
+    <qg:phrase text="GRAVE: points off, best sold" as="GRAVE: pontos a menos, o melhor à venda" />
+    <qg:phrase text="BANKRUPT" as="FALÊNCIA" />
+    <qg:phrase text="The new stand is open:" as="A arquibancada nova está aberta:" />
+    <qg:phrase text="Six points off for the debts:" as="Seis pontos a menos pelas dívidas:" />
+    <qg:phrase text="Bankrupt: rescued, and down a division:" as="Falência: socorrido, e uma divisão abaixo:" />
+    <qg:phrase text="A star is born:" as="Nasce uma estrela:" />
+    <qg:phrase text="Better this season:" as="Evoluíram na temporada:" />
+    <qg:phrase text="In crisis, the club cannot buy" as="Em crise, o clube não pode comprar" />
+    <qg:phrase text="THE GROUND" as="O ESTÁDIO" />
+    <qg:phrase text="Health:" as="Saúde:" />
+    <qg:phrase text="gate" as="renda" />
+    <qg:phrase text="Works:" as="Obras:" />
+    <qg:phrase text="rounds" as="rodadas" />
+    <qg:phrase text="No works going on" as="Nenhuma obra" />
+    <qg:phrase text="A dearer ticket keeps people away;" as="Ingresso caro afasta o público;" />
+    <qg:phrase text="Maintenance" as="Manutenção" />
+    <qg:phrase text="A quarter more seats" as="Um quarto a mais de lugares" />
+    <qg:phrase text="History" as="Histórico" />
+    <qg:phrase text="No season has ended yet." as="Nenhuma temporada terminou ainda." />
+    <qg:phrase text="Seasons" as="Temp." />
+    <qg:phrase text="Titles" as="Títulos" />
+    <qg:phrase text="Up" as="Sob." />
+    <qg:phrase text="Pts/match" as="Pts/jogo" />
+    <qg:phrase text="Clubs" as="Clubes" />
+    <qg:phrase text="TOP SCORERS OF ALL TIME" as="ARTILHEIROS DE TODOS OS TEMPOS" />
   </qg:language>
   <qg:language lang="es" name="Español">
     <qg:phrase text="    ☻  P A N D A F O O T  ☻    " as="    ☻  P A N D A F O O T  ☻    " />
@@ -9642,6 +9882,37 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="ON THE LIST" as="EN LA LISTA" />
     <qg:phrase text="on loan" as="cedido" />
     <qg:phrase text="On the list / off it" as="A la lista / fuera" />
+    <qg:phrase text="spotless" as="impecable" />
+    <qg:phrase text="needs care" as="necesita atención" />
+    <qg:phrase text="run down" as="deteriorado" />
+    <qg:phrase text="critical" as="crítico" />
+    <qg:phrase text="Watch the finances!" as="¡Cuidado con las finanzas!" />
+    <qg:phrase text="CRISIS: no buying" as="CRISIS: sin fichajes" />
+    <qg:phrase text="GRAVE: points off, best sold" as="GRAVE: puntos menos, el mejor en venta" />
+    <qg:phrase text="BANKRUPT" as="QUIEBRA" />
+    <qg:phrase text="The new stand is open:" as="La nueva grada está abierta:" />
+    <qg:phrase text="Six points off for the debts:" as="Seis puntos menos por las deudas:" />
+    <qg:phrase text="Bankrupt: rescued, and down a division:" as="Quiebra: rescatado, y una división abajo:" />
+    <qg:phrase text="A star is born:" as="Nace una estrella:" />
+    <qg:phrase text="Better this season:" as="Mejoraron en la temporada:" />
+    <qg:phrase text="In crisis, the club cannot buy" as="En crisis, el club no puede fichar" />
+    <qg:phrase text="THE GROUND" as="EL ESTADIO" />
+    <qg:phrase text="Health:" as="Salud:" />
+    <qg:phrase text="gate" as="taquilla" />
+    <qg:phrase text="Works:" as="Obras:" />
+    <qg:phrase text="rounds" as="jornadas" />
+    <qg:phrase text="No works going on" as="Ninguna obra" />
+    <qg:phrase text="A dearer ticket keeps people away;" as="Una entrada cara aleja al público;" />
+    <qg:phrase text="Maintenance" as="Mantenimiento" />
+    <qg:phrase text="A quarter more seats" as="Un cuarto más de asientos" />
+    <qg:phrase text="History" as="Historia" />
+    <qg:phrase text="No season has ended yet." as="Ninguna temporada ha terminado aún." />
+    <qg:phrase text="Seasons" as="Temp." />
+    <qg:phrase text="Titles" as="Títulos" />
+    <qg:phrase text="Up" as="Asc." />
+    <qg:phrase text="Pts/match" as="Pts/partido" />
+    <qg:phrase text="Clubs" as="Clubes" />
+    <qg:phrase text="TOP SCORERS OF ALL TIME" as="GOLEADORES DE TODOS LOS TIEMPOS" />
   </qg:language>
 </q:application>
 ```
