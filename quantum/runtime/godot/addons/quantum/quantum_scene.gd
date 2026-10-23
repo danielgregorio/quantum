@@ -9,6 +9,7 @@ extends Node2D
 var q_spec: Dictionary = {}
 var q_game: Dictionary = {}
 var q_seed: int = 0
+var q_entered := false   # _q_enter has run: the scene's computed q:sets have their values
 var q_camera: Camera2D = null
 var q_views: Array = []   # qg:camera player=: [camera, its view's size] each (split.gd); [] for one camera
 var q_fall_y: float = 100000.0
@@ -34,6 +35,7 @@ func _ready() -> void:
 		q_camera.make_current()
 	if has_method("_q_enter"):
 		call("_q_enter")
+	q_entered = true
 
 
 # A thing of the scene died (health 0): the scene's qg:on-death of= its tag.

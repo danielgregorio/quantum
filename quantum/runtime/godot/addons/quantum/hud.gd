@@ -195,6 +195,8 @@ func _bound(bind: String):
 
 
 func _refresh() -> void:
+	if "q_entered" in _scene and not _scene.q_entered:
+		return   # built before the scene is entered: its computed q:sets are not set yet
 	if _if_method != null:
 		visible = bool(_scene.call(_if_method))
 	if not visible:
