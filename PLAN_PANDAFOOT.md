@@ -2,7 +2,9 @@
 
 > Status: approved 2026-10-22, the four phases below. Phase 1 done the same day; what its first players
 > found fixed on 2026-10-23, when the phases were reordered: the club (Phase 2) before the online round (Phase 3);
-> what they found on a second evening fixed the same day, and what they asked for added to Phase 2.
+> what they found on a second evening fixed the same day, and what they asked for added to Phase 2. Phase 2
+> done the same evening (version 2.0, with its version in view and its changelog), played by the agent for
+> fifteen seasons; next, what people find playing it.
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The game's design is [danielgregorio/pandafoot](https://github.com/danielgregorio/pandafoot)'s
 > `GAME_DESIGN.md` (v0.2, with the decisions of 2026-10-22), and its numbers are checked there by
@@ -232,6 +234,35 @@ Playtest: five seasons from the fourth division, by the agent and by people; how
 climbs, how often a manager is sacked and offered a job, how often the hidden genius is found and sold, and
 whether the auction's long shots ("Romário topou o Náutico!") come often enough to be stories and rarely
 enough to be news.
+
+### The playtest (2026-10-23)
+
+Three worlds, five seasons each, played by the agent through the play protocol: one manager from a small club of
+the fourth, the line-up the computer's, a bid at 200% of the wage on the best player on the list clearly better
+than the eleven (three times a season), the first offer always taken. 300 dates, no script error; a season takes
+about five minutes at 16x.
+
+| Measure | Three worlds, 15 seasons |
+|---|---|
+| Goals a match | 2.52 in the league (Phase 1: 2.60), 2.35 in the cup |
+| Home, draw, away | 47 / 26 / 26 |
+| A club weaker by 3 or more wins | 24% (draws 27%): the design's fifth to quarter |
+| A club of the fourth climbs | 5, 4 and 4 of the ten went up at least once; two reached the second in five seasons |
+| A club of the first goes down | 6, 5 and 4 of the ten at least once |
+| A manager sacked and offered a job | One sacked twice in the fourth (8th of 10 with three new players), then promoted with a third club and offered the second; two offered the third after one season and the first after the second: one champion of the first in the fourth season, the other sacked twice in the fifth (from the first, then from the second at round 7) |
+| The hidden genius found and sold | Never: he stayed at his small club in all three worlds. No computer club buys him; he is the manager's to find |
+| The long shots | 8 of 79 deals (9%): about five deals a season in a world, a long shot every other season, news and not the rule |
+| The manager's bids | 12 of 12 signed, all free agents of strength 30 to 37 (a fourth division's eleven is about 20) |
+| Stars born | 15 in 15 seasons, one a season |
+| The crisis | 3 to 6 clubs of the fourth and 1 to 4 of the third in the red at a season's end; six points off five times; no bankruptcy |
+| Players who grow | The first's mean strength from 38 to about 36.5, the fourth's from 17.8 to about 20 |
+| The cup | The lower division wins in 90 minutes 30% of the ties one division apart, 23% of those two or three apart, and a quarter more go to penalties: the fourth knocks out the first in about a third of their ties |
+| The grounds | No computer club grew its ground in fifteen seasons: only a manager builds |
+
+To tune once people have played (none is a bug): the cup's giant-killing (a third, where a cup's lore says one in
+six or seven); free agents of first-division strength who sign for the fourth for no fee (the fourth's market was
+meant to be free agents, not these); an offer after a promotion that skips a division (from the third to the first);
+the computer's clubs that never build; a hidden genius nobody else ever finds.
 
 ## Phase 3 — The live round online
 
