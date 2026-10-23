@@ -14,7 +14,8 @@ description: "A q:knowledge source that is a query: the rows of your FAQ table, 
 
 A `type="query"` source turns each row into a text to index. Everything in it
 is shared by every user of the app — any question can retrieve any row — so
-index only what everyone may read.
+index only what everyone may read, or give the rows of each reader a base of
+their own (IA-10).
 
 <<< @/../examples/cookbook/ai/knowledge-from-a-table/components/index.q{xml}
 

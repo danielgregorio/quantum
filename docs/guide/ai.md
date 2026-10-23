@@ -135,9 +135,11 @@ Behaviour worth knowing:
   source's text, the embedding model or the chunking changes, and reused
   otherwise — embedding is the expensive part.
 - Any `name` works; it does not have to be a valid ChromaDB collection name.
-- A `type="query"` source is shared by every user of the app: whoever asks can
-  retrieve any of its rows. There is no per-user filter yet — do not index rows
-  that only some users may see.
+- A `type="query"` source is shared by whoever reads its base. To keep rows
+  apart — a board's, a user's — pass the query's values with `q:param`, as in
+  `q:query` (`{…}` in its SQL is refused), and give each its own base:
+  `<q:knowledge name="cards{id}">` and `knowledge="cards{id}"` on the `q:llm`
+  ([IA-10](../reference/spec.md#IA-10)).
 
 ### Answers that cite their sources
 

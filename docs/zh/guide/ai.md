@@ -127,7 +127,7 @@ llm:
 
 - 索引保存在 `./.quantum/knowledge`（`persistPath` 可以修改，`persist="false"` 让它只存在内存中）。当某个来源的文本、嵌入模型或分块方式改变时，它会**自动重建**，否则会复用——计算嵌入是开销最大的部分。
 - 任何 `name` 都可以；不必是合法的 ChromaDB 集合名。
-- `type="query"` 来源由应用的所有用户共享：任何提问的人都可以检索到其中任意一行。目前还没有按用户过滤——不要索引只有部分用户可以看到的行。
+- `type="query"` 来源由读取其知识库的人共享。要把各行分开（一个看板的、一个用户的），像 `q:query` 一样用 `q:param` 传入查询的值（SQL 中的 `{…}` 会被拒绝），并为每一份各建一个知识库：`<q:knowledge name="cards{id}">`，并在 `q:llm` 上写 `knowledge="cards{id}"`（[IA-10](../../reference/spec.md#IA-10)）。
 
 ### 引用来源的回答 {#answers-that-cite-their-sources}
 

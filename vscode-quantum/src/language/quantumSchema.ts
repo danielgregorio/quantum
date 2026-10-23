@@ -364,6 +364,7 @@ export const quantumTags: TagSchema[] = [
             { name: 'table', description: 'Take the q:params from this table\'s schema (UI-10)', type: 'string' },
             { name: 'datasource', description: 'Datasource of `table`', type: 'string' },
             { name: 'columns', description: 'Only these columns, in this order (UI-10)', type: 'string' },
+            { name: 'require_role', description: 'Only these roles (comma-separated) may run it; others get 403 (AUTH-8)', type: 'string' },
         ]
     },
     {
@@ -535,7 +536,7 @@ export const quantumTags: TagSchema[] = [
     {
         name: 'source',
         namespace: 'q',
-        description: 'A source of a q:knowledge, read whole (IA-8)',
+        description: 'A source of a q:knowledge, read whole (IA-8); a query\'s values are q:params (IA-10)',
         category: 'Core',
         attributes: [
             { name: 'type', description: 'Kind', required: true, type: 'enum', values: ['text', 'file', 'directory', 'query'] },

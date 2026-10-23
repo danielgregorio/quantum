@@ -128,8 +128,19 @@ muestra. En cualquier otro lugar no haría nada, así que no pasa el análisis:
 
 Una acción se protege a través de su página: `require_auth` / `require_role` en
 el `q:component`, o una guarda (un `q:if` de nivel superior con `q:redirect`),
-que se ejecuta antes de cada acción de la página. El propio `q:action` no acepta
-ningún atributo de protección:
+que se ejecuta antes de cada acción de la página. Además, `require_role` en un
+`q:action` deja que solo esos roles la ejecuten — una página que sus lectores
+leen y sus miembros cambian; cualquier otro recibe `403`, y nada de la acción
+se ejecuta:
+
+```xml
+<q:action name="move" method="POST" require_role="admin,member">
+  <q:redirect url="/" />
+</q:action>
+```
+
+Quién puede abrir la página lo dice la página: `require_auth` en un `q:action`
+se rechaza:
 
 ```xml
 <q:action name="save" method="POST" require_auth="true">

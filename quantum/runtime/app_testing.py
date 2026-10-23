@@ -30,6 +30,7 @@ import yaml
 from quantum.core.features.native_testing.src import (
     TestCaseNode, TestFileNode, TestParseError, TestStepNode, is_test_file, parse_test_source)
 from quantum.core.features.native_testing.src.parser import QUERIES
+from quantum.runtime.ui_table_edit import EDIT_ACTION, signature_on_page
 
 # Folders never searched for tests.
 _SKIP_DIRS = {'.git', 'node_modules', '__pycache__', 'data', '.quantum', '.venv', 'venv', 'dist'}
@@ -385,6 +386,11 @@ class TestRun:
     def _submit(self, step: TestStepNode) -> None:
         attrs = dict(step.attrs)
         data = {'action': attrs.pop('action'), **attrs}
+        if data['action'] == EDIT_ACTION and '__sig' not in data:
+            # UI-13: a cell is posted with the signature the page gave this session, as a browser does
+            html = self.world.client.get(self.current).get_data(as_text=True)
+            data['__sig'] = signature_on_page(html, data.get('__table', ''), data.get('__column', ''),
+                                              data.get('__key', ''))
         self.last = self._request('POST', self.current, data)
         # A page with one q:action runs it whatever name was posted (ACT-1): a
         # test that names another action would pass while testing the wrong one.

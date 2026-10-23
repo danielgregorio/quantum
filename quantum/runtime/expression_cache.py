@@ -436,7 +436,7 @@ class DataBindingCache:
 
     def __init__(self, max_size: int = 500):
         self._expr_cache = ExpressionCache(max_size=max_size)
-        self._pattern = re.compile(r'\{([^}]+)\}')
+        self._pattern = re.compile(r'\{([^{}]+)\}')
         self._lock = threading.RLock()
 
     def apply(self, text: str, context: Dict[str, Any]) -> Any:

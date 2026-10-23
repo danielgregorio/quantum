@@ -280,6 +280,11 @@ class ActionHandler:
                         if getattr(param, 'nullable', False):
                             validated[param.name] = None      # UI-10: a NULL column left blank
                         continue
+                    if param.default == '':
+                        # ACT-2: default="" is "nothing": an optional date, url or e-mail left
+                        # blank is '' (it was converted, and '' is not a URL or a date)
+                        validated[param.name] = ''
+                        continue
                     value = param.default
 
                 # Type validation and conversion

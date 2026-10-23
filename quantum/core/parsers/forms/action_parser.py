@@ -48,6 +48,15 @@ class ActionParser(BaseTagParser):
                     f'<q:action name="{name}"> {attr}= is not supported: it was accepted '
                     f'and never enforced. {why}')
 
+        # AUTH-8: who may run it, of those who may open the page (a viewer reads, a member changes)
+        role = element.get('require_role')
+        if role is not None:
+            roles = [r.strip() for r in role.split(',') if r.strip()]
+            if not roles:
+                from quantum.core.parser import QuantumParseError
+                raise QuantumParseError(f'<q:action name="{name}"> require_role= names no role')
+            action_node.require_role = ','.join(roles)
+
         # UI-10 (M17): the action's params come from a table's schema, read
         # from the database when the action is used; a q:param written wins.
         action_node.table = element.get('table')

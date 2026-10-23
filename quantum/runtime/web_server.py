@@ -493,6 +493,11 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
 
                 if action_node:
                     dev_note(action=action_node.name)
+                    # AUTH-8: an action of some roles only — refused before anything of it runs
+                    if action_node.require_role and not AuthService.has_role(session_data, action_node.require_role):
+                        return Response(f"<h1>403 Forbidden</h1><p>Required role: "
+                                        f"{html_escape(action_node.require_role)}</p>",
+                                        status=403, mimetype='text/html')
                     # AUTH-6: the page's guards run before its action. Without
                     # this a guard protected the GET only, and the POST ran
                     # the action with no session.
@@ -699,7 +704,7 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
         rules from the schema (UI-10) and updates one row by its key through
         the database service — so /_dev shows it like any action."""
         from quantum.runtime.table_params import TableParamsError, columns_of, param_from_column
-        from quantum.runtime.ui_table_edit import EDIT_ACTION, find_editable_table
+        from quantum.runtime.ui_table_edit import EDIT_ACTION, find_editable_table, signed_cell
         from quantum.runtime.action_handler import ValidationError
 
         table = request.form.get('__table', '')
@@ -717,6 +722,12 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
             guard_runtime.run_guards(ast, self._page_params(path_params, consume_flash=False))
         except PageRedirect as r:
             return self._page_redirect(r, guard_runtime)
+        if not signed_cell(table, column, key, request.form.get('__sig')):
+            # a cell the page did not show this person: a table in a q:if false for them, a row
+            # their query left out, or a form from another session
+            return Response(f'<h1>403 Forbidden</h1><p>{html_escape(table)}.{html_escape(column)} '
+                            f'of {html_escape(key)} was not shown to you as editable.</p>',
+                            status=403, mimetype='text/html')
 
         back = request.referrer or request.path
         try:

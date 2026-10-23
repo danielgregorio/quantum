@@ -47,7 +47,7 @@ class TestAttributesThatNeverWorked:
 
     @pytest.mark.parametrize('attribute', [
         'memoize="true"', 'cache="60s"', 'async="true"', 'pure="true"', 'retry="3"',
-        'access="private"', 'endpoint="/api/x"', 'scope="global"', 'validate="true"'])
+        'access="private"', 'endpoint="/api/x"', 'scope="global"', 'validate="true"', 'params="card"'])
     def test_they_are_parse_errors(self, attribute):
         # FN-2
         with pytest.raises(QuantumParseError, match='is not supported'):

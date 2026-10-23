@@ -25,7 +25,7 @@ frequentes guardadas no banco.
 Uma fonte `type="query"` transforma cada linha num texto a indexar. Tudo o
 que está nela é compartilhado por todos os usuários da aplicação — qualquer
 pergunta pode recuperar qualquer linha — então indexe só o que todos podem
-ler.
+ler, ou dê às linhas de cada leitor uma base só delas (IA-10).
 
 <<< @/../examples/cookbook/ai/knowledge-from-a-table/components/index.q{xml}
 

@@ -198,6 +198,7 @@ CORE_AI_TAGS: Dict[str, TagInfo] = {t.full_name: t for t in [
         a("table", "Take the q:params from this table's schema (UI-10)"),
         a("datasource", "Datasource of `table`"),
         a("columns", "Only these columns, in this order (UI-10)"),
+        a("require_role", "Only these roles (comma-separated) may run it; others get 403 (AUTH-8)"),
     ], children=["q:param", "q:set", "q:query", "q:if", "q:loop", "q:file", "q:mail", "q:flash", "q:redirect"]),
     tag("redirect", "Ends the action or page with a redirect (ACT-3, ACT-7)", [
         a("url", "Where to", X), a("to", "Where to (same as url)", X),
@@ -265,7 +266,7 @@ CORE_AI_TAGS: Dict[str, TagInfo] = {t.full_name: t for t in [
         a("rebuild", "Index again", B, default="false"),
         ONERROR,
     ], children=["q:source"]),
-    tag("source", "A source of a q:knowledge, read whole (IA-8)", [
+    tag("source", "A source of a q:knowledge, read whole (IA-8); a query's values are q:params (IA-10)", [
         a("type", "Kind", E, required=True, values=["text", "file", "directory", "query"]),
         a("path", "File or folder"), a("pattern", "Files of the folder, e.g. `*.md`"),
         a("datasource", "Datasource of a query source"),

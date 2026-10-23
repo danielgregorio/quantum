@@ -152,10 +152,11 @@ Comportamentos que vale saber:
   embeddings é a parte cara.
 - Qualquer `name` serve; não precisa ser um nome válido de coleção do
   ChromaDB.
-- Uma fonte `type="query"` é compartilhada por todos os usuários da
-  aplicação: quem pergunta pode recuperar qualquer uma das linhas dela. Ainda
-  não há filtro por usuário — não indexe linhas que só alguns usuários podem
-  ver.
+- Uma fonte `type="query"` é compartilhada por quem lê a base dela. Para
+  manter linhas separadas — as de um quadro, as de um usuário — passe os
+  valores da query com `q:param`, como no `q:query` (`{…}` no SQL é recusado),
+  e dê a cada uma a sua base: `<q:knowledge name="cards{id}">` e
+  `knowledge="cards{id}"` no `q:llm` ([IA-10](../../reference/spec.md#IA-10)).
 
 ### Respostas que citam as fontes {#answers-that-cite-their-sources}
 

@@ -10,9 +10,14 @@ small form in its cell. It posts to an action the page does not write:
 `__edit`, handled by the server (web_server._edit_cell), which accepts only a
 table and column this page declares editable, validates the value with the
 column's rules from the schema (UI-10) and updates one row by its key. What it
-does shows in /_dev like any action.
+does shows in /_dev like any action. Each cell is signed for the session it was
+shown to (`__sig`): a cell the page did not show this person — a table inside a
+`q:if` that was false for them, a row their query left out — is refused.
 """
 
+import hashlib
+import hmac
+import secrets
 from typing import Dict, Optional
 from urllib.parse import urlencode
 
@@ -93,8 +98,40 @@ def cell_field(plan: dict, column_schema, row: dict, state: Optional[dict], esca
                       True, {'value': current})
     field, error = prepare_field(field, ctx, escape)
     hidden = {'action': EDIT_ACTION, '__table': plan['table'], '__key': str(row[key]),
-              '__column': column_schema.name}
+              '__column': column_schema.name,
+              '__sig': cell_signature(plan['table'], column_schema.name, str(row[key]))}
     return field, hidden, error
+
+
+def cell_signature(table: str, column: str, key: str) -> str:
+    """UI-13: the signature of a cell shown to this session — who is signed in, and a nonce of the
+    session, so that a cell shown to an admin is not a cell anyone else can edit. '' outside a request."""
+    from flask import current_app, has_request_context, session
+    if not has_request_context() or not current_app.secret_key:
+        return ''
+    nonce = session.get('_q_cells')
+    if not nonce:
+        nonce = session['_q_cells'] = secrets.token_hex(8)
+    who = session.get('quantum_session') or {}
+    message = '\x1f'.join([nonce, str(who.get('userId', '')), str(who.get('userRole', '')), table, column, key])
+    return hmac.new(str(current_app.secret_key).encode(), message.encode(), hashlib.sha256).hexdigest()[:32]
+
+
+def signature_on_page(html: str, table: str, column: str, key: str) -> str:
+    """The `__sig` a rendered page gave a cell ('' when it shows no such cell), as a browser posts it."""
+    import re
+    for form in re.findall(r'<form method="post" class="q-cell">.*?</form>', html or '', re.S):
+        if all(f'name="{name}" value="{value}"' in form
+               for name, value in (('__table', table), ('__column', column), ('__key', key))):
+            found = re.search(r'name="__sig" value="([^"]*)"', form)
+            return found.group(1) if found else ''
+    return ''
+
+
+def signed_cell(table: str, column: str, key: str, signature: Optional[str]) -> bool:
+    """Whether a posted cell is one this page showed this session (UI-13)."""
+    expected = cell_signature(table, column, key)
+    return bool(expected) and hmac.compare_digest(expected, signature or '')
 
 
 CELL_CSS = """

@@ -94,5 +94,26 @@ class KnowledgeParser(BaseTagParser):
             source.content = self.get_text(element)
         elif source_type == 'query':
             source.sql = self.get_text(element)
+            self._parse_query_params(element, source)
 
         return source
+
+    def _parse_query_params(self, element: ET.Element, source: KnowledgeSourceNode) -> None:
+        """IA-10: a query source binds its values as q:query does — `:name` and a q:param each.
+
+        Its SQL was databound like text, so `{id}` from the URL went into the SQL
+        as written; it is refused here, as it is in q:query."""
+        import re
+        from quantum.core.parsers.data.query_parser import QueryParser
+        parser = QueryParser(self._parser)
+        for child in element:
+            if self.get_element_name(child) == 'param':
+                source.params.append(parser._parse_query_param(child))
+        sql = source.sql or ''
+        if re.search(r'\{[a-zA-Z_]\w*', sql):
+            raise ParserError('<q:source type="query">: direct {var} interpolation in SQL is not allowed; '
+                              'use :name and <q:param name="name" value="{...}" /> (IA-10)')
+        missing = QueryParser._named_params(sql) - {p.name for p in source.params}
+        if missing:
+            raise ParserError(f'<q:source type="query">: SQL parameter(s) '
+                              f'{", ".join(":" + p for p in sorted(missing))} have no <q:param> (IA-10)')

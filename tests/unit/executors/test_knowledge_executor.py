@@ -269,23 +269,28 @@ class TestQuerySource:
         # database_service must be forwarded — query sources need it
         assert kwargs["database_service"] is runtime.services.database
 
-    def test_query_source_with_databinding(self):
-        runtime = MockKnowledgeRuntime({"category": "tech"})
+    def test_query_source_binds_its_params(self):
+        # IA-10: the values go as bound parameters, never into the SQL
+        from quantum.core.ast_nodes import QueryParamNode
+        runtime = MockKnowledgeRuntime({"category": "tech'; DROP TABLE articles; --"})
         executor = KnowledgeExecutor(runtime)
 
         source = KnowledgeSourceNode()
         source.source_type = "query"
         source.datasource = "mydb"
-        source.sql = "SELECT * FROM articles WHERE category = '{category}'"
+        source.sql = "SELECT * FROM articles WHERE category = :category"
+        source.params = [QueryParamNode("category", "{category}", "string")]
 
         node = KnowledgeNode()
-        node.name = "tech_articles"
+        node.name = "articles_{category}"
         node.sources = [source]
 
         executor.execute(node, runtime.execution_context)
 
         kwargs = runtime._knowledge_service.last_kwargs
-        assert "tech" in kwargs["sources"][0].sql
+        assert kwargs["sources"][0].sql == source.sql
+        assert kwargs["sources"][0].bound == {"category": "tech'; DROP TABLE articles; --"}
+        assert kwargs["name"] == "articles_tech'; DROP TABLE articles; --"
 
 
 class TestMultipleSources:

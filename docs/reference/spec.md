@@ -191,9 +191,10 @@ argument that does not pass is an error that names the parameter.
 <a id="FN-2"></a>**[FN-2](#FN-2)** — `q:function` accepts `name`, `returnType` ([FN-4](#FN-4)), `description` and
 `hint`. The attributes that were accepted and never did anything (`cache`,
 `memoize`, `pure`, `async`, `retry`, `timeout`, `access`, `scope`, `validate`,
-`endpoint` and the REST ones) are parse errors that say so.
+`endpoint` and the REST ones) are parse errors that say so; so is `params=`,
+which says that each parameter is a `q:param` child.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-function"><code>&lt;q:function&gt;</code></a> · <a href="./config#cfg-mail"><code>mail.timeout</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-function"><code>&lt;q:function&gt;</code></a> · <a href="./config#cfg-mail"><code>mail.timeout</code></a></p>
 
 <a id="FN-3"></a>**[FN-3](#FN-3)** — A component's `q:function` can be called in any of its expressions:
 `q:` attributes and HTML content.
@@ -218,7 +219,8 @@ named by the `action` field of the request body.
 <a id="ACT-2"></a>**[ACT-2](#ACT-2)** — Each field declared with `q:param` becomes a variable of the action,
 already validated and converted to the declared type (a `date` is a day that
 exists, written `YYYY-MM-DD`, and stays text). A `default` stands for a field
-left out or blank and is converted the same way. If a validation rule
+left out or blank and is converted the same way, but for `default=""`, which is
+an empty value of any type: an optional date, URL or e-mail left blank is `''`. If a validation rule
 fails (`required`, `type`, `minlength`, `maxlength`, `min`, `max`, `pattern`,
 `enum`, `range`),
 the action does not run: the response redirects to the page it came from, with
@@ -423,7 +425,15 @@ error, not false: the page fails closed. `require_auth` and `require_role`
 
 <a id="AUTH-7"></a>**[AUTH-7](#AUTH-7)** — `q:action` does not accept `require_auth`, `csrf` or `rate_limit`:
 they were read and never applied, and are parse errors that say so. An action
-is protected through its page ([AUTH-1](#AUTH-1), [AUTH-6](#AUTH-6)).
+is protected through its page ([AUTH-1](#AUTH-1), [AUTH-6](#AUTH-6)), and by role with [AUTH-8](#AUTH-8).
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a></p>
+
+<a id="AUTH-8"></a>**[AUTH-8](#AUTH-8)** — `q:action require_role="a, b"` runs only for an authenticated
+session whose `session.userRole` is one of the listed roles: for anyone else
+the answer is `403` and nothing of the action runs — a page its viewers read
+and only its members change. A `require_role` that names no role is a parse
+error.
 
 <p class="spec-cited">Referenced by: <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a></p>
 
@@ -556,7 +566,8 @@ user (`userName`, else `userId`), the action, the table, the row's key, the
 operation and the row before and after as JSON. A write rolled back leaves no
 history. Writes outside actions are not recorded. A write that is not a
 single-table INSERT/UPDATE/DELETE is recorded with its SQL, without before and
-after. `<ui:history table key datasource [limit]>` lists a row's history,
+after. A write with `RETURNING` returns its rows, and is committed and recorded
+like the others. `<ui:history table key datasource [limit]>` lists a row's history,
 newest first — when, who, action, and for an update each changed column as
 `old → new` — in the browser and the console; on a datasource without history
 it is an error.
@@ -589,7 +600,8 @@ value does not exist and points to `q:if` or `operation="increment"`.
 <a id="EXPR-4"></a>**[EXPR-4](#EXPR-4)** — In HTML content, an expression that does not resolve stays as
 literal text and is logged once per distinct expression. Anywhere, a JSON
 object (`{"a": 1}`) and a regex quantifier (`\d{10,11}`) are not expressions
-and pass through untouched.
+and pass through untouched; the expressions inside a JSON object are evaluated
+(`{"board": "{name}"}`).
 
 <a id="EXPR-5"></a>**[EXPR-5](#EXPR-5)** — A `condition` is a presence test: a name, key, attribute or index
 that does not exist makes it false, logged once. `<q:if condition="flash">`
@@ -919,8 +931,8 @@ source. `q:source type` is `text`, `file`, `directory` or `query`; anything
 else (`url` included) is a parse error. `q:llm timeout=` is the number of
 seconds to wait for the model (60 when not declared); `q:agent timeout=`, in
 milliseconds, is the whole run's budget, and each model call gets what is
-left. A `type="query"` source is shared by every user of the application: any
-user's question can retrieve any of its rows — there is no per-user filter yet.
+left. A `type="query"` source is shared by whoever reads its base: to keep
+rows apart (a board's, a user's), give each its own base ([IA-10](#IA-10)).
 
 <p class="spec-cited">Referenced by: <a href="./tags#q-llm"><code>&lt;q:llm&gt;</code></a> · <a href="./tags#q-knowledge"><code>&lt;q:knowledge&gt;</code></a> · <a href="./tags#q-agent"><code>&lt;q:agent&gt;</code></a> · <a href="./tags#q-source"><code>&lt;q:source&gt;</code></a> · <a href="./config#cfg-logging"><code>logging.file</code></a></p>
 
@@ -932,6 +944,16 @@ source, false when it cites none or nothing was found, and empty while a
 streamed answer ([IA-7](#IA-7)) is still being written.
 
 <p class="spec-cited">Referenced by: <a href="./tags#q-llm"><code>&lt;q:llm&gt;</code></a></p>
+
+<a id="IA-10"></a>**[IA-10](#IA-10)** — A `type="query"` source's SQL takes its values as `q:query`'s does:
+`:name` in the SQL and a `q:param name="name" value="…" type="…"` child for
+each, converted and checked by its type; `{…}` in its SQL, and a `:name`
+without its `q:param`, are parse errors. `q:knowledge name=` is an expression,
+and so are `q:llm knowledge=` and `q:query datasource="knowledge:…"`, so a page
+has a base per board or per user (`name="cards{id}"`, `knowledge="cards{id}"`)
+and a question retrieves only that base's rows.
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-llm"><code>&lt;q:llm&gt;</code></a> · <a href="./tags#q-knowledge"><code>&lt;q:knowledge&gt;</code></a> · <a href="./tags#q-source"><code>&lt;q:source&gt;</code></a></p>
 
 ## 8a. Configuration
 
@@ -1173,13 +1195,16 @@ is ignored, never turned into SQL. `<ui:table edit="t" datasource="d">` makes
 each shown column of table `t` (but the primary key and those with
 `edit="false"`) a form in the cell, which posts to the generated action
 `__edit`: the server accepts only a table and column the page declares
-editable, runs the page's guards ([AUTH-6](#AUTH-6)), validates the value with the
+editable, runs the page's guards ([AUTH-6](#AUTH-6)), accepts only a cell the page showed
+this session (each cell is signed for the session and the signed-in user it
+was drawn for: a table in a `q:if` that was false for this person, or a row
+their query left out, is `403`), validates the value with the
 column's rules ([UI-10](#UI-10)) and updates one row by its key; a refused value comes
 back in the cell, with the error. The rows must carry the primary key. What it
 runs shows in `/_dev`. In the console, headers are links and cells are fields
 that save on Enter.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a></p>
 
 <a id="UI-14"></a>**[UI-14](#UI-14)** — `<ui:input rows="n">` (n ≥ 2) is a multi-line field: a `<textarea>`
 in the browser, whose value is escaped, and a text area in the console. A

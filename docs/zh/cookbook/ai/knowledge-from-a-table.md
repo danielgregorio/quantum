@@ -19,7 +19,7 @@ source_hash: f7b220a49066
 <<< @/../examples/cookbook/ai/knowledge-from-a-table/migrations/V001_faq.sql{sql}
 
 `type="query"` 来源把每一行变成一段待索引的文本。其中的所有内容由应用的所有用户共享——
-任何问题都可能检索到任何一行——所以只索引每个人都可以读的内容。
+任何问题都可能检索到任何一行——所以只索引每个人都可以读的内容，或者为每个读者的行各建一个知识库（IA-10）。
 
 <<< @/../examples/cookbook/ai/knowledge-from-a-table/components/index.q{xml}
 

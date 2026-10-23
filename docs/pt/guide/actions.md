@@ -128,8 +128,18 @@ Em qualquer outro lugar ela não faria nada, então não passa pelo parser:
 
 Uma ação é protegida pela sua página: `require_auth` / `require_role` no
 `q:component`, ou uma guarda (um `q:if` no topo com `q:redirect`), que roda
-antes de cada ação da página. A própria `q:action` não aceita atributo de
-proteção:
+antes de cada ação da página. Além disso, `require_role` numa `q:action` deixa
+só esses papéis a executarem — uma página que os leitores leem e os membros
+alteram; qualquer outro recebe `403`, e nada da ação roda:
+
+```xml
+<q:action name="move" method="POST" require_role="admin,member">
+  <q:redirect url="/" />
+</q:action>
+```
+
+Quem pode abrir a página é a página que diz: `require_auth` numa `q:action` é
+recusado:
 
 ```xml
 <q:action name="save" method="POST" require_auth="true">

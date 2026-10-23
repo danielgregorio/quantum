@@ -24,7 +24,7 @@ frecuentes guardadas en la base de datos.
 Una fuente `type="query"` convierte cada fila en un texto para indexar. Todo
 lo que contiene lo comparten todos los usuarios de la aplicación — cualquier
 pregunta puede recuperar cualquier fila — así que indexa solo lo que todos
-pueden leer.
+pueden leer, o da a las filas de cada lector una base propia (IA-10).
 
 <<< @/../examples/cookbook/ai/knowledge-from-a-table/components/index.q{xml}
 

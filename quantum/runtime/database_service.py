@@ -3,6 +3,7 @@ Quantum Database Service - Manages database connections and query execution
 """
 
 import logging
+import re
 import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -25,6 +26,9 @@ def _register_sqlite_date_adapters() -> None:
 _register_sqlite_date_adapters()
 
 logger = logging.getLogger('quantum.database')
+
+# A statement that writes, whether or not it returns rows (RETURNING)
+_WRITE_SQL = re.compile(r'^\s*(INSERT|UPDATE|DELETE|REPLACE)\b', re.I)
 
 
 @dataclass
@@ -328,6 +332,16 @@ class DatabaseService:
                 record_count = len(data)
                 affected_rows = None
                 last_insert_id = None
+                if _WRITE_SQL.match(sql):
+                    # INSERT/UPDATE/DELETE … RETURNING: a write that returns its rows is still a write —
+                    # recorded (DB-11) and committed. It was taken for a SELECT: never committed by
+                    # itself, and missing from the history.
+                    if capture is not None:
+                        from quantum.runtime import history
+                        history.finish(conn, capture, getattr(cursor, 'lastrowid', None))
+                    if not in_transaction:
+                        conn.commit()
+                    affected_rows = record_count
             else:
                 # Non-SELECT query (INSERT, UPDATE, DELETE). Commit now ONLY
                 # when standalone; inside a transaction the commit is deferred

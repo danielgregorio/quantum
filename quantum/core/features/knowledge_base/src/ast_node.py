@@ -15,7 +15,8 @@ class KnowledgeSourceNode(QuantumNode):
       <q:source type="file" path="./docs/guide.md" />
       <q:source type="directory" path="./docs/" pattern="*.md" />
       <q:source type="query" datasource="mydb">
-          SELECT title, content FROM articles
+          SELECT title, content FROM articles WHERE board_id = :board
+          <q:param name="board" value="{id}" type="integer" />
       </q:source>
     """
     source_type: str = "text"          # text, file, directory, url, query
@@ -25,6 +26,7 @@ class KnowledgeSourceNode(QuantumNode):
     url: Optional[str] = None          # URL for url type
     datasource: Optional[str] = None   # Datasource for query type
     sql: Optional[str] = None          # SQL for query type
+    params: List[Any] = field(default_factory=list)   # its q:params (QueryParamNode), bound as q:query's
     chunk_size: Optional[int] = None   # Override parent chunk_size
     chunk_overlap: Optional[int] = None  # Override parent chunk_overlap
 

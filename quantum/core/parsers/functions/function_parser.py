@@ -17,6 +17,7 @@ _NEVER_IMPLEMENTED = {
     'endpoint': "functions are not served as REST endpoints; " + _NO_OP,
     'method': _NO_OP, 'produces': _NO_OP, 'consumes': _NO_OP, 'auth': _NO_OP,
     'roles': _NO_OP, 'rateLimit': _NO_OP, 'cors': _NO_OP, 'status': _NO_OP,
+    'params': 'declare each parameter as a <q:param name="…" type="…"/> child of the function (FN-1)',
 }
 
 

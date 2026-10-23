@@ -236,7 +236,10 @@ select with the `CHECK` list.
   table and columns this page declares, runs the page's guards, validates the
   value with the column's rules from the schema (NOT NULL, `CHECK … IN`, type)
   and updates one row by its primary key. A refused value comes back in its cell
-  with the error. `edit="false"` on a column keeps it read-only.
+  with the error. `edit="false"` on a column keeps it read-only. Each cell is
+  signed for the session it was shown to: a table inside a `q:if` that was
+  false for this person, or a row their query left out, cannot be edited by a
+  form made by hand.
 - The rows must include the primary key (`SELECT id, …`).
 - What it does shows in [`/_dev`](/tools/dev-panel) like any action.
 

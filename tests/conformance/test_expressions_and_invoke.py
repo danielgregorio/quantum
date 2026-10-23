@@ -77,6 +77,16 @@ class TestExpressions:
         # EXPR-4
         assert run_body(f"<q:return value='{value}'/>") == value
 
+    @pytest.mark.parametrize('value,expected', [
+        ('{"board": "{name}", "card": {n}}', '{"board": "Ana", "card": 3}'),
+        ('[{"a": "{name}"}, {"b": "{n}"}]', '[{"a": "Ana"}, {"b": "3"}]'),
+    ])
+    def test_expressions_inside_json_are_evaluated(self, run_body, value, expected):
+        # EXPR-4 (before: the first {expr} after a JSON object's brace stayed as it was written: a webhook
+        # body {"board": "{name}"} sent {name})
+        assert run_body(f'<q:set name="name" value="Ana"/><q:set name="n" value="3" type="integer"/>'
+                        f"<q:return value='{value}'/>") == expected
+
     @pytest.mark.parametrize('condition', ['flash', 'session.user.is_admin', 'user.admin', 'items[3]'])
     def test_a_condition_with_a_missing_name_is_false(self, run_body, condition):
         # EXPR-5: <q:if condition="flash"> before flash exists

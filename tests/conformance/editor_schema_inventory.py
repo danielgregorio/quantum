@@ -65,7 +65,7 @@ CORPUS = [
     '<q:flash type="info" message="m"/><q:redirect url="/" flash="ok" status="302"/></q:action><p>x</p>',
     '<q:action name="t" method="POST" table="t" datasource="db" columns="a,b"><q:redirect url="/"/></q:action><p>x</p>',
     '<q:file action="send" file="{f}" name="n.pdf"/>',
-    '<q:action name="b" method="POST"><q:redirect to="/"/></q:action><p>x</p>',
+    '<q:action name="b" method="POST" require_role="admin"><q:redirect to="/"/></q:action><p>x</p>',
     '<q:file action="delete" file="{f}"/>',
     '<q:mail name="m" to="a@b.co" from="c@d.co" cc="e@f.co" bcc="g@h.co" replyTo="i@j.co" subject="s" type="text" '
     'body="b" onerror="continue"><q:attachment file="x.pdf"/></q:mail>',

@@ -1,0 +1,39 @@
+# Kanban: a Kanban manager, the proving application of PLAN_PLATFORMS.md. The same
+# pages are the web, the desktop, the TUI and the terminal versions:
+#
+#   quantum migrate up                 # data/kanban.db, with a demo board and three users
+#   quantum run --on web               # http://127.0.0.1:8090
+#   quantum run --on desktop           # a window of its own
+#   quantum run --on tui               # a text screen drawn by Godot
+#   quantum run --on terminal          # the terminal itself (SSH)
+#
+# Sign in as ana@example.com (admin), bruno@example.com (member) or carla@example.com
+# (viewer), password kanban-demo. The AI asks the model server of llm: below.
+
+server:
+  port: 8090
+  host: 127.0.0.1
+  reload: false
+  debug: false
+
+paths:
+  components: ./components
+  migrations: ./migrations
+
+datasources:
+  db:
+    driver: sqlite
+    database: ./data/kanban.db
+    history: true          # every change an action makes is recorded (DB-11): the cards' history and flow
+
+llm:
+  base_url: ${QUANTUM_LLM_BASE_URL:-http://localhost:11434}
+  model: phi3
+
+security:
+  login_url: /login
+
+logging:
+  level: INFO
+  console: true
+  file: false

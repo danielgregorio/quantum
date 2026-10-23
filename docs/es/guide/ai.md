@@ -148,9 +148,11 @@ Comportamientos que conviene conocer:
   fragmentos, y se reutiliza en los demás casos — calcular los embeddings es la
   parte cara.
 - Cualquier `name` funciona; no tiene que ser un nombre válido de colección de ChromaDB.
-- Una fuente `type="query"` la comparten todos los usuarios de la aplicación:
-  quien pregunta puede recuperar cualquiera de sus filas. Todavía no hay un
-  filtro por usuario — no indexes filas que solo algunos usuarios pueden ver.
+- Una fuente `type="query"` la comparte quien lee su base. Para mantener
+  filas separadas — las de un tablero, las de un usuario — pasa los valores de
+  la consulta con `q:param`, como en `q:query` (`{…}` en su SQL se rechaza), y
+  da a cada una su propia base: `<q:knowledge name="cards{id}">` y
+  `knowledge="cards{id}"` en el `q:llm` ([IA-10](../../reference/spec.md#IA-10)).
 
 ### Respuestas que citan sus fuentes {#answers-that-cite-their-sources}
 
