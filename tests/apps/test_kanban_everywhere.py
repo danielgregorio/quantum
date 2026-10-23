@@ -163,17 +163,19 @@ def free_port():
         return s.getsockname()[1]
 
 
-def test_on_web(kanban, services):
+def test_on_web(kanban, services, tmp_path):
     # UI-18: `quantum run <app> --on web` serves it; the script runs in a browser
     port = free_port()
+    # its log goes to a file: a pipe nobody reads fills, and the server stops at its next line
+    log = open(tmp_path / "server.log", "wb")
     server = subprocess.Popen([sys.executable, "-m", "quantum.cli.runner", "run", str(kanban), "--on", "web",
-                               "--port", str(port)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                               "--port", str(port)], stdout=subprocess.DEVNULL, stderr=log,
                               env={**os.environ, "QUANTUM_LLM_BASE_URL": services[0].url})
     url = f"http://127.0.0.1:{port}/"
     try:
         deadline = time.monotonic() + 60
         while True:
-            assert server.poll() is None, server.stderr.read().decode()
+            assert server.poll() is None, (tmp_path / "server.log").read_text(errors="replace")
             try:
                 if requests.get(url + "health", timeout=2).status_code == 200:
                     break
@@ -185,6 +187,7 @@ def test_on_web(kanban, services):
     finally:
         server.terminate()
         server.wait(10)
+        log.close()
     the_script_held(kanban, services[1])
 
 
