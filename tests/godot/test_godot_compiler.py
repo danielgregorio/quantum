@@ -1430,6 +1430,16 @@ class TestWhatCreepsAsked:
         err = refuse(tmp_path, game('  <qg:scene name="main"><q:set name="ready" value="false" type="boolean" /></qg:scene>\n'))
         assert "'ready' is a property of every Godot node" in str(err)
 
+    def test_a_state_named_like_an_object_method(self, tmp_path):
+        # Object's own members are not in the class table (it starts at Node): a game state `free` was Object.free()
+        # to the scripts that read it (PandaFoot's free agents)
+        err = refuse(tmp_path, '''<q:application id="t" type="game">
+  <q:set name="free" value="[]" type="array" />
+  <qg:scene name="main"><qg:hud><qg:text value="{len(free)}" /></qg:hud></qg:scene>
+</q:application>
+''')
+        assert "'free' is a method of every Godot object; a game state needs another name" in str(err)
+
 
 class TestMultiplayer:
     def test_the_declaration_and_every_players_actions(self, tmp_path):

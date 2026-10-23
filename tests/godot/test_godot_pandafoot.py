@@ -210,6 +210,8 @@ def test_a_season_keeps_the_rules_of_football(pandafoot, godot):
                     assert len([p for p in c['players'] if p['xi']]) == 11
                     assert not [p['name'] for p in c['players'] if p['xi'] and (p['injured'] or p['suspended'])]
                 seen = game.act(tap=['select'], ticks=3)
+                if seen['scene'] == 'job':                          # sacked: the career goes on, at the first club
+                    seen = game.act(tap=['select'], ticks=3)
         # after the last results, a look at the table and back: the season's end. It was the dashboard, round 19 of
         # 18, the last match again, and again (its first players could not get past it)
         assert game.act(tap=['standings'], ticks=3)['scene'] == 'standings'
@@ -469,4 +471,126 @@ def test_a_promoted_manager_is_offered_a_bigger_club(pandafoot, godot, tmp_path)
             game.act(tap=['down'], ticks=2)
         back = game.act(tap=['select'], ticks=3)
         assert back['scene'] == 'dashboard' and back['state']['game']['managers'][0]['club'] == 34
+        assert not [line for line in game.log if 'SCRIPT ERROR' in line]
+
+
+# --- transfers (PLAN_PANDAFOOT.md Phase 2): Elifoot 2's auction of wages ---
+
+def to_the_list(game):
+    """From the results: the dashboard, then the transfer list (F6)."""
+    game.act(tap=['select'], ticks=3)
+    return game.act(tap=['market'], ticks=3)
+
+
+def test_the_list_fills_and_the_computers_clubs_trade(pandafoot, godot):
+    """After a round the list has free agents and players of the computer's clubs; three rounds on, the first
+    auctions are decided: a player changes clubs, the fee changes purses, the papers say so."""
+    with PlaySession(pandafoot, binary=godot) as game:
+        new_game(game)
+        before = game.observe()['state']['game']
+        after = play_round(game)
+        market = after['state']['game']['market']
+        assert sum(e['seller'] < 0 for e in market) >= 6 and all(e['left'] == 3 for e in market)
+        listing = to_the_list(game)
+        rows = [i['button'] for i in menus(listing)[0]['items'] if i['shown']]
+        assert len(rows) == len(market) and any('free' in r for r in rows)
+        game.act(tap=['cancel'], ticks=3)
+        for _ in range(5):
+            after = play_round(game)
+            game.act(tap=['select'], ticks=3)
+        state = after['state']['game']
+        news = [n['text'] for n in state['news']]
+        assert 'Signed:' in news or 'Surprise! He took the long shot:' in news
+        squads = {p['name'] for c in state['clubs'] for p in c['players']}
+        assert len(squads) == sum(len(c['players']) for c in state['clubs'])        # no one in two clubs
+        assert sum(len(c['players']) for c in state['clubs']) > sum(len(c['players']) for c in before['clubs'])
+        assert not [line for line in game.log if 'SCRIPT ERROR' in line]
+
+
+def test_a_manager_signs_a_free_agent(pandafoot, godot):
+    """Three times the wage he asks: he would come (80% or more), and three rounds on he is the manager's."""
+    with PlaySession(pandafoot, binary=godot) as game:
+        new_game(game)
+        play_round(game)
+        listing = to_the_list(game)
+        market = listing['state']['game']['market']
+        at = next(k for k, e in enumerate(market) if e['seller'] < 0)
+        for _ in range(at):
+            game.act(tap=['down'], ticks=2)
+        bid = game.act(tap=['select'], ticks=3)
+        assert bid['scene'] == 'bid' and texts(bid)[1] == 'A free agent'
+        for _ in range(36):                                        # 120% to 300% of what he asks
+            bid = game.act(tap=['right'], ticks=2)
+        line = [t for t in texts(bid) if t.startswith('He would come:')][0]
+        assert int(line.split()[3].rstrip('%')) >= 80, line
+        game.act(tap=['down'], ticks=2)
+        back = game.act(tap=['select'], ticks=3)                  # Make the bid
+        assert back['scene'] == 'market'
+        entry = back['state']['game']['market'][at]
+        who = entry['who']
+        assert [(b['club'], b['wage']) for b in entry['bids'] if b['club'] == 34] == [(34, round(entry['wage'] * 3))]
+        game.act(tap=['cancel'], ticks=3)
+        for _ in range(3):
+            after = play_round(game)
+            game.act(tap=['select'], ticks=3)
+        mine = after['state']['game']['clubs'][34]
+        assert who in [p['name'] for p in mine['players']] and len(mine['players']) == 23
+        assert who not in [p['name'] for p in after['state']['game']['free_agents']]
+
+
+def test_a_manager_puts_a_player_on_the_list(pandafoot, godot):
+    with PlaySession(pandafoot, binary=godot) as game:
+        new_game(game)
+        game.act(tap=['market'], ticks=3)
+        selling = game.act(tap=['sell'], ticks=3)
+        first = selling['state']['game']['clubs'][34]['players'][0]
+        listed = game.act(tap=['select'], ticks=3)
+        entry = [e for e in listed['state']['game']['market'] if e['who'] == first['name']]
+        assert entry and entry[0]['seller'] == 34 and entry[0]['fee'] > 0
+        assert any('ON THE LIST' in i['button'] for i in menus(listed)[0]['items'])
+        off = game.act(tap=['select'], ticks=3)                    # and off it again
+        assert not [e for e in off['state']['game']['market'] if e['who'] == first['name']]
+
+
+def test_a_loan_comes_back_with_the_new_season(pandafoot, godot, tmp_path):
+    """A rich manager borrows a player of a computer's club for the rest of the season; with the new season he is
+    back at his club."""
+    def two_rounds_left_and_rich(state):
+        state['matchday'] = 16
+        state['clubs'][34]['balance'] = 50_000_000
+        state['clubs'][34]['points'] = 99                         # first: a pleased board
+    saved_then(pandafoot, godot, tmp_path, two_rounds_left_and_rich)
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        continued(game)
+        play_round(game)                                           # the list fills
+        listing = to_the_list(game)
+        state = listing['state']['game']
+        at = next(k for k, e in enumerate(state['market'])
+                  if e['seller'] >= 0 and state['clubs'][e['seller']]['manager'] == 0)
+        entry = state['market'][at]
+        for _ in range(at):
+            game.act(tap=['down'], ticks=2)
+        bid = game.act(tap=['select'], ticks=3)
+        buttons = [i['button'] for i in menus(bid)[0]['items'] if 'button' in i and i['shown']]
+        assert buttons[1].startswith('Borrow him for the season'), buttons      # after the wage and the bid
+        game.act(tap=['down'], ticks=2)
+        game.act(tap=['down'], ticks=2)
+        lent = game.act(tap=['select'], ticks=3)['state']['game']
+        mine = lent['clubs'][34]
+        him = [p for p in mine['players'] if p['name'] == entry['who']]
+        assert him and him[0]['loan'] == entry['seller'] and len(mine['players']) == 23
+        assert mine['balance'] == pytest.approx(state['clubs'][34]['balance'] - 0.1 * entry['fee'])
+        assert entry['who'] not in [p['name'] for p in lent['clubs'][entry['seller']]['players']]
+        game.act(tap=['cancel'], ticks=3)
+        play_round(game)
+        assert game.act(tap=['select'], ticks=3)['scene'] == 'season-end'
+        seen = game.act(tap=['select'], ticks=3)                   # New season (and perhaps an offer: stay)
+        if seen['scene'] == 'job':
+            game.act(tap=['down'], ticks=2)
+            game.act(tap=['down'], ticks=2)
+            seen = game.act(tap=['select'], ticks=3)
+        state = seen['state']['game']
+        assert entry['who'] not in [p['name'] for p in state['clubs'][34]['players']]
+        back = [p for p in state['clubs'][entry['seller']]['players'] if p['name'] == entry['who']]
+        assert back and back[0]['loan'] == -1
         assert not [line for line in game.log if 'SCRIPT ERROR' in line]
