@@ -136,8 +136,10 @@ def test_cell_edits_are_recorded(open_app, database):
             '<ui:window title="T"><ui:table source="{posts}" edit="posts" datasource="db">'
             '<ui:column key="title"/></ui:table></ui:window></q:component>')
     c = open_app(t=page)
-    c.post('/t', data={'action': '__edit', '__table': 'posts', '__key': '1', '__column': 'title', 'value': 'Edited'},
-           headers={'Referer': 'http://localhost/t'})
+    from quantum.runtime.ui_table_edit import signature_on_page
+    signature = signature_on_page(c.get('/t').get_data(as_text=True), 'posts', 'title', '1')
+    c.post('/t', data={'action': '__edit', '__table': 'posts', '__key': '1', '__column': 'title', 'value': 'Edited',
+                       '__sig': signature}, headers={'Referer': 'http://localhost/t'})
     assert [(r[1], r[4]) for r in history_rows(database)] == [('__edit posts.title', 'update')]
 
 
@@ -158,3 +160,16 @@ def test_ui_history_attributes(attrs, message):
     from quantum.core.parser import QuantumParser
     with pytest.raises(Exception, match=message):
         QuantumParser().parse(f'<q:component name="p" {NS}><ui:history {attrs}/></q:component>')
+
+
+def test_a_write_that_returns_rows_is_recorded(open_app, database):
+    # DB-11 (before: RETURNING went into the query that reads the rows before, a syntax error, and the action failed)
+    page = (f'<q:component name="r" {NS}><q:action name="publish" method="POST">'
+            '<q:query name="done" datasource="db">UPDATE posts SET status = \'published\' WHERE id = 1 RETURNING title'
+            '</q:query><q:redirect url="/r" flash="{done[0].title} published"/></q:action>'
+            '<p>{flash}</p></q:component>')
+    c = open_app(r=page)
+    assert c.post('/r', data={'action': 'publish'}).status_code == 302
+    assert 'First published' in c.get('/r').get_data(as_text=True)
+    (entry,) = [r for r in history_rows(database) if r[4] == 'update']
+    assert json.loads(entry[5])['status'] == 'draft' and json.loads(entry[6])['status'] == 'published'

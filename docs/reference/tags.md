@@ -73,7 +73,7 @@ Inside: [`q:function`](#q-function), [`q:query`](#q-query), [`q:invoke`](#q-invo
 <q:param name="age" type="integer" required="true" min="18" />
 ```
 
-Specified by: [ACT-2](./spec#ACT-2) · [ACT-6](./spec#ACT-6) · [ACT-11](./spec#ACT-11) · [DB-1](./spec#DB-1) · [ERR-1](./spec#ERR-1) · [FILE-1](./spec#FILE-1) · [FN-1](./spec#FN-1) · [IA-4](./spec#IA-4) · [INV-1](./spec#INV-1) · [PARSE-3](./spec#PARSE-3) · [PARSE-5](./spec#PARSE-5) · [SVC-3](./spec#SVC-3) · [TEST-3](./spec#TEST-3) · [UI-6](./spec#UI-6) · [UI-9](./spec#UI-9) · [UI-10](./spec#UI-10) · [UI-14](./spec#UI-14)
+Specified by: [ACT-2](./spec#ACT-2) · [ACT-6](./spec#ACT-6) · [ACT-11](./spec#ACT-11) · [DB-1](./spec#DB-1) · [ERR-1](./spec#ERR-1) · [FILE-1](./spec#FILE-1) · [FN-1](./spec#FN-1) · [FN-2](./spec#FN-2) · [IA-4](./spec#IA-4) · [IA-10](./spec#IA-10) · [INV-1](./spec#INV-1) · [PARSE-3](./spec#PARSE-3) · [PARSE-5](./spec#PARSE-5) · [SVC-3](./spec#SVC-3) · [TEST-3](./spec#TEST-3) · [UI-6](./spec#UI-6) · [UI-9](./spec#UI-9) · [UI-10](./spec#UI-10) · [UI-14](./spec#UI-14)
 
 <a id="q-return"></a>
 
@@ -143,7 +143,7 @@ Inside: [`q:action`](#q-action)
 
 Contains: `q:elseif`, `q:else`
 
-Specified by: [AUTH-6](./spec#AUTH-6) · [DATA-3](./spec#DATA-3) · [DB-4](./spec#DB-4) · [EXEC-1](./spec#EXEC-1) · [EXPR-3](./spec#EXPR-3) · [EXPR-5](./spec#EXPR-5) · [IF-1](./spec#IF-1) · [IF-3](./spec#IF-3) · [IF-4](./spec#IF-4) · [RET-3](./spec#RET-3) · [UI-1](./spec#UI-1) · [UI-3](./spec#UI-3) · [UI-16](./spec#UI-16)
+Specified by: [AUTH-6](./spec#AUTH-6) · [DATA-3](./spec#DATA-3) · [DB-4](./spec#DB-4) · [EXEC-1](./spec#EXEC-1) · [EXPR-3](./spec#EXPR-3) · [EXPR-5](./spec#EXPR-5) · [IF-1](./spec#IF-1) · [IF-3](./spec#IF-3) · [IF-4](./spec#IF-4) · [RET-3](./spec#RET-3) · [UI-1](./spec#UI-1) · [UI-3](./spec#UI-3) · [UI-13](./spec#UI-13) · [UI-16](./spec#UI-16)
 
 <a id="q-loop"></a>
 
@@ -209,7 +209,7 @@ Inside: [`q:transaction`](#q-transaction), [`q:action`](#q-action)
 
 Contains: `q:param`
 
-Specified by: [ACT-4](./spec#ACT-4) · [DB-1](./spec#DB-1) · [DB-2](./spec#DB-2) · [DB-3](./spec#DB-3) · [DB-5](./spec#DB-5) · [DB-9](./spec#DB-9) · [DB-11](./spec#DB-11) · [DEV-3](./spec#DEV-3) · [EXEC-1](./spec#EXEC-1) · [IA-3](./spec#IA-3) · [IA-5](./spec#IA-5) · [INV-2](./spec#INV-2) · [PARSE-2](./spec#PARSE-2) · [PARSE-5](./spec#PARSE-5) · [UI-5](./spec#UI-5) · [UI-13](./spec#UI-13)
+Specified by: [ACT-4](./spec#ACT-4) · [DB-1](./spec#DB-1) · [DB-2](./spec#DB-2) · [DB-3](./spec#DB-3) · [DB-5](./spec#DB-5) · [DB-9](./spec#DB-9) · [DB-11](./spec#DB-11) · [DEV-3](./spec#DEV-3) · [EXEC-1](./spec#EXEC-1) · [IA-3](./spec#IA-3) · [IA-5](./spec#IA-5) · [IA-10](./spec#IA-10) · [INV-2](./spec#INV-2) · [PARSE-2](./spec#PARSE-2) · [PARSE-5](./spec#PARSE-5) · [UI-5](./spec#UI-5) · [UI-13](./spec#UI-13)
 
 <a id="q-transaction"></a>
 
@@ -300,10 +300,11 @@ Runs on a POST with the `action` field; its q:params are the validated form fiel
 | `table` | string |  |  |  | Take the q:params from this table's schema ([UI-10](./spec#UI-10)) |
 | `datasource` | string |  |  |  | Datasource of `table` |
 | `columns` | string |  |  |  | Only these columns, in this order ([UI-10](./spec#UI-10)) |
+| `require_role` | string |  |  |  | Only these roles (comma-separated) may run it; others get 403 ([AUTH-8](./spec#AUTH-8)) |
 
 Contains: `q:param`, `q:set`, `q:query`, `q:if`, `q:loop`, `q:file`, `q:mail`, `q:flash`, `q:redirect`
 
-Specified by: [ACT-1](./spec#ACT-1) · [ACT-3](./spec#ACT-3) · [ACT-4](./spec#ACT-4) · [ACT-5](./spec#ACT-5) · [ACT-6](./spec#ACT-6) · [ACT-7](./spec#ACT-7) · [ACT-8](./spec#ACT-8) · [ACT-9](./spec#ACT-9) · [ACT-10](./spec#ACT-10) · [ACT-11](./spec#ACT-11) · [AUTH-6](./spec#AUTH-6) · [AUTH-7](./spec#AUTH-7) · [DB-11](./spec#DB-11) · [DEV-1](./spec#DEV-1) · [EXEC-2](./spec#EXEC-2) · [EXEC-3](./spec#EXEC-3) · [FN-1](./spec#FN-1) · [IF-1](./spec#IF-1) · [PARSE-2](./spec#PARSE-2) · [ROUTE-2](./spec#ROUTE-2) · [TEST-3](./spec#TEST-3) · [UI-1](./spec#UI-1) · [UI-10](./spec#UI-10)
+Specified by: [ACT-1](./spec#ACT-1) · [ACT-3](./spec#ACT-3) · [ACT-4](./spec#ACT-4) · [ACT-5](./spec#ACT-5) · [ACT-6](./spec#ACT-6) · [ACT-7](./spec#ACT-7) · [ACT-8](./spec#ACT-8) · [ACT-9](./spec#ACT-9) · [ACT-10](./spec#ACT-10) · [ACT-11](./spec#ACT-11) · [AUTH-6](./spec#AUTH-6) · [AUTH-7](./spec#AUTH-7) · [AUTH-8](./spec#AUTH-8) · [DB-11](./spec#DB-11) · [DEV-1](./spec#DEV-1) · [EXEC-2](./spec#EXEC-2) · [EXEC-3](./spec#EXEC-3) · [FN-1](./spec#FN-1) · [IF-1](./spec#IF-1) · [PARSE-2](./spec#PARSE-2) · [ROUTE-2](./spec#ROUTE-2) · [TEST-3](./spec#TEST-3) · [UI-1](./spec#UI-1) · [UI-10](./spec#UI-10)
 
 <a id="q-redirect"></a>
 
@@ -445,7 +446,7 @@ Contains: `q:prompt`, `q:message`, `q:system`
 </q:llm>
 ```
 
-Specified by: [IA-1](./spec#IA-1) · [IA-2](./spec#IA-2) · [IA-3](./spec#IA-3) · [IA-5](./spec#IA-5) · [IA-6](./spec#IA-6) · [IA-7](./spec#IA-7) · [IA-8](./spec#IA-8) · [IA-9](./spec#IA-9) · [INV-2](./spec#INV-2)
+Specified by: [IA-1](./spec#IA-1) · [IA-2](./spec#IA-2) · [IA-3](./spec#IA-3) · [IA-5](./spec#IA-5) · [IA-6](./spec#IA-6) · [IA-7](./spec#IA-7) · [IA-8](./spec#IA-8) · [IA-9](./spec#IA-9) · [IA-10](./spec#IA-10) · [INV-2](./spec#INV-2)
 
 <a id="q-knowledge"></a>
 
@@ -466,7 +467,7 @@ A base of text chunks that q:llm knowledge= answers from ([IA-2](./spec#IA-2), [
 
 Contains: `q:source`
 
-Specified by: [IA-2](./spec#IA-2) · [IA-5](./spec#IA-5) · [IA-6](./spec#IA-6) · [IA-8](./spec#IA-8) · [INV-2](./spec#INV-2) · [PARSE-3](./spec#PARSE-3)
+Specified by: [IA-2](./spec#IA-2) · [IA-5](./spec#IA-5) · [IA-6](./spec#IA-6) · [IA-8](./spec#IA-8) · [IA-10](./spec#IA-10) · [INV-2](./spec#INV-2) · [PARSE-3](./spec#PARSE-3)
 
 <a id="q-agent"></a>
 
@@ -707,7 +708,7 @@ Inside: [`q:llm`](#q-llm)
 
 ## `q:source`
 
-A source of a q:knowledge, read whole ([IA-8](./spec#IA-8))
+A source of a q:knowledge, read whole ([IA-8](./spec#IA-8)); a query's values are q:params ([IA-10](./spec#IA-10))
 
 Inside: [`q:knowledge`](#q-knowledge)
 
@@ -720,7 +721,7 @@ Inside: [`q:knowledge`](#q-knowledge)
 | `chunkSize` | integer |  |  |  | Characters per chunk for this source |
 | `chunkOverlap` | integer |  |  |  | Overlap for this source |
 
-Specified by: [IA-8](./spec#IA-8)
+Specified by: [IA-8](./spec#IA-8) · [IA-10](./spec#IA-10)
 
 <a id="q-instruction"></a>
 

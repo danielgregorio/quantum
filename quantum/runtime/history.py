@@ -33,6 +33,7 @@ _ACTION = contextvars.ContextVar('quantum_history_action', default=None)
 
 _WRITE = re.compile(r'^\s*(INSERT\s+(?:OR\s+\w+\s+)?INTO|UPDATE|DELETE\s+FROM)\s+"?(\w+)"?', re.I)
 _WHERE = re.compile(r'\bWHERE\b(.*)$', re.I | re.S)
+_RETURNING = re.compile(r'\s+RETURNING\b.*$', re.I | re.S)
 
 
 def enter(action: str, session_vars: Optional[dict]):
@@ -56,8 +57,8 @@ def parse_write(sql: str):
     if not m:
         return None
     op = {'INSERT': 'insert', 'UPDATE': 'update', 'DELETE': 'delete'}[m.group(1).split()[0].upper()]
-    where = _WHERE.search(sql)
-    return op, m.group(2), (where.group(1).strip().rstrip(';') if where else None)
+    where = _WHERE.search(_RETURNING.sub('', sql.strip().rstrip(';')))     # DB-11: the rows, not what it returns
+    return op, m.group(2), (where.group(1).strip() if where else None)
 
 
 class Capture:

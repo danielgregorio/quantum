@@ -250,7 +250,10 @@ prioridad es un select con la lista del `CHECK`.
   las guardas de la página, valida el valor con las reglas de la columna tomadas
   del esquema (NOT NULL, `CHECK … IN`, tipo) y actualiza una fila por su clave
   primaria. Un valor rechazado vuelve a su celda con el error. `edit="false"` en
-  una columna la deja de solo lectura.
+  una columna la deja de solo lectura. Cada celda va firmada para la sesión a la
+  que se mostró: una tabla dentro de un `q:if` falso para esa persona, o una
+  fila que su consulta dejó fuera, no se puede editar con un formulario hecho a
+  mano.
 - Las filas deben incluir la clave primaria (`SELECT id, …`).
 - Lo que hace se muestra en [`/_dev`](/tools/dev-panel) como cualquier acción.
 

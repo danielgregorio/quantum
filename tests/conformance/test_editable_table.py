@@ -53,8 +53,12 @@ def rows(db, sql):
         c.close()
 
 
-def edit(c, column, key, value=None, table='tasks'):
+def edit(c, column, key, value=None, table='tasks', signed=True):
+    """A cell posted as a browser posts it: with the signature the page gave this session (UI-13)."""
+    from quantum.runtime.ui_table_edit import signature_on_page
     data = {'action': '__edit', '__table': table, '__key': str(key), '__column': column}
+    if signed:
+        data['__sig'] = signature_on_page(c.get('/t').get_data(as_text=True), table, column, str(key))
     if value is not None:
         data['value'] = value
     return c.post('/t', data=data, headers={'Referer': 'http://localhost/t'})
@@ -127,6 +131,25 @@ class TestEditing:
         c = open_page(t=page())
         assert edit(c, column, 1, 'x', table=table).status_code == 400
         assert rows(db, 'SELECT id, title FROM tasks WHERE id = 1') == [(1, 'Beta')]
+
+    def test_a_cell_the_page_did_not_show_this_session_is_refused(self, open_page, db):
+        # UI-13: a table in a q:if false for this person, a row their query left out, another session's form
+        c = open_page(t=page(before='<q:set name="mine" value="{query.mine}" default="" />')
+                      .replace('<ui:table', '<q:if condition="mine"><ui:table').replace('</ui:table>', '</ui:table></q:if>'))
+        assert edit(c, 'title', 2, 'Hidden').status_code == 403                  # the table was not shown
+        assert edit(c, 'title', 2, 'Unsigned', signed=False).status_code == 403
+        html = c.get('/t?mine=1').get_data(as_text=True)
+        from quantum.runtime.ui_table_edit import signature_on_page
+        signature = signature_on_page(html, 'tasks', 'title', '2')
+        assert signature
+        other = c.application.test_client()                                  # another session
+        stolen = other.post('/t', data={'action': '__edit', '__table': 'tasks', '__key': '2', '__column': 'title',
+                                        'value': 'Stolen', '__sig': signature})
+        assert stolen.status_code == 403
+        assert rows(db, 'SELECT title FROM tasks WHERE id = 2') == [('Alpha',)]
+        ok = c.post('/t?mine=1', data={'action': '__edit', '__table': 'tasks', '__key': '2', '__column': 'title',
+                                       'value': 'Shown', '__sig': signature})
+        assert ok.status_code == 302 and rows(db, 'SELECT title FROM tasks WHERE id = 2') == [('Shown',)]
 
     def test_the_page_guard_applies_to_editing(self, open_page, db):
         # UI-13 + AUTH-6

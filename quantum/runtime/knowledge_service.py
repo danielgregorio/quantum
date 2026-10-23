@@ -313,7 +313,8 @@ class KnowledgeService:
             if not (database_service and source.datasource and source.sql):
                 raise KnowledgeError('<q:source type="query"> needs datasource= and the SQL as its text')
             try:
-                result = database_service.execute_query(source.datasource, source.sql, {})
+                result = database_service.execute_query(source.datasource, source.sql,
+                                                       getattr(source, 'bound', None) or {})
             except Exception as exc:
                 raise KnowledgeError(f'<q:source type="query">: {exc}') from exc
             for row in result.data:

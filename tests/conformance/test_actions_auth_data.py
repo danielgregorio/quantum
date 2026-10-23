@@ -44,6 +44,16 @@ class TestActions:
         client.post('/form', data={'name': 'Ana', 'age': '30'})
         assert 'SEEN=Ana|30' in text(client.get('/form'))
 
+    @pytest.mark.parametrize('kind', ['url', 'date', 'email', 'integer'])
+    def test_an_empty_default_is_empty_whatever_the_type(self, serve_pages, kind):
+        # ACT-2 (before: default="" was converted, and '' is not a URL, a date or an e-mail: the action never ran)
+        client = serve_pages(f=('<q:component name="f" xmlns:q="https://quantum.lang/ns">'
+                                f'<q:action name="s" method="POST"><q:param name="v" type="{kind}" default=""/>'
+                                '<q:set name="session.v" value="[{v}]"/><q:redirect url="/f"/></q:action>'
+                                '<p>V={session.v}</p></q:component>'))
+        assert client.post('/f', data={'v': ''}).headers['Location'].endswith('/f')
+        assert 'V=[]' in text(client.get('/f'))
+
     def test_a_failed_validation_does_not_run_and_comes_back_with_the_reason(self, serve_pages):
         # ACT-2
         client = serve_pages(form=FORM)
@@ -189,6 +199,31 @@ class TestAuthentication:
         client.post('/signin', data={'role': 'editor', 'hours': '1'})
         assert client.get('/admin').status_code == 403
         assert 'INSIDE' in text(client.get('/team'))
+
+    def test_an_action_of_some_roles_is_403_for_the_others(self, serve_pages):
+        # AUTH-8: a viewer reads the page, a member changes it
+        board = ('<q:component name="board" require_auth="true" xmlns:q="https://quantum.lang/ns">'
+                 '<q:action name="change" method="POST" require_role="admin, member">'
+                 '<q:set name="session.changed" value="yes"/><q:redirect url="/board"/></q:action>'
+                 '<p>BOARD changed={session.changed}</p></q:component>')
+        viewer = serve_pages(signin=SIGN_IN, board=board)
+        viewer.post('/signin', data={'role': 'viewer', 'hours': '1'})
+        assert 'BOARD' in text(viewer.get('/board'))
+        r = viewer.post('/board', data={'action': 'change'})
+        assert r.status_code == 403 and 'admin,member' in text(r)
+        member = serve_pages(signin=SIGN_IN, board=board)
+        member.post('/signin', data={'role': 'member', 'hours': '1'})
+        assert member.post('/board', data={'action': 'change'}).status_code == 302
+        assert 'changed=yes' in text(member.get('/board'))
+        anonymous = serve_pages(board=board.replace(' require_auth="true"', ''))
+        assert anonymous.post('/board', data={'action': 'change'}).status_code == 403
+
+    def test_an_action_role_that_names_nothing_is_a_parse_error(self):
+        # AUTH-8
+        from quantum.core.parser import QuantumParser, QuantumParseError
+        with pytest.raises(QuantumParseError, match='require_role= names no role'):
+            QuantumParser().parse('<q:component name="p" xmlns:q="https://quantum.lang/ns">'
+                                  '<q:action name="a" require_role=" , "><q:set name="x" value="1"/></q:action></q:component>')
 
     def test_the_session_cookie_is_httponly_and_samesite_lax(self, serve_pages):
         # AUTH-5: without SameSite, another site could post a form (q:action) with the session

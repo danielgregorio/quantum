@@ -10,6 +10,22 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Kanban (`projects/kanban`), the application `PLAN_PLATFORMS.md` proves the
+  platforms with (Phase 1): boards of columns of cards in SQLite, a limit of
+  cards in progress that a column says when it is passed, filters by who,
+  label and due date, every change in the history and the flow measured from
+  it; admins, members and viewers; a repository's open issues imported as
+  cards and a webhook told of a card done (`q:invoke`); a card split into
+  subtasks by the AI, the board summarised as it is read, questions answered
+  from the board's own cards, and an agent that says what is late. Tested end
+  to end with a forge and a model server over HTTP (`tests/apps/test_kanban.py`).
+- `require_role` on `q:action` (AUTH-8): only those roles run it, anyone else
+  gets `403` — a page its viewers read and its members change.
+- A knowledge base per board or per user (IA-10): a `type="query"` source
+  takes its values as `q:param`s, bound as `q:query`'s are, and
+  `q:knowledge name=`, `q:llm knowledge=` and `datasource="knowledge:…"` are
+  expressions (`name="cards{id}"`).
+
 - Laboratory: Bricks (`projects/bricks/bricks.q`), a brick breaker for one,
   or two to four over the network, written for the tags below: three levels
   written as lines of letters and built by a `q:loop`, steel bricks of two
@@ -780,8 +796,33 @@ alter the behaviour of an existing app is listed under **Breaking**.
   each time; PandaFoot's round is seeded by the world, the season and the
   round, so each round has its own luck and a replay the same.
 
+### Breaking
+
+- `require_role` on a `q:action` was accepted and ignored: the action ran for
+  anyone who could open the page. It is enforced now (AUTH-8).
+- `{…}` in the SQL of a `<q:source type="query">` is a parse error (IA-10): it
+  was put into the SQL as written, so a value from the URL could change the
+  query. Pass it as a `q:param`.
+- A cell of an editable table is signed for the session it was shown to
+  (UI-13): a form made by hand, a cell of a table inside a `q:if` that was
+  false for that person, or of a row their query left out, is `403` (it
+  edited any row of the table, by its key). A test that posts `__edit`
+  directly takes the signature from the page; `quantum test` does it itself.
+- `params=` on `q:function` is a parse error that says to declare each
+  parameter as a `q:param` (it was ignored, and the call bound nothing).
+
 ### Fixed
 
+- `default=""` on a typed `q:param` of an action is an empty value (ACT-2): an
+  optional URL, date or e-mail left blank failed its type, and the action
+  never ran.
+- An expression inside a JSON object written in a value is evaluated (EXPR-4):
+  the first one after the object's brace stayed as written, so a webhook body
+  `{"board": "{name}"}` sent `{name}`.
+- A write with `RETURNING` (`UPDATE … RETURNING id`) is committed and recorded
+  in the history (DB-11): it was taken for a `SELECT`, never committed by
+  itself and missing from the history, and with `history: true` its
+  `RETURNING` went into the query that reads the rows before, a syntax error.
 - Laboratory: PandaFoot, what its first players found (`PLAN_PANDAFOOT.md`).
   A second yellow is a red, and the side plays a man short; the injured are
   carried off and a substitute comes on (three a match), and a manager makes

@@ -186,7 +186,7 @@ class ComponentRuntime:
         # Databinding cache for optimized {variable} interpolation (Phase 1 enhancement)
         self._databinding_cache = get_databinding_cache()
         # Pre-compiled regex patterns (avoid re-compilation on every call)
-        self._databinding_pattern = re.compile(r'\{([^}]+)\}')
+        self._databinding_pattern = re.compile(r'\{([^{}]+)\}')
         self._order_by_pattern = re.compile(r'\s+ORDER\s+BY\s+[^;]+?(?=\s+(?:LIMIT|OFFSET|FOR\s+UPDATE)|$)', re.IGNORECASE)
         self._limit_pattern = re.compile(r'\s+LIMIT\s+\d+', re.IGNORECASE)
         self._offset_pattern = re.compile(r'\s+OFFSET\s+\d+', re.IGNORECASE)
@@ -861,6 +861,8 @@ class ComponentRuntime:
         try:
             # Extract knowledge base name from datasource
             kb_name = query_node.datasource.replace('knowledge:', '', 1)
+            if '{' in kb_name:                             # IA-10: datasource="knowledge:cards{id}"
+                kb_name = str(self._apply_databinding(kb_name, exec_context.get_all_variables()))
 
             # IA-5: a base that could not be built is an error here too — never an
             # answer ("still loading", success=True) that the page shows as one.

@@ -41,8 +41,10 @@ class KnowledgeExecutor(BaseExecutor):
         Returns:
             Knowledge base info dict
         """
+        context = exec_context.get_all_variables()
+        # IA-10: the name is an expression — a base per board or per user (name="cards{id}")
+        name = str(self.apply_databinding(node.name, context)) if '{' in node.name else node.name
         try:
-            context = exec_context.get_all_variables()
 
             # KnowledgeService.index_knowledge() expects KnowledgeSourceNode
             # objects (attribute access: source.content, source.path, ...),
@@ -57,8 +59,8 @@ class KnowledgeExecutor(BaseExecutor):
                     resolved.path = self.apply_databinding(source.path, context)
                 elif source.source_type == 'url' and source.url:
                     resolved.url = self.apply_databinding(source.url, context)
-                elif source.source_type == 'query' and source.sql:
-                    resolved.sql = self.apply_databinding(source.sql, context)
+                elif source.source_type == 'query':
+                    resolved.bound = self._bind(source, context)       # IA-10: never into the SQL
 
                 sources.append(resolved)
 
@@ -69,7 +71,7 @@ class KnowledgeExecutor(BaseExecutor):
             # instance and indexing into it would leave searches empty.
             knowledge_service = self.runtime.knowledge_service
             knowledge_service.index_knowledge(
-                name=node.name,
+                name=name,
                 sources=sources,
                 embed_model=node.embed_model,
                 chunk_size=node.chunk_size,
@@ -83,32 +85,45 @@ class KnowledgeExecutor(BaseExecutor):
 
             info = {
                 'success': True,
-                'name': node.name,
+                'name': name,
                 'embed_model': node.embed_model,
             }
 
             # Store knowledge base reference (name resolves via q:query
             # datasource="knowledge:{name}", not by reading this variable)
-            exec_context.set_variable(node.name, info, scope="component")
-            exec_context.set_variable(f"{node.name}_info", info, scope="component")
-            exec_context.set_variable(f"_knowledge_{node.name}", {
+            exec_context.set_variable(name, info, scope="component")
+            exec_context.set_variable(f"{name}_info", info, scope="component")
+            exec_context.set_variable(f"_knowledge_{name}", {
                 'embed_model': node.embed_model,
             }, scope="component")
 
             return info
 
         except Exception as e:
-            exec_context.set_variable(f"{node.name}_info", {
+            exec_context.set_variable(f"{name}_info", {
                 'success': False,
                 'error': str(e),
-                'name': node.name
+                'name': name
             }, scope="component")
             # IA-5: a q:query on this base then fails with this reason (it used
             # to answer "Knowledge base is still loading" as if that were the
             # answer, with success=True).
-            exec_context.set_variable(f"_knowledge_{node.name}", {
+            exec_context.set_variable(f"_knowledge_{name}", {
                 '_failed': True, 'error': str(e),
             }, scope="component")
             if getattr(node, 'on_error', 'fail') == 'continue':
                 return None
             raise ExecutorError(f"Knowledge base creation error: {e}")
+
+    def _bind(self, source, context) -> dict:
+        """The values of a query source's q:params, checked by their types as q:query's are (IA-10)."""
+        from quantum.runtime.query_validators import QueryValidator, QueryValidationError
+        bound = {}
+        for param in getattr(source, 'params', None) or []:
+            try:
+                bound[param.name] = QueryValidator.validate_param(
+                    self.apply_databinding(param.value, context), param.param_type,
+                    {'null': param.null, 'max_length': param.max_length, 'scale': param.scale})
+            except QueryValidationError as exc:
+                raise ExecutorError(f'<q:source type="query"> <q:param name="{param.name}">: {exc}') from exc
+        return bound

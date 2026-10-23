@@ -116,8 +116,18 @@ it would do nothing, so it does not parse:
 
 An action is protected through its page: `require_auth` / `require_role` on the
 `q:component`, or a guard (a top-level `q:if` with `q:redirect`), which runs
-before every action of the page. `q:action` itself takes no protection
-attribute:
+before every action of the page. On top of that, `require_role` on a `q:action`
+lets only those roles run it — a page its viewers read and its members change;
+anyone else gets `403`, and nothing of the action runs:
+
+```xml
+<q:action name="move" method="POST" require_role="admin,member">
+  <q:redirect url="/" />
+</q:action>
+```
+
+Who may open the page is the page's to say: `require_auth` on a `q:action` is
+refused:
 
 ```xml
 <q:action name="save" method="POST" require_auth="true">

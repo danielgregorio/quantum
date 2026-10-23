@@ -561,7 +561,7 @@ class HTMLRenderer:
         if not text:
             return text
 
-        pattern = r'\{([^}]+)\}'
+        pattern = r'\{([^{}]+)\}'
 
         # Check if the ENTIRE text is just a single databinding expression
         full_match = re.fullmatch(pattern, text.strip())

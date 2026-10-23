@@ -119,7 +119,16 @@ source_hash: 2e221351f1c5
 
 动作通过它所在的页面来保护：`q:component` 上的 `require_auth` / `require_role`，
 或者一个守卫（带 `q:redirect` 的顶层 `q:if`），它会在页面的每个动作之前运行。
-`q:action` 本身不接受任何保护属性：
+此外，`q:action` 上的 `require_role` 只让这些角色执行它——一个查看者能读、成员能改的页面；
+其他任何人得到 `403`，动作的任何部分都不会运行：
+
+```xml
+<q:action name="move" method="POST" require_role="admin,member">
+  <q:redirect url="/" />
+</q:action>
+```
+
+谁能打开页面由页面决定：`q:action` 上的 `require_auth` 会被拒绝：
 
 ```xml
 <q:action name="save" method="POST" require_auth="true">

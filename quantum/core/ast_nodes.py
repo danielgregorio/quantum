@@ -1104,6 +1104,8 @@ class ActionNode(QuantumNode):
         self.table: Optional[str] = None
         self.table_datasource: Optional[str] = None
         self.table_columns: Optional[List[str]] = None
+        # AUTH-8: the roles that may run it (comma-separated); None: whoever may open the page
+        self.require_role: Optional[str] = None
 
         # Action configuration
         self.validate_csrf = True  # Auto CSRF protection

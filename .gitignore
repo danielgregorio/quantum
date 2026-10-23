@@ -221,6 +221,8 @@ quantum_kb/
 # the old one is never collected. Five got committed before this rule.
 /static/styles-*.css
 /static/scripts-*.js
+projects/*/static/styles-*.css
+projects/*/static/scripts-*.js
 
 # HTML that examples/*.q write into the repo root when run. The .q test
 # suite produces these on every run, so they land in `git status` and get

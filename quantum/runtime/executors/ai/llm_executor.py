@@ -201,6 +201,8 @@ class LLMExecutor(BaseExecutor):
         answered from whatever came back.
         """
         name = node.knowledge
+        if '{' in name:                                   # IA-10: knowledge="cards{id}"
+            name = str(self.apply_databinding(name, exec_context.get_all_variables()))
         try:
             meta = exec_context.get_variable(f'_knowledge_{name}')
         except Exception:

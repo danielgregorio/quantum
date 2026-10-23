@@ -249,7 +249,10 @@ prioridade é uma seleção com a lista do `CHECK`.
   guardas da página, valida o valor com as regras da coluna tiradas do esquema
   (NOT NULL, `CHECK … IN`, o tipo) e atualiza uma linha pela chave primária.
   Um valor recusado volta na sua célula com o erro. `edit="false"` numa coluna
-  a deixa só de leitura.
+  a deixa só de leitura. Cada célula é assinada para a sessão a que foi
+  mostrada: uma tabela dentro de um `q:if` falso para essa pessoa, ou uma linha
+  que a query dela deixou de fora, não pode ser editada por um formulário feito
+  à mão.
 - As linhas precisam incluir a chave primária (`SELECT id, …`).
 - O que ela faz aparece no [`/_dev`](/tools/dev-panel) como qualquer ação.
 
