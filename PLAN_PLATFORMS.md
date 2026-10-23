@@ -6,7 +6,9 @@
 > view tree (UI-3).
 >
 > Phase 1 done 2026-10-23: `projects/kanban`, tested end to end in `tests/apps/test_kanban.py`; what it found
-> in the runtime is below, each fixed with its rule and test. Next: Phase 2.
+> in the runtime is below, each fixed with its rule and test. Phase 2 done the same day: `quantum run <app>
+> --on web|desktop|terminal` (UI-18), the Kanban's script in each version (`tests/apps/test_kanban_everywhere.py`),
+> and motion the same everywhere (UI-19), checked by that script; `--on tui` waits for Phase 3. Next: Phase 3.
 
 ## The goal
 

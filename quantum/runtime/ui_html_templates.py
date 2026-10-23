@@ -810,7 +810,14 @@ document.addEventListener('click', function(e) {
   document.querySelectorAll('.q-tab-header[data-tab-group="' + group + '"]').forEach(function(b) { b.classList.remove('active'); });
   document.querySelectorAll('.q-tab-content[data-tab-group="' + group + '"]').forEach(function(c) { c.classList.remove('active'); });
   btn.classList.add('active');
-  document.getElementById(btn.dataset.tab).classList.add('active');
+  var content = document.getElementById(btn.dataset.tab);
+  content.classList.add('active');
+  if (window.quantumMotionOn) {   // UI-19: the tab's content opens with expand
+    content.classList.remove('q-m', 'q-m-expand');
+    void content.offsetWidth;
+    content.classList.add('q-m', 'q-m-expand');
+    window.quantumMotions.push({kind: 'expand', speed: 'normal', what: 'tab:' + btn.textContent.trim()});
+  }
 });
 </script>
 """

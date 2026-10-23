@@ -19,6 +19,8 @@ from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual.widgets import (Button, Checkbox, Input, ProgressBar, RadioButton, RadioSet,
                              Select, Static, Switch, TabbedContent, TabPane, TextArea)
 
+from quantum.runtime.ui_motion import TerminalMotion, of_props, record
+
 VIEW = 'application/vnd.quantum.view+json'
 
 # UI-2 in a terminal: the breakpoints in columns (a column is ~8 px).
@@ -88,6 +90,10 @@ class ConsoleUI(App):
         # searches, so a count of loads cannot tell which one the typist is
         # waiting for; the value can.
         self.last_search: Optional[tuple] = None
+        # UI-19: the motions this page ran, in order ({kind, speed, what}), as the browser records them
+        self.motions: List[Dict[str, str]] = []
+        self.motion_on = True
+        self._tabs_opened: set = set()
 
     def compose(self) -> ComposeResult:
         yield VerticalScroll(id='page')
@@ -125,6 +131,9 @@ class ConsoleUI(App):
 
     async def _load_page(self, path: str, method: str, data: Optional[dict]) -> None:
         page = self._fetch(method, path, data)
+        self.motions = []
+        self.motion_on = bool(page.get('motion', True))
+        self._tabs_opened = set()
         self.page_title = page.get('title', '')
         self.title = self.page_title
         body = self.query_one('#page', VerticalScroll)
@@ -153,8 +162,15 @@ class ConsoleUI(App):
         return ' '.join(classes)
 
     def _widget(self, node: dict, form: Optional[dict]):
-        widget = self._widget_without_width(node, form)
         props = node.get('props') or {}
+        # UI-19: recorded before its children are built — in document order, as the browser does
+        motion = of_props(node.get('type', ''), props) if self.motion_on else None
+        if motion is not None:
+            self.motions.append(record(motion))
+        widget = self._widget_without_width(node, form)
+        if motion is not None and widget is not None:
+            moving = TerminalMotion(widget, motion['kind'])
+            widget.call_after_refresh(lambda: moving.run(self, motion['ms']))
         width = str(props.get('width') or '')
         if widget is not None and width.isdigit():
             # A width in px becomes columns (~8 px each), as the breakpoints do.
@@ -171,7 +187,7 @@ class ConsoleUI(App):
         ident = props.get('ui_id')
         text = str(props.get('text') or '')
 
-        if kind in ('window', 'vbox', 'scrollbox', 'cardbody', 'cardfooter', 'tab'):
+        if kind in ('window', 'vbox', 'scrollbox', 'cardbody', 'cardfooter', 'tab', 'animate'):
             return Vertical(*self._build_widgets(children, form), classes=self._css_classes(props, 'vbox'), id=ident)
         if kind == 'section':
             title = [Static(Text(str(props['title']), style='bold'), classes='text')] if props.get('title') else []
@@ -425,6 +441,17 @@ class ConsoleUI(App):
             return
         if action:
             await self.load_page(self.path, 'POST', {'action': action['action'], **action.get('fields', {})})
+
+    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+        """UI-19: a tab the user opens expands into view; the tab the page opens on does not."""
+        tabs = event.tabbed_content
+        if id(tabs) not in self._tabs_opened:
+            self._tabs_opened.add(id(tabs))
+            if event.pane.id == tabs._initial:          # the tab the page opens on (UI-17)
+                return
+        if self.motion_on and event.pane is not None:
+            self.motions.append({'kind': 'expand', 'speed': 'normal', 'what': f'tab:{event.pane._title}'})
+            TerminalMotion(event.pane, 'expand').run(self, 250)
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """UI-12: search as you type — after a pause, the page with ?bind=value."""

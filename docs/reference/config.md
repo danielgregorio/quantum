@@ -195,4 +195,16 @@ Accepted; its keys are not checked.
 
 Specified by: [SVC-2](./spec#SVC-2)
 
+<a id="cfg-ui"></a>
+
+## `ui`
+
+| Key | Type | Default | Rules |
+|---|---|---|---|
+| `motion` |  |  |  |
+
+Another key in this section is warned about when the configuration is loaded ([CFG-2](./spec#CFG-2), [CFG-3](./spec#CFG-3)).
+
+Specified by: [LOOP-6](./spec#LOOP-6) · [EXEC-1](./spec#EXEC-1) · [DB-11](./spec#DB-11) · [EXPR-11](./spec#EXPR-11) · [IA-7](./spec#IA-7) · [APP-1](./spec#APP-1) · [UI-1](./spec#UI-1) · [UI-2](./spec#UI-2) · [UI-3](./spec#UI-3) · [UI-4](./spec#UI-4) · [UI-5](./spec#UI-5) · [UI-6](./spec#UI-6) · [UI-7](./spec#UI-7) · [UI-9](./spec#UI-9) · [UI-10](./spec#UI-10) · [UI-11](./spec#UI-11) · [UI-12](./spec#UI-12) · [UI-13](./spec#UI-13) · [UI-14](./spec#UI-14) · [UI-16](./spec#UI-16) · [UI-17](./spec#UI-17) · [UI-19](./spec#UI-19) · [DEV-3](./spec#DEV-3)
+
 :::

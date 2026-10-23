@@ -72,8 +72,8 @@ def test_a_world_is_made_from_its_number(pandafoot, godot):
     assert first['managers'] == [{'name': 'Manager 1', 'club': 4}] and clubs[4]['manager'] == 1
     geniuses = [(c['level'], p['strength']) for c in clubs for p in c['players'] if p['genius']]
     assert len(geniuses) == 3 and sum(1 for level, s in geniuses if level == 3 and 40 <= s <= 42) == 1
-    for c in clubs:                                                  # no two players of a club share a name
-        assert len({p['name'] for p in c['players']}) == 22
+    names = [p['name'] for c in clubs for p in c['players']]        # no two players of the world share a name
+    assert len(set(names)) == len(names) == 220
     rounds = first['fixtures']
     assert len(rounds) == 18 and all(len(r) == 5 for r in rounds)
     pairs = sorted(tuple(g) for r in rounds for g in r)
@@ -200,8 +200,13 @@ def test_a_season_keeps_the_rules_of_football(pandafoot, godot):
                 for c in state['clubs']:
                     assert len([p for p in c['players'] if p['xi']]) == 11
                     assert not [p['name'] for p in c['players'] if p['xi'] and (p['injured'] or p['suspended'])]
-            seen = game.act(tap=['select'], ticks=3)
+                seen = game.act(tap=['select'], ticks=3)
+        # after the last results, a look at the table and back: the season's end. It was the dashboard, round 19 of
+        # 18, the last match again, and again (its first players could not get past it)
+        assert game.act(tap=['standings'], ticks=3)['scene'] == 'standings'
+        seen = game.act(tap=['cancel'], ticks=3)
         assert seen['scene'] == 'season-end'
+        assert game.act(tap=['select'], ticks=3)['state']['game']['matchday'] == 0     # New season
         assert knocks > 0 and subs > 0
         assert reds > 0
 
@@ -235,13 +240,16 @@ def test_a_dearer_ticket_keeps_people_away(pandafoot, godot):
     with PlaySession(pandafoot, binary=godot) as game:
         new_game(game)
         finances = game.act(tap=['finances'], ticks=3)
-        crowd = [t for t in texts(finances) if t.startswith('Crowd at this price:')]
-        at_15 = int(crowd[0].split()[-1].replace('.', ''))
+        def crowd(seen):
+            """'Crowd at this price:  9.350-12.650': about how many, never exactly (the day changes it)"""
+            low, high = [t for t in texts(seen) if t.startswith('Crowd at this price:')][0].split()[-1].split('-')
+            return int(low.replace('.', '')), int(high.replace('.', ''))
+        low_15, high_15 = crowd(finances)
+        assert low_15 < high_15
         for _ in range(35):                                       # Ticket +$1, to $50
             seen = game.act(tap=['select'], ticks=2)
         assert any(t.startswith('Ticket:') and t.endswith('$50') for t in texts(seen))
-        at_50 = int([t for t in texts(seen) if t.startswith('Crowd at this price:')][0].split()[-1].replace('.', ''))
-        assert at_50 < at_15 / 3
+        assert crowd(seen)[1] < low_15 / 3
 
 
 def test_a_new_game_starts_from_nothing(pandafoot, godot):
@@ -293,7 +301,49 @@ def test_the_results_say_who_scored_and_who_came(pandafoot, godot):
             assert shown.startswith(row[3]) and (row[3] == shown or len(full) > 42), (row, full)   # cut at 42
         assert goals > 0
         standings = game.act(tap=['standings'], ticks=3)
-        assert '═══ TOP SCORERS ═══' in texts(standings)
-        top = tables(standings)[1]['rows']
+        assert '═ TOP SCORERS ═' in texts(standings)
+        top = tables(standings)[0]['rows']
         assert top and int(top[0][0]) >= int(top[-1][0])
+        assert not [line for line in game.log if 'SCRIPT ERROR' in line]
+
+
+def test_a_match_in_numbers(pandafoot, godot):
+    """The shots (on target), the ball and who is pressing, as the match goes; the shots in the results."""
+    with PlaySession(pandafoot, binary=godot) as game:
+        new_game(game)
+        game.act(tap=['select'], ticks=3)
+        live = game.act(ticks=400)
+        line = texts(live)[2]
+        assert line.startswith('Shots ') and ' Ball ' in line and 'Pressing: ' in line, line
+        for _ in range(3):
+            game.act(tap=['faster'], ticks=2)
+        game.until('minute >= 89', max_ticks=2000)
+        after = game.until("scene == 'results'", max_ticks=600)
+        for m in after['state']['game']['last']:
+            for side, goals in ((m['h'], m['hg']), (m['a'], m['ag'])):
+                assert side['shots'] >= side['on'] >= goals
+        mine = [t for t in texts(after) if t.startswith('Man of the match: ')][0]
+        assert ' Shots ' in mine
+
+
+def test_any_clubs_squad_from_the_table(pandafoot, godot):
+    """F7, a club's row, Enter: its squad (the hidden genius not marked); Esc: the table again."""
+    with PlaySession(pandafoot, binary=godot) as game:
+        new_game(game)
+        table = game.act(tap=['standings'], ticks=3)
+        rows = [i['button'] for i in menus(table)[0]['items'] if i['shown']]
+        assert len(rows) == 10 and sum('►' in r for r in rows) == 1           # the manager's club marked
+        game.act(tap=['down'], ticks=2)
+        game.act(tap=['down'], ticks=2)
+        squad = game.act(tap=['select'], ticks=3)
+        assert squad['scene'] == 'squad'
+        club = squad['state']['game']['clubs'][int(squad['state']['game']['viewing'])]
+        assert texts(squad)[0].startswith('SQUAD - ' + club['name']) and club['name'] in rows[2]
+        assert len(tables(squad)[0]['rows']) == 22
+        if club['level'] == 3:
+            assert not [r for r in tables(squad)[0]['rows'] if '◆' in r[4]]
+        back = game.act(tap=['cancel'], ticks=3)
+        assert back['scene'] == 'standings' and back['state']['game']['viewing'] == -1
+        mine = game.act(tap=['squad'], ticks=3)
+        assert texts(mine)[0].startswith('SQUAD - Lontra AC')
         assert not [line for line in game.log if 'SCRIPT ERROR' in line]

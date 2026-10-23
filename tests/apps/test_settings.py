@@ -19,7 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from tests.apps.test_ui_parity_script import OS_DIR, Browser, Console, Pixel, Screen, run_script
+from tests.apps.test_ui_parity_script import OS_DIR, Pixel, Screen
+from tests.apps.ui_drivers import Browser, Console, run_script
 
 SETTINGS = Path(__file__).resolve().parents[2] / 'os' / 'apps' / 'settings'
 

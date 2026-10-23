@@ -67,6 +67,21 @@ quantum desktop /reports   # another page, --width/--height to size the window
 O título da janela é o `title` do primeiro `ui:window` — o mesmo título que a
 aba do navegador e o console mostram.
 
+### Um parâmetro {#one-parameter}
+
+A aplicação inteira, na versão que você pedir — passe a pasta da aplicação:
+
+```bash
+quantum run projects/kanban --on web        # the browser (quantum start)
+quantum run projects/kanban --on desktop    # a window of its own (quantum desktop)
+quantum run projects/kanban --on terminal   # the terminal (quantum console)
+```
+
+`--page /board/1` abre em outra página, `--port` define a porta da web. O `--on tui`, uma tela de
+texto desenhada pelo Godot, está a caminho (`PLAN_PLATFORMS.md`) e diz isso até lá. O Kanban do
+repositório roda um mesmo roteiro — entrar, mover cartões, as subtarefas da IA, importar issues,
+um leitor que não muda nada — em todas as versões, no CI (`tests/apps/test_kanban_everywhere.py`).
+
 ## Eventos são ações {#events-are-actions}
 
 Um botão ou um formulário não chama código no navegador: ele envia para uma
@@ -414,6 +429,41 @@ e `lg` (1024 px). No console eles são contados em colunas (80, 96 e 128).
   partir de `lg`.
 - `hide-below` / `hide-above` escondem um elemento de um lado de um ponto de
   quebra.
+
+## Movimento {#motion}
+
+Três tipos de movimento — `fade`, `slide`, `expand` — em duas velocidades — `fast` (150 ms) e `normal`
+(250 ms, o padrão) — iguais no navegador, no desktop e no terminal:
+
+```xml
+<q:component name="Board">
+  <q:set name="moved" value="{query.moved}" default="2" type="number" />
+  <q:set name="cards" type="array" value='[{"id": 1, "title": "Fonts"}, {"id": 2, "title": "Domain"}]' />
+  <ui:window title="Board" transition="slide">
+    <q:loop items="{cards}" var="card">
+      <ui:card title="{card.title}" enter="{card.id == moved and 'slide' or ''}" />
+    </q:loop>
+    <ui:animate type="expand" speed="fast">
+      <ui:text>Opens quickly</ui:text>
+    </ui:animate>
+  </ui:window>
+</q:component>
+```
+
+**Mostra:** `Fonts` · `Domain` · `Opens quickly`
+
+- `transition` no `ui:window` (`fade` ou `slide`): a página entra assim cada vez que é mostrada.
+- `enter` em qualquer elemento, também uma expressão: o elemento entra assim quando a página é
+  mostrada; `''` é nenhum movimento. `<ui:animate type="fade|slide|expand">` faz o mesmo com o que
+  envolve.
+- O conteúdo de uma aba abre com `expand` quando o usuário troca de aba.
+- `speed="fast"` em qualquer um deles.
+
+`ui.motion: off` no `quantum.config.yaml` desliga todo movimento; o navegador também para quando o
+sistema pede movimento reduzido. Cada renderizador registra os movimentos que fez
+(`window.quantumMotions` no navegador), para um teste conferir que todas as versões se moveram igual.
+Os outros tipos do `ui:animate` (`bounce`, `scale`…) são só do navegador; nos outros, o conteúdo
+aparece sem eles.
 
 ## O conjunto do Núcleo {#the-core-set}
 

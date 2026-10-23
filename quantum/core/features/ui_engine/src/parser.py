@@ -221,6 +221,15 @@ class UIParser:
                 raise UIParseError(f'{attr}="{value}": use sm (640 px), md (768 px) or lg (1024 px)')
             setattr(node, field, value)
         node.grow = element.get('grow')
+        # UI-19: how it enters, and how fast — an expression is resolved with the page
+        from quantum.runtime.ui_motion import KINDS, SPEEDS, check_literal
+        node.enter = element.get('enter')
+        node.speed = element.get('speed')
+        try:
+            check_literal('enter', node.enter, KINDS, f'ui:{self._get_local_name(element)}')
+            check_literal('speed', node.speed, tuple(SPEEDS), f'ui:{self._get_local_name(element)}')
+        except ValueError as exc:
+            raise UIParseError(str(exc)) from exc
 
     # ------------------------------------------------------------------
     # Animation attributes helper
@@ -292,6 +301,13 @@ class UIParser:
         title = element.get('title')
         node = UIWindowNode(title)
         self._apply_layout_attrs(node, element)
+        # UI-19: the page enters this way each time it is shown
+        from quantum.runtime.ui_motion import PAGE_KINDS, check_literal
+        node.transition = element.get('transition')
+        try:
+            check_literal('transition', node.transition, PAGE_KINDS, 'ui:window')
+        except ValueError as exc:
+            raise UIParseError(str(exc)) from exc
         self._parse_children(element, node)
         return node
 

@@ -575,6 +575,7 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
             # runtime, same actions — only the drawing differs.
             if 'application/vnd.quantum.view+json' in (request.headers.get('Accept') or ''):
                 from quantum.runtime.ui_view import UIViewBuilder, page_title, shows_text
+                from quantum.runtime.ui_motion import motion_on
                 import json as _json
                 view = UIViewBuilder(renderer).build([s for s in ast.statements if not isinstance(s, ActionNode)])
                 flash = params.get('flash', '')
@@ -583,6 +584,8 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
                     'flash': flash, 'flashType': params.get('flashType', ''),
                     # UI-16: the page draws its flash itself; the renderer does not again
                     'flashShown': bool(flash) and shows_text(view, flash),
+                    # UI-19: whether the renderer draws the page's motion
+                    'motion': motion_on(self.config),
                     'view': view,
                 }
                 return Response(_json.dumps(payload, ensure_ascii=False, default=str),

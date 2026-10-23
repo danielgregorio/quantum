@@ -68,6 +68,22 @@ quantum desktop /reports   # another page, --width/--height to size the window
 El título de la ventana es el `title` del primer `ui:window` — el mismo título
 que muestran la pestaña del navegador y la consola.
 
+### Un parámetro {#one-parameter}
+
+La aplicación entera, en la versión que pidas — pásale la carpeta de la aplicación:
+
+```bash
+quantum run projects/kanban --on web        # the browser (quantum start)
+quantum run projects/kanban --on desktop    # a window of its own (quantum desktop)
+quantum run projects/kanban --on terminal   # the terminal (quantum console)
+```
+
+`--page /board/1` abre en otra página, `--port` fija el puerto de la web. `--on tui`, una pantalla de
+texto dibujada por Godot, está en camino (`PLAN_PLATFORMS.md`) y lo dice hasta entonces. El Kanban
+del repositorio ejecuta un mismo guion — entrar, mover tarjetas, las subtareas de la IA, importar
+issues, un lector que no cambia nada — en todas las versiones, en el CI
+(`tests/apps/test_kanban_everywhere.py`).
+
 ## Los eventos son acciones {#events-are-actions}
 
 Un botón o un formulario no llama código en el navegador: envía datos a un
@@ -413,6 +429,41 @@ El diseño se declara, con tres puntos de quiebre: `sm` (640 px), `md` (768 px) 
 - `grow="true"` ocupa el resto de la fila.
 - `ui:grid columns="1 sm:2 lg:3"`: una columna, dos desde `sm`, tres desde `lg`.
 - `hide-below` / `hide-above` ocultan un elemento a un lado de un punto de quiebre.
+
+## Movimiento {#motion}
+
+Tres tipos de movimiento — `fade`, `slide`, `expand` — a dos velocidades — `fast` (150 ms) y `normal`
+(250 ms, la predeterminada) — iguales en el navegador, el escritorio y la terminal:
+
+```xml
+<q:component name="Board">
+  <q:set name="moved" value="{query.moved}" default="2" type="number" />
+  <q:set name="cards" type="array" value='[{"id": 1, "title": "Fonts"}, {"id": 2, "title": "Domain"}]' />
+  <ui:window title="Board" transition="slide">
+    <q:loop items="{cards}" var="card">
+      <ui:card title="{card.title}" enter="{card.id == moved and 'slide' or ''}" />
+    </q:loop>
+    <ui:animate type="expand" speed="fast">
+      <ui:text>Opens quickly</ui:text>
+    </ui:animate>
+  </ui:window>
+</q:component>
+```
+
+**Shows:** `Fonts` · `Domain` · `Opens quickly`
+
+- `transition` en `ui:window` (`fade` o `slide`): la página entra así cada vez que se muestra.
+- `enter` en cualquier elemento, también una expresión: el elemento entra así cuando se muestra su
+  página; `''` es ningún movimiento. `<ui:animate type="fade|slide|expand">` hace lo mismo con lo que
+  envuelve.
+- El contenido de una pestaña se abre con `expand` cuando el usuario cambia de pestaña.
+- `speed="fast"` en cualquiera de ellos.
+
+`ui.motion: off` en `quantum.config.yaml` apaga todo movimiento; el navegador también los detiene
+cuando el sistema pide movimiento reducido. Cada renderizador registra los movimientos que hizo
+(`window.quantumMotions` en el navegador), para que una prueba compruebe que todas las versiones se
+movieron igual. Los otros tipos de `ui:animate` (`bounce`, `scale`…) son solo del navegador; en los
+demás, el contenido aparece sin ellos.
 
 ## El conjunto del Núcleo {#the-core-set}
 

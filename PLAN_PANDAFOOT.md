@@ -1,7 +1,8 @@
 # PandaFoot — a football manager in the game language
 
 > Status: approved 2026-10-22, the four phases below. Phase 1 done the same day; what its first players
-> found fixed on 2026-10-23, when the phases were reordered: the club (Phase 2) before the online round (Phase 3).
+> found fixed on 2026-10-23, when the phases were reordered: the club (Phase 2) before the online round (Phase 3);
+> what they found on a second evening fixed the same day, and what they asked for added to Phase 2.
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The game's design is [danielgregorio/pandafoot](https://github.com/danielgregorio/pandafoot)'s
 > `GAME_DESIGN.md` (v0.2, with the decisions of 2026-10-22), and its numbers are checked there by
@@ -182,6 +183,21 @@ its style against the other's tendency, the weaker side countered the stronger e
 against Attacking: +15%), and the stronger had no answer in its objective. Only a manager's objectives read
 the opponent now; the computer's can be read, and that is what the tactics screen is for.
 
+### A second evening (2026-10-23)
+
+They played on, to the end of a season and past it, and sent what they found. What Phase 1 promised and did not
+do, and what kept the game from going on, was fixed at once; what they asked for went into Phase 2 (below).
+
+| They found | Now |
+|---|---|
+| "The game does not go on, it keeps going back to the same match" | After the last round, a look at the table (F7) and Esc went to the dashboard: round 19 of 18, the last match again, and again, and the season never ended. The dashboard sends a finished season to its end (from the table, from a save) |
+| "Some clubs have a player of the same name, Bambuzinho" | Names were drawn apart only within a club: three clubs had a Bambuzinho. No two players of the world share a name, and there are twice as many nicknames |
+| "When you set the ticket you know exactly how many will come, and it never changes" | The crowd varies with the day (the weather, the traffic: 0.85 to 1.15 a match) as well as the table, the visitor, the form and the price; the finances say about how many would come, a range |
+| "You can't see the match's numbers: whether we are pressing, whether we shoot at goal" | The live round shows the match's shots and how many were on target, the ball (by how the sides attack) and who is pressing (the chances of the last minutes); the results, the shots of the manager's match |
+| "I can't go into the other clubs" | The table is a menu: Enter on a club shows its squad, its strength, traits, form and wages (a genius hidden in a small club stays unmarked: finding him is part of Phase 2's transfers) |
+| The money does nothing, no auction; the players' strength never changes; the ground never grows | Phase 2, as planned: transfers as Elifoot 2's auction, players who grow, the ground's works |
+| More cups, with a draw; the history of who won; a ranking of managers and of top scorers; players on loan; a highlight on the best players, or a top scorer who becomes a star after a season of goals | Added to Phase 2 (below) |
+
 ## Phase 2 — The club
 
 Approved 2026-10-23, before the online round (Phase 3): its first players wanted the rest of the club first.
@@ -200,9 +216,17 @@ too easy", "the players never get better": what makes a career, as in Elifoot.
 - **The ground**: seats grown by works that take months, and its health (the design's).
 - **Players who grow without ageing**: a season of playing, playing well and with morale makes a player
   stronger; one left out for long loses a little. No age and no retirement, as the design keeps it simple.
+  A season of goals makes a forward a Star (the trait: the crowd comes to see him), and the squad and the
+  dashboard mark the club's best (asked for on the second evening).
+- **Loans**: a player lent for a season or half of one, his wages paid by who has him, and back after it
+  (asked for on the second evening).
 - **Records**: the managers' ranking (titles, promotions, points a match, seasons, clubs), the clubs'
-  (titles, an all-time table), the top scorers of each division and of all time.
-- **The crisis and bankruptcy** (the design's), and a cup if the calendar has room for it.
+  (titles, an all-time table), the top scorers of each division and of all time, and the history: who won
+  each season and each cup.
+- **Cups, with a draw**: the Panda Cup, knock-out across the four divisions, drawn on screen each round (a
+  small club at home to a big one), and the champions' cup between the season's winners; the calendar makes
+  room for them between rounds of the league (asked for on the second evening: "more kinds of cup, a draw").
+- **The crisis and bankruptcy** (the design's).
 
 Playtest: five seasons from the fourth division, by the agent and by people; how often a club of the fourth
 climbs, how often a manager is sacked and offered a job, how often the hidden genius is found and sold, and

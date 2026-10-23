@@ -61,6 +61,21 @@ quantum desktop /reports   # another page, --width/--height to size the window
 
 窗口的标题是第一个 `ui:window` 的 `title`——与浏览器标签页和终端显示的标题相同。
 
+### 一个参数 {#one-parameter}
+
+整个应用，按你要的版本运行——传入应用的文件夹：
+
+```bash
+quantum run projects/kanban --on web        # the browser (quantum start)
+quantum run projects/kanban --on desktop    # a window of its own (quantum desktop)
+quantum run projects/kanban --on terminal   # the terminal (quantum console)
+```
+
+`--page /board/1` 打开另一个页面，`--port` 设置 web 的端口。`--on tui`（由 Godot 绘制的文本屏幕）
+正在开发中（`PLAN_PLATFORMS.md`），在那之前会如实说明。仓库里的 Kanban 在 CI 中用同一个脚本——登录、
+移动卡片、AI 拆分的子任务、导入 issue、一个什么都不能改的查看者——跑遍每个版本
+（`tests/apps/test_kanban_everywhere.py`）。
+
 ## 事件就是动作 {#events-are-actions}
 
 按钮或表单不会在浏览器中调用代码：它向页面的一个 `q:action` 提交数据。动作校验、完成工作
@@ -374,6 +389,38 @@ INSERT INTO posts (title) SELECT 'Post ' || i FROM n;
 - `grow="true"` 占用这一行剩余的空间。
 - `ui:grid columns="1 sm:2 lg:3"`：一列，从 `sm` 起两列，从 `lg` 起三列。
 - `hide-below` / `hide-above` 在断点的一侧隐藏一个元素。
+
+## 动效 {#motion}
+
+三种动效——`fade`、`slide`、`expand`——两种速度——`fast`（150 ms）和 `normal`（250 ms，默认）——
+在浏览器、桌面和终端中表现一致：
+
+```xml
+<q:component name="Board">
+  <q:set name="moved" value="{query.moved}" default="2" type="number" />
+  <q:set name="cards" type="array" value='[{"id": 1, "title": "Fonts"}, {"id": 2, "title": "Domain"}]' />
+  <ui:window title="Board" transition="slide">
+    <q:loop items="{cards}" var="card">
+      <ui:card title="{card.title}" enter="{card.id == moved and 'slide' or ''}" />
+    </q:loop>
+    <ui:animate type="expand" speed="fast">
+      <ui:text>Opens quickly</ui:text>
+    </ui:animate>
+  </ui:window>
+</q:component>
+```
+
+**Shows:** `Fonts` · `Domain` · `Opens quickly`
+
+- `ui:window` 上的 `transition`（`fade` 或 `slide`）：页面每次显示时都以这种方式进入。
+- 任何元素上的 `enter`，也可以是表达式：页面显示时该元素以这种方式进入；`''` 表示没有动效。
+  `<ui:animate type="fade|slide|expand">` 对它包住的内容做同样的事。
+- 用户切换标签页时，标签页内容以 `expand` 打开。
+- 它们都可以加 `speed="fast"`。
+
+`quantum.config.yaml` 中的 `ui.motion: off` 关闭所有动效；系统要求减少动效时浏览器也会停止。每个渲染器都会
+记录它执行过的动效（浏览器中是 `window.quantumMotions`），这样测试可以检查每个版本的动作是否一致。
+`ui:animate` 的其他类型（`bounce`、`scale`……）只属于浏览器；在其他地方，内容会直接显示，没有这些动效。
 
 ## 核心层组件集 {#the-core-set}
 

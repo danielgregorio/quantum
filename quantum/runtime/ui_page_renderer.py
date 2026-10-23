@@ -21,6 +21,7 @@ What changes from the standalone adapter:
 
 import copy
 import html
+import re
 from typing import Any, Iterator, List, Optional
 
 from quantum.core.features.ui_engine.src import ast_nodes as ui_nodes
@@ -28,6 +29,7 @@ from quantum.runtime.ui_html_adapter import UIHtmlAdapter
 from quantum.runtime.ui_form_rules import FORM_CSS, form_context, generated_fields, prepare_field, sends_files
 from quantum.runtime.ui_html_templates import CSS_THEME, RESPONSIVE_CSS, HtmlBuilder
 from quantum.runtime.ui_pager import PAGER_CSS, pager_items
+from quantum.runtime.ui_motion import MOTION_CSS, html_attrs, motion_on, of_props
 from quantum.runtime.ui_table_edit import CELL_CSS, cell_field, edit_plan, sort_link
 from quantum.core.xml_lines import tag_error
 
@@ -38,6 +40,22 @@ _NOT_TEXT = {'on_click', 'on_submit', 'on_change', 'on_select', 'bind', 'childre
 
 
 is_ui_node = ui_nodes.is_ui_node
+
+
+def with_attrs(markup: str, attrs: dict) -> str:
+    """The markup with `attrs` on its first tag: a class and a style are added to the ones it has."""
+    match = re.search(r'<([a-zA-Z][\w-]*)([^>]*?)(/?)>', markup)
+    if match is None:
+        return markup
+    tag_attrs = match.group(2)
+    for name, value in attrs.items():
+        found = re.search(r'\s' + name + r'="([^"]*)"', tag_attrs)
+        if found and name in ('class', 'style'):
+            joined = f'{found.group(1)} {value}' if name == 'class' else f'{value}; {found.group(1)}'
+            tag_attrs = tag_attrs[:found.start(1)] + joined + tag_attrs[found.end(1):]
+        elif not found:
+            tag_attrs += f' {name}="{html.escape(str(value), quote=True)}"'
+    return markup[:match.start(2)] + tag_attrs + markup[match.end(2):]
 
 
 def source_rows(page, node, where: str, default_var: str) -> Iterator[Any]:
@@ -135,14 +153,22 @@ class UIPageRenderer(UIHtmlAdapter):
 
     @staticmethod
     def css() -> str:
-        return CSS_THEME + '\n' + RESPONSIVE_CSS + '\n' + FORM_CSS + '\n' + PAGER_CSS + '\n' + CELL_CSS
+        return (CSS_THEME + '\n' + RESPONSIVE_CSS + '\n' + FORM_CSS + '\n' + PAGER_CSS + '\n' + CELL_CSS
+                + '\n' + MOTION_CSS)
 
     # -- dispatch ----------------------------------------------------------
 
     def _render_node_ui(self, node, b: HtmlBuilder):
         try:
             if is_ui_node(node):
-                super()._render_node(self._resolved(node), b)
+                resolved = self._resolved(node)
+                motion = self._motion(resolved)
+                if motion is None:
+                    super()._render_node(resolved, b)
+                else:
+                    inner = HtmlBuilder()
+                    super()._render_node(resolved, inner)
+                    b.raw(with_attrs(inner.build(), html_attrs(motion)))
             else:
                 b.raw(self._page.render(node))
         except Exception as exc:
@@ -153,6 +179,15 @@ class UIPageRenderer(UIHtmlAdapter):
     def _render_children(self, children: list, b: HtmlBuilder):
         for child in children:
             self._render_node(child, b)
+
+    def _motion(self, node):
+        """UI-19: the motion the element asks for, unless the application turned motion off."""
+        if not motion_on(getattr(self._page, 'config', None)):
+            return None
+        from quantum.runtime.ui_view import _view_type
+        props = {name: html.unescape(value) if isinstance(value, str) else value
+                 for name, value in vars(node).items() if name in ('transition', 'enter', 'speed', 'anim_type', 'ui_id')}
+        return of_props(_view_type(node), props)
 
     def _resolved(self, node):
         """A copy of the node with every `{expression}` resolved and escaped."""

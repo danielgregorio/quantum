@@ -10,6 +10,22 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Motion, the same in every renderer (UI-19): `fade`, `slide` and `expand`,
+  `fast` (150 ms) or `normal` (250 ms). `transition=` on `ui:window` (the page
+  enters), `enter=` on any `ui:*` element, an expression too (it enters when its
+  page is shown), `ui:animate type=` with those kinds, and a tab's content that
+  expands as it opens. The browser draws them with CSS, the console with
+  Textual's animator; each records the motions it ran, and the same steps give
+  the same list. `ui.motion: off` in the config turns them off (the browser also
+  for reduced motion). The Kanban's pages slide in, its flash fades in, a card
+  just moved slides into its column and a new one opens in place.
+- `quantum run <app> --on web|desktop|tui|terminal` (UI-18): one application, its
+  versions by one parameter — the browser, a window of its own, the terminal —
+  served by the same runtime; `--page` and `--port`. `--on tui`, the text screen
+  drawn by Godot, says it is not built yet (`PLAN_PLATFORMS.md`, Phase 3). The
+  Kanban runs one script in every version in CI
+  (`tests/apps/test_kanban_everywhere.py`); the drivers it shares with the UI
+  parity script are `tests/apps/ui_drivers.py`.
 - Kanban (`projects/kanban`), the application `PLAN_PLATFORMS.md` proves the
   platforms with (Phase 1): boards of columns of cards in SQLite, a limit of
   cards in progress that a column says when it is passed, filters by who,
@@ -838,6 +854,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   matches; a new game no longer keeps the managers and the season of the
   game before it (each one added a manager of the same club, and Enter
   seemed to do nothing).
+- Laboratory: PandaFoot, what its players found on a second evening
+  (`PLAN_PANDAFOOT.md`). After the last round, a look at the table (F7) and
+  Esc went to the dashboard, round 19 of 18, the last match again and again:
+  the season's end comes, from there and from a save. No two players of the
+  world share a name (a Bambuzinho played for three clubs). The crowd varies
+  with the day as well as the table, the form and the price: the finances say
+  about how many would come, a range. A match shows its shots (on target), the
+  ball and who is pressing as it is played, and the results the shots of the
+  manager's. The table is a menu: Enter on a club shows its squad (a genius
+  hidden in a small club stays unmarked).
 - Laboratory: a HUD or a menu of rows is built with its scene, before the
   scene is entered, and read the scene's computed `q:set`s as nulls (a
   script error, a frame without its text); they read them once the scene is
