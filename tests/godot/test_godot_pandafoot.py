@@ -341,7 +341,7 @@ def test_a_report_not_taken_now_waits_and_goes_later(godot, tmp_path):
     persist = tmp_path / 'persist'
     with PlaySession(game_dir, binary=godot, persist_dir=persist) as game:
         send_one(game, 'The table froze')
-        down = game.until({'path': 'state.game.report_status', 'op': '!=', 'value': 'Sending...'}, max_ticks=3000)
+        down = game.until({'path': 'state.game.report_status', 'op': '!=', 'value': 'Sending...'}, max_ticks=6000)
         assert down['state']['game']['report_status'] == ('Not sent now (503: Service Unavailable): it is kept and '
                                                           'goes later.')
         assert len(down['state']['game']['outbox']) == 1
@@ -349,13 +349,13 @@ def test_a_report_not_taken_now_waits_and_goes_later(godot, tmp_path):
         game.act(tap=['down'], ticks=2)                                  # a scene changed: the outbox kept
         game.act(tap=['up'], ticks=2)
     with PlaySession(game_dir, binary=godot, persist_dir=persist) as game:     # another run
-        later = game.until({'path': 'state.game.outbox', 'op': '==', 'value': []}, max_ticks=3000)
+        later = game.until({'path': 'state.game.outbox', 'op': '==', 'value': []}, max_ticks=6000)
         assert later['scene'] == 'title' and later['stopped'] == 'condition'
         assert [r['text'] for r in answers.received] == ['The table froze', 'The table froze']
     answers.answers = [(422, {'error': 'invalid', 'message': "Parameter 'text' is too long"})]
     with PlaySession(game_dir, binary=godot, persist_dir=persist) as game:
         send_one(game, 'Another one')
-        refused = game.until({'path': 'state.game.outbox', 'op': '==', 'value': []}, max_ticks=3000)
+        refused = game.until({'path': 'state.game.outbox', 'op': '==', 'value': []}, max_ticks=6000)
         assert refused['state']['game']['report_status'] == ("The report was not accepted: 422: Parameter 'text' is "
                                                              "too long")
 
@@ -389,7 +389,7 @@ def test_a_report_reaches_the_receiver_and_the_forge(godot, tmp_path, monkeypatc
                 game.act(tap=['report'], ticks=3)
                 type_report(game, 'The keeper scored from his own area')
                 game.act(tap=['select'], ticks=3)
-                sent = game.until({'path': 'state.game.outbox', 'op': '==', 'value': []}, max_ticks=3000)
+                sent = game.until({'path': 'state.game.outbox', 'op': '==', 'value': []}, max_ticks=6000)
                 assert sent['state']['game']['report_status'] == 'Sent: report no. 1. Thank you!'
                 assert 'Sent: report no. 1. Thank you!' in texts(sent)
         finally:

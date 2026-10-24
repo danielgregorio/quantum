@@ -222,15 +222,25 @@ LATER = '''<q:application id="later" type="game">
 
 def test_an_answer_to_a_function_of_the_game_is_heard_by_the_scene_played_then(godot, server, tmp_path):
     """The title sends, and is left before the server answers: the answer is heard in the pitch, which has the
-    application's q:function too, with the names of its handler as they were. (The play protocol runs at a fixed 60
-    frames a second of game time, as fast as it can: the timeout is of those seconds, and is long here.)"""
+    application's q:function too, with the names of its handler as they were.
+
+    The play protocol runs ticks as fast as the machine does, while the server's half second is the clock's: the
+    test waits for the server to have the request, then for the answer to be on its way, and only then plays on;
+    the post's timeout is of game seconds and long here."""
     server.answer, server.delay = (201, {'number': 12}), 0.5
+    server.received.clear()
     try:
         out = build(tmp_path, LATER.replace('SERVER', server.url))
         with PlaySession(out, binary=godot) as game:
             left = game.act(ticks=6)
             assert left['scene'] == 'pitch' and left['state']['game']['got'] == 0       # not answered yet
-            heard = game.until({'path': 'state.game.got', 'op': '==', 'value': 12}, max_ticks=6000)
+            for _ in range(200):                                                       # the request on its way
+                if server.received:
+                    break
+                game.act(ticks=2)
+            assert server.received == [('/api/reports', 'application/json', {'hello': 'title'})]
+            time.sleep(server.delay + 0.5)                                             # and the answer sent
+            heard = game.until({'path': 'state.game.got', 'op': '==', 'value': 12}, max_ticks=1200)
             assert heard['stopped'] == 'condition' and heard['scene'] == 'pitch'
             assert heard['state']['game']['why'] == 'title'
     finally:
