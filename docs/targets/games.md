@@ -6949,7 +6949,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <q:set name="last" value="[]" type="array" />           <!-- the last round's matches, for its results -->
   <q:set name="champion" value="-1" type="number" />
   <q:set name="viewing" value="-1" type="number" />       <!-- the club whose squad is shown, from the table (-1: the manager's) -->
-  <q:set name="came_from" value="title" type="string" />  <!-- the screen a beta report goes back to: title or dashboard -->
+  <!-- the beta's reports that have not reached the beta's server yet, kept between runs (at most ten, the newest):
+       {id, report}; and those on their way now, and what the last one came to -->
+  <q:set name="outbox" value="[]" type="array" saved="true" />
+  <q:set name="report_seq" value="0" type="number" saved="true" />
+  <q:set name="sending" value="[]" type="array" />
+  <q:set name="report_status" value="" type="string" />
 
   <!-- the numbers of the design, in one place; the names are names in every language -->
   <q:set name="club_names" value='["Panda FC", "Bambu United", "Urso Polar", "Tigre Branco", "Leão Dourado", "Onça Pintada", "Gavião Real", "Lobo Guará", "Jacaré FC", "Arara Azul", "Coala City", "Pinguim FC", "Capivara EC", "Tucano FC", "Raposa EC", "Coruja AC", "Falcão United", "Boto Rosa", "Cervo FC", "Zebra City", "Tamanduá", "Jaguatirica", "Mico-Leão", "Tatu-Bola", "Quati AC", "Peixe-Boi", "Ouriço FC", "Preguiça EC", "Flamingo FC", "Pelicano EC", "Sabiá United", "Gambá City", "Lhama FC", "Canguru AC", "Lontra AC", "Tartaruga", "Camelo FC", "Esquilo EC", "Marreco AC", "Siri FC"]' type="array" />
@@ -6984,7 +6989,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <qg:input action="slower" keys="Minus, KpSubtract" />
   <qg:input action="undo" keys="C" />        <!-- undo an automatic change of tactics -->
   <qg:input action="auto" keys="A" />        <!-- the line-up picked by the computer -->
-  <qg:input action="report" keys="F9" />     <!-- the beta: a bug or a suggestion, in the report form -->
+  <qg:input action="report" keys="F9" />     <!-- the beta: a bug or a suggestion, in the report panel -->
 
   <!-- ===== Little helpers ===== -->
 
@@ -6998,21 +7003,124 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:return value="{'https://quantumframework.net/games/pandafoot/changelog/' + ('pt/' if language() == 'Português' else ('es/' if language() == 'Español' else ''))}" />
   </q:function>
 
-  <!-- the beta's reports: the owner's form (a Google Form), opened filled in with the kind and where the game is, so
-       the player writes only what happened. The kinds are the form's own words; the fields are the form's, from its
-       prefilled link -->
-  <q:function name="report_url" params="kind">
-    <q:return value="{'https://docs.google.com/forms/d/e/FORM_ID/viewform?usp=pp_url&entry.KIND_ID=' + url_encode(kind) + '&entry.CONTEXT_ID=' + url_encode(report_context())}" />
-  </q:function>
+  <!-- ===== The beta's reports (PLAN_PANDAFOOT.md, "The beta's reports") =====
+       [!] in the corner of every screen, or F9, opens the report panel over whatever is shown, which stands still
+       under it. A report goes to the beta's server (projects/beta-reports) with where the game is: the screen, the
+       option the cursor was on, the round, the club; and, if the player says so, the game itself, as its save. It
+       waits in the outbox, kept between runs, until the server has it: sent again from the title, the dashboard
+       and the panel. -->
+  <qg:touch-button action="report" x="622" y="18" size="24" label="!" show="always" />
+
+  <!-- where the reports go; '' while the beta's server is not set up: the reports wait in the outbox -->
+  <q:function name="report_server"><q:return value="{''}" /></q:function>
 
   <!-- where the game is, in a line: enough to find the season and the round again in the same world -->
   <q:function name="report_context">
-    <q:set name="where" value="{'PandaFoot ' + game_version() + ' beta; ' + language() + '; ' + ('desktop' if can_quit() else 'browser') + '; screen ' + came_from}" />
+    <q:set name="where" value="{'PandaFoot ' + game_version() + ' beta; ' + language() + '; ' + ('desktop' if can_quit() else 'browser') + '; screen ' + scene_name()}" />
     <q:if condition="{len(managers) == 0 or len(clubs) != 40}"><q:return value="{where + '; no game in progress'}" /></q:if>
     <q:set name="t" value="{managers[min(turn, len(managers) - 1)]}" />
     <q:set name="c" value="{clubs[t.club]}" />
     <q:return value="{where + '; world ' + str(world) + ', season ' + str(season) + ', round ' + str(matchday) + '/18, next ' + next_kind() + '; ' + t.name + ' at ' + c.name + ' (division ' + str(c.div) + ', ' + str(position_of(t.club)) + 'th, ' + money(c.balance) + '); ' + str(len(managers)) + ' manager(s)'}" />
   </q:function>
+
+  <!-- who reports: the managers' names -->
+  <q:function name="report_player">
+    <q:set name="names" value="{[]}" />
+    <q:loop items="{managers}" var="m"><q:set name="names" value="{names + [m.name]}" /></q:loop>
+    <q:return value="{join(names, ', ')}" />
+  </q:function>
+
+  <!-- a report into the outbox, as the server takes it (its lengths cut to what it accepts) -->
+  <q:function name="queue_report" params="kind, text, seen, option, attach">
+    <q:set name="report_seq" value="{report_seq + 1}" />
+    <q:set name="report" value="{ {'game': 'pandafoot', 'version': game_version(), 'kind': kind, 'text': text[0:4000], 'screen': seen[0:60], 'option': option[0:120], 'context': report_context()[0:2000], 'player': report_player()[0:40], 'save': save_text() if attach else ''} }" />
+    <q:if condition="{len(outbox) >= 10}"><q:set name="outbox" value="{outbox[1:]}" /></q:if>
+    <q:set name="outbox" value="{outbox + [{'id': report_seq, 'report': report}]}" />
+  </q:function>
+
+  <!-- each report of the outbox not on its way already, to the server -->
+  <q:function name="send_reports">
+    <q:if condition="{report_server() == ''}"><q:return /></q:if>
+    <q:loop items="{outbox}" var="r">
+      <q:if condition="{not (r.id in sending)}">
+        <q:set name="sending" value="{sending + [r.id]}" />
+        <qg:post to="{report_server()}" data="{r.report}" timeout="30">
+          <qg:on-done><q:call function="report_sent" args="{r.id}, {reply}" /></qg:on-done>
+          <qg:on-fail><q:call function="report_not_sent" args="{r.id}, {reason}" /></qg:on-fail>
+        </qg:post>
+      </q:if>
+    </q:loop>
+  </q:function>
+
+  <q:function name="report_sent" params="id, reply">
+    <q:call function="report_out" args="{id}, {true}" />
+    <q:set name="report_status" value="{tr('Sent: report no.') + ' ' + str(reply.number) + '. ' + tr('Thank you!')}" />
+  </q:function>
+
+  <!-- not sent: kept for later; refused for what it is (a 4xx other than too many), it never would be taken -->
+  <q:function name="report_not_sent" params="id, reason">
+    <q:set name="refused" value="{reason[0:1] == '4' and reason[0:3] != '429'}" />
+    <q:call function="report_out" args="{id}, {refused}" />
+    <q:if condition="{refused}">
+      <q:set name="report_status" value="{tr('The report was not accepted:') + ' ' + reason}" />
+      <q:else>
+        <q:set name="report_status" value="{tr('Not sent now') + ' (' + reason + '): ' + tr('it is kept and goes later.')}" />
+      </q:else>
+    </q:if>
+  </q:function>
+
+  <!-- a report no longer on its way; dropped from the outbox too when it is done with -->
+  <q:function name="report_out" params="id, done">
+    <q:set name="still" value="{[]}" />
+    <q:loop items="{sending}" var="s"><q:if condition="{s != id}"><q:set name="still" value="{still + [s]}" /></q:if></q:loop>
+    <q:set name="sending" value="{still}" />
+    <q:if condition="{done}">
+      <q:set name="kept" value="{[]}" />
+      <q:loop items="{outbox}" var="r"><q:if condition="{r.id != id}"><q:set name="kept" value="{kept + [r]}" /></q:if></q:loop>
+      <q:set name="outbox" value="{kept}" />
+    </q:if>
+  </q:function>
+
+  <!-- the panel, over any screen -->
+  <qg:overlay name="report" action="report" shade="0.6" background="#000020">
+    <q:set name="kind" value="bug" type="string" />
+    <q:set name="text" value="" type="string" />
+    <q:set name="attach" value="true" type="boolean" />
+    <q:set name="seen" value="{scene_name()}" type="string" />
+    <q:set name="option" value="{focused()}" type="string" />
+    <q:set name="report_status" value="" />
+    <q:call function="send_reports" />
+    <qg:hud x="96" y="40" box="frame" font="assets/DejaVuSansMono.ttf" size="14">
+      <qg:text value="{'BETA - ' + tr('REPORT A BUG OR SUGGEST')}" color="#ffff55" />
+      <qg:text value="{fit(tr('Where:') + ' ' + seen + (' - ' + option if option != '' else ''), 50)}" />
+      <qg:text value="{tr('Every report is read. Thank you!')}" color="#55ffff" />
+    </qg:hud>
+    <qg:menu x="96" y="140" font="assets/DejaVuSansMono.ttf" size="14" box="frame">
+      <qg:button label="{tr('Kind:') + ' ' + tr('Bug' if kind == 'bug' else ('Suggestion' if kind == 'suggestion' else 'Something else'))}">
+        <q:set name="kind" value="{'suggestion' if kind == 'bug' else ('other' if kind == 'suggestion' else 'bug')}" />
+      </qg:button>
+      <qg:field bind="text" label="What happened, or your idea:" max-length="600" />
+      <qg:button label="{tr('Attach my game:') + ' ' + tr('yes' if attach else 'no')}"><q:set name="attach" value="{not attach}" /></qg:button>
+      <qg:button label="Send">
+        <q:if condition="{len(text) < 3}">
+          <q:set name="report_status" value="{tr('Write a few words first.')}" />
+          <q:else>
+            <q:call function="queue_report" args="{kind}, {text}, {seen}, {option}, {attach}" />
+            <q:set name="text" value="" />
+            <q:set name="report_status" value="{tr('Sending...') if report_server() != '' else tr('Kept: it goes when the beta\'s server is ready.')}" />
+            <q:call function="send_reports" />
+          </q:else>
+        </q:if>
+      </qg:button>
+      <qg:button label="Back"><qg:close-overlay /></qg:button>
+    </qg:menu>
+    <qg:hud x="96" y="300" font="assets/DejaVuSansMono.ttf" size="12">
+      <qg:text value="{report_status}" color="#55ff55" />
+      <qg:text value="{(tr('Waiting to be sent:') + ' ' + str(len(outbox))) if len(outbox) > 0 else ''}" color="#aaaaaa" />
+      <qg:text value="{tr('[!] or F9 opens this on any screen.') + '   [ESC] ' + tr('Back')}" color="#aaaaaa" />
+    </qg:hud>
+    <qg:on-input action="cancel"><qg:close-overlay /></qg:on-input>
+  </qg:overlay>
 
   <!-- a new game starts from nothing: no managers, the first season (a game played before leaves nothing behind) -->
   <q:function name="reset_game">
@@ -8567,6 +8675,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- The title: a new game, one of the three saved, the options. -->
   <qg:scene name="title" width="640" height="400" background="#0000a8">
+    <q:call function="send_reports" />
     <qg:hud x="160" y="40" box="frame" font="assets/DejaVuSansMono.ttf" size="16">
       <qg:text value="{'    ☻  P A N D A F O O T  ☻    '}" color="#ffff55" />
       <qg:text value="{'  one manager, one league, the ball  '}" color="#55ffff" />
@@ -8578,41 +8687,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <qg:button label="{tr('Continue') + ' 3'}" if="{has_save(3)}"><qg:continue slot="3" /></qg:button>
       <qg:button label="Options"><qg:goto-scene name="options" /></qg:button>
       <qg:button label="{tr('What\'s new') + ' (v' + game_version() + ')'}"><qg:open-url href="{changelog_url()}" /></qg:button>
-      <qg:button label="Report a bug or suggest"><q:set name="came_from" value="{'title'}" /><qg:goto-scene name="report" /></qg:button>
+      <qg:button label="Report a bug or suggest"><qg:open-overlay name="report" /></qg:button>
       <qg:button label="Quit" if="{can_quit()}"><qg:quit /></qg:button>
     </qg:menu>
     <qg:hud position="bottom-right" font="assets/DejaVuSansMono.ttf" size="11">
       <qg:text value="{'PandaFoot v' + game_version() + ' beta'}" color="#aaaaaa" />
     </qg:hud>
   </qg:scene>
-
-  <!-- the beta's reports: a bug, a suggestion or anything else, in the form; back where the player came from -->
-  <qg:scene name="report" width="640" height="400" background="#0000a8">
-    <q:set name="sent" value="false" type="boolean" />
-    <qg:hud x="16" y="16" box="frame" font="assets/DejaVuSansMono.ttf" size="14">
-      <qg:text value="{'BETA - ' + tr('REPORT A BUG OR SUGGEST')}" color="#ffff55" />
-      <qg:text value="{tr('A form opens in your browser, already filled in')}" />
-      <qg:text value="{tr('with where the game is (version, world, round).')}" />
-      <qg:text value="{tr('You only write what happened, or your idea.')}" />
-      <qg:text value="{tr('Every report is read. Thank you!')}" color="#55ffff" />
-    </qg:hud>
-    <qg:menu x="16" y="170" font="assets/DejaVuSansMono.ttf" size="14" box="frame">
-      <qg:button label="Report a bug"><qg:open-url href="{report_url('Bug')}" /><q:set name="sent" value="{true}" /></qg:button>
-      <qg:button label="Suggest something"><qg:open-url href="{report_url('Sugestão')}" /><q:set name="sent" value="{true}" /></qg:button>
-      <qg:button label="Something else"><qg:open-url href="{report_url('Outro')}" /><q:set name="sent" value="{true}" /></qg:button>
-      <qg:button label="Back"><q:call function="report_back" /></qg:button>
-    </qg:menu>
-    <qg:hud x="16" y="330" font="assets/DejaVuSansMono.ttf" size="14" if="{sent}">
-      <qg:text value="{tr('The form is open in your browser.')}" color="#55ff55" />
-    </qg:hud>
-    <qg:on-input action="cancel"><q:call function="report_back" /></qg:on-input>
-  </qg:scene>
-
-  <q:function name="report_back">
-    <q:if condition="{came_from == 'dashboard'}"><qg:goto-scene name="dashboard" />
-      <q:else><qg:goto-scene name="title" /></q:else>
-    </q:if>
-  </q:function>
 
   <!-- A new game: the world's number, the save, the managers and their clubs. -->
   <qg:scene name="new-game" width="640" height="400" background="#0000a8">
@@ -8657,6 +8738,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- ===== The dashboard: the club at a glance, its eleven in view, the next match and who it is against ===== -->
   <qg:scene name="dashboard" width="640" height="400" background="#0000a8" save="true">
+    <q:call function="send_reports" />
     <q:set name="g" value="{next_match(managers[turn].club)}" />
     <q:set name="opp" value="{g[1] if g[0] == managers[turn].club else g[0]}" />
     <qg:hud x="6" y="4" box="frame" font="assets/DejaVuSansMono.ttf" size="12">
@@ -8701,7 +8783,6 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:on-input action="standings"><qg:goto-scene name="standings" /></qg:on-input>
     <qg:on-input action="market"><qg:goto-scene name="market" /></qg:on-input>
     <qg:on-input action="history"><qg:goto-scene name="history" /></qg:on-input>
-    <qg:on-input action="report"><q:set name="came_from" value="{'dashboard'}" /><qg:goto-scene name="report" /></qg:on-input>
     <qg:on-input action="select">
       <q:if condition="{not lineup_ok(my_club())}"><q:call function="fill_lineup" args="{my_club()}" /></q:if>
       <q:if condition="{turn < len(managers) - 1}">
@@ -9666,14 +9747,25 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="What's new" as="Novidades" />
     <qg:phrase text="Report a bug or suggest" as="Relatar bug ou sugerir" />
     <qg:phrase text="REPORT A BUG OR SUGGEST" as="RELATAR UM BUG OU SUGERIR" />
-    <qg:phrase text="A form opens in your browser, already filled in" as="Um formulário abre no navegador, já preenchido" />
-    <qg:phrase text="with where the game is (version, world, round)." as="com onde o jogo está (versão, mundo, rodada)." />
-    <qg:phrase text="You only write what happened, or your idea." as="Você só escreve o que aconteceu, ou a sua ideia." />
     <qg:phrase text="Every report is read. Thank you!" as="Todo relato é lido. Obrigado!" />
-    <qg:phrase text="Report a bug" as="Relatar um bug" />
-    <qg:phrase text="Suggest something" as="Sugerir algo" />
+    <qg:phrase text="Kind:" as="Tipo:" />
+    <qg:phrase text="Bug" as="Bug" />
+    <qg:phrase text="Suggestion" as="Sugestão" />
+    <qg:phrase text="What happened, or your idea:" as="O que aconteceu, ou a sua ideia:" />
+    <qg:phrase text="Attach my game:" as="Anexar o meu jogo:" />
+    <qg:phrase text="Send" as="Enviar" />
+    <qg:phrase text="Where:" as="Onde:" />
+    <qg:phrase text="Write a few words first." as="Escreva algumas palavras antes." />
+    <qg:phrase text="Sending..." as="Enviando..." />
+    <qg:phrase text="Kept: it goes when the beta's server is ready." as="Guardado: vai quando o servidor do beta estiver pronto." />
+    <qg:phrase text="Sent: report no." as="Enviado: relato nº" />
+    <qg:phrase text="Thank you!" as="Obrigado!" />
+    <qg:phrase text="The report was not accepted:" as="O relato não foi aceito:" />
+    <qg:phrase text="Not sent now" as="Não enviado agora" />
+    <qg:phrase text="it is kept and goes later." as="fica guardado e vai depois." />
+    <qg:phrase text="Waiting to be sent:" as="Esperando envio:" />
+    <qg:phrase text="[!] or F9 opens this on any screen." as="[!] ou F9 abre isto em qualquer tela." />
     <qg:phrase text="Something else" as="Outra coisa" />
-    <qg:phrase text="The form is open in your browser." as="O formulário abriu no navegador." />
     <qg:phrase text="Report" as="Relatar" />
     <qg:phrase text="NEW GAME" as="NOVO JOGO" />
     <qg:phrase text="Managers:" as="Técnicos:" />
@@ -10006,14 +10098,25 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <qg:phrase text="What's new" as="Novedades" />
     <qg:phrase text="Report a bug or suggest" as="Reportar un error o sugerir" />
     <qg:phrase text="REPORT A BUG OR SUGGEST" as="REPORTAR UN ERROR O SUGERIR" />
-    <qg:phrase text="A form opens in your browser, already filled in" as="Un formulario se abre en el navegador, ya rellenado" />
-    <qg:phrase text="with where the game is (version, world, round)." as="con dónde está el juego (versión, mundo, jornada)." />
-    <qg:phrase text="You only write what happened, or your idea." as="Solo escribes lo que pasó, o tu idea." />
     <qg:phrase text="Every report is read. Thank you!" as="Se lee cada reporte. ¡Gracias!" />
-    <qg:phrase text="Report a bug" as="Reportar un error" />
-    <qg:phrase text="Suggest something" as="Sugerir algo" />
+    <qg:phrase text="Kind:" as="Tipo:" />
+    <qg:phrase text="Bug" as="Error" />
+    <qg:phrase text="Suggestion" as="Sugerencia" />
+    <qg:phrase text="What happened, or your idea:" as="Qué pasó, o tu idea:" />
+    <qg:phrase text="Attach my game:" as="Adjuntar mi partida:" />
+    <qg:phrase text="Send" as="Enviar" />
+    <qg:phrase text="Where:" as="Dónde:" />
+    <qg:phrase text="Write a few words first." as="Escribe unas palabras antes." />
+    <qg:phrase text="Sending..." as="Enviando..." />
+    <qg:phrase text="Kept: it goes when the beta's server is ready." as="Guardado: se envía cuando el servidor de la beta esté listo." />
+    <qg:phrase text="Sent: report no." as="Enviado: reporte n.º" />
+    <qg:phrase text="Thank you!" as="¡Gracias!" />
+    <qg:phrase text="The report was not accepted:" as="El reporte no fue aceptado:" />
+    <qg:phrase text="Not sent now" as="No enviado ahora" />
+    <qg:phrase text="it is kept and goes later." as="se guarda y se envía después." />
+    <qg:phrase text="Waiting to be sent:" as="Esperando envío:" />
+    <qg:phrase text="[!] or F9 opens this on any screen." as="[!] o F9 abre esto en cualquier pantalla." />
     <qg:phrase text="Something else" as="Otra cosa" />
-    <qg:phrase text="The form is open in your browser." as="El formulario se abrió en el navegador." />
     <qg:phrase text="Report" as="Reportar" />
     <qg:phrase text="NEW GAME" as="NUEVA PARTIDA" />
     <qg:phrase text="Managers:" as="Técnicos:" />
