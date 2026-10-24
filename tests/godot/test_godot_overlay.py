@@ -9,6 +9,7 @@ qg:on-done (`reply`) or qg:on-fail (`reason`). save_text() is the game as a qg:s
 
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -73,6 +74,7 @@ class Server:
     def __init__(self):
         self.received = []
         self.answer = (201, {'number': 7})
+        self.delay = 0.0          # seconds before it answers
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -80,6 +82,7 @@ class Server:
                 length = int(self.headers.get('Content-Length', 0))
                 outer.received.append((self.path, self.headers.get('Content-Type'),
                                        json.loads(self.rfile.read(length))))
+                time.sleep(outer.delay)
                 status, body = outer.answer
                 data = json.dumps(body).encode()
                 self.send_response(status)
@@ -195,6 +198,43 @@ def test_a_server_that_is_not_there(godot, tmp_path):
         game.act(tap=['select'], ticks=1)
         failed = game.until({'path': 'state.status', 'op': '!=', 'value': 'Sending'}, max_ticks=900)
         assert failed['state']['status'] == 'Kept: cannot reach the server'
+
+
+LATER = '''<q:application id="later" type="game">
+  <q:set name="got" value="0" type="number" />
+  <q:set name="why" value="" type="string" />
+  <q:function name="hello">
+    <q:set name="sent_at" value="{'title'}" />
+    <qg:post to="SERVER" data="{ {'hello': sent_at} }" timeout="120">
+      <qg:on-done><q:set name="got" value="{reply.number}" /><q:set name="why" value="{sent_at}" /></qg:on-done>
+    </qg:post>
+  </q:function>
+  <qg:scene name="title" width="320" height="180">
+    <q:call function="hello" />
+    <qg:timer after="2"><qg:goto-scene name="pitch" /></qg:timer>
+  </qg:scene>
+  <qg:scene name="pitch" width="320" height="180">
+    <q:set name="here" value="0" type="number" />
+  </qg:scene>
+</q:application>
+'''
+
+
+def test_an_answer_to_a_function_of_the_game_is_heard_by_the_scene_played_then(godot, server, tmp_path):
+    """The title sends, and is left before the server answers: the answer is heard in the pitch, which has the
+    application's q:function too, with the names of its handler as they were. (The play protocol runs at a fixed 60
+    frames a second of game time, as fast as it can: the timeout is of those seconds, and is long here.)"""
+    server.answer, server.delay = (201, {'number': 12}), 0.5
+    try:
+        out = build(tmp_path, LATER.replace('SERVER', server.url))
+        with PlaySession(out, binary=godot) as game:
+            left = game.act(ticks=6)
+            assert left['scene'] == 'pitch' and left['state']['game']['got'] == 0       # not answered yet
+            heard = game.until({'path': 'state.game.got', 'op': '==', 'value': 12}, max_ticks=6000)
+            assert heard['stopped'] == 'condition' and heard['scene'] == 'pitch'
+            assert heard['state']['game']['why'] == 'title'
+    finally:
+        server.delay = 0.0
 
 
 def test_a_scene_change_from_the_overlay_closes_it(beta, godot):

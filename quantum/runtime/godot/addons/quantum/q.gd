@@ -984,8 +984,10 @@ static func save_text(ctx) -> String:
 # The request goes on its own (an HTTPRequest under Q, which outlives the
 # scene); its answer is heard at the start of a tick, by the scene or overlay
 # that sent it if it is still there, and once it goes on (not under an overlay).
+# One sent by a q:function of the application (_on_game_post_*, which every
+# scene has) is heard by the scene played then when the one that sent it is gone.
 
-var _answers: Array = []   # [caller, method, args, event kind, event data], heard at the next tick
+var _answers: Array = []   # [caller's instance id, method, args, event kind, event data], heard at the next tick
 
 
 static func post(caller: Object, url, data, on_done: String, on_fail: String, args: Array, timeout: float) -> void:
@@ -993,7 +995,7 @@ static func post(caller: Object, url, data, on_done: String, on_fail: String, ar
 	var address := str(url)
 	if not (address.begins_with("http://") or address.begins_with("https://")):
 		push_warning("quantum: qg:post sends to http:// and https:// addresses, not " + address.left(40))
-		q._answer(caller, on_fail, args, address, "not a web address")
+		q._answer(caller.get_instance_id(), on_fail, args, address, "not a web address")
 		return
 	var body := JSON.stringify(data)
 	event("post", {"to": address, "bytes": body.to_utf8_buffer().size()})
@@ -1001,16 +1003,18 @@ static func post(caller: Object, url, data, on_done: String, on_fail: String, ar
 	http.timeout = timeout
 	http.process_mode = Node.PROCESS_MODE_ALWAYS
 	q.add_child(http)
-	http.request_completed.connect(Callable(q, "_posted").bind(http, caller, address, on_done, on_fail, args, timeout))
+	# the sender by its id: it may be freed (a scene left) before the answer comes
+	http.request_completed.connect(Callable(q, "_posted").bind(http, caller.get_instance_id(), address, on_done,
+		on_fail, args, timeout))
 	var err := http.request(address, PackedStringArray(["Content-Type: application/json", "Accept: application/json"]),
 		HTTPClient.METHOD_POST, body)
 	if err != OK:
 		http.queue_free()
-		q._answer(caller, on_fail, args, address, "cannot reach the server")
+		q._answer(caller.get_instance_id(), on_fail, args, address, "cannot reach the server")
 
 
 func _posted(result: int, code: int, _headers: PackedStringArray, bytes: PackedByteArray, http: Node,
-		caller: Object, address: String, on_done: String, on_fail: String, args: Array, timeout: float) -> void:
+		caller: int, address: String, on_done: String, on_fail: String, args: Array, timeout: float) -> void:
 	http.queue_free()
 	if result == HTTPRequest.RESULT_TIMEOUT:
 		_answer(caller, on_fail, args, address, "no answer in %d seconds" % int(round(timeout)))
@@ -1031,7 +1035,7 @@ func _posted(result: int, code: int, _headers: PackedStringArray, bytes: PackedB
 	_answers.append([caller, on_done, args + [reply], "posted", {"to": address, "status": code}])
 
 
-func _answer(caller: Object, on_fail: String, args: Array, address: String, reason: String) -> void:
+func _answer(caller: int, on_fail: String, args: Array, address: String, reason: String) -> void:
 	_answers.append([caller, on_fail, args + [reason], "post-failed", {"to": address, "reason": reason}])
 
 
@@ -1039,13 +1043,24 @@ func _hear_answers() -> void:
 	var due := _answers
 	_answers = []
 	for a in due:
-		var caller = a[0]
+		var caller = instance_from_id(int(a[0]))   # null: freed
+		if not is_instance_valid(caller) and str(a[1]).begins_with("_on_game_post_"):
+			caller = _shown_scene()   # every scene has the application's q:functions
 		if is_instance_valid(caller) and caller is Node and not (caller as Node).can_process():
 			_answers.append(a)   # a scene under an overlay hears it when it goes on
 			continue
 		event(a[3], a[4])
 		if is_instance_valid(caller) and a[1] != "" and caller.has_method(a[1]):
 			caller.callv(a[1], a[2])   # gone (the scene was left): nobody hears it
+
+
+# The scene shown: the overlay open, or else the scene played.
+static func _shown_scene() -> Node:
+	var g := _game()
+	if g == null:
+		return null
+	var open = g.get("overlay")
+	return open if open != null else g.get("current_scene")
 
 
 static func quit() -> void:

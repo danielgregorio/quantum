@@ -1027,7 +1027,8 @@ TAGS: Dict[str, Tag] = {
         '`reason` (`no answer in 20 seconds`, `cannot reach the server`, or the server\'s refusal: `429: Too many '
         'requests`). A report to a beta\'s server, a score to a table of the best. The names the handler reads '
         '(me, a loop\'s variable, a parameter) are what they were as it was sent. The answer is heard by the scene '
-        'or overlay that sent it, if it is still there. In a browser the server must let the game\'s site post to '
+        'or overlay that sent it, if it is still there; one a q:function of the application sent, by the scene '
+        'shown then if that one is gone (every scene has the function). In a browser the server must let the game\'s site post to '
         'it (q:endpoint origins=). Not in a qg:multiplayer game: the answer would come to each peer at another '
         'tick.',
         {'to': Attr('str', required=True, doc='the address, http:// or https://, or an expression ({...}) that gives '

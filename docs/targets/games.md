@@ -1500,7 +1500,7 @@ Goes inside: a handler.
 
 ### `qg:post`
 
-Sends data to a web address as JSON (an HTTP POST), and the game goes on: the answer comes later, and runs its qg:on-done, with `reply` (the JSON the server answered, null for none), or its qg:on-fail, with `reason` (`no answer in 20 seconds`, `cannot reach the server`, or the server's refusal: `429: Too many requests`). A report to a beta's server, a score to a table of the best. The names the handler reads (me, a loop's variable, a parameter) are what they were as it was sent. The answer is heard by the scene or overlay that sent it, if it is still there. In a browser the server must let the game's site post to it (q:endpoint origins=). Not in a qg:multiplayer game: the answer would come to each peer at another tick.
+Sends data to a web address as JSON (an HTTP POST), and the game goes on: the answer comes later, and runs its qg:on-done, with `reply` (the JSON the server answered, null for none), or its qg:on-fail, with `reason` (`no answer in 20 seconds`, `cannot reach the server`, or the server's refusal: `429: Too many requests`). A report to a beta's server, a score to a table of the best. The names the handler reads (me, a loop's variable, a parameter) are what they were as it was sent. The answer is heard by the scene or overlay that sent it, if it is still there; one a q:function of the application sent, by the scene shown then if that one is gone (every scene has the function). In a browser the server must let the game's site post to it (q:endpoint origins=). Not in a qg:multiplayer game: the answer would come to each peer at another tick.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|

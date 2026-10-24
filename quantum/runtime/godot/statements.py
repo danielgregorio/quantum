@@ -92,6 +92,7 @@ class SceneScript:
     cameras_moved: List[Optional[int]] = field(default_factory=list)   # lines of qg:camera-to: the scene needs a camera
     overlays_used: List[tuple] = field(default_factory=list)   # (name, line) from qg:open-overlay
     posts_used: List[Optional[int]] = field(default_factory=list)   # lines of qg:post: each its answers' methods
+    game_posts: int = 0   # the qg:posts of the application's q:functions: the same numbers in every script
 
     node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
     game_functions: List[str] = field(default_factory=list)   # the q:functions of <q:application>, every scene's
@@ -858,7 +859,13 @@ def _post(el: Element, scope: Scope, script: SceneScript) -> str:
         raise GameCompileError('<qg:post> holds one <qg:on-done> and one <qg:on-fail> at most, and nothing else',
                                el.line)
     script.posts_used.append(el.line)
-    number = len(script.posts_used)   # a post in its own qg:on-done is the next number
+    # a post in its own qg:on-done is the next number. One in a q:function of the application is numbered among
+    # those alone: every script compiles them in the same order, so a scene played later has the same method
+    if script.game_wide:
+        script.game_posts += 1
+        prefix = f'_on_game_post_{script.game_posts}'
+    else:
+        prefix = f'_on_post_{len(script.posts_used)}'
     names = scope.locals()
     methods = []
     for tag, answer in (('on-done', 'reply'), ('on-fail', 'reason')):
@@ -869,7 +876,7 @@ def _post(el: Element, scope: Scope, script: SceneScript) -> str:
         if answer in names:
             raise GameCompileError(f'<qg:{tag}>: its answer is `{answer}`, a name this handler has already; '
                                    f'give that one another name', handler.line)
-        method = compile_handler(script, f'_on_post_{number}_{tag[3:]}', handler.children,
+        method = compile_handler(script, f'{prefix}_{tag[3:]}', handler.children,
                                  handler.line, params=tuple(names) + (answer,))
         methods.append(json.dumps(method))
     data = compile_expression(el.get('data'), scope, el.line)
