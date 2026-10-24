@@ -8279,12 +8279,12 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <q:set name="att" value="{me_side.attack ** 0.7}" />
       <q:set name="dfn" value="{them.defense ** 0.7}" />
       <q:set name="me_side.press" value="{me_side.press * 0.8}" />   <!-- the chances of the last minutes, the older ones fading -->
-      <q:if condition="{chance(0.26 * att / (att + dfn) * luck * pace_of)}">
+      <q:if condition="{chance(0.31 * att / (att + dfn) * luck * pace_of)}">
         <q:set name="me_side.shots" value="{me_side.shots + 1}" />
         <q:set name="me_side.press" value="{me_side.press + 1}" />
-        <q:set name="pen" value="{chance(0.012)}" />   <!-- a foul in the box: about one match in three -->
+        <q:set name="pen" value="{chance(0.01)}" />   <!-- a foul in the box: about one match in four -->
         <q:set name="p" value="{taker_of(club) if pen else null}" />
-        <q:set name="in_net" value="{chance(pen_chance(p)) if pen else chance(0.15 * sqrt(att / dfn))}" />
+        <q:set name="in_net" value="{chance(pen_chance(p)) if pen else chance(0.125 * sqrt(att / dfn))}" />
         <q:if condition="{in_net or chance(0.6 if pen else 0.25)}"><q:set name="me_side.on" value="{me_side.on + 1}" /></q:if>   <!-- on target: a goal, or the keeper saved it -->
         <q:if condition="{in_net}">
           <q:if condition="{not pen}"><q:set name="p" value="{scorer(club)}" /></q:if>
