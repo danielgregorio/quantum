@@ -79,6 +79,9 @@ func observation() -> Dictionary:
 			var v: Dictionary = n.quantum_view()
 			if not v.is_empty():
 				obs["screen"].append(v)
+	var open = game.get("overlay")
+	if open != null and is_instance_valid(open) and game.current_scene != null:
+		obs["under"] = String(game.current_scene.name)   # the scene the overlay is over
 	for a in InputMap.get_actions():
 		var name_ := String(a)
 		if name_.begins_with("ui_") or name_.begins_with("raw_"):
@@ -99,6 +102,8 @@ func observation() -> Dictionary:
 
 
 func _walk(n: Node) -> Array:
+	if n.has_meta("q_under"):
+		return []   # the scene under an open qg:overlay: what is seen is the overlay
 	var out := [n]
 	for c in n.get_children():
 		out += _walk(c)

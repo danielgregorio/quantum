@@ -320,7 +320,7 @@ declarative shape for it.
 | Changing scene, with a fade | `change_scene_to_file()` + script | `SceneManager.LoadScene()` + script | `qg:goto-scene name= fade=` (at the end of the tick; only the picture fades) | covered |
 | Arriving at a door of the next scene | script | script | `qg:exit to= at=` (disarmed until left) | covered |
 | A world map, levels unlocked | script | script | `qg:map-node scene=`, `qg:map-path requires=` (against `cleared`) | covered |
-| Overlays and additive scenes | another scene added as a child | `LoadSceneMode.Additive` | menus, dialogue and the HUD over a scene | partial: one scene runs at a time |
+| Overlays and additive scenes | another scene added as a child | `LoadSceneMode.Additive` | `qg:overlay`: a panel of its own HUD, menus and handlers over whatever scene is shown, which stands still under it; `qg:open-overlay`, `qg:close-overlay`, `action=` from every scene; `scene_name()`, `focused()` | covered |
 | Restarting a level | `reload_current_scene()` | `LoadScene()` of the active scene | `qg:goto-scene` to the same scene, `qg:respawn`, `qg:reset-items` | covered |
 | Groups | `add_to_group()`, `get_nodes_in_group()` | Tags (one per object), layers | `tag=`; `count()`, `with=`, `qg:on-death of=` | covered |
 | One action on every thing of a group | `call_group()` | `FindGameObjectsWithTag()` + a loop | `qg:for-each tag= var=` | covered |
@@ -374,6 +374,7 @@ declarative shape for it.
 | Matchmaking and room lists | — | Lobby, Matchmaker (Unity Gaming Services) | — (a room is a link to send) | partial: no list of rooms |
 | Names and chat between players | RPCs | RPCs, Vivox | `shared="true"` on `qg:field`: sent with the inputs on Enter, set on every machine on one tick; `qg:menu local="true"` (Bricks' who is who) | covered |
 | Testing several peers, latency | — | Multiplayer Play Mode, Network Simulator | `replay_peers()` (N headless Godots under tapes, `latency_ms=`, `net_report=`) | covered |
+| Web requests (a report to a beta's server, a score to a table) | `HTTPRequest` | `UnityWebRequest` | `qg:post to= data=` (JSON), `qg:on-done` with `reply`, `qg:on-fail` with `reason`; `save_text()` | partial: a POST of JSON only, and not in a networked game |
 
 ## 22. Testing and determinism
 
@@ -435,21 +436,21 @@ declarative shape for it.
 | Lighting, shaders and post-processing | 2 | 1 | 0 | 3 | 6 |
 | UI | 15 | 3 | 0 | 0 | 18 |
 | Time | 7 | 0 | 0 | 1 | 8 |
-| Scene flow | 8 | 1 | 0 | 1 | 10 |
+| Scene flow | 9 | 0 | 0 | 1 | 10 |
 | Persistence | 5 | 1 | 0 | 1 | 7 |
 | Localization | 7 | 0 | 0 | 0 | 7 |
-| Multiplayer and networking | 13 | 2 | 0 | 2 | 17 |
+| Multiplayer and networking | 13 | 3 | 0 | 2 | 18 |
 | Testing and determinism | 9 | 1 | 0 | 0 | 10 |
 | Export and platforms | 5 | 0 | 0 | 1 | 6 |
 | Tooling | 5 | 1 | 0 | 2 | 8 |
-| **Total** | **205** | **24** | **1** | **23** | **253** |
+| **Total** | **206** | **24** | **1** | **23** | **254** |
 
-Of 253 rows, 205 are covered and 24 partial; 1 is a gap, and 23 are left
+Of 254 rows, 206 are covered and 24 partial; 1 is a gap, and 23 are left
 out by design: four in five covered (146, 42 and 40 when the map was made;
 Phase 1 of PLAN_GAMES_3.md covered nine rows, and the clock in an expression,
 its `ticks()`, counted late; Phase 2 twelve more, Phase 3 nine more, Phase 4
 ten more, Phase 5 four more, Phase 6 twelve, and a frame for boxes; PLAN_PANDAFOOT.md's Phase 1 one, and
-two rows more covered). The gap left is
+two rows more covered; its beta's reports the overlays, and a row for web requests). The gap left is
 adaptive music, which no game has asked for. The rows
 left out by design are mostly the rigid-body solver, shaders and post-
 processing, what belongs to an editor, and the networking machinery that

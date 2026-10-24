@@ -932,6 +932,122 @@ static func open_url(url) -> void:
 	OS.shell_open(address)
 
 
+# --- qg:overlay: opened and closed by the game (quantum_game.gd), as the tick ends ---
+
+static func open_overlay(name_: String) -> void:
+	var g := _game()
+	if g != null and g.has_method("open_overlay"):
+		g.call_deferred("open_overlay", name_)
+
+
+static func close_overlay() -> void:
+	var g := _game()
+	if g != null and g.has_method("close_overlay"):
+		g.call_deferred("close_overlay")
+
+
+# The scene being played: under an open overlay, the one it is over.
+static func _played(ctx) -> Node:
+	var scene := _current_scene(ctx)
+	var g := _game()
+	var open = g.get("overlay") if g != null else null
+	if open != null and scene == open:
+		return g.current_scene
+	return scene
+
+
+# scene_name(): the scene being played (from an overlay, the one under it).
+static func scene_name(ctx) -> String:
+	var scene := _played(ctx)
+	return String(scene.name) if scene != null else ""
+
+
+# focused(): the text of the option the cursor is on in the scene's menus (from an overlay, the scene's
+# under it): the menu that has the keys, else the first shown; "" when none is shown.
+static func focused(ctx) -> String:
+	var scene := _played(ctx)
+	if scene == null:
+		return ""
+	var menu = null
+	for m in scene.get_children():
+		if m.is_in_group("q_menu") and m.active() and m.focus in m._shown_indices() and (menu == null or m._keys):
+			menu = m
+	return menu._label(menu.focus) if menu != null else ""
+
+
+# save_text(): the game as a qg:save writes it, {"scene", "game"}, as text (a beta's report carries it).
+static func save_text(ctx) -> String:
+	return JSON.stringify({"scene": scene_name(ctx), "game": G.quantum_state()})
+
+
+# --- qg:post: data to a web address, as JSON ---
+# The request goes on its own (an HTTPRequest under Q, which outlives the
+# scene); its answer is heard at the start of a tick, by the scene or overlay
+# that sent it if it is still there, and once it goes on (not under an overlay).
+
+var _answers: Array = []   # [caller, method, args, event kind, event data], heard at the next tick
+
+
+static func post(caller: Object, url, data, on_done: String, on_fail: String, args: Array, timeout: float) -> void:
+	var q := _q_node()
+	var address := str(url)
+	if not (address.begins_with("http://") or address.begins_with("https://")):
+		push_warning("quantum: qg:post sends to http:// and https:// addresses, not " + address.left(40))
+		q._answer(caller, on_fail, args, address, "not a web address")
+		return
+	var body := JSON.stringify(data)
+	event("post", {"to": address, "bytes": body.to_utf8_buffer().size()})
+	var http := HTTPRequest.new()
+	http.timeout = timeout
+	http.process_mode = Node.PROCESS_MODE_ALWAYS
+	q.add_child(http)
+	http.request_completed.connect(Callable(q, "_posted").bind(http, caller, address, on_done, on_fail, args, timeout))
+	var err := http.request(address, PackedStringArray(["Content-Type: application/json", "Accept: application/json"]),
+		HTTPClient.METHOD_POST, body)
+	if err != OK:
+		http.queue_free()
+		q._answer(caller, on_fail, args, address, "cannot reach the server")
+
+
+func _posted(result: int, code: int, _headers: PackedStringArray, bytes: PackedByteArray, http: Node,
+		caller: Object, address: String, on_done: String, on_fail: String, args: Array, timeout: float) -> void:
+	http.queue_free()
+	if result == HTTPRequest.RESULT_TIMEOUT:
+		_answer(caller, on_fail, args, address, "no answer in %d seconds" % int(round(timeout)))
+		return
+	if result != HTTPRequest.RESULT_SUCCESS:
+		_answer(caller, on_fail, args, address, "cannot reach the server")
+		return
+	var text := bytes.get_string_from_utf8().strip_edges()
+	var reply = JSON.parse_string(text) if text != "" else null
+	if code < 200 or code >= 300:
+		var said := ""
+		if reply is Dictionary:
+			said = str(reply.get("message", reply.get("error", "")))
+		elif text != "":
+			said = text.left(120)
+		_answer(caller, on_fail, args, address, "%d: %s" % [code, said] if said != "" else str(code))
+		return
+	_answers.append([caller, on_done, args + [reply], "posted", {"to": address, "status": code}])
+
+
+func _answer(caller: Object, on_fail: String, args: Array, address: String, reason: String) -> void:
+	_answers.append([caller, on_fail, args + [reason], "post-failed", {"to": address, "reason": reason}])
+
+
+func _hear_answers() -> void:
+	var due := _answers
+	_answers = []
+	for a in due:
+		var caller = a[0]
+		if is_instance_valid(caller) and caller is Node and not (caller as Node).can_process():
+			_answers.append(a)   # a scene under an overlay hears it when it goes on
+			continue
+		event(a[3], a[4])
+		if is_instance_valid(caller) and a[1] != "" and caller.has_method(a[1]):
+			caller.callv(a[1], a[2])   # gone (the scene was left): nobody hears it
+
+
 static func quit() -> void:
 	event("quit")
 	var q := _q_node()
@@ -1210,6 +1326,8 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	if not _answers.is_empty():
+		_hear_answers()
 	if slow_ticks > 0:
 		slow_ticks -= 1
 		if slow_ticks == 0:
@@ -1708,7 +1826,7 @@ static func save_game(ctx: Node, at: String = "", slot_ = null) -> void:
 		return
 	if slot_ != null:
 		_q_node().slot = int(slot_)
-	var where := at if at != "" else String(scene.name)
+	var where := at if at != "" else scene_name(scene)   # from an overlay: the scene under it
 	var f := FileAccess.open(_save_path(), FileAccess.WRITE)
 	if f == null:
 		push_warning("quantum: cannot write " + _save_path())

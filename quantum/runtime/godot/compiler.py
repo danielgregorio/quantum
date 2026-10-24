@@ -422,6 +422,8 @@ class _Compiler:
                         f'(tags: {", ".join(sorted(tags))})', None)
         self.scripts['prefabs.gd'] = prefabs_source(pscript)
         self._prefab_scenes_used = pscript.scenes_used
+        self._overlays_used: List[tuple] = list(pscript.overlays_used)
+        self._posts_used: List[Optional[int]] = list(pscript.posts_used)
         scenes = {}
         self._scenes_used: List[tuple] = []
         self._exits_used: List[tuple] = []
@@ -431,6 +433,14 @@ class _Compiler:
         self._scene_spawns: Dict[str, Optional[int]] = {}
         for scene in g.scenes:
             scenes[scene.get('name')] = self._scene(scene, sheets, prefabs)
+        overlays = {name: self._overlay(el, sheets, prefabs) for name, el in g.overlays.items()}
+        for oname, line in self._overlays_used:
+            if oname not in overlays:
+                raise GameCompileError(f'<qg:open-overlay name="{oname}">: no qg:overlay of that name (declared: '
+                                       f'{", ".join(sorted(overlays)) or "none"})', line)
+        if self.multiplayer is not None and self._posts_used:
+            raise GameCompileError('<qg:post> is not for a qg:multiplayer game: its answer would come to each peer '
+                                   'at another tick', self._posts_used[0])
         if self.multiplayer is not None and self.multiplayer.get('rollback'):
             _check_rollback(self.multiplayer.get('start') or g.scenes[0].get('name'), scenes,
                             self._scene_goes, self._scene_spawns, g.multiplayer.line)
@@ -466,6 +476,7 @@ class _Compiler:
                 'languages': languages,
                 'prefabs': prefabs,
                 'scenes': scenes,
+                **({'overlays': overlays} if overlays else {}),
             },
             'scripts': self.scripts,
             'assets': self.assets,
@@ -808,6 +819,28 @@ class _Compiler:
         if name not in sheets:
             known = ', '.join(sorted(sheets)) or 'none'
             raise GameCompileError(f'no qg:spritesheet or qg:tileset named {name!r} (declared: {known})', line)
+
+    def _overlay(self, el: Element, sheets: dict, prefabs: dict) -> dict:
+        """A qg:overlay: a screen of its own (its HUD, menus and handlers, compiled as a scene's are), built over
+        the scene shown when it opens."""
+        name = el.get('name')
+        if self.multiplayer is not None:
+            raise GameCompileError(f'<qg:overlay name="{name}">: not in a qg:multiplayer game (the scene under it '
+                                   f'would stand still on one machine only)', el.line)
+        action = el.get('action')
+        if action is not None and action not in self.actions:
+            raise GameCompileError(f'<qg:overlay action="{action}">: no such action (the game has '
+                                   f'{", ".join(sorted(self.actions))}; a qg:input declares one)', el.line)
+        if not 0.0 <= el.get('shade') <= 1.0:
+            raise GameCompileError(f'<qg:overlay shade="{el.get("shade")}">: 0 (the scene as it is) to 1 (hidden)',
+                                   el.line)
+        first = self.game.scenes[0]
+        screen = Element('scene', {'name': name, 'width': first.get('width'), 'height': first.get('height'),
+                                   'background': el.get('background'), 'seed': '0', 'save': False, 'y-sort': False,
+                                   'ambient': None}, el.line, children=el.children, gd=el.gd)
+        spec = self._scene(screen, sheets, prefabs)
+        spec['overlay'] = {'shade': el.get('shade'), **({'action': action} if action else {})}
+        return spec
 
     def _scene(self, scene: Element, sheets: dict, prefabs: dict) -> dict:
         name = scene.get('name')
@@ -1745,6 +1778,8 @@ class _Compiler:
             raise GameCompileError('qg:host, qg:join, qg:watch, qg:leave and qg:start-now need a <qg:multiplayer> in q:application', script.net_used[0])
         self._scene_exits[name] = set(exits)
         self._scenes_used.extend(script.scenes_used)
+        self._overlays_used.extend(script.overlays_used)
+        self._posts_used.extend(script.posts_used)
         self._scene_goes[name] = [s for s, _ in script.scenes_used]
         self._scene_spawns[name] = script.prefabs_used[0][1] if script.prefabs_used else None
         for pname, line in script.prefabs_used:

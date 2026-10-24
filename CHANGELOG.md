@@ -35,6 +35,20 @@ alter the behaviour of an existing app is listed under **Breaking**.
   container and its compose file for a homelab behind HTTPS
   (`projects/beta-reports/README.md`); tested against a forge of the test
   (`tests/apps/test_beta_reports.py`) and, as an image, in CI.
+- Laboratory: a panel over any screen, and data sent from a game to a server
+  (Phase 3 of `PLAN_PANDAFOOT.md`'s beta reports). `<qg:overlay>` in the
+  application holds a screen's HUD, menus, dialogues and handlers, and opens
+  over whatever scene is shown (`qg:open-overlay`, or its `action=` from every
+  scene: a `qg:touch-button`'s [!], F9); the scene under it stands still and
+  goes on where it was when it closes (`qg:close-overlay`, the action again).
+  `<qg:post to= data=>` sends a dictionary as JSON and the game goes on: the
+  answer runs `qg:on-done` with `reply`, or `qg:on-fail` with `reason` (no
+  answer, cannot reach the server, `429: Too many reports`), at the start of a
+  tick, in the scene that sent it. `scene_name()` and `focused()` say where the
+  player is (from an overlay, the scene under it and the option its menu's
+  cursor was on), and `save_text()` is the game as a `qg:save` writes it, for
+  a report to carry. Not in a `qg:multiplayer` game
+  (`tests/godot/test_godot_overlay.py`, against a server of the test).
 - Laboratory: PandaFoot 2.1, the beta, and reports from inside the game. "Report
   a bug or suggest" on the title, or F9 on the dashboard, opens the beta's
   report form in the browser filled in with the kind and where the game is

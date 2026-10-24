@@ -728,7 +728,7 @@ Text and pictures over the game.
 | `size` | integer | `8` | the font size of its items, unless an item says otherwise |
 | `if` | an expression |  | shown only while this is true |
 
-Goes inside: `qg:scene`.
+Goes inside: `qg:scene`, `qg:overlay`.
 
 ### `qg:counter`
 
@@ -801,7 +801,7 @@ A list of buttons (and text fields) over the scene. A player moves through it wi
 | `columns` | integer | `1` | its items in a grid of so many columns: left and right move along a row |
 | `rows` | integer | `0` | how many rows show at once; the others scroll into view with the focus (0: all of them) |
 
-Goes inside: `qg:scene`.
+Goes inside: `qg:scene`, `qg:overlay`.
 
 ### `qg:button`
 
@@ -904,7 +904,7 @@ What happens when the player presses an action in this scene, or lets it go (on=
 | `within` | integer | `30` | sequence: how many ticks from its first press to its last (60 a second) |
 | `player` | integer | `1` | sequence: whose presses |
 
-Goes inside: `qg:scene`.
+Goes inside: `qg:scene`, `qg:overlay`.
 
 ### `qg:on-select`
 
@@ -1482,6 +1482,34 @@ Opens a web address in the player's browser: a new tab when the game runs in a b
 
 Goes inside: a handler.
 
+### `qg:open-overlay`
+
+Opens a qg:overlay over the scene, as the tick ends: the scene stands still under it. Nothing when one is open already.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required | the qg:overlay |
+
+Goes inside: a handler.
+
+### `qg:close-overlay`
+
+Closes the qg:overlay that is open, as the tick ends: the scene under it goes on where it was. A qg:goto-scene from the overlay closes it too, and leaves the scene under it for the one it names.
+
+Goes inside: a handler.
+
+### `qg:post`
+
+Sends data to a web address as JSON (an HTTP POST), and the game goes on: the answer comes later, and runs its qg:on-done, with `reply` (the JSON the server answered, null for none), or its qg:on-fail, with `reason` (`no answer in 20 seconds`, `cannot reach the server`, or the server's refusal: `429: Too many requests`). A report to a beta's server, a score to a table of the best. The names the handler reads (me, a loop's variable, a parameter) are what they were as it was sent. The answer is heard by the scene or overlay that sent it, if it is still there. In a browser the server must let the game's site post to it (q:endpoint origins=). Not in a qg:multiplayer game: the answer would come to each peer at another tick.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `to` | text | required | the address, http:// or https://, or an expression ({...}) that gives one |
+| `data` | an expression | required | what is sent: a dictionary ({ {'text': text} }), as JSON |
+| `timeout` | number | `20.0` | seconds to wait for the answer before qg:on-fail |
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:asset`
@@ -1533,7 +1561,7 @@ Lines someone says, shown one at a time in a box at the bottom of the screen (qg
 | `sheet` | a name |  | a qg:spritesheet of faces: a line's portrait= is a frame of it |
 | `box` | a name |  | a qg:spritesheet with slice=: the box is drawn with it, stretched (a frame) |
 
-Goes inside: `qg:scene`.
+Goes inside: `qg:scene`, `qg:overlay`.
 
 ### `qg:icon`
 
@@ -1606,11 +1634,23 @@ One line of a qg:dialogue: who says it, and what. With qg:choice inside, the pla
 
 Goes inside: `qg:dialogue`.
 
+### `qg:on-done`
+
+What happens when the server a qg:post sent to has answered yes (a 2xx status): `reply` is what it answered, read from its JSON. Holds actions and statements.
+
+Goes inside: `qg:post`.
+
 ### `qg:on-end`
 
 What happens when a qg:dialogue has shown its last line, or when a qg:tween is done (the last of its repeats; `me` is the thing it moved, and another tween in it plays after: a sequence). Holds actions and statements.
 
 Goes inside: `qg:dialogue`, `qg:tween`, `qg:travel`.
+
+### `qg:on-fail`
+
+What happens when a qg:post did not get through: `reason` says why. Holds actions and statements.
+
+Goes inside: `qg:post`.
 
 ### `qg:on-screen-enter`
 
@@ -1643,6 +1683,19 @@ What happens when this character or prefab stops touching something it touched: 
 | `with` | a name | required | the tag of what it stops touching |
 
 Goes inside: `qg:character`, `qg:prefab`.
+
+### `qg:overlay`
+
+A panel over whatever screen is shown, reached from every scene: a report of a beta, help, a quick menu. It holds what a screen holds (qg:hud, qg:menu, qg:dialogue, qg:on-input, qg:timer, qg:when, q:set and q:function). While it is open the scene under it stands still as it was, seen through its shade, and nothing of it runs; closed, the scene goes on where it was. qg:open-overlay opens it, or its action= in any scene; qg:close-overlay closes it, or its action= again. Its q:sets start afresh each time it opens; the game's state is the game's. `scene_name()` there is the scene under it, `focused()` the option its menu's cursor was on. An agent playing it (the play protocol) sees the overlay, and `under`: the scene it is over. Not in a qg:multiplayer game.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required | not the name of a scene |
+| `action` | a name |  | an action that opens it from any scene and closes it: a qg:input's key (F9), a qg:touch-button's [!] on every screen |
+| `shade` | number | `0.6` | how much the scene under it is darkened: 0, not at all; 1, hidden |
+| `background` | `#rrggbb` | `#000000` | the colour of the shade |
+
+Goes inside: `q:application`.
 
 ### `qg:parallax`
 
@@ -1754,7 +1807,7 @@ Runs its handler after so many ticks, or every so many ticks, in this scene.
 | `from` | integer | `0` | every: the tick the count starts at |
 | `count` | integer | `0` | every: stop after this many runs (0: never) |
 
-Goes inside: `qg:scene`.
+Goes inside: `qg:scene`, `qg:overlay`.
 
 ### `qg:touch-button`
 
@@ -1794,11 +1847,11 @@ Runs its handler when a condition turns true: a wave beaten (`count('enemy') == 
 |---|---|---|---|
 | `condition` | an expression | required | an expression of the scene's state |
 
-Goes inside: `qg:scene`.
+Goes inside: `qg:scene`, `qg:overlay`.
 
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. A `q:set` directly in a scene whose value is computed (a function, the game's state, `random()`) is set as the scene is entered, after its seed, in the order written. `<q:set name="team.points">` sets a field of a record in place (in the list that holds it too), and `index=` an item of a list or a key of a dictionary. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `tr_n()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `cost()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`, `pick()`, `chance()`, `join()`, `fit()`, `thousands()`, `repeat()`, `url_encode()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), `sort()`, `pick()`, `chance()` and `join()` are the Core's, `fit(v, width)` cuts or pads a text to a column (`fit(v, width, 'right')` for numbers), `thousands(n, '.')` writes 1.500.000, `repeat(text, n)` a bar and `url_encode(text)` puts a text into a web address (`qg:open-url`, a form's link with what to fill in). `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. A `q:set` directly in a scene whose value is computed (a function, the game's state, `random()`) is set as the scene is entered, after its seed, in the order written. `<q:set name="team.points">` sets a field of a record in place (in the list that holds it too), and `index=` an item of a list or a key of a dictionary. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `tr_n()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `cost()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`, `pick()`, `chance()`, `join()`, `fit()`, `thousands()`, `repeat()`, `url_encode()`, `scene_name()`, `focused()`, `save_text()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), `sort()`, `pick()`, `chance()` and `join()` are the Core's, `fit(v, width)` cuts or pads a text to a column (`fit(v, width, 'right')` for numbers), `thousands(n, '.')` writes 1.500.000, `repeat(text, n)` a bar and `url_encode(text)` puts a text into a web address (`qg:open-url`, a form's link with what to fill in); `scene_name()` and `focused()` say where the player is, the scene and the option its menu's cursor is on (from a `qg:overlay`, the scene under it), and `save_text()` is the game as a `qg:save` writes it, as text (a report carries it). `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
 
 ## `gd:` attributes
 
