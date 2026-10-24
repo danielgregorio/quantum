@@ -69,6 +69,7 @@ RUN_BY_TEST = {
     'targets/screen.md': 'tests/screen/test_screen_docs.py',
     'guide/why-quantum.md': 'tests/docs/test_why_quantum.py',
     'guide/sessions.md': 'tests/docs/test_guide_sessions.py',
+    'guide/endpoints.md': 'tests/docs/test_guide_endpoints.py',
     'guide/services.md': 'tests/docs/test_guide_services.py',
     'guide/testing.md': 'tests/docs/test_guide_testing.py',
     'guide/project-structure.md': 'tests/docs/test_guide_project_structure.py',

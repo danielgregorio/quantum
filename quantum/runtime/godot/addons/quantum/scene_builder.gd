@@ -31,6 +31,7 @@ const BehaviorBody := preload("res://addons/quantum/behavior_body.gd")
 const Camera := preload("res://addons/quantum/camera.gd")
 
 static var _textures: Dictionary = {}
+const OVERLAY_LAYER := 50   # a qg:overlay's canvas layers go this far above the scene's (HUD 1, menus 10, touch 30)
 
 
 static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
@@ -49,7 +50,18 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	bg.size = Vector2(16384, 16384)
 	bg.position = Vector2(-8192, -8192)
 	bg.z_index = -100
-	scene.add_child(bg)
+	var over: bool = scene_spec.has("overlay")
+	if over:
+		# a qg:overlay: its background is a shade over the scene under it, on a layer above that scene's own
+		var shade := CanvasLayer.new()
+		shade.name = "Shade"
+		shade.layer = OVERLAY_LAYER
+		bg.color.a = float(scene_spec["overlay"].get("shade", 0.6))
+		bg.mouse_filter = Control.MOUSE_FILTER_STOP   # a click on the shade does not reach the scene under it
+		shade.add_child(bg)
+		scene.add_child(shade)
+	else:
+		scene.add_child(bg)
 	# y-sort="true": what stands lower is drawn in front (the tilemap stays under all of it)
 	scene.y_sort_enabled = bool(scene_spec.get("y_sort", false))
 	var clock: Node = load("res://addons/quantum/clock.gd").new()
@@ -249,6 +261,11 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				hud.setup(node_spec, scene)
 				Q.apply_gd(hud, node_spec.get("gd"))
 				scene.add_child(hud)
+	if over:
+		for c in scene.get_children():
+			if c is CanvasLayer and c.name != "Shade":
+				c.layer += OVERLAY_LAYER   # its HUD, menus and dialogues over the shade
+		return scene
 	# on a touch screen: the game's buttons and sticks, and this scene's
 	var touch: Array = game.get("touch", []) + scene_spec.get("touch", [])
 	if not touch.is_empty():

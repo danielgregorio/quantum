@@ -6,8 +6,19 @@ Handles function, component, and HTTP invocations with caching.
 
 from typing import Any, List, Dict, Type
 import json
+import os
+import re
 from quantum.runtime.executors.base import BaseExecutor, ExecutorError
 from quantum.core.features.invocation.src.ast_node import InvokeNode
+
+
+# INV-3: ${NAME} in a credential (authToken, authUsername, authPassword, a q:header's value) is the
+# environment variable NAME, read when the call is made; it never enters an expression, so no page can show it
+_ENV = re.compile(r'\$\{([A-Za-z_][A-Za-z0-9_]*)\}')
+
+
+class _MissingCredential(ExecutorError):
+    """INV-3: a credential's ${NAME} is not set: no call is made."""
 
 
 class InvokeExecutor(BaseExecutor):
@@ -52,7 +63,16 @@ class InvokeExecutor(BaseExecutor):
             elif invocation_type == "component":
                 params = self._build_component_params(node, context)
             elif invocation_type == "http":
-                params = self._build_http_params(node, context)
+                try:
+                    params = self._build_http_params(node, context)
+                except _MissingCredential as missing:
+                    if getattr(node, 'on_error', 'fail') != 'continue':
+                        raise
+                    # INV-2, INV-3: with onerror="continue" the call failed, and says why; none was made
+                    from quantum.core.features.invocation.src.runtime import InvocationResult
+                    self._store_result(node, InvocationResult(success=False, error={'message': str(missing)},
+                                                              invocation_type='http'), exec_context)
+                    return
             elif invocation_type == "service":
                 result = self._invoke_service(node, context)
                 self._store_result(node, result, exec_context)
@@ -167,13 +187,30 @@ class InvokeExecutor(BaseExecutor):
             'args': args
         }
 
+    def _credential(self, node: InvokeNode, text, context: Dict[str, Any]):
+        """INV-3: a credential's ${NAME}s from the environment, its {expressions} from the context."""
+        if not text or not isinstance(text, str) or not _ENV.search(text):
+            return self.apply_databinding(text, context) if text else text
+        parts, pos = [], 0
+        for match in _ENV.finditer(text):
+            before = text[pos:match.start()]
+            parts.append(str(self.apply_databinding(before, context)) if '{' in before else before)
+            value = os.environ.get(match.group(1))
+            if value is None:
+                raise _MissingCredential(f"the environment variable {match.group(1)} is not set (INV-3)")
+            parts.append(value)
+            pos = match.end()
+        rest = text[pos:]
+        parts.append(str(self.apply_databinding(rest, context)) if '{' in rest else rest)
+        return ''.join(parts)
+
     def _build_http_params(self, node: InvokeNode, context: Dict[str, Any]) -> Dict[str, Any]:
         """Build parameters for HTTP invocation"""
         url = self.apply_databinding(node.url, context)
 
         headers = {}
         for header_node in node.headers:
-            header_value = self.apply_databinding(header_node.value, context)
+            header_value = self._credential(node, header_node.value, context)
             headers[header_node.name] = header_value
 
         if 'Content-Type' not in headers and 'content-type' not in headers:
@@ -199,10 +236,10 @@ class InvokeExecutor(BaseExecutor):
             'params': query_params,
             'body': body,
             'auth_type': node.auth_type,
-            'auth_token': self.apply_databinding(node.auth_token, context) if node.auth_token else None,
+            'auth_token': self._credential(node, node.auth_token, context) if node.auth_token else None,
             'auth_header': node.auth_header,
-            'auth_username': self.apply_databinding(node.auth_username, context) if node.auth_username else None,
-            'auth_password': self.apply_databinding(node.auth_password, context) if node.auth_password else None,
+            'auth_username': self._credential(node, node.auth_username, context) if node.auth_username else None,
+            'auth_password': self._credential(node, node.auth_password, context) if node.auth_password else None,
             'timeout': node.timeout,
             'retry': node.retry,
             'retry_delay': node.retry_delay,

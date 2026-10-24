@@ -3,6 +3,36 @@
 A versão que você joga está na tela de título e no canto do painel. Cada versão abaixo diz o que mudou para
 quem joga; como foi feito está no [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
+## 2.1 — O beta (2026-10-24)
+
+- **O PandaFoot está em beta.** A versão diz isso no título e no canto do painel.
+- **Relatar um bug ou sugerir, de qualquer tela.** O [!] no canto superior direito de toda tela, ou F9, abre o
+  painel de relato por cima do jogo, que fica parado até você fechar: um bug, uma sugestão ou outra coisa, umas
+  palavras, e Enviar. Vai junto onde você estava (a tela, a opção em que o cursor estava, a rodada, o seu clube) e,
+  se você deixar "Anexar o meu jogo" ligado, o seu jogo, para ser jogado de novo exatamente como estava. Sem
+  conexão, ele espera e vai depois, sozinho. Todo relato é lido, e o que ele mudar aparece aqui.
+
+O que os primeiros jogadores do beta pediram:
+
+- **O seu clube é sorteado**, como no Elifoot: cada técnico recebe por sorteio um clube pequeno da 4ª divisão.
+- **Mais dinheiro no começo** (cerca de três vezes mais), e **obras no estádio que um clube pequeno consegue
+  pagar**: mil lugares a mais (um quarto a mais num estádio maior), com preço pela divisão, um terço à vista e o
+  resto em sete meses. Quando o dinheiro não dá, a tela de finanças avisa.
+- **Mais finalizações e gols**: umas 24 finalizações e 3 gols por jogo, como um jogo tem.
+- **Pênaltis durante a partida**, de vez em quando, e **você escolhe quem bate** (Táticas, F2); na disputa de
+  pênaltis da Copa, ele bate o primeiro.
+- **A má fase acaba.** Os seus titulares voltam ao time assim que acaba uma lesão ou suspensão (antes o reserva
+  ficava no lugar para sempre, e por isso um time que perdia continuava perdendo), e quando a formação tem menos
+  vagas, sai o mais fraco. Um jogo cansa menos e a semana descansa mais, uma derrota baixa o moral menos do que uma
+  vitória sobe, e o moral volta ao normal. O painel avisa quando os titulares estão cansados.
+- **A rodada que está sendo jogada** aparece na tela da rodada ao vivo (rodada 5/18), e lá **o TAB passa pelas
+  quatro divisões**, como já faz na tabela e nos resultados.
+- **Os gols de toda a carreira** de cada jogador no elenco (F3), ao lado dos da temporada.
+- **Lance por qualquer jogador de um clube do computador**: no elenco dele (F7, Enter no clube), B; o jogador vai a
+  leilão e os outros clubes também podem dar lances, por três rodadas.
+- **Propostas no meio da temporada**: um técnico na ponta da sua divisão, ou bem acima do que a diretoria espera,
+  recebe proposta de um clube da divisão de cima depois da 9ª rodada, não só no fim da temporada.
+
 ## 2.0 — O clube (2026-10-23)
 
 - **Quatro divisões de dez clubes.** 40 clubes, turno e returno, dois sobem e dois descem a cada temporada.

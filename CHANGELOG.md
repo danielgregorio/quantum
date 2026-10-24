@@ -10,6 +10,70 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- `q:endpoint`, a component's REST API (API-1 to API-6), brought forward from
+  `PLAN_PLATFORMS.md` for PandaFoot's beta reports. A component with
+  `<q:endpoint method="POST">` answers JSON: its `q:param`s come from the JSON
+  body (the query string for `GET` and `DELETE`) and are checked as an
+  action's, a refusal is `422` with each field's error, `q:respond json=
+  status=` answers (`204` without it), a method without an endpoint is `405`,
+  roles and guards refuse with `401` and `403`, and a failure is `500` in
+  JSON. `origins=` names the sites whose pages may call it (the browser's
+  preflight answered), `limit="10/minute"` counts each caller's calls
+  (`429` with `Retry-After`) and `maxsize=` refuses a larger body (`413`).
+  The guide's page: `docs/guide/endpoints.md`.
+- `server.proxies` (CFG-4): behind so many reverse proxies, a request's
+  address, scheme and host are the ones the proxy received, so `limit=`
+  counts each caller.
+- `${NAME}` in a `q:invoke` credential (`authToken`, `authUsername`,
+  `authPassword`, a `q:header`'s value) is the environment variable, read when
+  the call is made and never put in a variable (INV-3); unset, the call fails
+  and says so (with `onerror="continue"`, `<name>_result` says why).
+- `base64(v)` in expressions (EXPR-18), for an API that takes a file's content.
+- `projects/beta-reports`: where the games' beta reports land, written in
+  Quantum. `POST /api/reports` keeps a report in SQLite and tells the forge:
+  an issue of the repository, the save attached as a file of its branch. A
+  container and its compose file for a homelab behind HTTPS
+  (`projects/beta-reports/README.md`); tested against a forge of the test
+  (`tests/apps/test_beta_reports.py`) and, as an image, in CI.
+- Laboratory: a panel over any screen, and data sent from a game to a server
+  (Phase 3 of `PLAN_PANDAFOOT.md`'s beta reports). `<qg:overlay>` in the
+  application holds a screen's HUD, menus, dialogues and handlers, and opens
+  over whatever scene is shown (`qg:open-overlay`, or its `action=` from every
+  scene: a `qg:touch-button`'s [!], F9); the scene under it stands still and
+  goes on where it was when it closes (`qg:close-overlay`, the action again).
+  `<qg:post to= data=>` sends a dictionary as JSON and the game goes on: the
+  answer runs `qg:on-done` with `reply`, or `qg:on-fail` with `reason` (no
+  answer, cannot reach the server, `429: Too many reports`), at the start of a
+  tick, in the scene that sent it. `scene_name()` and `focused()` say where the
+  player is (from an overlay, the scene under it and the option its menu's
+  cursor was on), and `save_text()` is the game as a `qg:save` writes it, for
+  a report to carry. Not in a `qg:multiplayer` game
+  (`tests/godot/test_godot_overlay.py`, against a server of the test).
+- Laboratory: PandaFoot 2.1, the beta, and reports from inside the game. The
+  [!] in the corner of every screen, or F9, opens the report panel over the
+  screen, which stands still under it: a bug, a suggestion or something else,
+  a few words, and "Attach my game" (its save). The report goes with where the
+  game is (the screen, the option the cursor was on, the version, the world,
+  the season, the round, the club) to the beta's receiver
+  (`projects/beta-reports`), and waits in an outbox kept between runs until
+  the receiver has it; the panel says the number it got. The title and the
+  dashboard say "beta", and so does the games page (`"stage": "beta"` in
+  `projects/games.json`). Tested from the game through the receiver to a
+  forge of the test (`tests/godot/test_godot_pandafoot.py`). And what its
+  first players asked for: the club drawn as in Elifoot, about three times
+  the money at the start and ground works a small club can pay (a thousand
+  seats, priced by the division, a third at once), about 24 shots and 3
+  goals a match, penalties in the match with the taker chosen in Tactics, a
+  manager's regulars back in the eleven once an injury or a ban is over
+  (a manager's club made 1.14 points a match where the computer's made
+  1.40: its stand-ins kept their places for good), a gentler fatigue and a
+  morale that comes back (and a warning when the eleven is tired), the round in view and TAB through the divisions in the
+  live round, a player's goals of his career in the squad, a bid for any
+  computer club's player that puts him up for auction, and offers from the
+  division above in the middle of the season.
+- Laboratory: `url_encode(text)` in a game's expressions: a text as a part of
+  a web address (a space as `%20`, a `ç` as `%C3%A7`, an `&` as `%26`), for a
+  form's link with what to fill in (`qg:open-url`).
 - Laboratory: PandaFoot 2.0, the club (Phase 2 of `PLAN_PANDAFOOT.md`), what
   its players asked for over two evenings. Four divisions of ten (40 clubs,
   18 rounds), two up and two down, strength, grounds, TV and sponsorship by
@@ -847,6 +911,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Breaking
 
+- An attribute that is one expression and a dictionary, `{ {'id': 1} }`, is
+  the dictionary (EXPR-17); it was left as the text. A JSON object written as
+  text, `{"board": "{name}"}`, is still text with expressions in it (EXPR-4).
+- `PATCH` reaches a page's `q:action` (it was `405` before any code ran), and
+  `OPTIONS` is answered by the server: `204` with `Allow`, and for an endpoint
+  the preflight of API-4.
 - Laboratory: a game state or a `q:function` named like what every Godot
   object has (`free`, `get`, `connect`), or a function named like a method
   of every node (`draw_line`), is a compile error that says so: the state

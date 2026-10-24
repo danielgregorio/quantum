@@ -2,7 +2,10 @@
 
 > Status: approved 2026-10-22, the four phases below. Phase 1 done the same day; what its first players
 > found fixed on 2026-10-23, when the phases were reordered: the club (Phase 2) before the online round (Phase 3);
-> what they found on a second evening fixed the same day, and what they asked for added to Phase 2.
+> what they found on a second evening fixed the same day, and what they asked for added to Phase 2. Phase 2
+> done the same evening (version 2.0, with its version in view and its changelog), played by the agent for
+> fifteen seasons; next, what people find playing it: 2.1 is the beta, with reports from inside the game, kept by
+> a server of ours (below, "The beta's reports"), and read four times a day.
 > Laboratory tier: no tag here carries a stability promise until it ships.
 > The game's design is [danielgregorio/pandafoot](https://github.com/danielgregorio/pandafoot)'s
 > `GAME_DESIGN.md` (v0.2, with the decisions of 2026-10-22), and its numbers are checked there by
@@ -232,6 +235,89 @@ Playtest: five seasons from the fourth division, by the agent and by people; how
 climbs, how often a manager is sacked and offered a job, how often the hidden genius is found and sold, and
 whether the auction's long shots ("Romário topou o Náutico!") come often enough to be stories and rarely
 enough to be news.
+
+### The playtest (2026-10-23)
+
+Three worlds, five seasons each, played by the agent through the play protocol: one manager from a small club of
+the fourth, the line-up the computer's, a bid at 200% of the wage on the best player on the list clearly better
+than the eleven (three times a season), the first offer always taken. 300 dates, no script error; a season takes
+about five minutes at 16x.
+
+| Measure | Three worlds, 15 seasons |
+|---|---|
+| Goals a match | 2.52 in the league (Phase 1: 2.60), 2.35 in the cup |
+| Home, draw, away | 47 / 26 / 26 |
+| A club weaker by 3 or more wins | 24% (draws 27%): the design's fifth to quarter |
+| A club of the fourth climbs | 5, 4 and 4 of the ten went up at least once; two reached the second in five seasons |
+| A club of the first goes down | 6, 5 and 4 of the ten at least once |
+| A manager sacked and offered a job | One sacked twice in the fourth (8th of 10 with three new players), then promoted with a third club and offered the second; two offered the third after one season and the first after the second: one champion of the first in the fourth season, the other sacked twice in the fifth (from the first, then from the second at round 7) |
+| The hidden genius found and sold | Never: he stayed at his small club in all three worlds. No computer club buys him; he is the manager's to find |
+| The long shots | 8 of 79 deals (9%): about five deals a season in a world, a long shot every other season, news and not the rule |
+| The manager's bids | 12 of 12 signed, all free agents of strength 30 to 37 (a fourth division's eleven is about 20) |
+| Stars born | 15 in 15 seasons, one a season |
+| The crisis | 3 to 6 clubs of the fourth and 1 to 4 of the third in the red at a season's end; six points off five times; no bankruptcy |
+| Players who grow | The first's mean strength from 38 to about 36.5, the fourth's from 17.8 to about 20 |
+| The cup | The lower division wins in 90 minutes 30% of the ties one division apart, 23% of those two or three apart, and a quarter more go to penalties: the fourth knocks out the first in about a third of their ties |
+| The grounds | No computer club grew its ground in fifteen seasons: only a manager builds |
+
+To tune once people have played (none is a bug): the cup's giant-killing (a third, where a cup's lore says one in
+six or seven); free agents of first-division strength who sign for the fourth for no fee (the fourth's market was
+meant to be free agents, not these); an offer after a promotion that skips a division (from the third to the first);
+the computer's clubs that never build; a hidden genius nobody else ever finds.
+
+## The beta's reports
+
+Decided with the owner on 2026-10-23: PandaFoot is a beta, and its players report from inside the game, as World
+of Warcraft's betas have them do: no form of a third party, no account to make. A report lands on a server of
+ours, on the owner's homelab, behind its own HTTPS.
+
+- **In the game**: a [!] in the corner of every screen, and F9. It opens a panel over the screen, which waits
+  under it: a bug or a suggestion, the text, and "attach my game" (the save, so a bug is played again exactly).
+  The game adds where it is: the screen, the option the cursor was on, the version, the world, the season, the
+  round, the club. Sent: "Report no. 12 sent. Thank you!"; without the network, kept and sent later.
+- **The receiver, written in Quantum** (`projects/beta-reports/`): `POST /api/reports` keeps each report in
+  SQLite with its save and opens an issue in the private danielgregorio/pandafoot (the token only on the server);
+  a page for the owner lists them. A request's size and rate are limited, and only the game's site may post from
+  a browser.
+- **The language**: `q:endpoint` in the Core, as `PLAN_PLATFORMS.md` designs it under "Later", brought forward
+  for this; in the game language, `qg:post` (a request from the game, in the browser and on the desktop), a panel
+  over any scene (`qg:overlay`: GAMES_PARITY.md's gap "Overlays and additive scenes"), a button on every scene,
+  `focused()` (the option the cursor is on) and the game's state as its save, to attach.
+- **Reading them**: four times a day the agent reads the new issues, groups them, plays the bugs on their saves,
+  and brings the owner a digest to discuss. What a report changes goes into the game's changelog.
+
+| Phase | What | Done when |
+|---|---|---|
+| 1 | `q:endpoint` (Core): a component's endpoint per method, `q:param`s from the JSON body validated as an action's, `q:respond json= status=`, its guards, the origins allowed, a size and a rate limit | **done**: SPEC.md API-1 to API-6 (with EXPR-17, EXPR-18, INV-3, CFG-4), `tests/conformance/test_endpoints.py`, `docs/guide/endpoints.md` |
+| 2 | The receiver (`projects/beta-reports/`) and its kit for the homelab (a container, the settings) | **done**: a report posted is kept, its save and its issue told to a fake forge (`tests/apps/test_beta_reports.py`), the image built and fed a report in CI; the owner reads the issues (a page of the receiver's own can come later) |
+| 3 | The game language: `qg:post`, `qg:overlay`, a button on every scene, `focused()`, the state as a save | **done**: `qg:overlay` (its `action=` from every scene; the button on every scene is an application's `qg:touch-button show="always"`), `qg:post` with `qg:on-done` and `qg:on-fail`, `scene_name()`, `focused()`, `save_text()`; `tests/godot/test_godot_overlay.py` posts to a server of the test |
+| 4 | PandaFoot 2.1: the [!], the panel, the reports kept until sent | **done**: `tests/godot/test_godot_pandafoot.py` sends a report from the dashboard through `projects/beta-reports` served over HTTP to a fake forge (the issue, the save on the branch), and keeps one the server did not take for the next run; until the owner's address is in `report_server()`, the reports wait in the outbox |
+| 5 | On the homelab, and the reading | the owner's address in the game, a report of the owner's read in a digest |
+
+The form of 2.1's first draft (a Google Form, opened filled in) gives way to this; `url_encode()` stays.
+
+## What the beta's first players asked for (2026-10-24)
+
+Eleven asks of the owner and Fernando, playing 2.0, and what each was (a bug, a thing they could not find, or new).
+All in 2.1, with the owner's choices: the club drawn always, a bid for any player opens an auction, about 3 goals.
+
+| Ask | What it was | In 2.1 |
+|---|---|---|
+| The other divisions are not shown | there, behind TAB on the table and the results; in the live round TAB went match by match | TAB goes through the divisions in the live round too |
+| The ground cannot grow | the works were there, at $375.000 for a 4th-division club of $50.000, and the button said nothing | a thousand seats priced by the division, a third at once; the screen says why not |
+| Show the round during the match | not shown | the live round's heading: round 5/18 |
+| Choose the penalty taker | no penalty in a match, only the cup's shootout | penalties in the match; the taker chosen in Tactics, first in a shootout |
+| A player's goals do not add up across seasons | added up (the history, F8), but the squad showed the season's only | a Career column in the squad |
+| Draw the club, as Elifoot | chosen from a list | drawn |
+| More money: the purse is hard to keep | 4th-division clubs began with about $50.000; two managers in three ended the first season in the red | about three times as much |
+| Bid for players of other clubs | only the listed ones | B on a computer club's squad: he goes up for auction |
+| Few shots and goals | about 11 shots and 2.5 goals a match | about 24 shots and 3.1 goals, a penalty one match in four |
+| Lose one, lose them all | **a bug**: a manager's stand-ins kept their places for good after an injury or a ban, and Auto's formation changes dropped the first of the squad's order, not the weakest. A manager's club made 1.14 points a match where the computer's clubs of the same strength made 1.40; the same club in the same world made fewer with a manager, four clubs of four | the manager's picks come back; the weakest leaves. The same six clubs, managed and not: 1.40 points a match both ways. Also a gentler fatigue and morale, and a warning for a tired eleven |
+| Be called by a better club after good work | offers only at the season's end, and only after a promotion or three places above the board's hopes | also after the 9th round, from the division above |
+
+The numbers, from the playtest of three worlds of three seasons and six runs of one world (`playtest3.py`,
+`paired.py` in the agent's notes): 2240 matches, 24.2 shots, 3.15 goals and 0.24 penalties a match; a manager's
+club 1.40 points a match against 1.40 for the computer's.
 
 ## Phase 3 — The live round online
 

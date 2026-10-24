@@ -2,7 +2,7 @@
 Quantum Component Runtime - Execute Quantum components
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # Fix imports
 
@@ -10,7 +10,7 @@ from quantum.core.ast_nodes import (
     ComponentNode, QuantumReturn, DispatchEventNode, OnEventNode, QueryNode,
     HTMLNode, TextNode, DocTypeNode,
     # Special-purpose nodes (handled outside executor dispatch)
-    ActionNode, FlashNode, CommentNode, ImportNode, SlotNode,
+    ActionNode, FlashNode, EndpointNode, CommentNode, ImportNode, SlotNode,
     ComponentCallNode,
 )
 from quantum.core.expression_diagnostics import (
@@ -128,6 +128,31 @@ def _create_executor_registry(runtime: 'ComponentRuntime') -> ExecutorRegistry:
     logger.debug(f"Initialized executor registry with {registry.executor_count} executors")
 
     return registry
+
+def _whole_expression(text: str) -> Optional[str]:
+    """EXPR-17: the expression inside `{ ... }` when the whole text is one expression that is itself a
+    dictionary, `{ {'id': 1} }`: the braces balanced, quotes respected, the first closing at the end. A JSON
+    object written as text, `{"board": "{name}"}`, is not one: its expressions are found inside it (EXPR-4)."""
+    stripped = text.strip()
+    if len(stripped) < 4 or stripped[0] != '{' or stripped[-1] != '}' or not stripped[1:].lstrip().startswith('{'):
+        return None
+    depth, quote = 0, None
+    for i, ch in enumerate(stripped):
+        if quote:
+            if ch == quote and stripped[i - 1] != '\\':
+                quote = None
+            continue
+        if ch in ('"', "'"):
+            quote = ch
+        elif ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0 and i != len(stripped) - 1:
+                return None
+    inner = stripped[1:-1].strip()
+    return inner if depth == 0 and inner else None
+
 
 class ComponentRuntime:
     """Runtime for executing Quantum components"""
@@ -386,7 +411,7 @@ class ComponentRuntime:
         # CommentNode: rendered as HTML comment by renderer
         if isinstance(statement, (
             HTMLNode, TextNode, DocTypeNode,
-            ActionNode, FlashNode,
+            ActionNode, FlashNode, EndpointNode,
             CommentNode, ImportNode, SlotNode, FunctionNode,
             # Resolved by HTMLRenderer._render_component_call during the render
             # pass, exactly like HTMLNode. It was missing from this list, so
@@ -452,6 +477,16 @@ class ComponentRuntime:
 
         # Use pre-compiled pattern (avoid re-compilation on every call)
         pattern = self._databinding_pattern
+
+        # EXPR-17: an attribute that is one expression may hold braces of its own: `{ {'id': 1} }` is the
+        # dictionary (q:respond json=, q:set value=). The pattern finds braces with none inside, so it
+        # read the dictionary's own braces as the expression, failed, and left the text as written.
+        whole = _whole_expression(text)
+        if whole is not None:
+            try:
+                return self._evaluate_databinding_expression(whole, context)
+            except Exception as exc:
+                return self._unresolved(whole, exc, text)
 
         # Check if the ENTIRE text is just a single databinding expression
         full_match = pattern.fullmatch(text.strip())

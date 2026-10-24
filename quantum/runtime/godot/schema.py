@@ -40,7 +40,8 @@ class Tag:
 # The tags that hold a handler: actions (and q: statements), run when it fires.
 HANDLERS = ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-tile',
             'on-animation-end', 'on-locked', 'on-damage', 'timer', 'button', 'on-end', 'on-separate',
-            'on-screen-exit', 'on-screen-enter', 'for-each', 'after', 'when', 'choice', 'field')
+            'on-screen-exit', 'on-screen-enter', 'for-each', 'after', 'when', 'choice', 'field', 'on-done',
+            'on-fail')
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
@@ -48,7 +49,7 @@ ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'c
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
            'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble', 'music', 'travel',
-           'open-url')
+           'open-url', 'open-overlay', 'close-overlay', 'post')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -310,6 +311,21 @@ TAGS: Dict[str, Tag] = {
                                             '#ffffff as drawn); its solid tiles cast the shadows of the lights with '
                                             'shadows="true"')},
         parents=('application',)),
+    'overlay': Tag(
+        'A panel over whatever screen is shown, reached from every scene: a report of a beta, help, a quick menu. '
+        'It holds what a screen holds (qg:hud, qg:menu, qg:dialogue, qg:on-input, qg:timer, qg:when, q:set and '
+        'q:function). While it is open the scene under it stands still as it was, seen through its shade, and '
+        'nothing of it runs; closed, the scene goes on where it was. qg:open-overlay opens it, or its action= in '
+        'any scene; qg:close-overlay closes it, or its action= again. Its q:sets start afresh each time it opens; '
+        'the game\'s state is the game\'s. `scene_name()` there is the scene under it, `focused()` the option its '
+        'menu\'s cursor was on. An agent playing it (the play protocol) sees the overlay, and `under`: the scene it is '
+        'over. Not in a qg:multiplayer game.',
+        {'name': Attr('ident', required=True, doc='not the name of a scene'),
+         'action': Attr('ident', None, doc='an action that opens it from any scene and closes it: a qg:input\'s '
+                                            'key (F9), a qg:touch-button\'s [!] on every screen'),
+         'shade': Attr('float', 0.6, doc='how much the scene under it is darkened: 0, not at all; 1, hidden'),
+         'background': Attr('color', '#000000', doc='the colour of the shade')},
+        parents=('application',)),
     'tilemap': Tag(
         'The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), '
         'or a Tiled map (src=) whose tile layers draw it and whose object layers place prefabs by class. '
@@ -443,7 +459,7 @@ TAGS: Dict[str, Tag] = {
          'columns': Attr('int', 1, doc='its items in a grid of so many columns: left and right move along a row'),
          'rows': Attr('int', 0, doc='how many rows show at once; the others scroll into view with the focus '
                                     '(0: all of them)')},
-        parents=('scene',)),
+        parents=('scene', 'overlay')),
     'button': Tag(
         'A button of a qg:menu. What it holds runs when it is chosen: actions and statements, like a handler.',
         {'label': Attr('str', required=True, doc='its text, or an expression ({...}) read every frame'),
@@ -489,7 +505,7 @@ TAGS: Dict[str, Tag] = {
                                          'at once); 0: the whole line at once'),
          'sheet': Attr('ident', None, doc='a qg:spritesheet of faces: a line\'s portrait= is a frame of it'),
          'box': Attr('ident', None, doc='a qg:spritesheet with slice=: the box is drawn with it, stretched (a frame)')},
-        parents=('scene',)),
+        parents=('scene', 'overlay')),
     'line': Tag(
         'One line of a qg:dialogue: who says it, and what. With qg:choice inside, the player chooses (up and '
         'down, select, or a click), and the choice\'s actions run before the next line.',
@@ -594,7 +610,7 @@ TAGS: Dict[str, Tag] = {
          'font': Attr('str', None, doc='a .ttf, relative to the .q or a folder above it'),
          'size': Attr('int', 8, doc='the font size of its items, unless an item says otherwise'),
          'if': Attr('expr', None, doc='shown only while this is true')},
-        parents=('scene',)),
+        parents=('scene', 'overlay')),
     'table': Tag(
         'Rows from the state in the HUD, a line each, in columns: a squad, a league table, a shop, the '
         'best scores. source= is read every frame; each qg:column is an expression of the row (as=). '
@@ -683,14 +699,14 @@ TAGS: Dict[str, Tag] = {
         'qg:afters due then (not while the scene is paused); the handler runs on the tick it is first true, and '
         'again only after it has been false. Holds actions and statements.',
         {'condition': Attr('expr', required=True, doc='an expression of the scene\'s state')},
-        parents=('scene',)),
+        parents=('scene', 'overlay')),
     'timer': Tag(
         'Runs its handler after so many ticks, or every so many ticks, in this scene.',
         {'after': Attr('int', None, doc='ticks from entering the scene, once'),
          'every': Attr('int', None, doc='ticks between runs, from entering the scene (or from=)'),
          'from': Attr('int', 0, doc='every: the tick the count starts at'),
          'count': Attr('int', 0, doc='every: stop after this many runs (0: never)')},
-        parents=('scene',)),
+        parents=('scene', 'overlay')),
     'spawner': Tag(
         'Places count instances of a prefab, one every so many ticks, from a tick on.',
         {'prefab': Attr('str', required=True, doc='a prefab name, or several comma-separated: one is drawn '
@@ -727,7 +743,7 @@ TAGS: Dict[str, Tag] = {
                                            'follow the way the player\'s character faces'),
          'within': Attr('int', 30, doc='sequence: how many ticks from its first press to its last (60 a second)'),
          'player': Attr('int', 1, doc='sequence: whose presses')},
-        parents=('scene',)),
+        parents=('scene', 'overlay')),
     'on-hit': Tag(
         'What happens when this character\'s swing (attack-action) reaches something. Holds actions and statements.',
         {'with': Attr('ident', required=True, doc='the tag of what it hits')},
@@ -995,6 +1011,40 @@ TAGS: Dict[str, Tag] = {
         'agent plays it (the play protocol, a replay) it opens nothing: the "open-url" event says what it would have opened.',
         {'href': Attr('str', required=True, doc='the address, or an expression ({...}) that gives one')},
         parents=('handler',)),
+    'open-overlay': Tag(
+        'Opens a qg:overlay over the scene, as the tick ends: the scene stands still under it. Nothing when one is '
+        'open already.',
+        {'name': Attr('ident', required=True, doc='the qg:overlay')},
+        parents=('handler',)),
+    'close-overlay': Tag(
+        'Closes the qg:overlay that is open, as the tick ends: the scene under it goes on where it was. A '
+        'qg:goto-scene from the overlay closes it too, and leaves the scene under it for the one it names.',
+        {},
+        parents=('handler',)),
+    'post': Tag(
+        'Sends data to a web address as JSON (an HTTP POST), and the game goes on: the answer comes later, and '
+        'runs its qg:on-done, with `reply` (the JSON the server answered, null for none), or its qg:on-fail, with '
+        '`reason` (`no answer in 20 seconds`, `cannot reach the server`, or the server\'s refusal: `429: Too many '
+        'requests`). A report to a beta\'s server, a score to a table of the best. The names the handler reads '
+        '(me, a loop\'s variable, a parameter) are what they were as it was sent. The answer is heard by the scene '
+        'or overlay that sent it, if it is still there; one a q:function of the application sent, by the scene '
+        'shown then if that one is gone (every scene has the function). In a browser the server must let the game\'s site post to '
+        'it (q:endpoint origins=). Not in a qg:multiplayer game: the answer would come to each peer at another '
+        'tick.',
+        {'to': Attr('str', required=True, doc='the address, http:// or https://, or an expression ({...}) that gives '
+                                             'one'),
+         'data': Attr('expr', required=True, doc='what is sent: a dictionary ({ {\'text\': text} }), as JSON'),
+         'timeout': Attr('float', 20.0, doc='seconds to wait for the answer before qg:on-fail')},
+        parents=('handler',)),
+    'on-done': Tag(
+        'What happens when the server a qg:post sent to has answered yes (a 2xx status): `reply` is what it '
+        'answered, read from its JSON. Holds actions and statements.',
+        {},
+        parents=('post',)),
+    'on-fail': Tag(
+        'What happens when a qg:post did not get through: `reason` says why. Holds actions and statements.',
+        {},
+        parents=('post',)),
     'quit': Tag(
         'Ends the game: the window closes. In a browser there is nothing to quit to and it does nothing; '
         '`can_quit()` says whether it would.',

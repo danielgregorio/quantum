@@ -22,6 +22,8 @@ CORE = frozenset({
     # 0.21: FILE-1/FILE-2 and MAIL-1/MAIL-2, proven by projects/helpdesk;
     # DB-4, used by projects/blog.
     "file", "mail", "transaction",
+    # API-1 to API-6: a component's REST API, proven by projects/beta-reports
+    "endpoint", "respond",
 })
 
 # AI — the reason the project exists. Same contract as Core: a SPEC rule, a

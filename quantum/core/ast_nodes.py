@@ -3,7 +3,7 @@ Quantum AST Nodes - Classes that represent elements of the Quantum language
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
 
 
@@ -1153,6 +1153,80 @@ class ActionNode(QuantumNode):
 
     def __repr__(self):
         return f'<ActionNode name={self.name} method={self.method}>'
+
+
+class EndpointNode(QuantumNode):
+    """API-1: a component's answer to one HTTP method, in JSON.
+
+      <q:endpoint method="POST" origins="https://example.com" limit="10/minute" maxsize="2mb">
+        <q:param name="title" type="string" required="true" maxlength="120" />
+        <q:query name="added" datasource="db">INSERT ... RETURNING id <q:param ... /></q:query>
+        <q:respond status="201" json="{ {'id': added[0].id} }" />
+      </q:endpoint>
+
+    Its q:params come from the JSON body (the query string for GET) and are
+    validated as an action's (ACT-2); a refusal is a 422 with each field's
+    error, and anything that fails is a JSON error, never a page.
+    """
+
+    METHODS = ('GET', 'POST', 'PUT', 'PATCH', 'DELETE')
+
+    def __init__(self, method: str = "GET"):
+        self.method = method.upper()
+        self.params: List[QuantumParam] = []
+        self.body: List[QuantumNode] = []
+        # API-3: who may call it (comma-separated roles); None: whoever may open the component
+        self.require_role: Optional[str] = None
+        # API-4: the web origins whose pages may call it from a browser ('*': any); a request
+        # without an Origin (a game on the desktop, a script) is never refused for it
+        self.origins: List[str] = []
+        # API-5: at most `limit[0]` calls in `limit[1]` seconds from one address; None: no limit
+        self.limit: Optional[Tuple[int, int]] = None
+        # API-5: the largest body it accepts, in bytes; None: the server's (security.max_content_length)
+        self.max_size: Optional[int] = None
+
+    def add_param(self, param: QuantumParam):
+        self.params.append(param)
+
+    def add_statement(self, statement: QuantumNode):
+        self.body.append(statement)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"type": "endpoint", "method": self.method, "params": [p.name for p in self.params],
+                "body_statements": len(self.body), "require_role": self.require_role,
+                "origins": self.origins, "limit": self.limit, "max_size": self.max_size}
+
+    def validate(self) -> List[str]:
+        errors = []
+        if self.method not in self.METHODS:
+            errors.append(f"Invalid endpoint method: {self.method}. Must be one of {', '.join(self.METHODS)}")
+        for param in self.params:
+            errors.extend(param.validate())
+        for statement in self.body:
+            if hasattr(statement, 'validate'):
+                errors.extend(statement.validate())
+        return errors
+
+    def __repr__(self):
+        return f'<EndpointNode method={self.method}>'
+
+
+class RespondNode(QuantumNode):
+    """API-2: what a q:endpoint answers: `json=` an expression, sent as JSON, with `status=`.
+    It ends the endpoint, as a return does."""
+
+    def __init__(self, json_expr: Optional[str] = None, status: int = 200):
+        self.json_expr = json_expr
+        self.status = status
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"type": "respond", "json": self.json_expr, "status": self.status}
+
+    def validate(self) -> List[str]:
+        return [] if 100 <= self.status <= 599 else [f"Invalid status: {self.status}"]
+
+    def __repr__(self):
+        return f'<RespondNode status={self.status}>'
 
 
 class RedirectNode(QuantumNode):

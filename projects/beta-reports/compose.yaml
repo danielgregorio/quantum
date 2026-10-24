@@ -1,0 +1,19 @@
+# The beta's reports on the homelab, from the repository's root:
+#
+#   GITHUB_TOKEN=github_pat_... QUANTUM_SECRET_KEY=$(openssl rand -hex 32) \
+#     docker compose -f projects/beta-reports/compose.yaml up -d --build
+#
+# It listens on 127.0.0.1:8095 only: the reverse proxy in front of it gives it HTTPS (README.md).
+services:
+  beta-reports:
+    build:
+      context: ../..
+      dockerfile: projects/beta-reports/Dockerfile
+    restart: unless-stopped
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:?a fine-grained token of the repository, Issues and Contents read and write}
+      QUANTUM_SECRET_KEY: ${QUANTUM_SECRET_KEY:?a secret of 32 bytes, openssl rand -hex 32}
+    ports:
+      - "127.0.0.1:8095:8095"
+    volumes:
+      - ./data:/app/projects/beta-reports/data

@@ -2,7 +2,8 @@
 
 Played through the play protocol, it opens nothing and says what it would have opened: an "open-url" event with
 the address, written or put together by an expression. An address that is not http:// or https:// is refused
-when the game is compiled, and ignored when an expression gives one.
+when the game is compiled, and ignored when an expression gives one. url_encode() puts a text (a club's name, with
+its accents and an &) into an address.
 """
 
 from pathlib import Path
@@ -22,6 +23,7 @@ LINKS = '''<q:application id="links" type="game">
       <qg:button label="What's new"><qg:open-url href="https://example.com/game/changelog/" /></qg:button>
       <qg:button label="Its page"><qg:open-url href="{'https://example.com/game/' + page + '/'}" /></qg:button>
       <qg:button label="Not a page"><qg:open-url href="{'file:///' + page}" /></qg:button>
+      <qg:button label="A form"><qg:open-url href="{'https://example.com/form?club=' + url_encode('Onça Pintada & 2º') + '&kind=Sugestão'}" /></qg:button>
     </qg:menu>
   </qg:scene>
 </q:application>
@@ -54,6 +56,10 @@ def test_a_button_opens_an_address(links, godot):
         third = game.act(tap=['select'], ticks=3)
         assert [e for e in third['events'] if e['kind'] == 'open-url'] == []        # file:// opens nothing
         assert third['scene'] == 'title'                                             # and the game goes on
+        game.act(tap=['down'], ticks=2)
+        fourth = game.act(tap=['select'], ticks=3)                                   # url_encode(): a text in it
+        assert [e['url'] for e in fourth['events'] if e['kind'] == 'open-url'] == [
+            'https://example.com/form?club=On%C3%A7a%20Pintada%20%26%202%C2%BA&kind=Sugestão']
 
 
 @pytest.mark.parametrize('href', ['file:///etc/passwd', 'javascript:alert(1)', 'example.com', ''])

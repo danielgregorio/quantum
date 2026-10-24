@@ -1371,6 +1371,76 @@
       "tags": [
         "set"
       ]
+    },
+    {
+      "id": "game-bad-079",
+      "intent": "An overlay with a character in it",
+      "input": {
+        "natural_language": "A help panel over the game with the hero in it",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:overlay name=\"help\">\n    <qg:character id=\"hero\" controller=\"platformer\" />\n  </qg:overlay>\n  <qg:scene name=\"main\" />\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "cannot go inside <overlay>"
+      },
+      "why_invalid": "An overlay is a panel over the scene: it holds a screen's HUD, menus, dialogues and handlers, not the characters and things of a scene.",
+      "correction": "Show the help with a qg:hud and a qg:menu; the hero stays in the scene under it.",
+      "tags": [
+        "overlay"
+      ]
+    },
+    {
+      "id": "game-bad-080",
+      "intent": "Opening an overlay the game does not have",
+      "input": {
+        "natural_language": "A button that opens the help panel",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:scene name=\"main\">\n    <qg:menu><qg:button label=\"Help\"><qg:open-overlay name=\"help\" /></qg:button></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "no qg:overlay of that name"
+      },
+      "why_invalid": "qg:open-overlay names a qg:overlay of the application.",
+      "correction": "Declare <qg:overlay name=\"help\"> in q:application.",
+      "tags": [
+        "open-overlay",
+        "overlay"
+      ]
+    },
+    {
+      "id": "game-bad-081",
+      "intent": "Posting to something that is not a web address",
+      "input": {
+        "natural_language": "Send the score to the scores server",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:scene name=\"main\">\n    <qg:menu><qg:button label=\"Send\"><qg:post to=\"scores.example.com\" data=\"{ {'score': 1} }\" /></qg:button></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "an http:// or https:// address"
+      },
+      "why_invalid": "qg:post sends to a web address: http:// or https://.",
+      "correction": "to=\"https://scores.example.com/api/scores\".",
+      "tags": [
+        "post"
+      ]
+    },
+    {
+      "id": "game-bad-082",
+      "intent": "A post in a networked game",
+      "input": {
+        "natural_language": "Each player sends their score to a server in a game played over the network",
+        "quantum_code": "<q:application id=\"bad\" type=\"game\">\n  <qg:multiplayer players=\"2\" />\n  <qg:scene name=\"main\">\n    <qg:menu><qg:button label=\"Send\"><qg:post to=\"https://example.com/scores\" data=\"{ {'score': 1} }\" /></qg:button></qg:menu>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "is not for a qg:multiplayer game"
+      },
+      "why_invalid": "The answer of a post comes when it comes: on each machine at another tick, and the peers of a lockstep game would differ.",
+      "correction": "Post from a game played on one machine.",
+      "tags": [
+        "post",
+        "multiplayer"
+      ]
     }
   ]
 }

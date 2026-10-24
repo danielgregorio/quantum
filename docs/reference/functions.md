@@ -111,6 +111,14 @@ Specified by: [EXPR-9](./spec#EXPR-9)
 
 Specified by: [EXPR-12](./spec#EXPR-12)
 
+<a id="fn-base64"></a>
+
+### `base64(v)`
+
+[EXPR-18](./spec#EXPR-18): a text in base64 (of its UTF-8), as an API asks for a file's content: a forge's.
+
+Specified by: [EXPR-18](./spec#EXPR-18)
+
 ## Collections
 
 <a id="fn-get"></a>

@@ -12,6 +12,7 @@ const Fade := preload("res://addons/quantum/fade.gd")
 var spec: Dictionary = {}
 var current_scene: Node = null
 var lockstep: Node = null
+var overlay: Node = null   # the qg:overlay open over current_scene, which stands still under it; or null
 
 
 func _ready() -> void:
@@ -218,6 +219,7 @@ func go_to_scene(scene_name: String, fade: float = 0.0) -> void:
 	if not spec["scenes"].has(scene_name):
 		push_error("quantum: no scene named " + scene_name)
 		return
+	close_overlay()   # a qg:goto-scene from an overlay leaves the scene under it too
 	if current_scene != null:
 		if current_scene.name == scene_name and current_scene.is_queued_for_deletion():
 			return
@@ -237,6 +239,70 @@ func go_to_scene(scene_name: String, fade: float = 0.0) -> void:
 		G._q_save()
 	if scene_spec.get("save", false):
 		Q.save_game(current_scene)
+
+
+# --- qg:overlay: a panel over whatever scene is shown ---
+# It opens over the scene (qg:open-overlay, or its action= in any scene) as the
+# tick ends, so what chose it does not choose in it too. The scene under it
+# stands still: nothing of it runs (its bodies stay in the physics, as they were),
+# and it is drawn as it was, through the overlay's shade. Closed, it goes on.
+
+var _kept: Dictionary = {}   # the scene's collision objects, and how each leaves the physics when disabled
+
+
+func _physics_process(_delta: float) -> void:
+	var overlays: Dictionary = spec.get("overlays", {})
+	if overlays.is_empty() or lockstep != null:
+		return
+	for oname in overlays.keys():
+		var action = overlays[oname]["overlay"].get("action")
+		if action == null or not Q.tapped(str(action)):
+			continue
+		if overlay == null:
+			call_deferred("open_overlay", oname)
+		elif String(overlay.name) == oname:
+			call_deferred("close_overlay")
+		return
+
+
+func open_overlay(oname: String) -> void:
+	var overlays: Dictionary = spec.get("overlays", {})
+	if overlay != null or current_scene == null or not overlays.has(oname) or lockstep != null:
+		return
+	_freeze(current_scene, true)
+	current_scene.set_meta("q_under", oname)   # the play protocol sees the overlay, not what is under it
+	overlay = SceneBuilder.build(spec, overlays[oname])
+	overlay.name = oname
+	add_child(overlay)
+	Q.event("overlay", {"name": oname, "open": true, "over": String(current_scene.name)})
+
+
+func close_overlay() -> void:
+	if overlay == null:
+		return
+	var oname := String(overlay.name)
+	remove_child(overlay)
+	overlay.queue_free()
+	overlay = null
+	if current_scene != null:
+		current_scene.remove_meta("q_under")
+		_freeze(current_scene, false)
+	Q.event("overlay", {"name": oname, "open": false})
+
+
+func _freeze(scene: Node, on: bool) -> void:
+	if on:
+		_kept.clear()
+		for n in Lockstep._collision_objects(scene):
+			_kept[n] = n.disable_mode
+			n.disable_mode = CollisionObject2D.DISABLE_MODE_KEEP_ACTIVE   # nothing leaves a zone it stands in
+		scene.process_mode = Node.PROCESS_MODE_DISABLED
+	else:
+		scene.process_mode = Node.PROCESS_MODE_INHERIT
+		for n in _kept.keys():
+			if is_instance_valid(n):
+				n.disable_mode = _kept[n]
+		_kept.clear()
 
 
 func _fade_in(seconds: float) -> void:

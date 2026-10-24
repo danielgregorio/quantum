@@ -74,6 +74,7 @@ class Game:
     items: Dict[str, Element] = field(default_factory=dict)
     functions: List[Statement] = field(default_factory=list)   # q:function at the application level: every scene's
     touch: List[Element] = field(default_factory=list)   # qg:touch-button and qg:touch-stick: every scene's
+    overlays: Dict[str, Element] = field(default_factory=dict)   # qg:overlay: a panel over any scene
 
 
 def _local(element: ET.Element) -> tuple:
@@ -269,9 +270,9 @@ def _read_statement(element: ET.Element, parent_tag: str) -> Statement:
     if kind == 'function':
         if 'name' not in attrs:
             raise GameCompileError('<q:function> needs name=', line)
-        if parent_tag not in ('scene', 'application'):
-            raise GameCompileError('<q:function> goes directly inside <qg:scene>, or <q:application> for every '
-                                   'scene', line)
+        if parent_tag not in ('scene', 'overlay', 'application'):
+            raise GameCompileError('<q:function> goes directly inside <qg:scene> (or <qg:overlay>), or '
+                                   '<q:application> for every scene', line)
     st.body = _read_children(element, 'handler', f'<q:{kind}>')
     return st
 
@@ -300,6 +301,7 @@ def read_game(app) -> Game:
     items: Dict[str, Element] = {}
     functions: List[Statement] = []
     touch: List[Element] = []
+    overlays: Dict[str, Element] = {}
     try:
         made = _extended_prefabs(root)
         for child in root:
@@ -335,6 +337,8 @@ def read_game(app) -> Game:
                     if any(s.get('name') == el.get('name') for s in scenes):
                         raise GameCompileError(f'two scenes named {el.get("name")!r}', el.line)
                     scenes.append(el)
+                elif el.tag == 'overlay':
+                    _unique(overlays, el, 'overlay')
                 else:
                     raise GameCompileError(f'<qg:{el.tag}> goes inside a scene', el.line)
             elif ns == 'q':
@@ -357,8 +361,12 @@ def read_game(app) -> Game:
         raise
     if not scenes:
         raise GameCompileError('a game needs at least one <qg:scene>', file=source_path)
+    for name, el in overlays.items():
+        if any(s.get('name') == name for s in scenes):
+            raise GameCompileError(f'<qg:overlay name="{name}">: a scene has that name; an overlay needs another',
+                                   el.line, file=source_path)
     return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
-                game_state, inputs, multiplayer, languages, particles, items, functions, touch)
+                game_state, inputs, multiplayer, languages, particles, items, functions, touch, overlays)
 
 
 def _child_key(child: ET.Element) -> tuple:

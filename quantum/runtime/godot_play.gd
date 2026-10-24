@@ -509,6 +509,9 @@ func observation() -> Dictionary:
 			var v: Dictionary = n.quantum_view()
 			if not v.is_empty():
 				obs["screen"].append(v)
+	var open = scene.get("overlay") if scene != null else null
+	if open != null and is_instance_valid(open) and scene.current_scene != null:
+		obs["under"] = String(scene.current_scene.name)   # the scene the overlay is over
 	var qn = root.get_node_or_null("Q")
 	if qn != null and not qn.languages.is_empty():   # the texts above are in this language ("" the game's own)
 		obs["lang"] = qn.lang
@@ -523,6 +526,8 @@ func observation() -> Dictionary:
 
 
 func _walk(n: Node) -> Array:
+	if n.has_meta("q_under"):
+		return []   # the scene under an open qg:overlay: what is seen is the overlay
 	var out := [n]
 	for c in n.get_children():
 		out += _walk(c)

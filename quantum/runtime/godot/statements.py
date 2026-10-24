@@ -90,6 +90,9 @@ class SceneScript:
     afters: int = 0       # the qg:afters so far: what each puts off is its own method
     headed: List[tuple] = field(default_factory=list)   # (prefab, line) of a qg:spawn heading=: an ai="fly" one
     cameras_moved: List[Optional[int]] = field(default_factory=list)   # lines of qg:camera-to: the scene needs a camera
+    overlays_used: List[tuple] = field(default_factory=list)   # (name, line) from qg:open-overlay
+    posts_used: List[Optional[int]] = field(default_factory=list)   # lines of qg:post: each its answers' methods
+    game_posts: int = 0   # the qg:posts of the application's q:functions: the same numbers in every script
 
     node_ids: List[str] = field(default_factory=list)   # the scene's characters, by id
     game_functions: List[str] = field(default_factory=list)   # the q:functions of <q:application>, every scene's
@@ -824,12 +827,61 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         if not re.match(r'https?://\S+$', href):
             raise GameCompileError(f'<qg:open-url href="{href}">: an http:// or https:// address', el.line)
         return f'Q.open_url({json.dumps(href)})'
+    if el.tag == 'open-overlay':
+        script.overlays_used.append((el.get('name'), el.line))
+        return f'Q.open_overlay({json.dumps(el.get("name"))})'
+    if el.tag == 'close-overlay':
+        return 'Q.close_overlay()'
+    if el.tag == 'post':
+        return _post(el, scope, script)
     if el.tag == 'checkpoint':
         at = el.get('at')
         if not scope.has(at):
             raise GameCompileError(f'<qg:checkpoint at="{at}"> outside a handler that has {at!r}', el.line)
         return f'Q.checkpoint({target}, {at})'
     raise GameCompileError(f'<qg:{el.tag}> is not an action; it cannot go inside a handler', el.line)
+
+
+def _post(el: Element, scope: Scope, script: SceneScript) -> str:
+    """qg:post: Q.post with the data, and its qg:on-done and qg:on-fail as methods of this script that take the
+    names of the handler as they are now (as qg:after's do) and then `reply` or `reason`."""
+    to = str(el.get('to')).strip()
+    if is_expression(to):
+        address = compile_expression(to, scope, el.line)
+    elif re.match(r'https?://\S+$', to):
+        address = json.dumps(to)
+    else:
+        raise GameCompileError(f'<qg:post to="{to}">: an http:// or https:// address', el.line)
+    if el.get('timeout') <= 0:
+        raise GameCompileError('<qg:post timeout=>: seconds, more than 0', el.line)
+    answers = {c.tag: c for c in el.children if isinstance(c, Element) and c.tag in ('on-done', 'on-fail')}
+    if len(answers) != len(el.children):
+        raise GameCompileError('<qg:post> holds one <qg:on-done> and one <qg:on-fail> at most, and nothing else',
+                               el.line)
+    script.posts_used.append(el.line)
+    # a post in its own qg:on-done is the next number. One in a q:function of the application is numbered among
+    # those alone: every script compiles them in the same order, so a scene played later has the same method
+    if script.game_wide:
+        script.game_posts += 1
+        prefix = f'_on_game_post_{script.game_posts}'
+    else:
+        prefix = f'_on_post_{len(script.posts_used)}'
+    names = scope.locals()
+    methods = []
+    for tag, answer in (('on-done', 'reply'), ('on-fail', 'reason')):
+        handler = answers.get(tag)
+        if handler is None:
+            methods.append('""')
+            continue
+        if answer in names:
+            raise GameCompileError(f'<qg:{tag}>: its answer is `{answer}`, a name this handler has already; '
+                                   f'give that one another name', handler.line)
+        method = compile_handler(script, f'{prefix}_{tag[3:]}', handler.children,
+                                 handler.line, params=tuple(names) + (answer,))
+        methods.append(json.dumps(method))
+    data = compile_expression(el.get('data'), scope, el.line)
+    return (f'Q.post(self, {address}, {data}, {methods[0]}, {methods[1]}, [{", ".join(names)}], '
+            f'{float(el.get("timeout"))!r})')
 
 
 def _tween_value(value: str, scope: Scope, line: Optional[int]) -> str:

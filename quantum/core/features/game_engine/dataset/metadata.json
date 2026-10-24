@@ -7,9 +7,9 @@
     "Claude"
   ],
   "statistics": {
-    "total_examples": 169,
-    "positive_examples": 91,
-    "negative_examples": 78,
+    "total_examples": 175,
+    "positive_examples": 93,
+    "negative_examples": 82,
     "categories": {
       "whole_games": 3,
       "controllers": 5,
@@ -18,11 +18,11 @@
       "tiles": 2,
       "handlers": 9,
       "presentation": 6,
-      "interface": 5,
+      "interface": 7,
       "items": 2,
       "persistence": 2,
       "multiplayer": 6,
-      "compile_errors": 78,
+      "compile_errors": 82,
       "logic": 6,
       "action": 6,
       "puzzle": 7,

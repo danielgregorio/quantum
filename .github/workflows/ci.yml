@@ -193,6 +193,25 @@ jobs:
           curl -sf http://127.0.0.1:8080/health | grep '"pong"'
           docker logs relay
 
+  beta-reports-image:
+    # The beta's reports as the homelab runs them (projects/beta-reports/Dockerfile): the image
+    # builds, migrates its database and keeps a report posted to it. No token here, so the forge
+    # is not told: the report is kept all the same (onerror="continue", INV-3).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the receiver's image
+        run: docker build -f projects/beta-reports/Dockerfile -t quantum-beta-reports .
+      - name: It keeps a report
+        run: |
+          docker run -d --name reports -p 8095:8095 quantum-beta-reports
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:8095/api/reports && break; sleep 1; done
+          answer=$(curl -s -X POST http://127.0.0.1:8095/api/reports -H 'Content-Type: application/json' \
+            -d '{"game": "pandafoot", "version": "2.1", "kind": "other", "text": "From CI"}')
+          echo "$answer"
+          echo "$answer" | grep '"number": 1'
+          docker logs reports
+
   docs:
     # The docs site, on every push and pull request. "Deploy Docs" builds it
     # too, but only after a change to docs/ has reached main -- a broken link

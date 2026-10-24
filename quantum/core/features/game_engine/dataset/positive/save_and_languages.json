@@ -67,6 +67,50 @@
         "button",
         "language"
       ]
+    },
+    {
+      "id": "game-report-001",
+      "intent": "A bug report from inside the game, with what it was doing",
+      "tags": [
+        "open-url",
+        "menu",
+        "button",
+        "function"
+      ],
+      "input": {
+        "natural_language": "Buttons that open the game's report form in the browser, already filled in with the kind of report and where the player was (the version, the world, the club, the language), so a player only writes what happened",
+        "context": {
+          "target": "godot",
+          "file": "game-report-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"report\" type=\"game\">\n  <q:set name=\"world\" value=\"7\" type=\"number\" />\n  <q:set name=\"club\" value=\"Onça Pintada\" type=\"string\" />\n  <q:function name=\"report_url\" params=\"kind\">\n    <q:return value=\"{'https://example.com/forms/report?kind=' + url_encode(kind) + '&context=' + url_encode('v1.0; world ' + str(world) + '; ' + club + '; ' + language())}\" />\n  </q:function>\n  <qg:scene name=\"title\" width=\"320\" height=\"180\">\n    <qg:menu>\n      <qg:button label=\"Report a bug\"><qg:open-url href=\"{report_url('Bug')}\" /></qg:button>\n      <qg:button label=\"Suggest something\"><qg:open-url href=\"{report_url('Sugestão')}\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "url_encode() writes each text as a part of the address (a space as %20, the ç of Onça as %C3%A7, an & as %26), so the form receives it whole. The button opens the form in a new tab in a browser, in the system's browser elsewhere; played by an agent it opens nothing and the \"open-url\" event says the address."
+      }
+    },
+    {
+      "id": "game-beta-001",
+      "intent": "A beta's report, from any screen, to a server",
+      "input": {
+        "natural_language": "A [!] on every screen, and F9, that opens a report panel over the screen being played: a bug or a suggestion, what happened, and Send, which posts it with where the player was and the saved game to the beta's server and says the number it got",
+        "context": {
+          "target": "godot",
+          "file": "game-beta-001.q"
+        }
+      },
+      "expected_output": {
+        "quantum_code": "<q:application id=\"beta\" type=\"game\">\n  <q:set name=\"outbox\" value=\"[]\" type=\"array\" saved=\"true\" />\n  <q:function name=\"game_version\"><q:return value=\"{'2.1'}\" /></q:function>\n  <qg:input action=\"report\" keys=\"F9\" />\n  <qg:touch-button action=\"report\" x=\"308\" y=\"12\" size=\"16\" label=\"!\" show=\"always\" />\n\n  <qg:overlay name=\"report\" action=\"report\" shade=\"0.6\">\n    <q:set name=\"kind\" value=\"bug\" type=\"string\" />\n    <q:set name=\"text\" value=\"\" type=\"string\" />\n    <q:set name=\"seen\" value=\"{scene_name()}\" type=\"string\" />\n    <q:set name=\"option\" value=\"{focused()}\" type=\"string\" />\n    <q:set name=\"status\" value=\"\" type=\"string\" />\n    <qg:hud position=\"top-left\">\n      <qg:text value=\"{'Report from ' + seen + (' (' + option + ')' if option != '' else '')}\" />\n      <qg:text bind=\"status\" />\n    </qg:hud>\n    <qg:menu y=\"60\" x=\"40\">\n      <qg:button label=\"{'Kind: ' + kind}\">\n        <q:set name=\"kind\" value=\"{'suggestion' if kind == 'bug' else 'bug'}\" />\n      </qg:button>\n      <qg:field bind=\"text\" label=\"What happened\" max-length=\"400\" />\n      <qg:button label=\"Send\">\n        <q:set name=\"status\" value=\"Sending\" />\n        <qg:post to=\"https://reports.example.com/api/reports\"\n                 data=\"{ {'game': 'beta', 'version': game_version(), 'kind': kind, 'text': text, 'screen': seen, 'option': option, 'save': save_text()} }\">\n          <qg:on-done><q:set name=\"status\" value=\"{'Report no. ' + str(reply.number) + ' sent, thank you'}\" /></qg:on-done>\n          <qg:on-fail><q:set name=\"status\" value=\"{'Not sent (' + reason + ')'}\" /></qg:on-fail>\n        </qg:post>\n      </qg:button>\n      <qg:button label=\"Back\"><qg:close-overlay /></qg:button>\n    </qg:menu>\n  </qg:overlay>\n\n  <qg:scene name=\"title\" width=\"320\" height=\"180\">\n    <qg:menu>\n      <qg:button label=\"Play\"><qg:goto-scene name=\"main\" /></qg:button>\n      <qg:button label=\"Report a bug or suggest\"><qg:open-overlay name=\"report\" /></qg:button>\n    </qg:menu>\n  </qg:scene>\n  <qg:scene name=\"main\" width=\"320\" height=\"180\">\n    <qg:hud position=\"bottom-right\"><qg:text value=\"{'v' + game_version() + ' beta'}\" /></qg:hud>\n  </qg:scene>\n</q:application>\n",
+        "runtime_behavior": "The panel opens over whatever scene is shown, which stands still under it; scene_name() and focused() there are that scene and the option its cursor was on, save_text() the game as a save writes it. The report goes as JSON and the game goes on: the server's answer, or why it did not get through, comes a few ticks later. Back closes the panel and the scene goes on where it was."
+      },
+      "tags": [
+        "overlay",
+        "open-overlay",
+        "close-overlay",
+        "post",
+        "touch-button",
+        "field"
+      ]
     }
   ]
 }

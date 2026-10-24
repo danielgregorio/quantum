@@ -76,6 +76,10 @@ _FUNCTIONS = {
     'fit': {2: 'Q.fit({0}, {1})', 3: 'Q.fit({0}, {1}, {2})'},   # cut or padded to so many characters ('right')
     'thousands': {1: 'Q.thousands({0})', 2: 'Q.thousands({0}, {1})'},   # 1500000 as 1,500,000 (or with '.')
     'repeat': 'Q.repeat({0}, {1})',          # a text so many times (a bar of blocks)
+    'url_encode': 'Q.url_encode({0})',       # a text as a part of a web address (%20 for a space), for qg:open-url
+    'scene_name': 'Q.scene_name(self)',      # the scene being played (from a qg:overlay, the one under it)
+    'focused': 'Q.focused(self)',            # the option the menu's cursor is on (from an overlay, the scene's under it)
+    'save_text': 'Q.save_text(self)',        # the game as a qg:save writes it, as text (a report carries it)
 }
 
 # The built-ins that read a player's action: the action's name, and the player (1 when not given).

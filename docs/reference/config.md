@@ -163,14 +163,14 @@ Specified by: [CFG-2](./spec#CFG-2)
 | Key | Type | Default | Rules |
 |---|---|---|---|
 | `login_url` |  |  | [AUTH-4](./spec#AUTH-4) |
-| `max_content_length` | int | `16777216` | [CFG-2](./spec#CFG-2) |
+| `max_content_length` | int | `16777216` | [API-5](./spec#API-5) · [CFG-2](./spec#CFG-2) |
 | `python_scripting` | bool |  |  |
 | `secret_key` |  |  | [DEV-2](./spec#DEV-2) |
 | `xss_protection` |  | `True` |  |
 
 Another key in this section is warned about when the configuration is loaded ([CFG-2](./spec#CFG-2), [CFG-3](./spec#CFG-3)).
 
-Specified by: [AUTH-4](./spec#AUTH-4) · [CFG-2](./spec#CFG-2)
+Specified by: [API-5](./spec#API-5) · [AUTH-4](./spec#AUTH-4) · [CFG-2](./spec#CFG-2)
 
 <a id="cfg-server"></a>
 
@@ -178,14 +178,15 @@ Specified by: [AUTH-4](./spec#AUTH-4) · [CFG-2](./spec#CFG-2)
 
 | Key | Type | Default | Rules |
 |---|---|---|---|
-| `debug` | bool | `False` | [CFG-3](./spec#CFG-3) |
+| `debug` | bool | `False` | [API-6](./spec#API-6) · [CFG-3](./spec#CFG-3) |
 | `host` | str | `127.0.0.1` | [CFG-3](./spec#CFG-3) · [MAIL-1](./spec#MAIL-1) |
 | `port` | int | `8080` | [CFG-3](./spec#CFG-3) · [MAIL-1](./spec#MAIL-1) |
+| `proxies` | int |  | [API-5](./spec#API-5) · [CFG-3](./spec#CFG-3) |
 | `reload` | bool | `True` | [CFG-3](./spec#CFG-3) · [UI-15](./spec#UI-15) |
 
 Another key in this section is warned about when the configuration is loaded ([CFG-2](./spec#CFG-2), [CFG-3](./spec#CFG-3)).
 
-Specified by: [IA-1](./spec#IA-1) · [CFG-3](./spec#CFG-3) · [DEV-1](./spec#DEV-1)
+Specified by: [API-5](./spec#API-5) · [API-6](./spec#API-6) · [IA-1](./spec#IA-1) · [CFG-3](./spec#CFG-3) · [CFG-4](./spec#CFG-4) · [DEV-1](./spec#DEV-1)
 
 <a id="cfg-services"></a>
 

@@ -14,10 +14,10 @@ Generated from the code and the SPEC on every change: what is here is what the p
 | Page | What it lists |
 |---|---|
 | [Tags](./tags) | The 41 Core and AI tags: attributes, types, values, defaults, rules |
-| [Expression functions](./functions) | The 32 functions an expression can call |
+| [Expression functions](./functions) | The 33 functions an expression can call |
 | [Command line](./cli) | `quantum` and its commands, options and defaults |
 | [Configuration](./config) | The sections and keys of `quantum.config.yaml` |
-| [Specification](./spec) | The 144 rules of the SPEC, each with an anchor |
+| [Specification](./spec) | The 154 rules of the SPEC, each with an anchor |
 | [UI tags](./ui) | The 67 `ui:*` tags, Core and Experimental, with the attributes each reads |
 | [Experimental tags](./experimental) | Tags outside the Core and the AI |
 

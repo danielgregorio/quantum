@@ -144,7 +144,7 @@ const GUIDE_SIDEBAR = [
     ['sessions', '/guide/sessions'], ['services', '/guide/services'], ['admin', '/guide/admin'],
   ]],
   ['webApplications', [
-    ['actions', '/guide/actions'], ['testing', '/guide/testing'],
+    ['actions', '/guide/actions'], ['endpoints', '/guide/endpoints'], ['testing', '/guide/testing'],
     ['ui', '/guide/ui'], ['applications', '/guide/applications'],
   ]],
 ]
@@ -160,7 +160,7 @@ const GUIDE_TEXT = {
     dataBackend: 'Data & Backend', queries: 'Database Queries (q:query)', dataImport: 'Data Import',
     filesAndMail: 'Files and Mail', authentication: 'Authentication', sessions: 'Sessions & Scopes',
     services: 'Declared Services', admin: 'Quantum Admin',
-    webApplications: 'Web Applications', actions: 'Actions & Forms', testing: 'Testing an App (quantum test)',
+    webApplications: 'Web Applications', actions: 'Actions & Forms', endpoints: 'APIs (q:endpoint)', testing: 'Testing an App (quantum test)',
     ui: 'One App, Many Screens (ui:)', applications: 'q:application (not for web)',
   },
   es: {
@@ -173,7 +173,7 @@ const GUIDE_TEXT = {
     dataBackend: 'Datos y backend', queries: 'Consultas a la base de datos (q:query)', dataImport: 'Importación de datos',
     filesAndMail: 'Archivos y correo', authentication: 'Autenticación', sessions: 'Sesiones y ámbitos',
     services: 'Servicios declarados', admin: 'Quantum Admin',
-    webApplications: 'Aplicaciones web', actions: 'Acciones y formularios', testing: 'Probar una aplicación (quantum test)',
+    webApplications: 'Aplicaciones web', actions: 'Acciones y formularios', endpoints: 'APIs (q:endpoint)', testing: 'Probar una aplicación (quantum test)',
     ui: 'Una aplicación, varias pantallas (ui:)', applications: 'q:application (no para la web)',
   },
   pt: {
@@ -186,7 +186,7 @@ const GUIDE_TEXT = {
     dataBackend: 'Dados e backend', queries: 'Consultas ao banco (q:query)', dataImport: 'Importação de dados',
     filesAndMail: 'Arquivos e e-mail', authentication: 'Autenticação', sessions: 'Sessões e escopos',
     services: 'Serviços declarados', admin: 'Quantum Admin',
-    webApplications: 'Aplicações web', actions: 'Ações e formulários', testing: 'Testar uma aplicação (quantum test)',
+    webApplications: 'Aplicações web', actions: 'Ações e formulários', endpoints: 'APIs (q:endpoint)', testing: 'Testar uma aplicação (quantum test)',
     ui: 'Uma aplicação, várias telas (ui:)', applications: 'q:application (não para web)',
   },
   zh: {
@@ -199,7 +199,7 @@ const GUIDE_TEXT = {
     dataBackend: '数据与后端', queries: '数据库查询（q:query）', dataImport: '数据导入',
     filesAndMail: '文件和邮件', authentication: '身份认证', sessions: '会话与作用域',
     services: '声明式服务', admin: 'Quantum Admin',
-    webApplications: 'Web 应用', actions: '动作与表单', testing: '测试应用（quantum test）',
+    webApplications: 'Web 应用', actions: '动作与表单', endpoints: 'API（q:endpoint）', testing: '测试应用（quantum test）',
     ui: '一个应用，多种界面（ui:）', applications: 'q:application（非 Web）',
   },
 }
