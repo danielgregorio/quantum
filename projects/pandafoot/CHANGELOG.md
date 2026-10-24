@@ -12,6 +12,25 @@ changed for whoever plays it; how it was built is in [PLAN_PANDAFOOT.md](https:/
   and, if you leave "Attach my game" on, your game itself, so it can be played again just as it was. Without a
   connection it waits and goes later, by itself. Every report is read, and what it changes comes here.
 
+What the first players of the beta asked for:
+
+- **Your club is drawn**, as in Elifoot: each manager is given a small club of the 4th division at random.
+- **More money to start with** (about three times as much), and **ground works a small club can pay for**: a
+  thousand more seats (a quarter more for a bigger ground), priced by the division, a third at once and the rest
+  in seven months. When the money is short, the finances screen says so.
+- **More shots and goals**: about 24 shots and 3 goals a match, as a match has.
+- **Penalties in the match**, now and then, and **you choose who takes them** (Tactics, F2); in a cup's shootout he
+  takes the first.
+- **A bad run ends**: a match tires a player less and a week rests him more, a defeat hurts the morale less than a
+  win lifts it, and morale comes back towards normal. The dashboard warns when the eleven is tired.
+- **The round being played** is on the live round's screen (round 5/18), and **TAB goes through the four
+  divisions** there, as it does on the table and the results.
+- **A player's goals of his whole career** in the squad (F3), beside the season's.
+- **Bid for any player of a computer's club**: on its squad (F7, Enter on the club), B; he goes up for auction and
+  the other clubs may bid too, for three rounds.
+- **Offers in the middle of the season**: a manager at the top of a division, or well above what the board
+  expects, is offered a club of the division above after the 9th round, not only at the season's end.
+
 ## 2.0 — The club (2026-10-23)
 
 - **Four divisions of ten clubs.** 40 clubs, home and away, two up and two down each season. A new manager

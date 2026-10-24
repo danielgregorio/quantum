@@ -59,7 +59,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the receiver has it; the panel says the number it got. The title and the
   dashboard say "beta", and so does the games page (`"stage": "beta"` in
   `projects/games.json`). Tested from the game through the receiver to a
-  forge of the test (`tests/godot/test_godot_pandafoot.py`).
+  forge of the test (`tests/godot/test_godot_pandafoot.py`). And what its
+  first players asked for: the club drawn as in Elifoot, about three times
+  the money at the start and ground works a small club can pay (a thousand
+  seats, priced by the division, a third at once), about 24 shots and 3
+  goals a match, penalties in the match with the taker chosen in Tactics, a
+  gentler fatigue and a morale that comes back (and a warning when the
+  eleven is tired), the round in view and TAB through the divisions in the
+  live round, a player's goals of his career in the squad, a bid for any
+  computer club's player that puts him up for auction, and offers from the
+  division above in the middle of the season.
 - Laboratory: `url_encode(text)` in a game's expressions: a text as a part of
   a web address (a space as `%20`, a `ç` as `%C3%A7`, an `&` as `%26`), for a
   form's link with what to fill in (`qg:open-url`).

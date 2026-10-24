@@ -69,7 +69,7 @@
      "check": {"scene": "title", "press": ["Enter"], "then": "field"}},
     {"name": "pandafoot", "title": "PandaFoot", "stage": "beta", "players": "1 to 4 players · one machine",
      "blurb": "A football manager after Elifoot 2, on a text screen of the DOS days: four divisions of ten, a career from a small club of the fourth, an auction for every player, a cup drawn on screen. Pick the eleven, the objective and the style, then watch the whole round live, every match in the same minute. Somewhere in a small club plays a hidden genius.",
-     "controls": "Arrows and Enter in the menus; F1 line-up, F2 tactics, F3 squad, F5 finances, F6 the transfer list (S sells, I pays in instalments), F7 table and top scorers, F8 history. In the round: + and - for the speed, Space to pause (then F1 for a substitution, F2 for another style), Tab for another match, C to undo an automatic change. The beta: F9, or the [!] in the corner of any screen, to report a bug or suggest.",
+     "controls": "Arrows and Enter in the menus; F1 line-up, F2 tactics, F3 squad, F5 finances, F6 the transfer list (S sells, I pays in instalments), F7 table and top scorers, F8 history. In the round: + and - for the speed, Space to pause (then F1 for a substitution, F2 for another style), Tab for another division, C to undo an automatic change. On another club's squad (F7, Enter), B to bid for one of its players. The beta: F9, or the [!] in the corner of any screen, to report a bug or suggest.",
      "check": {"scene": "title", "press": ["Enter"], "then": "new-game"}},
     {"name": "creeps", "title": "Creeps", "players": "1 player",
      "blurb": "Godot's \"Dodge the Creeps\" tutorial game, transcribed: creeps from the border at random speeds, a point a second.",
