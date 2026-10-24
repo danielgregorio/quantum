@@ -49,13 +49,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
   cursor was on), and `save_text()` is the game as a `qg:save` writes it, for
   a report to carry. Not in a `qg:multiplayer` game
   (`tests/godot/test_godot_overlay.py`, against a server of the test).
-- Laboratory: PandaFoot 2.1, the beta, and reports from inside the game. "Report
-  a bug or suggest" on the title, or F9 on the dashboard, opens the beta's
-  report form in the browser filled in with the kind and where the game is
-  (the version, the world, the season, the round, the club, the language),
-  so a player writes only what happened; the title and the dashboard say
-  "beta", and so does the games page (`"stage": "beta"` in
-  `projects/games.json`).
+- Laboratory: PandaFoot 2.1, the beta, and reports from inside the game. The
+  [!] in the corner of every screen, or F9, opens the report panel over the
+  screen, which stands still under it: a bug, a suggestion or something else,
+  a few words, and "Attach my game" (its save). The report goes with where the
+  game is (the screen, the option the cursor was on, the version, the world,
+  the season, the round, the club) to the beta's receiver
+  (`projects/beta-reports`), and waits in an outbox kept between runs until
+  the receiver has it; the panel says the number it got. The title and the
+  dashboard say "beta", and so does the games page (`"stage": "beta"` in
+  `projects/games.json`). Tested from the game through the receiver to a
+  forge of the test (`tests/godot/test_godot_pandafoot.py`).
 - Laboratory: `url_encode(text)` in a game's expressions: a text as a part of
   a web address (a space as `%20`, a `ç` as `%C3%A7`, an `&` as `%26`), for a
   form's link with what to fill in (`qg:open-url`).

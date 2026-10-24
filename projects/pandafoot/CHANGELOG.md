@@ -3,13 +3,14 @@
 The version you play is on the title screen and in the dashboard's corner. Each version below says what
 changed for whoever plays it; how it was built is in [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
-## 2.1 — The beta (2026-10-23)
+## 2.1 — The beta (2026-10-24)
 
 - **PandaFoot is in beta.** The version says so on the title and in the dashboard's corner.
-- **Report a bug or suggest, from the game.** "Report a bug or suggest" on the title, or F9 on the dashboard: a
-  form opens in the browser already filled in with where the game is (the version, the world, the season, the
-  round, your club); you only write what happened, or your idea. Every report is read, and what it changes comes
-  here.
+- **Report a bug or suggest, from any screen.** The [!] in the top-right corner of every screen, or F9, opens the
+  report panel over the game, which stands still until you close it: a bug, a suggestion or something else, a few
+  words, and Send. It goes with where you were (the screen, the option the cursor was on, the round, your club)
+  and, if you leave "Attach my game" on, your game itself, so it can be played again just as it was. Without a
+  connection it waits and goes later, by itself. Every report is read, and what it changes comes here.
 
 ## 2.0 — The club (2026-10-23)
 

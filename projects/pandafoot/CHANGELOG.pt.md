@@ -3,12 +3,14 @@
 A versão que você joga está na tela de título e no canto do painel. Cada versão abaixo diz o que mudou para
 quem joga; como foi feito está no [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
-## 2.1 — O beta (2026-10-23)
+## 2.1 — O beta (2026-10-24)
 
 - **O PandaFoot está em beta.** A versão diz isso no título e no canto do painel.
-- **Relatar um bug ou sugerir, de dentro do jogo.** "Relatar bug ou sugerir" no título, ou F9 no painel: um
-  formulário abre no navegador já preenchido com onde o jogo está (a versão, o mundo, a temporada, a rodada, o seu
-  clube); você só escreve o que aconteceu, ou a sua ideia. Todo relato é lido, e o que ele mudar aparece aqui.
+- **Relatar um bug ou sugerir, de qualquer tela.** O [!] no canto superior direito de toda tela, ou F9, abre o
+  painel de relato por cima do jogo, que fica parado até você fechar: um bug, uma sugestão ou outra coisa, umas
+  palavras, e Enviar. Vai junto onde você estava (a tela, a opção em que o cursor estava, a rodada, o seu clube) e,
+  se você deixar "Anexar o meu jogo" ligado, o seu jogo, para ser jogado de novo exatamente como estava. Sem
+  conexão, ele espera e vai depois, sozinho. Todo relato é lido, e o que ele mudar aparece aqui.
 
 ## 2.0 — O clube (2026-10-23)
 

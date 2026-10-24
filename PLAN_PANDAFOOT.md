@@ -290,8 +290,8 @@ ours, on the owner's homelab, behind its own HTTPS.
 |---|---|---|
 | 1 | `q:endpoint` (Core): a component's endpoint per method, `q:param`s from the JSON body validated as an action's, `q:respond json= status=`, its guards, the origins allowed, a size and a rate limit | **done**: SPEC.md API-1 to API-6 (with EXPR-17, EXPR-18, INV-3, CFG-4), `tests/conformance/test_endpoints.py`, `docs/guide/endpoints.md` |
 | 2 | The receiver (`projects/beta-reports/`) and its kit for the homelab (a container, the settings) | **done**: a report posted is kept, its save and its issue told to a fake forge (`tests/apps/test_beta_reports.py`), the image built and fed a report in CI; the owner reads the issues (a page of the receiver's own can come later) |
-| 3 | The game language: `qg:post`, `qg:overlay`, a button on every scene, `focused()`, the state as a save | Godot tests, a game posting to a receiver started by the test |
-| 4 | PandaFoot 2.1: the [!], the panel, the reports kept until sent | the game, a receiver and a fake forge in one test: a report from the dashboard becomes an issue |
+| 3 | The game language: `qg:post`, `qg:overlay`, a button on every scene, `focused()`, the state as a save | **done**: `qg:overlay` (its `action=` from every scene; the button on every scene is an application's `qg:touch-button show="always"`), `qg:post` with `qg:on-done` and `qg:on-fail`, `scene_name()`, `focused()`, `save_text()`; `tests/godot/test_godot_overlay.py` posts to a server of the test |
+| 4 | PandaFoot 2.1: the [!], the panel, the reports kept until sent | **done**: `tests/godot/test_godot_pandafoot.py` sends a report from the dashboard through `projects/beta-reports` served over HTTP to a fake forge (the issue, the save on the branch), and keeps one the server did not take for the next run; until the owner's address is in `report_server()`, the reports wait in the outbox |
 | 5 | On the homelab, and the reading | the owner's address in the game, a report of the owner's read in a digest |
 
 The form of 2.1's first draft (a Google Form, opened filled in) gives way to this; `url_encode()` stays.

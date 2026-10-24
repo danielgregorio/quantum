@@ -3,12 +3,14 @@
 La versión que juegas está en la pantalla de título y en la esquina del panel. Cada versión de abajo dice qué
 cambió para quien juega; cómo se hizo está en el [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
-## 2.1 — La beta (2026-10-23)
+## 2.1 — La beta (2026-10-24)
 
 - **PandaFoot está en beta.** La versión lo dice en el título y en la esquina del panel.
-- **Reportar un error o sugerir, desde el juego.** "Reportar un error o sugerir" en el título, o F9 en el panel:
-  un formulario se abre en el navegador ya rellenado con dónde está el juego (la versión, el mundo, la temporada,
-  la jornada, tu club); solo escribes lo que pasó, o tu idea. Se lee cada reporte, y lo que cambie aparece aquí.
+- **Reportar un error o sugerir, desde cualquier pantalla.** El [!] en la esquina superior derecha de cada
+  pantalla, o F9, abre el panel de reporte sobre el juego, que queda detenido hasta que lo cierres: un error, una
+  sugerencia u otra cosa, unas palabras, y Enviar. Va con dónde estabas (la pantalla, la opción donde estaba el
+  cursor, la jornada, tu club) y, si dejas "Adjuntar mi partida" activado, tu partida, para jugarla de nuevo tal
+  como estaba. Sin conexión, espera y se envía después, solo. Se lee cada reporte, y lo que cambie aparece aquí.
 
 ## 2.0 — El club (2026-10-23)
 

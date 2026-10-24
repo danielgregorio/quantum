@@ -5,6 +5,7 @@ and comes back to the dashboard with the table, the purse and the players change
 the same world; a saved game continues where it was; in Portuguese, the screens say it in Portuguese.
 """
 
+import base64
 import json
 import re
 from pathlib import Path
@@ -190,37 +191,221 @@ def test_the_version_is_in_view_and_whats_new_opens_its_changelog(pandafoot, god
                 assert f'v{version} beta' in texts(new_game(game))
 
 
-def test_a_beta_report_opens_the_form_filled_in(pandafoot, godot):
-    """The beta's reports: on the title and with F9 on the dashboard, a bug, a suggestion or anything else opens the
-    owner's form, filled in with the kind (the form's own word) and where the game is, written into the address;
-    back, the player is where they were."""
+def fields(obs):
+    """The report panel's menu, as {label: item}: its buttons by what they start with, its text box."""
+    out = {}
+    for item in menus(obs)[0]['items']:
+        label = item.get('button', item.get('field', ''))
+        out[label.split(':')[0]] = item
+    return out
+
+
+def type_report(game, text):
+    """In the open panel: down to the text box, typed in, Enter; then down to Send."""
+    game.act(tap=['down'], ticks=2)
+    game.act(tap=['select'], ticks=2)
+    game.act(text=text + '\n', ticks=3)
+    game.act(tap=['down'], ticks=2)                                  # Attach my game
+    return game.act(tap=['down'], ticks=2)                           # Send
+
+
+def test_the_report_panel_opens_over_any_screen(pandafoot, godot):
+    """The beta's reports (PLAN_PANDAFOOT.md): "Report a bug or suggest" on the title, F9 or the [!] on any screen,
+    opens the panel over the screen, which stands still under it; it knows the screen and the option the cursor was
+    on. With no server set up yet, a report waits in the outbox, with where the game is and the game itself."""
     with PlaySession(pandafoot, binary=godot) as game:
         title = game.act(ticks=3)
+        assert PlaySession.screen(title, 'touch')['controls'][0]['action'] == 'report'      # the [!]
         buttons = [i['button'] for i in menus(title)[0]['items'] if i['shown']]
         for _ in range(buttons.index('Report a bug or suggest')):
             game.act(tap=['down'], ticks=2)
-        report = game.act(tap=['select'], ticks=3)
-        assert report['scene'] == 'report'
-        assert [i['button'] for i in menus(report)[0]['items']] == ['Report a bug', 'Suggest something',
-                                                                     'Something else', 'Back']
-        game.act(tap=['down'], ticks=2)
-        opened = game.act(tap=['select'], ticks=3)                  # a suggestion, with no game in progress
-        url, = [e['url'] for e in opened['events'] if e['kind'] == 'open-url']
-        assert url.startswith('https://docs.google.com/forms/') and '=Sugest%C3%A3o&' in url
-        assert url.endswith('PandaFoot%202.1%20beta%3B%20English%3B%20desktop%3B%20screen%20title%3B%20no%20game%20'
-                            'in%20progress')
-        assert 'The form is open in your browser.' in texts(opened)
-        assert game.act(tap=['cancel'], ticks=3)['scene'] == 'title'
-        new_game(game)
-        assert game.act(tap=['report'], ticks=3)['scene'] == 'report'   # F9 on the dashboard
-        opened = game.act(tap=['select'], ticks=3)                      # a bug
-        url, = [e['url'] for e in opened['events'] if e['kind'] == 'open-url']
-        assert '=Bug&' in url
-        assert ('screen%20dashboard%3B%20world%207%2C%20season%202026%2C%20round%200%2F18%2C%20next%20league%3B%20'
-                'Manager%201%20at%20Lontra%20AC%20%28division%204%2C') in url
+        panel = game.act(tap=['select'], ticks=3)
+        assert panel['scene'] == 'report' and panel['under'] == 'title'
+        assert texts(panel)[1].rstrip() == 'Where: title - Report a bug or suggest'       # fit to the box
+        assert list(fields(panel)) == ['Kind', 'What happened, or your idea', 'Attach my game', 'Send', 'Back']
+        assert fields(panel)['Kind']['button'] == 'Kind: Bug'
+        game.act(tap=['select'], ticks=2)                                # a suggestion
         for _ in range(3):
             game.act(tap=['down'], ticks=2)
-        assert game.act(tap=['select'], ticks=3)['scene'] == 'dashboard'   # Back
+        empty = game.act(tap=['select'], ticks=3)                       # Send, with nothing written
+        assert 'Write a few words first.' in texts(empty) and empty['state']['game']['outbox'] == []
+        for _ in range(3):
+            game.act(tap=['up'], ticks=2)
+        type_report(game, 'A cup for the 4th division only')
+        kept = game.act(tap=['select'], ticks=3)
+        assert "Kept: it goes when the beta's server is ready." in texts(kept)
+        assert 'Waiting to be sent: 1' in texts(kept)
+        (entry,) = kept['state']['game']['outbox']
+        report = entry['report']
+        assert {k: report[k] for k in ('game', 'version', 'kind', 'text', 'screen', 'option')} == {
+            'game': 'pandafoot', 'version': '2.1', 'kind': 'suggestion', 'text': 'A cup for the 4th division only',
+            'screen': 'title', 'option': 'Report a bug or suggest'}
+        assert report['context'].endswith('screen title; no game in progress')
+        assert json.loads(report['save'])['scene'] == 'title'
+        back = game.act(tap=['cancel'], ticks=3)                         # back where it was, the cursor too
+        every = [i['button'] for i in menus(title)[0]['items']]           # its focus counts the hidden ones too
+        assert back['scene'] == 'title' and back['state']['menus'] == [every.index('Report a bug or suggest')]
+        for _ in range(buttons.index('Report a bug or suggest')):
+            game.act(tap=['up'], ticks=2)
+        seen = new_game(game)
+        panel = game.act(tap=['report'], ticks=3)                       # F9 on the dashboard
+        assert panel['scene'] == 'report' and panel['under'] == 'dashboard'
+        assert 'Waiting to be sent: 1' in texts(panel)
+        before = panel['state']['game']
+        game.act(tap=['down'], ticks=2)
+        game.act(tap=['down'], ticks=2)
+        game.act(tap=['select'], ticks=2)                                # Attach my game: no
+        assert fields(game.observe())['Attach my game']['button'] == 'Attach my game: no'
+        for _ in range(2):
+            game.act(tap=['up'], ticks=2)
+        type_report(game, 'The table froze')
+        second = game.act(tap=['select'], ticks=3)
+        report = second['state']['game']['outbox'][1]['report']
+        assert report['kind'] == 'bug' and report['screen'] == 'dashboard' and report['save'] == ''
+        assert ('screen dashboard; world 7, season 2026, round 0/18, next league; Manager 1 at Lontra AC '
+                '(division 4,') in report['context']
+        assert report['player'] == 'Manager 1'
+        assert second['state']['game']['clubs'] == before['clubs']      # nothing of the game ran meanwhile
+        back = game.act(tap=['report'], ticks=3)                         # F9 again closes it
+        assert back['scene'] == 'dashboard' and texts(back)[0] == texts(seen)[0]
+        live = game.act(tap=['select'], ticks=3)                         # and over a live round, which stops
+        assert live['scene'] == 'round'
+        over = game.act(tap=['report'], ticks=3)
+        assert over['scene'] == 'report' and over['under'] == 'round'
+        game.act(ticks=120)
+        after = game.act(tap=['report'], ticks=3)
+        assert after['scene'] == 'round' and after['state']['minute'] <= live['state']['minute'] + 1
+        going = game.act(ticks=120)
+        assert going['state']['minute'] > after['state']['minute'] + 1      # as 120 ticks of a round do
+
+
+# --- the beta's reports, end to end: the game, the receiver (projects/beta-reports), a forge of the test ---
+
+class Answers:
+    """A server of the test that answers each report with the next of `answers` (a status and a JSON)."""
+
+    def __init__(self, answers):
+        import threading
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        self.answers, self.received = list(answers), []
+        outer = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                outer.received.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+                status, body = outer.answers.pop(0) if len(outer.answers) > 1 else outer.answers[0]
+                data = json.dumps(body).encode()
+                self.send_response(status)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *args):
+                pass
+
+        self.http = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        self.url = f'http://127.0.0.1:{self.http.server_port}/api/reports'
+        threading.Thread(target=self.http.serve_forever, daemon=True).start()
+
+
+def pandafoot_to(godot, folder: Path, url: str) -> Path:
+    """PandaFoot with its reports going to `url`."""
+    from quantum.core.parser import QuantumParser
+    from quantum.runtime.godot import compile_game
+    source = (PROJECTS / 'pandafoot' / 'pandafoot.q').read_text(encoding='utf-8')
+    server = '<q:function name="report_server"><q:return value="{\'\'}" /></q:function>'
+    assert server in source
+    folder.mkdir(parents=True, exist_ok=True)
+    copy = folder / 'pandafoot.q'
+    copy.write_text(source.replace(server, server.replace("\'\'", repr(url))), encoding='utf-8')
+    out = Path(compile_game(QuantumParser(use_cache=False).parse_file(str(copy)), str(folder / 'godot'),
+                            source_dir=str(PROJECTS / 'pandafoot')))
+    assert check_project(out, binary=godot) == []
+    return out
+
+
+def send_one(game, text):
+    """From the title: the panel, a bug written, sent."""
+    game.act(ticks=3)
+    game.act(tap=['report'], ticks=3)
+    type_report(game, text)
+    return game.act(tap=['select'], ticks=3)
+
+
+def test_a_report_not_taken_now_waits_and_goes_later(godot, tmp_path):
+    """The server down (503): the report stays in the outbox, kept between runs, and goes the next time the title
+    is seen; one refused for what it is (422) is dropped."""
+    answers = Answers([(503, {'error': 'down', 'message': 'Service Unavailable'}), (201, {'number': 4})])
+    game_dir = pandafoot_to(godot, tmp_path, answers.url)
+    persist = tmp_path / 'persist'
+    with PlaySession(game_dir, binary=godot, persist_dir=persist) as game:
+        send_one(game, 'The table froze')
+        down = game.until({'path': 'state.game.report_status', 'op': '!=', 'value': 'Sending...'}, max_ticks=3000)
+        assert down['state']['game']['report_status'] == ('Not sent now (503: Service Unavailable): it is kept and '
+                                                          'goes later.')
+        assert len(down['state']['game']['outbox']) == 1
+        game.act(tap=['cancel'], ticks=3)
+        game.act(tap=['down'], ticks=2)                                  # a scene changed: the outbox kept
+        game.act(tap=['up'], ticks=2)
+    with PlaySession(game_dir, binary=godot, persist_dir=persist) as game:     # another run
+        later = game.until({'path': 'state.game.outbox', 'op': '==', 'value': []}, max_ticks=3000)
+        assert later['scene'] == 'title' and later['stopped'] == 'condition'
+        assert [r['text'] for r in answers.received] == ['The table froze', 'The table froze']
+    answers.answers = [(422, {'error': 'invalid', 'message': "Parameter 'text' is too long"})]
+    with PlaySession(game_dir, binary=godot, persist_dir=persist) as game:
+        send_one(game, 'Another one')
+        refused = game.until({'path': 'state.game.outbox', 'op': '==', 'value': []}, max_ticks=3000)
+        assert refused['state']['game']['report_status'] == ("The report was not accepted: 422: Parameter 'text' is "
+                                                             "too long")
+
+
+def test_a_report_reaches_the_receiver_and_the_forge(godot, tmp_path, monkeypatch):
+    """The whole way: the game posts to projects/beta-reports served over HTTP, which keeps it in SQLite, puts the
+    save on the forge's branch and opens an issue; the game says the number it got."""
+    import logging
+    import shutil
+    import sqlite3
+    import threading
+    from werkzeug.serving import make_server
+    from tests.apps.test_beta_reports import PROJECT, FakeForge
+    from quantum.cli.migrations import MigrationRunner
+    from quantum.runtime.web_server import QuantumWebServer
+    receiver = tmp_path / 'beta-reports'
+    shutil.copytree(PROJECT, receiver, ignore=shutil.ignore_patterns('data', '.quantum', '__pycache__'))
+    monkeypatch.chdir(receiver)
+    monkeypatch.setenv('GITHUB_TOKEN', 'test-token')
+    MigrationRunner(receiver).up()
+    with FakeForge() as forge:
+        with sqlite3.connect(receiver / 'data' / 'reports.db') as db:
+            db.execute("UPDATE settings SET forge = ?, repo = 'acme/beta'", (forge.url,))
+        logging.disable(logging.WARNING)
+        http = make_server('127.0.0.1', 0, QuantumWebServer(str(receiver / 'quantum.config.yaml')).app, threaded=True)
+        threading.Thread(target=http.serve_forever, daemon=True).start()
+        try:
+            game_dir = pandafoot_to(godot, tmp_path / 'game', f'http://127.0.0.1:{http.server_port}/api/reports')
+            with PlaySession(game_dir, binary=godot) as game:
+                new_game(game)
+                game.act(tap=['report'], ticks=3)
+                type_report(game, 'The keeper scored from his own area')
+                game.act(tap=['select'], ticks=3)
+                sent = game.until({'path': 'state.game.outbox', 'op': '==', 'value': []}, max_ticks=3000)
+                assert sent['state']['game']['report_status'] == 'Sent: report no. 1. Thank you!'
+                assert 'Sent: report no. 1. Thank you!' in texts(sent)
+        finally:
+            http.shutdown()
+            logging.disable(logging.NOTSET)
+        with sqlite3.connect(receiver / 'data' / 'reports.db') as db:
+            db.row_factory = sqlite3.Row
+            (row,) = [dict(r) for r in db.execute('SELECT * FROM reports')]
+        assert (row['game'], row['version'], row['kind'], row['screen']) == ('pandafoot', '2.1', 'bug', 'dashboard')
+        assert row['text'] == 'The keeper scored from his own area' and row['issue'] == 41
+        assert json.loads(row['save'])['game']['world'] == 7
+        (put, _, _, body), (issue_method, issue_path, _, issue) = forge.received
+        assert put == 'PUT' and json.loads(base64.b64decode(body['content']))['scene'] == 'dashboard'
+        assert issue['title'] == '[pandafoot 2.1] bug: The keeper scored from his own area'
+        assert issue['labels'] == ['beta-report', 'pandafoot', 'bug']
+        assert 'Lontra AC' in issue['body']
 
 
 # --- what the first people to play it found (PLAN_PANDAFOOT.md, the fixes of 2026-10-23) ---
