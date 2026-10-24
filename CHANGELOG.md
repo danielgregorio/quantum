@@ -32,9 +32,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - `projects/beta-reports`: where the games' beta reports land, written in
   Quantum. `POST /api/reports` keeps a report in SQLite and tells the forge:
   an issue of the repository, the save attached as a file of its branch. A
-  container and its compose file for a homelab behind HTTPS
-  (`projects/beta-reports/README.md`); tested against a forge of the test
-  (`tests/apps/test_beta_reports.py`) and, as an image, in CI.
+  container and its compose file for a homelab behind HTTPS, given by a
+  Cloudflare Tunnel (`compose.tunnel.yaml`: the homelab opens no port) or
+  another reverse proxy (`projects/beta-reports/README.md`); tested against a
+  forge of the test (`tests/apps/test_beta_reports.py`) and, as an image, in CI.
 - Laboratory: a panel over any screen, and data sent from a game to a server
   (Phase 3 of `PLAN_PANDAFOOT.md`'s beta reports). `<qg:overlay>` in the
   application holds a screen's HUD, menus, dialogues and handlers, and opens

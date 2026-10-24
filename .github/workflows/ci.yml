@@ -196,10 +196,20 @@ jobs:
   beta-reports-image:
     # The beta's reports as the homelab runs them (projects/beta-reports/Dockerfile): the image
     # builds, migrates its database and keeps a report posted to it. No token here, so the forge
-    # is not told: the report is kept all the same (onerror="continue", INV-3).
+    # is not told: the report is kept all the same (onerror="continue", INV-3). The compose files
+    # read together, and the tunnel's cloudflared is a version that exists.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: The homelab's compose files, the tunnel's too
+        env:
+          GITHUB_TOKEN: placeholder
+          QUANTUM_SECRET_KEY: placeholder
+          CLOUDFLARE_TUNNEL_TOKEN: placeholder
+        run: |
+          files="-f projects/beta-reports/compose.yaml -f projects/beta-reports/compose.tunnel.yaml"
+          docker compose $files config --quiet
+          docker compose $files pull tunnel
       - name: Build the receiver's image
         run: docker build -f projects/beta-reports/Dockerfile -t quantum-beta-reports .
       - name: It keeps a report
