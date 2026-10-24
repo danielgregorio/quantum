@@ -1070,6 +1070,28 @@
   </q:function>
 
   <!-- the best eleven for the club's formation, picked again from the whole squad -->
+  <!-- a manager's eleven: who he picked (the line-up screen, F1; at first the eleven he was given), each back in his
+       place once he can play again; who stood in for him steps back; the gaps filled as the computer would -->
+  <q:function name="picked" params="p">
+    <q:return value="{p.pick if 'pick' in p else ''}" />
+  </q:function>
+
+  <q:function name="mark_picks" params="club">
+    <q:loop items="{club.players}" var="p"><q:set name="p.pick" value="{p.xi}" /></q:loop>
+  </q:function>
+
+  <q:function name="manager_lineup" params="club">
+    <q:set name="any" value="{false}" />
+    <q:loop items="{club.players}" var="p"><q:if condition="{picked(p) != ''}"><q:set name="any" value="{true}" /></q:if></q:loop>
+    <q:if condition="{not any}"><q:call function="mark_picks" args="{club}" /></q:if>
+    <q:loop items="{club.players}" var="p">
+      <q:if condition="{picked(p) != '' and available(p)}"><q:set name="p.xi" value="{picked(p)}" /><q:set name="p.bench" value="{false}" />
+        <q:elseif condition="{p.xi != '' and picked(p) == ''}"><q:set name="p.xi" value="{''}" /></q:elseif>
+      </q:if>
+    </q:loop>
+    <q:call function="fill_lineup" args="{club}" />
+  </q:function>
+
   <q:function name="auto_lineup" params="club">
     <q:loop items="{club.players}" var="p"><q:set name="p.xi" value="{''}" /><q:set name="p.bench" value="{false}" /></q:loop>
     <q:call function="fill_lineup" args="{club}" />
@@ -1084,8 +1106,14 @@
     <q:set name="open" value="{['GK'] + ['DF', 'DF', 'DF', 'DF', 'DF'][0:n[0]] + ['MF', 'MF', 'MF', 'MF', 'MF'][0:n[1]] + ['FW', 'FW', 'FW'][0:n[2]]}" />
     <q:loop items="{club.players}" var="p">
       <q:if condition="{not available(p)}"><q:set name="p.xi" value="{''}" /><q:set name="p.bench" value="{false}" /></q:if>
-      <q:if condition="{p.xi != '' and p.xi in open}"><q:set name="open" value="{without(open, p.xi)}" /><q:set name="p.bench" value="{false}" />
-        <q:elseif condition="{p.xi != ''}"><q:set name="p.xi" value="{''}" /></q:elseif>
+    </q:loop>
+    <!-- who keeps a place, the best first: with fewer places of a kind, the weakest of the eleven leaves -->
+    <q:set name="keys" value="{[]}" />
+    <q:loop var="k" from="0" to="{len(club.players) - 1}"><q:if condition="{club.players[k].xi != ''}"><q:set name="keys" value="{keys + [[eff(club.players[k], club.players[k].xi), 100 - k]]}" /></q:if></q:loop>
+    <q:loop items="{sort(keys, true)}" var="key">
+      <q:set name="keeps" value="{club.players[100 - key[1]]}" />
+      <q:if condition="{keeps.xi in open}"><q:set name="open" value="{without(open, keeps.xi)}" /><q:set name="keeps.bench" value="{false}" />
+        <q:else><q:set name="keeps.xi" value="{''}" /></q:else>
       </q:if>
     </q:loop>
     <q:loop items="{[1.0, 0.8, 0.5]}" var="least">
@@ -1206,7 +1234,7 @@
     <q:if condition="{club.plan != 'By hand'}"><q:call function="preset" args="{club}, {club.plan}, {usual(opponent) if club.manager > 0 else 'Balanced'}" /></q:if>
     <q:if condition="{auto}"><q:set name="club.objective" value="{'Auto'}" /></q:if>
     <q:if condition="{club.manager == 0}"><q:call function="auto_lineup" args="{club}" />
-      <q:else><q:call function="fill_lineup" args="{club}" /></q:else>
+      <q:else><q:call function="manager_lineup" args="{club}" /></q:else>
     </q:if>
   </q:function>
 
@@ -2137,7 +2165,7 @@
       <qg:text value="{tr('Attack') + ' ' + str(round(power(my_club())[0])) + '   ' + tr('Defence') + ' ' + str(round(power(my_club())[1])) + ('' if lineup_ok(my_club()) else '   ⚠ ' + tr('eleven fit to play, one of them in goal'))}" color="{'#ffffff' if lineup_ok(my_club()) else '#ff5555'}" />
       <qg:text value="{'[ENTER] ' + tr('Eleven → bench → out') + '   [A] ' + tr('Automatic') + '   [F2] ' + tr('Tactics') + '   [ESC] ' + tr('Back')}" color="#55ffff" />
     </qg:hud>
-    <qg:on-input action="auto"><q:call function="auto_lineup" args="{my_club()}" /></qg:on-input>
+    <qg:on-input action="auto"><q:call function="auto_lineup" args="{my_club()}" /><q:call function="mark_picks" args="{my_club()}" /></qg:on-input>
     <qg:on-input action="tactics"><qg:goto-scene name="tactics" /></qg:on-input>
     <qg:on-input action="squad"><qg:goto-scene name="squad" /></qg:on-input>
     <qg:on-input action="cancel"><qg:goto-scene name="dashboard" /></qg:on-input>
@@ -2145,9 +2173,10 @@
 
   <!-- a player chosen in the line-up: in the eleven, then on the bench, then out -->
   <q:function name="toggle" params="club, p">
-    <q:if condition="{p.xi != ''}"><q:set name="p.xi" value="{''}" /><q:set name="p.bench" value="{true}" /><q:return /></q:if>
+    <q:if condition="{p.xi != ''}"><q:set name="p.xi" value="{''}" /><q:set name="p.bench" value="{true}" /><q:call function="mark_picks" args="{club}" /><q:return /></q:if>
     <q:if condition="{p.bench}"><q:set name="p.bench" value="{false}" /><q:return /></q:if>
     <q:if condition="{available(p) and len(eleven(club)) < 11}"><q:set name="p.xi" value="{open_place(club, p)}" /></q:if>
+    <q:call function="mark_picks" args="{club}" />
   </q:function>
 
   <!-- where a player goes into the eleven: their own place if it is open, a second one, else any open -->

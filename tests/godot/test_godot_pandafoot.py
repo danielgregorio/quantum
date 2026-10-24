@@ -1145,3 +1145,25 @@ def test_a_manager_doing_well_is_offered_a_club_at_mid_season(pandafoot, godot, 
         offer = job['state']['game']['jobs'][0]
         assert offer['kind'] == 'offer' and len(offer['clubs']) == 2
         assert all(job['state']['game']['clubs'][ci]['div'] == 3 for ci in offer['clubs'])
+
+
+def test_a_regular_back_from_injury_is_back_in_the_eleven(pandafoot, godot, tmp_path):
+    """The manager's eleven is who he picked: one who stood in for an injured regular steps back as soon as the
+    regular can play again, with no one putting him back by hand (the bad run of the beta: a team that lost its
+    best men to a knock or a ban kept their stand-ins for good)."""
+    hurt = {}
+    def knocked(state):
+        club = state['clubs'][MINE]
+        p = max((q for q in club['players'] if q['xi'] not in ('', 'GK')), key=lambda q: q['strength'])
+        p['injured'] = 1
+        hurt.update(name=p['name'], place=p['xi'])
+    saved_then(pandafoot, godot, tmp_path, knocked)
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        continued(game)
+        live = game.act(tap=['select'], ticks=3)
+        regular = next(p for p in live['state']['game']['clubs'][MINE]['players'] if p['name'] == hurt['name'])
+        assert regular['xi'] == '' and regular['pick'] == hurt['place']          # out of this match, still picked
+        after = play_round(game)
+        back = next(p for p in after['state']['game']['clubs'][MINE]['players'] if p['name'] == hurt['name'])
+        assert back['injured'] == 0 and back['xi'] == hurt['place']               # back in his place for the next
+        assert len([p for p in after['state']['game']['clubs'][MINE]['players'] if p['xi']]) == 11
