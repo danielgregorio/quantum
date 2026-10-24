@@ -296,6 +296,29 @@ ours, on the owner's homelab, behind its own HTTPS.
 
 The form of 2.1's first draft (a Google Form, opened filled in) gives way to this; `url_encode()` stays.
 
+## What the beta's first players asked for (2026-10-24)
+
+Eleven asks of the owner and Fernando, playing 2.0, and what each was (a bug, a thing they could not find, or new).
+All in 2.1, with the owner's choices: the club drawn always, a bid for any player opens an auction, about 3 goals.
+
+| Ask | What it was | In 2.1 |
+|---|---|---|
+| The other divisions are not shown | there, behind TAB on the table and the results; in the live round TAB went match by match | TAB goes through the divisions in the live round too |
+| The ground cannot grow | the works were there, at $375.000 for a 4th-division club of $50.000, and the button said nothing | a thousand seats priced by the division, a third at once; the screen says why not |
+| Show the round during the match | not shown | the live round's heading: round 5/18 |
+| Choose the penalty taker | no penalty in a match, only the cup's shootout | penalties in the match; the taker chosen in Tactics, first in a shootout |
+| A player's goals do not add up across seasons | added up (the history, F8), but the squad showed the season's only | a Career column in the squad |
+| Draw the club, as Elifoot | chosen from a list | drawn |
+| More money: the purse is hard to keep | 4th-division clubs began with about $50.000; two managers in three ended the first season in the red | about three times as much |
+| Bid for players of other clubs | only the listed ones | B on a computer club's squad: he goes up for auction |
+| Few shots and goals | about 11 shots and 2.5 goals a match | about 24 shots and 3.1 goals, a penalty one match in four |
+| Lose one, lose them all | **a bug**: a manager's stand-ins kept their places for good after an injury or a ban, and Auto's formation changes dropped the first of the squad's order, not the weakest. A manager's club made 1.14 points a match where the computer's clubs of the same strength made 1.40; the same club in the same world made fewer with a manager, four clubs of four | the manager's picks come back; the weakest leaves. The same six clubs, managed and not: 1.40 points a match both ways. Also a gentler fatigue and morale, and a warning for a tired eleven |
+| Be called by a better club after good work | offers only at the season's end, and only after a promotion or three places above the board's hopes | also after the 9th round, from the division above |
+
+The numbers, from the playtest of three worlds of three seasons and six runs of one world (`playtest3.py`,
+`paired.py` in the agent's notes): 2240 matches, 24.2 shots, 3.15 goals and 0.24 penalties a match; a manager's
+club 1.40 points a match against 1.40 for the computer's.
+
 ## Phase 3 — The live round online
 
 The design's default room: two to eight managers on their own machines (the lockstep, its seats,

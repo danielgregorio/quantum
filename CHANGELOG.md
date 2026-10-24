@@ -64,8 +64,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the money at the start and ground works a small club can pay (a thousand
   seats, priced by the division, a third at once), about 24 shots and 3
   goals a match, penalties in the match with the taker chosen in Tactics, a
-  gentler fatigue and a morale that comes back (and a warning when the
-  eleven is tired), the round in view and TAB through the divisions in the
+  manager's regulars back in the eleven once an injury or a ban is over
+  (a manager's club made 1.14 points a match where the computer's made
+  1.40: its stand-ins kept their places for good), a gentler fatigue and a
+  morale that comes back (and a warning when the eleven is tired), the round in view and TAB through the divisions in the
   live round, a player's goals of his career in the squad, a bid for any
   computer club's player that puts him up for auction, and offers from the
   division above in the middle of the season.

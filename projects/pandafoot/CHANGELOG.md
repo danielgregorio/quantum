@@ -21,8 +21,10 @@ What the first players of the beta asked for:
 - **More shots and goals**: about 24 shots and 3 goals a match, as a match has.
 - **Penalties in the match**, now and then, and **you choose who takes them** (Tactics, F2); in a cup's shootout he
   takes the first.
-- **A bad run ends**: a match tires a player less and a week rests him more, a defeat hurts the morale less than a
-  win lifts it, and morale comes back towards normal. The dashboard warns when the eleven is tired.
+- **A bad run ends.** Your regulars come back to the eleven as soon as an injury or a ban is over (the stand-ins
+  used to keep their places for good, which is why a team that lost kept losing), and when the formation has fewer
+  places, the weakest leaves. A match tires a player less and a week rests him more, a defeat hurts the morale less
+  than a win lifts it, and morale comes back towards normal. The dashboard warns when the eleven is tired.
 - **The round being played** is on the live round's screen (round 5/18), and **TAB goes through the four
   divisions** there, as it does on the table and the results.
 - **A player's goals of his whole career** in the squad (F3), beside the season's.

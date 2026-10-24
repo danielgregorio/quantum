@@ -21,7 +21,9 @@ O que os primeiros jogadores do beta pediram:
 - **Mais finalizações e gols**: umas 24 finalizações e 3 gols por jogo, como um jogo tem.
 - **Pênaltis durante a partida**, de vez em quando, e **você escolhe quem bate** (Táticas, F2); na disputa de
   pênaltis da Copa, ele bate o primeiro.
-- **A má fase acaba**: um jogo cansa menos e a semana descansa mais, uma derrota baixa o moral menos do que uma
+- **A má fase acaba.** Os seus titulares voltam ao time assim que acaba uma lesão ou suspensão (antes o reserva
+  ficava no lugar para sempre, e por isso um time que perdia continuava perdendo), e quando a formação tem menos
+  vagas, sai o mais fraco. Um jogo cansa menos e a semana descansa mais, uma derrota baixa o moral menos do que uma
   vitória sobe, e o moral volta ao normal. O painel avisa quando os titulares estão cansados.
 - **A rodada que está sendo jogada** aparece na tela da rodada ao vivo (rodada 5/18), e lá **o TAB passa pelas
   quatro divisões**, como já faz na tabela e nos resultados.

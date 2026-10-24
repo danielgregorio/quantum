@@ -21,8 +21,11 @@ Lo que pidieron los primeros jugadores de la beta:
 - **Más remates y goles**: unos 24 remates y 3 goles por partido, como tiene un partido.
 - **Penaltis durante el partido**, de vez en cuando, y **tú eliges quién los tira** (Tácticas, F2); en la tanda de
   penaltis de la Copa, él tira el primero.
-- **La mala racha termina**: un partido cansa menos y la semana descansa más, una derrota baja la moral menos de
-  lo que una victoria la sube, y la moral vuelve a lo normal. El panel avisa cuando los titulares están cansados.
+- **La mala racha termina.** Tus titulares vuelven al equipo en cuanto termina una lesión o una sanción (antes el
+  suplente se quedaba con el puesto para siempre, y por eso un equipo que perdía seguía perdiendo), y cuando la
+  formación tiene menos puestos, sale el más flojo. Un partido cansa menos y la semana descansa más, una derrota baja
+  la moral menos de lo que una victoria la sube, y la moral vuelve a lo normal. El panel avisa cuando los titulares
+  están cansados.
 - **La jornada que se está jugando** aparece en la pantalla de la jornada en directo (jornada 5/18), y allí **el
   TAB recorre las cuatro divisiones**, como ya hace en la tabla y en los resultados.
 - **Los goles de toda la carrera** de cada jugador en la plantilla (F3), junto a los de la temporada.
