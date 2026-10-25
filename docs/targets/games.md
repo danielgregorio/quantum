@@ -7822,8 +7822,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:return value="{ {'chance': max(0, min(100, total)), 'why': why} }" />
   </q:function>
 
-  <!-- each round: the computer's clubs bid (any club he would play for, a squad player at least, that can pay a third
-       of the fee and three months of his wage; a price under his worth draws more of them, one over it fewer); the
+  <!-- each round: the computer's clubs bid (any club he would play for, one of its sixteen best or so, that can pay a
+       third of the fee and three months of his wage; a price under his worth draws more of them, one over it fewer); the
        auctions whose time is up are decided; the computer's clubs put players on the list, of every level, and the
        free agents come on it -->
   <q:function name="market_round">
@@ -7834,7 +7834,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <q:set name="lure" value="{(2 if e.fee <= 0 else min(2, value_of(p) / e.fee)) if p != null else 0}" />
       <q:loop var="bi" from="0" to="{len(clubs) - 1}">
         <q:set name="buyer" value="{clubs[bi]}" />
-        <q:if condition="{buyer.manager == 0 and bi != e.seller and len(buyer.players) < 28 and e.str >= powers[bi] - 3 and e.str <= powers[bi] + 14 and buyer.balance >= 0.3 * e.fee + 3 * e.wage and not bid_by(e, bi) and chance(0.1 * lure)}">
+        <q:if condition="{buyer.manager == 0 and bi != e.seller and len(buyer.players) < 28 and e.str >= powers[bi] - 5 and e.str <= powers[bi] + 14 and buyer.balance >= 0.3 * e.fee + 3 * e.wage and not bid_by(e, bi) and chance(0.1 * lure)}">
           <q:set name="e.bids" value="{e.bids + [ {'club': bi, 'wage': round(e.wage * random(1.0, 1.5)), 'plan': 'cash' if buyer.balance >= e.fee + 3 * e.wage else 'parts'} ]}" />
         </q:if>
       </q:loop>
@@ -9726,7 +9726,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:set name="keys" value="{[]}" />
     <q:loop var="ci" from="0" to="{len(clubs)}">
       <q:set name="pool" value="{free_agents if ci == len(clubs) else clubs[ci].players}" />
-      <q:if condition="{ci == len(clubs) or looking.div == 0 or clubs[ci].div == looking.div}">
+      <q:if condition="{looking.div == 0 or (ci < len(clubs) and clubs[ci].div == looking.div)}">   <!-- the free agents with every division only -->
         <q:loop var="k" from="0" to="{len(pool) - 1}">
           <q:set name="q" value="{pool[k]}" />
           <q:if condition="{looking.pos == '' or q.pos == looking.pos}">

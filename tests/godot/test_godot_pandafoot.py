@@ -1197,10 +1197,11 @@ def table_place(clubs, i):
     return order.index(i) + 1
 
 
-def test_a_weak_player_sells_and_the_list_has_every_level(pandafoot, godot):
-    """Nobody bought a weak player (worth more than a small club's purse, and out of the strong clubs' range) and the
-    list had players of 10 to 20 after a while: now his worth halves every four of strength, the asking price is the
-    manager's (half his worth here), any club he would play for may bid, and the computer's clubs list regulars too."""
+def test_a_player_sells_and_the_list_has_every_level(pandafoot, godot):
+    """Nobody bought a player of the manager's but his best (a worth above a small club's purse, and a bid only from
+    clubs of the player's own level) and the list had players of 10 to 20 after a while: now the worth halves every
+    four of strength, the asking price is the manager's (half his worth here), any club he would be one of the sixteen
+    best of may bid, and the computer's clubs list regulars too."""
     with PlaySession(pandafoot, binary=godot) as game:
         new_game(game)
         game.act(tap=['market'], ticks=3)
@@ -1211,8 +1212,8 @@ def test_a_weak_player_sells_and_the_list_has_every_level(pandafoot, godot):
         state = seen['state']['game']
         assert state['asking'] == 50
         squad = state['clubs'][MINE]['players']
-        k = min((i for i, p in enumerate(squad) if not p['xi'] and not p['bench']), key=lambda i: squad[i]['strength'])
-        weak = squad[k]
+        k = min((i for i, p in enumerate(squad) if p['xi'] and p['xi'] != 'GK'), key=lambda i: squad[i]['strength'])
+        weak = squad[k]                                             # the weakest of the eleven
         game.act(tap=['down'], ticks=2)                            # from the price to the squad
         for _ in range(k):
             game.act(tap=['down'], ticks=2)
@@ -1223,7 +1224,7 @@ def test_a_weak_player_sells_and_the_list_has_every_level(pandafoot, godot):
         game.act(tap=['cancel'], ticks=3)
         bids = 0
         strong = 0
-        for _ in range(3):
+        for _ in range(4):
             after = play_round(game)['state']['game']
             strong = max([strong] + [e['str'] for e in after['market'] if e['seller'] >= 0 and e['seller'] != MINE])
             on = [e for e in after['market'] if e['who'] == weak['name']]
@@ -1232,7 +1233,7 @@ def test_a_weak_player_sells_and_the_list_has_every_level(pandafoot, godot):
             to_dashboard(game)
             if gone:
                 break
-        assert gone or bids > 0, 'no club bid for a reserve at half his worth'
+        assert gone or bids > 0, 'no club bid for a regular at half his worth'
         assert strong >= 30                                        # the list is not only reserves of 10 to 20
         assert len(after['free_agents']) >= 30
         assert not [line for line in game.log if 'SCRIPT ERROR' in line]
