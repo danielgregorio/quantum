@@ -121,7 +121,7 @@ def test_a_live_round_changes_the_table_the_purses_and_the_players(pandafoot, go
     with PlaySession(pandafoot, binary=godot) as game:
         before = new_game(game)['state']['game']
         live = game.act(tap=['select'], ticks=3)
-        assert live['scene'] == 'round' and len(tables(live)[1]['rows']) == 5      # the round's five matches
+        assert live['scene'] == 'round' and len(shown(live)[0]['items']) == 5      # the round's five matches
         for _ in range(3):
             game.act(tap=['faster'], ticks=2)
         assert '16x' in texts(game.observe())[1]
