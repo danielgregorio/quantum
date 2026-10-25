@@ -343,6 +343,17 @@ academy for the money.
 | The layout is hard to read: other players' strength, in how many games | the squad without games; no list of all | Gm and Avg in the squad, F4 |
 | Brasfoot's characteristics of players | the traits are symbols with a legend (the message was cut) | to discuss: a player's card with the traits by name |
 
+The numbers, from three worlds of three seasons with a manager from the 4th (2.2) against one world of 2.1 (`audit.py`
+in the agent's notes): the computer's clubs' players on the list 7 to 9 a round (2.1: 4 to 6), their median strength
+24 to 29 (17 to 22), a quarter to a half of them 30 or stronger (an eighth to a quarter); 125 to 161 transfers in the
+papers (36); a manager's regular of 17 at his worth sold in the first auction ($73.000; a reserve of 9 still finds no
+club, being nobody's sixteen best); the world's mean strength 27.6 to 27.7 in three seasons (2.1 grew it by 0.4 a
+season); the 4th division's purses in the black; squads of 22 to 24; no club with its keeper five below its eleven
+(2.1: six of forty). A first calibration let every reserve who hardly played lose a point (the world grew weaker by
+0.4 a season), let long squads list their worst (the list's median fell to 15) and the 4th's clubs buy beyond their
+purses: a point lost only above 30, a squad over 24 lets its worst go, regulars listed more often than reserves,
+and a club buys keeping half the fee and six months of the wage.
+
 ## Phase 3 — The live round online
 
 The design's default room: two to eight managers on their own machines (the lockstep, its seats,
