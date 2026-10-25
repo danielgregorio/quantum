@@ -50,6 +50,23 @@ alter the behaviour of an existing app is listed under **Breaking**.
   cursor was on), and `save_text()` is the game as a `qg:save` writes it, for
   a report to carry. Not in a `qg:multiplayer` game
   (`tests/godot/test_godot_overlay.py`, against a server of the test).
+- Laboratory: PandaFoot 2.2, the market, the ratings and the club: what the
+  beta's players asked for the second time (`PLAN_PANDAFOOT.md`, the feedback
+  of 2026-10-25). A player's worth doubles every four of strength ($300.000 at
+  26), so a small club can buy and a weak player sells; the manager sets the
+  asking price (50% to 150%), any club he would play for may bid, and the
+  computer's clubs list their regulars too, with new free agents every season.
+  Every player who plays is rated, 3 to 10 (the man of the match is the best of
+  them; [R] on the results); at each month's end a mean of 7 or more grows a
+  player a point and 5 or less takes one. A training center and a youth
+  academy (F5, levels 1 to 5), the season's prizes (each division's champion,
+  runner-up, top scorer and best player; the two last in gold and worth a
+  third more the next season), every player of the world on one screen (F4),
+  the live round's matches clickable and both elevens with their ratings so
+  far in a panel over it (F3, a `qg:overlay`), the managers' careers club by
+  club (F8), a board pleased by a win and a draw too, each club's first
+  keeper among its eleven best, and the ground saying what stops it growing.
+  A game saved by 2.1 is brought up to 2.2 as it is continued.
 - Laboratory: PandaFoot 2.1, the beta, and reports from inside the game. The
   [!] in the corner of every screen, or F9, opens the report panel over the
   screen, which stands still under it: a bug, a suggestion or something else,

@@ -3,6 +3,43 @@
 La versión que juegas está en la pantalla de título y en la esquina del panel. Cada versión de abajo dice qué
 cambió para quien juega; cómo se hizo está en el [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
+## 2.2 — El mercado, las notas y el club (2026-10-25)
+
+Lo que pidieron los jugadores del beta, por segunda vez:
+
+- **Un mercado que funciona, como en Elifoot 2.** El valor de un jugador se duplica cada 4 de fuerza: un 20 vale
+  unos $100.000, un 30 unos $600.000, un 45 unos $8M. Un club pequeño puede comprar, y vender a tus jugadores flojos
+  da dinero para comprar mejores. Al vender (F6, S), **eliges el precio pedido** (del 50% al 150% de su valor): más
+  barato, más clubes pujan. Cualquier club en el que jugaría puede pujar, y un suplente acepta bajar de división más
+  fácil: quiere jugar.
+- **La lista tiene jugadores de todos los niveles.** Los clubes de la computadora también ponen en venta a sus
+  titulares, no solo a los suplentes, y llegan nuevos agentes libres cada temporada.
+- **Notas de 3 a 10** para cada jugador en cada partido: la figura del partido es la mejor nota, y [R] en los
+  resultados muestra las de tu partido. La plantilla (F3) muestra los partidos, la media de la temporada y quién
+  subió o bajó en el mes (▲▼).
+- **Los jugadores mejoran durante la temporada.** Al final de cada mes, una media de 7 o más sube un punto de
+  fuerza, y de 5 o menos baja uno. La prensa dice quién.
+- **Centro de entrenamiento y cantera** (F5), del nivel 1 al 5. El entrenamiento hace que los jugadores mejoren y
+  descansen más; la cantera trae uno o dos juveniles cada temporada, mejores cuanto más alto el nivel. Un tercio al
+  contado, el resto en siete meses, y un costo al mes.
+- **Los premios de la temporada**: el goleador y el mejor jugador (la mejor media, diez partidos como mínimo) de
+  cada división dan dinero a su club, brillan en dorado (✪ ✦) y valen un tercio más la temporada siguiente. El
+  campeón y el subcampeón de cada división también ganan un premio. El final de la temporada los muestra todos.
+- **F4, Jugadores**: todos los jugadores del mundo en una pantalla, por fuerza, goles, nota, partidos o valor, por
+  posición y por división. Enter puja por él.
+- **En la jornada en vivo, haz clic en un partido** para verlo; **F3 (o "Los equipos")** muestra las alineaciones de
+  los dos equipos con la nota de cada uno hasta ese momento, con la jornada detenida debajo.
+- **El ranking de técnicos** (F8) tiene puntos, títulos, copas, ascensos, descensos y despidos, y Enter muestra la
+  carrera entera: cada club, las temporadas allí y cómo terminó (despedido, se fue a otro club, sigue allí).
+- **La directiva se alegra con el buen trabajo**: una victoria +4, un empate +1, una derrota −3, y la copa también
+  cuenta. El panel muestra la paciencia en número. Un técnico que ganaba la mitad de los partidos veía la barra solo
+  bajar.
+- **El primer portero de cada club está entre sus once mejores** (las posiciones se sorteaban, y un club de cada
+  cuatro tenía a sus dos porteros entre los peores).
+- **El estadio dice qué le falta para crecer**: con la salud en 60% o menos no puede, y ahora el panel avisa antes y
+  las finanzas dicen qué hacer (el Mantenimiento).
+- Un juego guardado en la 2.1 sigue en la 2.2.
+
 ## 2.1 — La beta (2026-10-24)
 
 - **PandaFoot está en beta.** La versión lo dice en el título y en la esquina del panel.

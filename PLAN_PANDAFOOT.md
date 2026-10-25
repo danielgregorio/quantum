@@ -319,6 +319,30 @@ The numbers, from the playtest of three worlds of three seasons and six runs of 
 `paired.py` in the agent's notes): 2240 matches, 24.2 shots, 3.15 goals and 0.24 penalties a match; a manager's
 club 1.40 points a match against 1.40 for the computer's.
 
+## What the beta's players asked for the second time (2026-10-25)
+
+Fifteen asks of Fernando, playing 2.1 in the browser, and what each was. All in 2.2, with the owner's choices: a
+worth that doubles every four of strength, growth by the month's ratings, and both a training center and a youth
+academy for the money.
+
+| Ask | What it was | In 2.2 |
+|---|---|---|
+| The list has only players of 10 to 20 after a while | the computer's clubs listed only their reserves, the weakest of each squad; the forty free agents of the world's start were never renewed (40 to 22 in two seasons) | the computer's clubs list regulars too (never their best three), a club short of money one of its eleven; free agents up to forty each season |
+| Nobody buys a player of mine, only my best | a worth of strength² × $4.000 made a 20 cost $1,6M, more than a 3rd- or 4th-division purse, and a club bid only for a player in its own range: who wanted him could not pay, who could pay did not want him. Three reserves listed for two seasons: no bid; 19 transfers in the world in two seasons | the worth doubles every four of strength ($300.000 at 26: a 20 about $100.000, a 45 about $8M); the asking price is the manager's (50% to 150%); every club he would play for may bid, a cheaper price drawing more; a reserve takes a lower division more easily |
+| Money is useless | nothing worth buying, no one to sell to | the market above, a training center and a youth academy (F5), the season's prizes |
+| Players do not grow | a point to three at the season's end only | each month's end: a mean rating of 7 or more grows a point (the training center lowers the bar), 5 or less takes one; ▲▼ in the squad |
+| Keepers are well below the others | the positions were drawn whatever the strength: one club in four had its two keepers among its weakest, and a keeper never scores (he grew least) | each club's first keeper among its eleven best; ratings reward a clean sheet |
+| Cannot click the teams during the match | the live round's matches were a table, the elevens nowhere | the matches are a menu (a click puts one in front); F3 or "The teams": both elevens, with their ratings so far, over the round, which waits |
+| The ground still cannot grow | at 60% of health or less it cannot, and only a small red line said so; the manager's ground is not mended by itself | the dashboard warns at 65%, F5 says what stops it (Maintenance) |
+| The board's bar never rises | a win +3, a draw 0, a defeat -4 and half a point a place under the board's hopes: a manager winning half his matches at a club that expects the title saw it only fall | a win +4, a draw +1, a defeat -3, the place term two at most; a cup round won +2, the cup +15; the number on the dashboard |
+| No place to see and compare players, the other clubs' scorers, their games | the squads one by one, the season's goals in them | F4: every player of the world, by strength, goals, rating, matches or worth, a position, a division; Enter bids |
+| The season's top scorer should stand out and be worth more | a Star from 12 goals | the season's prizes: each division's top scorer and best player in gold (✪ ✦), a third more worth the next season |
+| Being top scorer brings no money; a prize for the best player | none | prizes of each division to the clubs: the champion, the runner-up, the top scorer, the best player |
+| Ratings after each match | none | 3 to 10 for each player of each match; the man of the match the best; [R] on the results, the mean in the squad |
+| The managers' ranking with points, cups, clubs, what happened | titles, ups and a match's points | points, titles, cups, ups, downs, sackings; Enter: each club's time and how it ended |
+| The layout is hard to read: other players' strength, in how many games | the squad without games; no list of all | Gm and Avg in the squad, F4 |
+| Brasfoot's characteristics of players | the traits are symbols with a legend (the message was cut) | to discuss: a player's card with the traits by name |
+
 ## Phase 3 — The live round online
 
 The design's default room: two to eight managers on their own machines (the lockstep, its seats,

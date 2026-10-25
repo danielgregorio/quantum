@@ -3,6 +3,41 @@
 The version you play is on the title screen and in the dashboard's corner. Each version below says what
 changed for whoever plays it; how it was built is in [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
+## 2.2 — The market, the ratings and the club (2026-10-25)
+
+What the beta's players asked for, the second time:
+
+- **A market that works, as in Elifoot 2.** A player's worth doubles every 4 of strength: a 20 is worth about
+  $100.000, a 30 about $600.000, a 45 about $8M. A small club can buy, and selling your weak players makes money to
+  buy better ones. Selling (F6, S), **you set the asking price** (50% to 150% of his worth): cheaper, more clubs bid.
+  Any club he would play for may bid, and a reserve takes a lower division more easily: he wants to play.
+- **The list has players of every level.** The computer's clubs list their regulars too, not only their reserves,
+  and new free agents come every season.
+- **Ratings of 3 to 10** for every player in every match: the man of the match is the best of them, and [R] on the
+  results shows your match's. The squad (F3) shows the matches, the season's mean and who went up or down in the
+  month (▲▼).
+- **Players grow during the season.** At each month's end, a mean of 7 or more makes a player a point stronger, and
+  5 or less a point weaker. The papers say who.
+- **A training center and a youth academy** (F5), levels 1 to 5. Training makes players grow and rest more; the
+  academy brings one or two youths every season, the better the higher it is. A third at once, the rest in seven
+  months, and a cost a month.
+- **The season's prizes**: each division's top scorer and best player (the best mean, ten matches at least) win
+  their club money, shine in gold (✪ ✦) and are worth a third more the next season. Each division's champion and
+  runner-up win a prize too. The season's end shows them all.
+- **F4, Players**: every player of the world on one screen, by strength, goals, rating, matches or worth, by
+  position and division. Enter bids for him.
+- **In the live round, click a match** to put it in front; **F3 (or "The teams")** shows both elevens with each
+  one's rating so far, the round waiting under it.
+- **The managers' ranking** (F8) has the points, titles, cups, ups, downs and sackings, and Enter shows the whole
+  career: each club, the seasons there and how it ended (sacked, left for another club, still there).
+- **The board is pleased by good work**: a win +4, a draw +1, a defeat −3, and the cup counts too. The dashboard
+  shows its patience as a number. A manager winning half his matches saw the bar only go down.
+- **Each club's first keeper is among its eleven best** (the positions were drawn, and one club in four had its two
+  keepers among its weakest).
+- **The ground says what stops it growing**: at 60% of health or less it cannot, and now the dashboard warns before
+  and the finances say what to do (Maintenance).
+- A game saved by 2.1 goes on in 2.2.
+
 ## 2.1 — The beta (2026-10-24)
 
 - **PandaFoot is in beta.** The version says so on the title and in the dashboard's corner.
