@@ -7470,9 +7470,16 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:call function="said" args="{'The Panda League kicks off:'}, {str(season)}" />
   </q:function>
 
-  <!-- players of no club, of every level, up to so many: forty when the world is made, and again each new season (who
-       left a club, who comes back from abroad), so the list never runs dry -->
+  <!-- players of no club, of every level, so many: forty when the world is made, and again each new season (the best
+       of them stay, who left a club or comes back from abroad joins them), so the list never runs dry -->
   <q:function name="free_agents_to" params="n, known">
+    <q:if condition="{len(free_agents) > n}">   <!-- the best stay; who no club took retires -->
+      <q:set name="keys" value="{[]}" />
+      <q:loop var="k" from="0" to="{len(free_agents) - 1}"><q:set name="keys" value="{keys + [[free_agents[k].strength, 1000 - k]]}" /></q:loop>
+      <q:set name="kept" value="{[]}" />
+      <q:loop items="{sort(keys, true)[0:n]}" var="key"><q:set name="kept" value="{kept + [free_agents[1000 - key[1]]]}" /></q:loop>
+      <q:set name="free_agents" value="{kept}" />
+    </q:if>
     <q:loop var="k" from="{len(free_agents) + 1}" to="{n}">
       <q:set name="agent" value="{new_player(round(random(10, 40)), pick(['GK', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW']), 0, known)}" />
       <q:set name="known" value="{known + [agent.name]}" />
@@ -7834,7 +7841,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <q:set name="lure" value="{(2 if e.fee <= 0 else min(2, value_of(p) / e.fee)) if p != null else 0}" />
       <q:loop var="bi" from="0" to="{len(clubs) - 1}">
         <q:set name="buyer" value="{clubs[bi]}" />
-        <q:if condition="{buyer.manager == 0 and bi != e.seller and len(buyer.players) < 28 and e.str >= powers[bi] - 5 and e.str <= powers[bi] + 14 and buyer.balance >= 0.3 * e.fee + 3 * e.wage and not bid_by(e, bi) and chance(0.1 * lure)}">
+        <q:if condition="{buyer.manager == 0 and bi != e.seller and len(buyer.players) < 26 and e.str >= powers[bi] - 5 and e.str <= powers[bi] + 14 and buyer.balance >= 0.5 * e.fee + 6 * e.wage and not bid_by(e, bi) and chance(0.1 * lure)}">
           <q:set name="e.bids" value="{e.bids + [ {'club': bi, 'wage': round(e.wage * random(1.0, 1.5)), 'plan': 'cash' if buyer.balance >= e.fee + 3 * e.wage else 'parts'} ]}" />
         </q:if>
       </q:loop>
@@ -7847,6 +7854,19 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       </q:if>
     </q:loop>
     <q:set name="market" value="{still}" />
+    <!-- a computer's club of more than 24 lets its worst reserve go: he is a free agent (his wage saved) -->
+    <q:loop items="{clubs}" var="c">
+      <q:if condition="{c.manager == 0 and len(c.players) > 24}">
+        <q:set name="spare" value="{[]}" />
+        <q:loop items="{c.players}" var="q"><q:if condition="{q.xi == '' and not q.bench and q.loan < 0 and not q.genius and not listed(q.name)}"><q:set name="spare" value="{spare + [q]}" /></q:if></q:loop>
+        <q:if condition="{len(spare) > 0}">
+          <q:set name="gone" value="{worst(spare)}" />
+          <q:set name="c.players" value="{without_named(c.players, gone.name)}" />
+          <q:set name="gone.num" value="{0}" />
+          <q:set name="free_agents" value="{free_agents + [gone]}" />
+        </q:if>
+      </q:if>
+    </q:loop>
     <q:loop var="k" from="1" to="4">
       <q:set name="ci" value="{min(39, floor(random(0, 40)))}" />
       <q:set name="seller" value="{clubs[ci]}" />
@@ -7873,9 +7893,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
     <q:return value="{false}" />
   </q:function>
 
-  <!-- what a computer's club lets go, and at what share of his worth: the weakest of a long squad; one of the eleven
-       or the bench at his worth when it is short of money; else now and then one left out, or one of its regulars at
-       a price that tempts it (its best three and a genius never): the list has players of every level -->
+  <!-- what a computer's club lets go, and at what share of his worth: one of the eleven or the bench at his worth when
+       it is short of money; else now and then one of its regulars at a price that tempts it (its best three and a
+       genius never), or one left out: the list has players of every level -->
   <q:function name="for_sale" params="club">
     <q:set name="spare" value="{[]}" />
     <q:set name="regulars" value="{[]}" />
@@ -7887,10 +7907,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
         </q:if>
       </q:if>
     </q:loop>
-    <q:if condition="{len(spare) > 0 and len(club.players) > 22}"><q:return value="{ {'who': worst(spare), 'times': random(1.0, 1.4)} }" /></q:if>
     <q:if condition="{len(regulars) > 0 and club.balance < payroll(club)}"><q:return value="{ {'who': pick(regulars), 'times': 1.0} }" /></q:if>
-    <q:if condition="{len(spare) > 0 and chance(0.5)}"><q:return value="{ {'who': pick(spare), 'times': random(1.0, 1.4)} }" /></q:if>
-    <q:if condition="{len(regulars) > 0 and chance(0.35)}"><q:return value="{ {'who': pick(regulars), 'times': random(1.2, 1.6)} }" /></q:if>
+    <q:if condition="{len(regulars) > 0 and chance(0.45)}"><q:return value="{ {'who': pick(regulars), 'times': random(1.1, 1.5)} }" /></q:if>
+    <q:if condition="{len(spare) > 0 and chance(0.3)}"><q:return value="{ {'who': pick(spare), 'times': random(0.8, 1.2)} }" /></q:if>
     <q:return value="{null}" />
   </q:function>
 
@@ -8146,14 +8165,15 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
 
   <!-- ===== The season makes the players (decisions 23 and 32; the months' growth is the ratings', month_growth) ===== -->
 
-  <!-- the season's end for the players: who hardly played loses a point (four matches); twelve goals make a forward
-       or a midfielder a Star; what each grew is told, and the season's goals, matches and ratings start again. No
-       age, no retirement -->
+  <!-- the season's end for the players: a player of more than 30 who hardly played (four matches) loses a point (every
+       reserve did, and the world grew weaker by half a point a season once the months made the growth); twelve goals
+       make a forward or a midfielder a Star; what each grew is told, and the season's goals, matches and ratings start
+       again. No age, no retirement -->
   <q:function name="growth">
     <q:loop items="{clubs}" var="c">
       <q:set name="better" value="{[]}" />
       <q:loop items="{c.players}" var="q">
-        <q:if condition="{q.apps < 4 and q.strength > 15}"><q:set name="q.strength" value="{q.strength - 1}" /><q:set name="q.grown" value="{q.grown - 1}" /></q:if>
+        <q:if condition="{q.apps < 4 and q.strength > 30}"><q:set name="q.strength" value="{q.strength - 1}" /><q:set name="q.grown" value="{q.grown - 1}" /></q:if>
         <q:if condition="{q.grown > 0}"><q:set name="better" value="{better + [q.name + ' +' + str(q.grown)]}" /></q:if>
         <q:if condition="{q.goals >= 12 and q.pos != 'GK' and not ('Star' in q.traits)}">
           <q:set name="q.traits" value="{q.traits + ['Star']}" />
