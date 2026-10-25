@@ -895,18 +895,20 @@ def test_a_loan_comes_back_with_the_new_season(pandafoot, godot, tmp_path):
 # --- the club's seasons (PLAN_PANDAFOOT.md Phase 2): growth, the ground, the crisis, the history ---
 
 def test_the_season_makes_the_players(pandafoot, godot, tmp_path):
-    """A forward who played and scored all season grows and becomes a Star; one who hardly played loses a point; the
-    goals go into those of all time; the history (F8) has the season's champions and the manager's title."""
+    """A forward who scored twelve goals becomes a Star; a player of more than 30 who hardly played loses a point (one
+    of 30 or less does not); the goals go into those of all time; the history (F8) has the season's champions and the
+    manager's title."""
     def a_season_of_goals(state):
         state['matchday'] = 17
         state['clubs'][MINE]['points'] = 99
         squad = state['clubs'][MINE]['players']
         scorer = next(p for p in squad if p['xi'] == 'FW')
         scorer.update(apps=15, morale=90, goals=14)
-        idle = next(p for p in squad if p['xi'] == '' and not p['bench'])
-        idle.update(apps=0, strength=20)
+        idle, weak = [p for p in squad if p['xi'] == '' and not p['bench']][:2]
+        idle.update(apps=0, strength=34)
+        weak.update(apps=0, strength=20)
         state['test'] = {'scorer': scorer['name'], 'strength': scorer['strength'], 'idle': idle['name'],
-                         'idle_strength': idle['strength']}
+                         'idle_strength': idle['strength'], 'weak': weak['name']}
     saved_then(pandafoot, godot, tmp_path, a_season_of_goals)
     marks = json.loads((tmp_path / 'quantum-save-1.json').read_text())['game']['test']
     with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
@@ -922,7 +924,7 @@ def test_the_season_makes_the_players(pandafoot, godot, tmp_path):
         scorer, idle = squad[marks['scorer']], squad[marks['idle']]
         assert scorer['strength'] == marks['strength'] and 'Star' in scorer['traits']    # the months grow, not the end
         assert scorer['total'] >= 14 and scorer['goals'] == 0 and scorer['apps'] == 0
-        assert idle['strength'] == marks['idle_strength'] - 1
+        assert idle['strength'] == marks['idle_strength'] - 1 and squad[marks['weak']]['strength'] == 20
         assert 'A star is born:' in [n['text'] for n in seen['state']['game']['news']]
         history = game.act(tap=['history'], ticks=3)
         assert history['scene'] == 'history'
