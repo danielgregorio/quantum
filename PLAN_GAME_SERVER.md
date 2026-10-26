@@ -178,6 +178,56 @@ What a world gets from the Quantum because it is declared, not written. Each say
 15. **No cheating by construction.** The client only asks; the server decides, at the rate it allows, and the ledger
   and the audit show what no rule should allow. *(Phases 1 to 4)*
 
+## The play protocol in a world
+
+`PLAN_PLAY_PROTOCOL.md` lets an agent play a game a decision at a time: the game stands still between requests,
+time belongs to the agent, and the whole state is there to read. A world changes three of its assumptions. What it
+keeps is its vocabulary: `start`, `observe`, `act`, `until` with its conditions, the reflexes, `snapshot`, `restore`
+and `tape` all stay, and every game of today plays as it does.
+
+**1. Time is the world's, except in a test.** Five hundred players do not wait for one agent. So a world has two
+clocks:
+
+- **A test world** (`quantum gameserver run --step`, and every CI test): the server ticks only when the harness says.
+  An `act {ticks}` advances the server and every client of the session together, faster than real time and the same
+  every run. This is the play protocol's step mode, held by the server instead of one game. The audit is this world
+  at a hundred times its speed.
+- **The live world**: an agent joins as a person does, and the world goes on between its requests, as Phase 6 of the
+  play protocol already plays with a person in the lockstep. The reflexes keep the hero doing something (follow the
+  target, drink a potion under 30% of health) between the agent's decisions.
+
+**2. Two doors in.**
+
+- **Through the game**: `PlaySession` as today, with the game connected (`connect=`). It sees what a player's screen
+  shows: the mirrored entities, the HUD, the overlays. This tests the client.
+- **Through the protocol**: a `WorldSession` in Python that speaks the server's protocol and starts no Godot. Its
+  requests are the same: `act` sends commands (`{"send": "step", "dir": "north"}`), `until` waits on the views and
+  the events (`"event:level"`, `"view.around.count(Wolf) == 0"`), and `observe` answers what the client would
+  receive. A process holds hundreds of them: they are the bots, the load test and the audit. Phase 1's test client
+  is the first of them.
+
+**3. An observation is what one player knows.** It is no longer the game's whole state: it is the player's views
+(the entities seen, their public fields, its own hero's private ones), the server's events and refusals, the world's
+clock, the ping. That is what the play protocol always meant by "what a player could know by looking", and a world
+enforces it: an agent playing a hero cannot peek. A session with the admin's role (`role="gm"`, in a test world or on
+/admin) also has **the god's view**: every entity, the ledger, the Director's proposals.
+
+**And what it gains:**
+
+- **Several seats in one session.** A test plays two heroes of one world (`act {"as": "p2", ...}`): a trade, a party,
+  one player attacking another, without two processes.
+- **The world's snapshot.** `snapshot`/`restore` in a test world are the server's: branch the world ("and if I had
+  fled from the bear?") and come back. `tape` is the log of the commands of every seat.
+- **An instant of the live world, played again.** `quantum gameserver replay --at` opens an instant of the log as a
+  test world, and an agent plays from there: a beta's report becomes a session that reproduces it.
+- **The other roles.** Through the MCP tools, an agent can play a hero, be the admin (inspect, approve the Director,
+  announce), talk to Marta to test her (a scripted model in CI, a real one in the playtest workflow) or run the audit.
+
+Where each comes: the `WorldSession` and the step clock in Phase 1; `PlaySession` connected, the observation of the
+views and several seats in Phase 2; the reflexes on the views and the latency injected in Phase 3; talking to the
+NPCs in Phase 5; the god's view, the admin's tools and the replay as a session in Phase 6; five hundred sessions in
+Phase 7.
+
 ## What Phase 0 found
 
 Outpost was written whole before any of this existed: a town, its sewers, a forest, a cave; rats, wolves and the Old
@@ -245,7 +295,8 @@ days, **L** more, with the tests, the reference and the dataset.
 
 `type="gameserver"` and its schema; `q:gameserver`, `q:map`, `q:entity`/`q:field`, `q:command`/`q:require`,
 `q:move`, `q:every`, `q:on-join`, the statements in a world. The world loop, the WebSocket protocol, the log
-(snapshot and commands) and `quantum gameserver run`. A test client in Python (`tests/gameserver/`).
+(snapshot and commands) and `quantum gameserver run`, with `--step` for the tests. The `WorldSession` of the play
+protocol, which is the test client (`tests/gameserver/`).
 
 Done when: a client signs in as a guest, steps, and is refused a wall, a step faster than `limit=` and a forged
 argument; two clients see the same world; the server stopped mid-way and started again has every committed command.
@@ -253,9 +304,9 @@ argument; two clients see the same world; the server stopped mid-way and started
 ### Phase 2 — Views and the game (L)
 
 `q:view` with the spatial index and the differences, the private fields, `q:emit`. In the game: `qg:connect`,
-`qg:mirror`, `qg:send`, `qg:on-event`, `qg:on-refused`, `me()`, `entity()`, `world=` and `freeze=`. A harness
-like the lockstep's `replay_peers()`: one server and two headless Godot clients under tapes, through the play
-protocol. A hundred bots.
+`qg:mirror`, `qg:send`, `qg:on-event`, `qg:on-refused`, `me()`, `entity()`, `world=` and `freeze=`. `PlaySession`
+connected to a test world, its observation of the views, several seats in one session; a harness like the lockstep's
+`replay_peers()`: one server and two headless Godot clients under tapes. A hundred bots.
 
 Done when: two Godot clients see each other walk and leave each other's view; a hero's private field never reaches
 another client; a hundred bots walk an hour, the tick and the bandwidth measured.
@@ -341,3 +392,5 @@ Done when: the numbers below hold for a day of bots.
 
 - 2026-10-26: the plan approved (`q:gameserver`, 500 players, the AI NPCs first); Phase 0, Outpost as it should
   read and what the compiler refuses of it.
+- 2026-10-26: the play protocol in a world (the owner asked how it changes): a test world's step clock, the
+  `WorldSession`, an observation of one player's views, the god's view, several seats, the replay as a session.
