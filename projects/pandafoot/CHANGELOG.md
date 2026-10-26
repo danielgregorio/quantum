@@ -3,7 +3,7 @@
 The version you play is on the title screen and in the dashboard's corner. Each version below says what
 changed for whoever plays it; how it was built is in [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
-## 2.2 — The market, the ratings and the club (2026-10-25)
+## 2.2 — The market, the ratings and the club (2026-10-26)
 
 What the beta's players asked for, the second time:
 

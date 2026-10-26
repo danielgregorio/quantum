@@ -3,7 +3,7 @@
 A versão que você joga está na tela de título e no canto do painel. Cada versão abaixo diz o que mudou para
 quem joga; como foi feito está no [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
-## 2.2 — O mercado, as notas e o clube (2026-10-25)
+## 2.2 — O mercado, as notas e o clube (2026-10-26)
 
 O que os jogadores do beta pediram na segunda leva:
 

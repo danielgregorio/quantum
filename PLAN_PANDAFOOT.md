@@ -367,6 +367,23 @@ with the eleven (not by an age, which would bring retirements and a new column).
 | Clubs of very alike strength, a 4th-division club as strong as a 2nd's | the divisions drew together: the 1st's mean fell about a point a season and the 4th's rose about one, as the strong grew in the small clubs and never left, and the free agents (10 to 40, taking any club) went to the small ones | the small clubs' stars go up (above); a free agent weighs the division of his level (36 and more the 1st, 30 the 2nd, 24 the 3rd) like a player leaving a club: -25 a division down |
 | Money is still of no use | at the top, nothing to buy with it (the purses of the 1st grew to $8M to $11M in three seasons) | stars on the list and a training center that grows the reserves |
 
+The numbers, three worlds of six seasons each with a manager from the 4th, 2.2 as it stood against 2.2 with these
+answers (`audit.py` in the agent's notes):
+
+| | As it stood | Now |
+|---|---|---|
+| The 1st division's mean strength, start → sixth season | 38 → 35 | 38.5 → 38 |
+| Between the divisions' means at the sixth season (1st-2nd, 2nd-3rd, 3rd-4th) | 4 to 5, 5, 5.5 | 6, 5.5, 6 |
+| Players of 40 or more listed by the computer's clubs, a season | 2 to 8 | 6 to 14 |
+| Of 44 or more | 0 to 4 | 1 to 7 |
+| The world's mean strength in six seasons | 27.6 → 28 | 27.8 → 29.5 |
+| Transfers in the papers | 248 to 276 | 288 to 333 |
+
+The manager's reserves grew in training in 15 to 20 of the 24 months. The world grows stronger by about 0.3 a season,
+most of it the 1st division no longer falling and the 3rd's reserves catching up with their elevens. The weakest club
+of a division and the strongest of the one below still meet (one or two clubs, as in 2.2 before): the two up and two
+down of each season.
+
 
 ## Phase 3 — The live round online
 
