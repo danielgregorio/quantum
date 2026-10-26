@@ -66,6 +66,8 @@ RUN_BY_TEST = {
     'targets/games.md': 'tests/godot/test_godot_docs.py',
     # The Hive's rule language: every block compiles to the daemons' files.
     'targets/hive.md': 'tests/hive/test_hive_docs.py',
+    # A world's language: every block is a world that is read and runs a tick (Laboratory job).
+    'targets/gameserver.md': 'tests/gameserver/test_gameserver_docs.py',
     'targets/screen.md': 'tests/screen/test_screen_docs.py',
     'guide/why-quantum.md': 'tests/docs/test_why_quantum.py',
     'guide/sessions.md': 'tests/docs/test_guide_sessions.py',

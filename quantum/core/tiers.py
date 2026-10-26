@@ -60,7 +60,7 @@ CORE_ATTRIBUTES = frozenset({"require_auth", "require_role"})
 # core change that breaks a game shows up in CI. The Hive's rules (qh:, the
 # rules and whitelist of Quantum OS's daemons, in os/) are laboratory for the
 # same reason.
-LAB_APP_TYPES = frozenset({"game", "hive", "screen"})
+LAB_APP_TYPES = frozenset({"game", "gameserver", "hive", "screen"})
 EXPERIMENTAL_APP_TYPES = frozenset({"terminal", "ui"})
 
 # Removed in 0.11 (APP-1), because they never worked: `quantum run` on a

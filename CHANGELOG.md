@@ -10,6 +10,21 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the game server's Phase 1 (`PLAN_GAME_SERVER.md`), the world
+  lives. `quantum gameserver run world.server.q` serves a
+  `q:application type="gameserver"` on a WebSocket at ten ticks a second
+  (`--step`: a test world, which ticks only when told), and `quantum
+  gameserver check` reads one against its schema, every unknown tag or
+  attribute an error with its line (the Core used to drop a gameserver's
+  children without a word). A world has a Tiled map (`q:map`), entities with
+  public and private fields (`q:entity`, `q:field`), commands a player may
+  send (`q:command` with `params=`, `limit=` and `q:require`), `q:move`,
+  rules (`q:every`, `q:on-join`, `q:on-leave`) and the Core's statements and
+  expressions, with a seeded random of its own. A command runs whole or not
+  at all; the same inputs make the same world; a snapshot and a log of every
+  input keep it, and a server killed mid-way comes back with every command
+  it acknowledged. `WorldSession` plays a world from Python with the play
+  protocol's words. The reference is `docs/targets/gameserver.md`.
 - Laboratory: `PLAN_GAME_SERVER.md`, the game server as a Quantum application:
   `<q:application type="gameserver">` and `<q:gameserver>`, a world for five
   hundred players whose entities, views (what each player sees, a query) and

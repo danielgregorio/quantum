@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.10.2" orientation="orthogonal" renderorder="right-down" width="12" height="8" tilewidth="16" tileheight="16" infinite="0" nextlayerid="4" nextobjectid="4">
+ <tileset firstgid="1" name="yard" tilewidth="16" tileheight="16" tilecount="4" columns="4">
+  <image source="yard.png" width="64" height="16"/>
+ </tileset>
+ <layer id="1" name="floor" width="12" height="8">
+  <data encoding="csv">
+1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,1,1,1,1,1,1,1,1,1,
+1,1,1,1,1,1,1,1,1,1,1,1
+</data>
+ </layer>
+ <layer id="2" name="walls" width="12" height="8">
+  <properties>
+   <property name="collision" type="bool" value="true"/>
+  </properties>
+  <data encoding="csv">
+2,2,2,2,2,2,2,2,2,2,2,2,
+2,0,0,0,0,0,0,0,0,0,0,2,
+2,0,0,0,0,0,0,0,0,0,0,2,
+2,0,0,0,0,2,0,0,0,0,0,2,
+2,0,0,0,0,2,0,0,0,0,0,2,
+2,0,0,0,0,0,0,0,0,0,0,2,
+2,0,0,0,0,0,0,0,0,0,0,2,
+2,2,2,2,2,2,2,2,2,2,2,2
+</data>
+ </layer>
+ <objectgroup id="3" name="areas">
+  <object id="1" name="gate" class="zone" x="16" y="16" width="32" height="32">
+   <properties>
+    <property name="tag" value="area"/>
+   </properties>
+  </object>
+  <object id="2" name="pen" class="zone" x="128" y="64" width="48" height="48">
+   <properties>
+    <property name="tag" value="area"/>
+   </properties>
+  </object>
+  <object id="3" name="pillar" class="zone" x="80" y="48" width="16" height="32">
+   <properties>
+    <property name="tag" value="area"/>
+   </properties>
+  </object>
+ </objectgroup>
+</map>
