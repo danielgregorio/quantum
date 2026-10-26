@@ -1,0 +1,16 @@
+# The receiver's HTTPS, by a Cloudflare Tunnel (README.md, "HTTPS"): cloudflared dials out to Cloudflare, so the
+# homelab opens no port and its router forwards nothing. From the repository's root, beside compose.yaml:
+#
+#   GITHUB_TOKEN=github_pat_... QUANTUM_SECRET_KEY=$(openssl rand -hex 32) CLOUDFLARE_TUNNEL_TOKEN=eyJ... \
+#     docker compose -f projects/beta-reports/compose.yaml -f projects/beta-reports/compose.tunnel.yaml up -d --build
+#
+# The tunnel's public hostname points at http://beta-reports:8095, the receiver's name on the stack's network.
+services:
+  tunnel:
+    image: cloudflare/cloudflared:2026.10.0
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?the tunnel's token, from Cloudflare (README.md, HTTPS)}
+    depends_on:
+      - beta-reports

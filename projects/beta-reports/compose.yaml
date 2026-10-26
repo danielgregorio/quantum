@@ -3,7 +3,8 @@
 #   GITHUB_TOKEN=github_pat_... QUANTUM_SECRET_KEY=$(openssl rand -hex 32) \
 #     docker compose -f projects/beta-reports/compose.yaml up -d --build
 #
-# It listens on 127.0.0.1:8095 only: the reverse proxy in front of it gives it HTTPS (README.md).
+# It listens on 127.0.0.1:8095 only: HTTPS is the Cloudflare Tunnel's, compose.tunnel.yaml beside this file, or
+# another reverse proxy's in front of it (README.md).
 services:
   beta-reports:
     build:

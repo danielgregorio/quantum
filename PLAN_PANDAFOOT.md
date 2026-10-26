@@ -292,7 +292,7 @@ ours, on the owner's homelab, behind its own HTTPS.
 | 2 | The receiver (`projects/beta-reports/`) and its kit for the homelab (a container, the settings) | **done**: a report posted is kept, its save and its issue told to a fake forge (`tests/apps/test_beta_reports.py`), the image built and fed a report in CI; the owner reads the issues (a page of the receiver's own can come later) |
 | 3 | The game language: `qg:post`, `qg:overlay`, a button on every scene, `focused()`, the state as a save | **done**: `qg:overlay` (its `action=` from every scene; the button on every scene is an application's `qg:touch-button show="always"`), `qg:post` with `qg:on-done` and `qg:on-fail`, `scene_name()`, `focused()`, `save_text()`; `tests/godot/test_godot_overlay.py` posts to a server of the test |
 | 4 | PandaFoot 2.1: the [!], the panel, the reports kept until sent | **done**: `tests/godot/test_godot_pandafoot.py` sends a report from the dashboard through `projects/beta-reports` served over HTTP to a fake forge (the issue, the save on the branch), and keeps one the server did not take for the next run; until the owner's address is in `report_server()`, the reports wait in the outbox |
-| 5 | On the homelab, and the reading | the owner's address in the game, a report of the owner's read in a digest |
+| 5 | On the homelab, and the reading: the homelab's Docker host, HTTPS by a Cloudflare Tunnel (`compose.tunnel.yaml`: the homelab opens no port), the reading at 8, 12, 16 and 20 o'clock, Brasília | the owner's address in the game, a report of the owner's read in a digest |
 
 The form of 2.1's first draft (a Google Form, opened filled in) gives way to this; `url_encode()` stays.
 
@@ -318,6 +318,72 @@ All in 2.1, with the owner's choices: the club drawn always, a bid for any playe
 The numbers, from the playtest of three worlds of three seasons and six runs of one world (`playtest3.py`,
 `paired.py` in the agent's notes): 2240 matches, 24.2 shots, 3.15 goals and 0.24 penalties a match; a manager's
 club 1.40 points a match against 1.40 for the computer's.
+
+## What the beta's players asked for the second time (2026-10-25)
+
+Fifteen asks of Fernando, playing 2.1 in the browser, and what each was. All in 2.2, with the owner's choices: a
+worth that doubles every four of strength, growth by the month's ratings, and both a training center and a youth
+academy for the money.
+
+| Ask | What it was | In 2.2 |
+|---|---|---|
+| The list has only players of 10 to 20 after a while | the computer's clubs listed only their reserves, the weakest of each squad; the forty free agents of the world's start were never renewed (40 to 22 in two seasons) | the computer's clubs list regulars too (never their best three), a club short of money one of its eleven; free agents up to forty each season |
+| Nobody buys a player of mine, only my best | a worth of strength² × $4.000 made a 20 cost $1,6M, more than a 3rd- or 4th-division purse, and a club bid only for a player in its own range: who wanted him could not pay, who could pay did not want him. Three reserves listed for two seasons: no bid; 19 transfers in the world in two seasons | the worth doubles every four of strength ($300.000 at 26: a 20 about $100.000, a 45 about $8M); the asking price is the manager's (50% to 150%); every club he would play for may bid, a cheaper price drawing more; a reserve takes a lower division more easily |
+| Money is useless | nothing worth buying, no one to sell to | the market above, a training center and a youth academy (F5), the season's prizes |
+| Players do not grow | a point to three at the season's end only | each month's end: a mean rating of 7 or more grows a point (the training center lowers the bar), 5 or less takes one; ▲▼ in the squad |
+| Keepers are well below the others | the positions were drawn whatever the strength: one club in four had its two keepers among its weakest, and a keeper never scores (he grew least) | each club's first keeper among its eleven best; ratings reward a clean sheet |
+| Cannot click the teams during the match | the live round's matches were a table, the elevens nowhere | the matches are a menu (a click puts one in front); F3 or "The teams": both elevens, with their ratings so far, over the round, which waits |
+| The ground still cannot grow | at 60% of health or less it cannot, and only a small red line said so; the manager's ground is not mended by itself | the dashboard warns at 65%, F5 says what stops it (Maintenance) |
+| The board's bar never rises | a win +3, a draw 0, a defeat -4 and half a point a place under the board's hopes: a manager winning half his matches at a club that expects the title saw it only fall | a win +4, a draw +1, a defeat -3, the place term two at most; a cup round won +2, the cup +15; the number on the dashboard |
+| No place to see and compare players, the other clubs' scorers, their games | the squads one by one, the season's goals in them | F4: every player of the world, by strength, goals, rating, matches or worth, a position, a division; Enter bids |
+| The season's top scorer should stand out and be worth more | a Star from 12 goals | the season's prizes: each division's top scorer and best player in gold (✪ ✦), a third more worth the next season |
+| Being top scorer brings no money; a prize for the best player | none | prizes of each division to the clubs: the champion, the runner-up, the top scorer, the best player |
+| Ratings after each match | none | 3 to 10 for each player of each match; the man of the match the best; [R] on the results, the mean in the squad |
+| The managers' ranking with points, cups, clubs, what happened | titles, ups and a match's points | points, titles, cups, ups, downs, sackings; Enter: each club's time and how it ended |
+| The layout is hard to read: other players' strength, in how many games | the squad without games; no list of all | Gm and Avg in the squad, F4 |
+| Brasfoot's characteristics of players | the traits are symbols with a legend (the message was cut) | to discuss: a player's card with the traits by name |
+
+The numbers, from three worlds of three seasons with a manager from the 4th (2.2) against one world of 2.1 (`audit.py`
+in the agent's notes): the computer's clubs' players on the list 7 to 9 a round (2.1: 4 to 6), their median strength
+24 to 29 (17 to 22), a quarter to a half of them 30 or stronger (an eighth to a quarter); 125 to 161 transfers in the
+papers (36); a manager's regular of 17 at his worth sold in the first auction ($73.000; a reserve of 9 still finds no
+club, being nobody's sixteen best); the world's mean strength 27.6 to 27.7 in three seasons (2.1 grew it by 0.4 a
+season); the 4th division's purses in the black; squads of 22 to 24; no club with its keeper five below its eleven
+(2.1: six of forty). A first calibration let every reserve who hardly played lose a point (the world grew weaker by
+0.4 a season), let long squads list their worst (the list's median fell to 15) and the 4th's clubs buy beyond their
+purses: a point lost only above 30, a squad over 24 lets its worst go, regulars listed more often than reserves,
+and a club buys keeping half the fee and six months of the wage.
+
+## What the beta's players asked for the third time (2026-10-26)
+
+Four asks, from 2.1 in the browser, before 2.2 went out. 2.2 had answered part of them; measured on it (three worlds
+of six seasons), each still held, so the answers went into 2.2. The owner's choice: the reserves grow by training
+with the eleven (not by an age, which would bring retirements and a new column).
+
+| Ask | What it was, in 2.2 as it stood | In 2.2 |
+|---|---|---|
+| No strong players on the market: in the 2nd or the 1st it is of no use | a club never listed its best three, and the free agents went up to 40: the list's players of 40 or more were the 1st division's regulars (35 to 44), rare and gone at once | a club of the 2nd division or below lists its best when he has outgrown it (six above its sixteen best's mean), a fifth to three fifths above his worth; any club now and then one of its best three, at 1.5 to 2 times (he wants to leave) |
+| The players who do not play do not grow | growth came only from the month's ratings, and a player of more than 30 who hardly played lost a point at the season's end | at each month's end one who hardly played (fewer than two matches) and is weaker than the eleven's mean grows a point in 10% of the months, 5% more a level of the training center (35% at level 5); one who grew so does not lose the season's point |
+| Clubs of very alike strength, a 4th-division club as strong as a 2nd's | the divisions drew together: the 1st's mean fell about a point a season and the 4th's rose about one, as the strong grew in the small clubs and never left, and the free agents (10 to 40, taking any club) went to the small ones | the small clubs' stars go up (above); a free agent weighs the division of his level (36 and more the 1st, 30 the 2nd, 24 the 3rd) like a player leaving a club: -25 a division down |
+| Money is still of no use | at the top, nothing to buy with it (the purses of the 1st grew to $8M to $11M in three seasons) | stars on the list and a training center that grows the reserves |
+
+The numbers, three worlds of six seasons each with a manager from the 4th, 2.2 as it stood against 2.2 with these
+answers (`audit.py` in the agent's notes):
+
+| | As it stood | Now |
+|---|---|---|
+| The 1st division's mean strength, start → sixth season | 38 → 35 | 38.5 → 38 |
+| Between the divisions' means at the sixth season (1st-2nd, 2nd-3rd, 3rd-4th) | 4 to 5, 5, 5.5 | 6, 5.5, 6 |
+| Players of 40 or more listed by the computer's clubs, a season | 2 to 8 | 6 to 14 |
+| Of 44 or more | 0 to 4 | 1 to 7 |
+| The world's mean strength in six seasons | 27.6 → 28 | 27.8 → 29.5 |
+| Transfers in the papers | 248 to 276 | 288 to 333 |
+
+The manager's reserves grew in training in 15 to 20 of the 24 months. The world grows stronger by about 0.3 a season,
+most of it the 1st division no longer falling and the 3rd's reserves catching up with their elevens. The weakest club
+of a division and the strongest of the one below still meet (one or two clubs, as in 2.2 before): the two up and two
+down of each season.
+
 
 ## Phase 3 — The live round online
 

@@ -32,9 +32,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
 - `projects/beta-reports`: where the games' beta reports land, written in
   Quantum. `POST /api/reports` keeps a report in SQLite and tells the forge:
   an issue of the repository, the save attached as a file of its branch. A
-  container and its compose file for a homelab behind HTTPS
-  (`projects/beta-reports/README.md`); tested against a forge of the test
-  (`tests/apps/test_beta_reports.py`) and, as an image, in CI.
+  container and its compose file for a homelab behind HTTPS, given by a
+  Cloudflare Tunnel (`compose.tunnel.yaml`: the homelab opens no port) or
+  another reverse proxy (`projects/beta-reports/README.md`); tested against a
+  forge of the test (`tests/apps/test_beta_reports.py`) and, as an image, in CI.
 - Laboratory: a panel over any screen, and data sent from a game to a server
   (Phase 3 of `PLAN_PANDAFOOT.md`'s beta reports). `<qg:overlay>` in the
   application holds a screen's HUD, menus, dialogues and handlers, and opens
@@ -49,6 +50,28 @@ alter the behaviour of an existing app is listed under **Breaking**.
   cursor was on), and `save_text()` is the game as a `qg:save` writes it, for
   a report to carry. Not in a `qg:multiplayer` game
   (`tests/godot/test_godot_overlay.py`, against a server of the test).
+- Laboratory: PandaFoot 2.2, the market, the ratings and the club: what the
+  beta's players asked for the second time (`PLAN_PANDAFOOT.md`, the feedback
+  of 2026-10-25). A player's worth doubles every four of strength ($300.000 at
+  26), so a small club can buy and a weak player sells; the manager sets the
+  asking price (50% to 150%), any club he would play for may bid, and the
+  computer's clubs list their regulars too, with new free agents every season.
+  Every player who plays is rated, 3 to 10 (the man of the match is the best of
+  them; [R] on the results); at each month's end a mean of 7 or more grows a
+  player a point and 5 or less takes one. A training center and a youth
+  academy (F5, levels 1 to 5), the season's prizes (each division's champion,
+  runner-up, top scorer and best player; the two last in gold and worth a
+  third more the next season), every player of the world on one screen (F4),
+  the live round's matches clickable and both elevens with their ratings so
+  far in a panel over it (F3, a `qg:overlay`), the managers' careers club by
+  club (F8), a board pleased by a win and a draw too, each club's first
+  keeper among its eleven best, and the ground saying what stops it growing.
+  Then the third ask (2026-10-26): the reserves train with the eleven (one
+  weaker than it may grow a point at a month's end, more often with a better
+  training center), a small club's star who has outgrown it goes on the list
+  for the big clubs, and a strong free agent wants a club of his level, so
+  the 1st and 2nd divisions have someone to buy and the divisions keep apart.
+  A game saved by 2.1 is brought up to 2.2 as it is continued.
 - Laboratory: PandaFoot 2.1, the beta, and reports from inside the game. The
   [!] in the corner of every screen, or F9, opens the report panel over the
   screen, which stands still under it: a bug, a suggestion or something else,
