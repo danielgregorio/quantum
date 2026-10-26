@@ -66,6 +66,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   far in a panel over it (F3, a `qg:overlay`), the managers' careers club by
   club (F8), a board pleased by a win and a draw too, each club's first
   keeper among its eleven best, and the ground saying what stops it growing.
+  Then the third ask (2026-10-26): the reserves train with the eleven (one
+  weaker than it may grow a point at a month's end, more often with a better
+  training center), a small club's star who has outgrown it goes on the list
+  for the big clubs, and a strong free agent wants a club of his level, so
+  the 1st and 2nd divisions have someone to buy and the divisions keep apart.
   A game saved by 2.1 is brought up to 2.2 as it is continued.
 - Laboratory: PandaFoot 2.1, the beta, and reports from inside the game. The
   [!] in the corner of every screen, or F9, opens the report panel over the

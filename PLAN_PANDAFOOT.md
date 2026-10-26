@@ -354,6 +354,20 @@ season); the 4th division's purses in the black; squads of 22 to 24; no club wit
 purses: a point lost only above 30, a squad over 24 lets its worst go, regulars listed more often than reserves,
 and a club buys keeping half the fee and six months of the wage.
 
+## What the beta's players asked for the third time (2026-10-26)
+
+Four asks, from 2.1 in the browser, before 2.2 went out. 2.2 had answered part of them; measured on it (three worlds
+of six seasons), each still held, so the answers went into 2.2. The owner's choice: the reserves grow by training
+with the eleven (not by an age, which would bring retirements and a new column).
+
+| Ask | What it was, in 2.2 as it stood | In 2.2 |
+|---|---|---|
+| No strong players on the market: in the 2nd or the 1st it is of no use | a club never listed its best three, and the free agents went up to 40: the list's players of 40 or more were the 1st division's regulars (35 to 44), rare and gone at once | a club of the 2nd division or below lists its best when he has outgrown it (six above its sixteen best's mean), a fifth to three fifths above his worth; any club now and then one of its best three, at 1.5 to 2 times (he wants to leave) |
+| The players who do not play do not grow | growth came only from the month's ratings, and a player of more than 30 who hardly played lost a point at the season's end | at each month's end one who hardly played (fewer than two matches) and is weaker than the eleven's mean grows a point in 10% of the months, 5% more a level of the training center (35% at level 5); one who grew so does not lose the season's point |
+| Clubs of very alike strength, a 4th-division club as strong as a 2nd's | the divisions drew together: the 1st's mean fell about a point a season and the 4th's rose about one, as the strong grew in the small clubs and never left, and the free agents (10 to 40, taking any club) went to the small ones | the small clubs' stars go up (above); a free agent weighs the division of his level (36 and more the 1st, 30 the 2nd, 24 the 3rd) like a player leaving a club: -25 a division down |
+| Money is still of no use | at the top, nothing to buy with it (the purses of the 1st grew to $8M to $11M in three seasons) | stars on the list and a training center that grows the reserves |
+
+
 ## Phase 3 — The live round online
 
 The design's default room: two to eight managers on their own machines (the lockstep, its seats,

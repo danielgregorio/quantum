@@ -895,8 +895,14 @@
     <q:set name="market" value="{market + [ {'who': p.name, 'seller': from_index, 'fee': round(fee / 1000) * 1000, 'wage': round(max(p.salary, 500)), 'left': 3, 'bids': [], 'pos': p.pos, 'str': p.strength} ]}" />
   </q:function>
 
+  <!-- the division a free agent of this strength would play in: 36 and more the first, 30 the second, 24 the third -->
+  <q:function name="level_div" params="strength">
+    <q:return value="{1 if strength >= 36 else (2 if strength >= 30 else (3 if strength >= 24 else 4))}" />
+  </q:function>
+
   <!-- would he come? 50, and: the wage (+20 at half as much again, +30 at twice, +40 at three times), the club's
-       division (+15 a division up, -25 a division down, -10 for one left out of his eleven: he wants to play), its
+       division (+15 a division up, -25 a division down, -10 for one left out of his eleven: he wants to play; a free
+       agent weighs the division of his level, level_div: a strong one does not go down to a small club), its
        place (the top four +10, the two at the bottom -10),
        its players' morale (+5 above 70, -10 under 40), a club in crisis +10 for a leader; a star comes only from 60.
        80 or more: he comes; under 20: he does not; between: a draw. With the reason that weighed most -->
@@ -904,8 +910,8 @@
     <q:set name="to" value="{clubs[to_index]}" />
     <q:set name="ratio" value="{wage / max(1, p.salary)}" />
     <q:set name="pay" value="{40 if ratio >= 3 else (30 if ratio >= 2 else (20 if ratio >= 1.5 else (10 if ratio >= 1.2 else (0 if ratio >= 1 else -20))))}" />
-    <q:set name="from_div" value="{clubs[from_index].div if from_index >= 0 else to.div}" />
-    <q:set name="level" value="{15 * (from_div - to.div) if to.div < from_div else (-10 if p.xi == '' and not p.bench else -25) * (to.div - from_div)}" />
+    <q:set name="from_div" value="{clubs[from_index].div if from_index >= 0 else level_div(p.strength)}" />
+    <q:set name="level" value="{15 * (from_div - to.div) if to.div < from_div else (-10 if p.xi == '' and not p.bench and from_index >= 0 else -25) * (to.div - from_div)}" />
     <q:set name="at" value="{position_of(to_index)}" />
     <q:set name="table" value="{10 if at <= 4 else (-10 if at >= 9 else 0)}" />
     <q:set name="mood" value="{team_morale(to)}" />
@@ -986,20 +992,29 @@
   </q:function>
 
   <!-- what a computer's club lets go, and at what share of his worth: one of the eleven or the bench at his worth when
-       it is short of money; else now and then one of its regulars at a price that tempts it (its best three and a
-       genius never), or one left out: the list has players of every level -->
+       it is short of money; its best (a genius never) when he has outgrown it, six above its sixteen best's mean, in
+       the 2nd division and below: the big clubs buy him (the beta's ask: no strong player ever came on the list, and
+       the divisions grew alike); one of its best three now and then, dear (he wants to leave); else now and then one
+       of its regulars at a price that tempts it, or one left out: the list has players of every level -->
   <q:function name="for_sale" params="club">
     <q:set name="spare" value="{[]}" />
     <q:set name="regulars" value="{[]}" />
+    <q:set name="stars" value="{[]}" />
     <q:set name="keep" value="{best_three(club)}" />
     <q:loop items="{club.players}" var="q">
       <q:if condition="{q.loan < 0 and not q.genius and not listed(q.name)}">
         <q:if condition="{q.xi == '' and not q.bench}"><q:set name="spare" value="{spare + [q]}" />
           <q:elseif condition="{not (q.name in keep)}"><q:set name="regulars" value="{regulars + [q]}" /></q:elseif>
+          <q:else><q:set name="stars" value="{stars + [q]}" /></q:else>
         </q:if>
       </q:if>
     </q:loop>
     <q:if condition="{len(regulars) > 0 and club.balance < payroll(club)}"><q:return value="{ {'who': pick(regulars), 'times': 1.0} }" /></q:if>
+    <q:if condition="{len(stars) > 0}">
+      <q:set name="top" value="{best(stars)}" />
+      <q:if condition="{club.div >= 2 and top.strength >= squad_strength(club) + 6 and chance(0.35)}"><q:return value="{ {'who': top, 'times': random(1.2, 1.6)} }" /></q:if>
+      <q:if condition="{chance(0.08)}"><q:return value="{ {'who': pick(stars), 'times': random(1.5, 2.0)} }" /></q:if>
+    </q:if>
     <q:if condition="{len(regulars) > 0 and chance(0.45)}"><q:return value="{ {'who': pick(regulars), 'times': random(1.1, 1.5)} }" /></q:if>
     <q:if condition="{len(spare) > 0 and chance(0.3)}"><q:return value="{ {'who': pick(spare), 'times': random(0.8, 1.2)} }" /></q:if>
     <q:return value="{null}" />
@@ -1257,15 +1272,16 @@
 
   <!-- ===== The season makes the players (decisions 23 and 32; the months' growth is the ratings', month_growth) ===== -->
 
-  <!-- the season's end for the players: a player of more than 30 who hardly played (four matches) loses a point (every
-       reserve did, and the world grew weaker by half a point a season once the months made the growth); twelve goals
+  <!-- the season's end for the players: a player of more than 30 who hardly played (four matches) and did not grow in
+       training loses a point (every reserve did, and the world grew weaker by half a point a season once the months
+       made the growth); twelve goals
        make a forward or a midfielder a Star; what each grew is told, and the season's goals, matches and ratings start
        again. No age, no retirement -->
   <q:function name="growth">
     <q:loop items="{clubs}" var="c">
       <q:set name="better" value="{[]}" />
       <q:loop items="{c.players}" var="q">
-        <q:if condition="{q.apps < 4 and q.strength > 30}"><q:set name="q.strength" value="{q.strength - 1}" /><q:set name="q.grown" value="{q.grown - 1}" /></q:if>
+        <q:if condition="{q.apps < 4 and q.strength > 30 and q.grown <= 0}"><q:set name="q.strength" value="{q.strength - 1}" /><q:set name="q.grown" value="{q.grown - 1}" /></q:if>
         <q:if condition="{q.grown > 0}"><q:set name="better" value="{better + [q.name + ' +' + str(q.grown)]}" /></q:if>
         <q:if condition="{q.goals >= 12 and q.pos != 'GK' and not ('Star' in q.traits)}">
           <q:set name="q.traits" value="{q.traits + ['Star']}" />
@@ -2211,12 +2227,17 @@
   </q:function>
 
   <!-- the month's end (decision of 2.2): whose mean of the month (two matches at least) is 7 or more grows a point,
-       the club's training center lowering that bar (by 0.15 a level); 5 or less, he loses one. The arrow in the squad
-       says it until the next month -->
+       the club's training center lowering that bar (by 0.15 a level); 5 or less, he loses one. Who hardly played
+       trains with the eleven (the beta's ask: the reserves never got better): one weaker than the eleven's mean, not
+       injured, grows a point one month in ten, and one in twenty more a level of the training center (a third of the
+       months at level 5); never past the eleven. The arrow in the squad says it until the next month -->
   <q:function name="month_growth" params="club">
     <q:set name="up" value="{[]}" />
     <q:set name="down" value="{[]}" />
+    <q:set name="trained" value="{[]}" />
     <q:set name="bar" value="{7.0 - 0.15 * club.training}" />
+    <q:set name="level" value="{xi_level(club)}" />
+    <q:set name="drill" value="{0.1 + 0.05 * club.training}" />
     <q:loop items="{club.players}" var="q">
       <q:set name="q.trend" value="{0}" />
       <q:if condition="{q.mn >= 2}">
@@ -2224,11 +2245,22 @@
         <q:if condition="{avg >= bar and q.strength < 50}"><q:set name="q.strength" value="{q.strength + 1}" /><q:set name="q.trend" value="{1}" /><q:set name="q.grown" value="{q.grown + 1}" /><q:set name="up" value="{up + [q.name]}" /></q:if>
         <q:if condition="{avg <= 5.0 and q.strength > 5}"><q:set name="q.strength" value="{q.strength - 1}" /><q:set name="q.trend" value="{-1}" /><q:set name="q.grown" value="{q.grown - 1}" /><q:set name="down" value="{down + [q.name]}" /></q:if>
       </q:if>
+      <q:if condition="{q.mn < 2 and q.injured == 0 and q.strength + 1 <= level and chance(drill)}"><q:set name="q.strength" value="{q.strength + 1}" /><q:set name="q.trend" value="{1}" /><q:set name="q.grown" value="{q.grown + 1}" /><q:set name="trained" value="{trained + [q.name]}" /></q:if>
       <q:set name="q.msum" value="{0}" />
       <q:set name="q.mn" value="{0}" />
     </q:loop>
     <q:if condition="{club.manager > 0 and len(up) > 0}"><q:call function="said" args="{'Better this month (+1):'}, {join(up[0:5], ', ')}" /></q:if>
+    <q:if condition="{club.manager > 0 and len(trained) > 0}"><q:call function="said" args="{'Better in training (+1):'}, {join(trained[0:5], ', ')}" /></q:if>
     <q:if condition="{club.manager > 0 and len(down) > 0}"><q:call function="said" args="{'Worse this month (-1):'}, {join(down[0:5], ', ')}" /></q:if>
+  </q:function>
+
+  <!-- the eleven's mean strength (the sixteen best's when there is no eleven yet) -->
+  <q:function name="xi_level" params="club">
+    <q:set name="xi" value="{eleven(club)}" />
+    <q:if condition="{len(xi) == 0}"><q:return value="{squad_strength(club)}" /></q:if>
+    <q:set name="sum" value="{0}" />
+    <q:loop items="{xi}" var="q"><q:set name="sum" value="{sum + q.strength}" /></q:loop>
+    <q:return value="{sum / len(xi)}" />
   </q:function>
 
   <!-- the papers: now and then a word on the hidden genius -->
@@ -3102,7 +3134,7 @@
       <qg:text value="{tr('Training center:') + ' ' + tr('level') + ' ' + str(my_club().training) + '/5'}" />
       <qg:text value="{tr('Youth academy:') + ' ' + tr('level') + ' ' + str(my_club().academy) + '/5'}" />
       <qg:text value="{tr('They cost a month:') + ' ' + money(upkeep(my_club()))}" color="#aaaaaa" />
-      <qg:text value="{tr('Training: players grow more easily.')}" color="#55ffff" />
+      <qg:text value="{tr('Training: a reserve grows') + ' ' + str(10 + 5 * my_club().training) + '% ' + tr('of the months.')}" color="#55ffff" />
       <qg:text value="{tr('Academy: youths every season.')}" color="#55ffff" />
     </qg:hud>
     <q:set name="note" value="" type="string" />
@@ -4017,6 +4049,7 @@
     <qg:phrase text="Best player" as="Melhor jogador" />
     <qg:phrase text="Better this month (+1):" as="Evoluíram no mês (+1):" />
     <qg:phrase text="Worse this month (-1):" as="Caíram no mês (-1):" />
+    <qg:phrase text="Better in training (+1):" as="Evoluíram no treino (+1):" />
     <qg:phrase text="CAREER" as="CARREIRA" />
     <qg:phrase text="Car" as="Car" />
     <qg:phrase text="Cheaper: more clubs bid." as="Mais barato: mais clubes dão lance." />
@@ -4057,7 +4090,8 @@
     <qg:phrase text="Top scorer" as="Artilheiro" />
     <qg:phrase text="Training center" as="Centro de treinamento" />
     <qg:phrase text="Training center:" as="Centro de treinamento:" />
-    <qg:phrase text="Training: players grow more easily." as="Treino: os jogadores evoluem mais." />
+    <qg:phrase text="Training: a reserve grows" as="Treino: um reserva evolui em" />
+    <qg:phrase text="of the months." as="dos meses." />
     <qg:phrase text="Youth academy" as="Categoria de base" />
     <qg:phrase text="Youth academy:" as="Categoria de base:" />
     <qg:phrase text="Your own player: to sell him, F6 and then S." as="Jogador seu: para vendê-lo, F6 e depois S." />
@@ -4473,6 +4507,7 @@
     <qg:phrase text="Best player" as="Mejor jugador" />
     <qg:phrase text="Better this month (+1):" as="Mejoraron en el mes (+1):" />
     <qg:phrase text="Worse this month (-1):" as="Empeoraron en el mes (-1):" />
+    <qg:phrase text="Better in training (+1):" as="Mejoraron en el entrenamiento (+1):" />
     <qg:phrase text="CAREER" as="CARRERA" />
     <qg:phrase text="Car" as="Car" />
     <qg:phrase text="Cheaper: more clubs bid." as="Más barato: más clubes pujan." />
@@ -4513,7 +4548,8 @@
     <qg:phrase text="Top scorer" as="Goleador" />
     <qg:phrase text="Training center" as="Centro de entrenamiento" />
     <qg:phrase text="Training center:" as="Centro de entrenamiento:" />
-    <qg:phrase text="Training: players grow more easily." as="Entrenamiento: los jugadores mejoran más." />
+    <qg:phrase text="Training: a reserve grows" as="Entreno: un suplente mejora" />
+    <qg:phrase text="of the months." as="de los meses." />
     <qg:phrase text="Youth academy" as="Cantera" />
     <qg:phrase text="Youth academy:" as="Cantera:" />
     <qg:phrase text="Your own player: to sell him, F6 and then S." as="Jugador tuyo: para venderlo, F6 y luego S." />

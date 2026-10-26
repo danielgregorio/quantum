@@ -11,14 +11,21 @@ What the beta's players asked for, the second time:
   $100.000, a 30 about $600.000, a 45 about $8M. A small club can buy, and selling your weak players makes money to
   buy better ones. Selling (F6, S), **you set the asking price** (50% to 150% of his worth): cheaper, more clubs bid.
   Any club he would play for may bid, and a reserve takes a lower division more easily: he wants to play.
-- **The list has players of every level.** The computer's clubs list their regulars too, not only their reserves,
-  and new free agents come every season.
+- **The list has players of every level, strong ones too.** The computer's clubs list their regulars, not only
+  their reserves. A club of the 2nd division or below whose best player has outgrown it sells him to the big clubs,
+  and now and then a club lets one of its stars go, dear: in the 1st and the 2nd there is someone to buy, and money
+  to buy him with. New free agents come every season, and a strong one wants a club of his level: to bring him to a
+  small club, pay him well.
 - **Ratings of 3 to 10** for every player in every match: the man of the match is the best of them, and [R] on the
   results shows your match's. The squad (F3) shows the matches, the season's mean and who went up or down in the
   month (▲▼).
 - **Players grow during the season.** At each month's end, a mean of 7 or more makes a player a point stronger, and
   5 or less a point weaker. The papers say who.
-- **A training center and a youth academy** (F5), levels 1 to 5. Training makes players grow and rest more; the
+- **The reserves train with the eleven.** Who hardly played in the month and is weaker than the eleven may grow a
+  point at the month's end: one month in ten, and one in twenty more for each level of the training center (a third
+  of the months at level 5). Never past the eleven, and one who grew in training does not lose the point a reserve
+  of more than 30 loses at the season's end.
+- **A training center and a youth academy** (F5), levels 1 to 5. Training makes the reserves grow, the regulars too, and everyone rest more; the
   academy brings one or two youths every season, the better the higher it is. A third at once, the rest in seven
   months, and a cost a month.
 - **The season's prizes**: each division's top scorer and best player (the best mean, ten matches at least) win

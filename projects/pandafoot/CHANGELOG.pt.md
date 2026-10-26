@@ -12,15 +12,22 @@ O que os jogadores do beta pediram na segunda leva:
   fracos rende dinheiro para comprar melhores. Ao vender (F6, S), **você escolhe o preço pedido** (de 50% a 150% do
   valor): mais barato, mais clubes dão lance. Qualquer clube em que ele jogaria pode dar lance, e um reserva aceita
   descer de divisão mais fácil, porque quer jogar.
-- **A lista tem jogadores de todos os níveis.** Os clubes do computador põem à venda também titulares, não só os
-  reservas, e chegam novos agentes livres a cada temporada.
+- **A lista tem jogadores de todos os níveis, fortes também.** Os clubes do computador põem à venda titulares,
+  não só reservas. Um clube da 2ª divisão para baixo cujo melhor jogador ficou grande demais para ele o vende aos
+  clubes grandes, e de vez em quando um clube libera um dos seus craques, caro: na 1ª e na 2ª há quem comprar, e
+  dinheiro para comprar. Chegam novos agentes livres a cada temporada, e um agente livre forte quer um clube do nível
+  dele: para levá-lo a um clube pequeno, pague bem.
 - **Notas de 3 a 10** para cada jogador em cada partida: o craque da partida é a maior nota, e nos resultados o
   [R] mostra as notas do seu jogo. O elenco (F3) mostra os jogos, a média da temporada e quem subiu ou caiu no mês
   (▲▼).
 - **Os jogadores evoluem durante a temporada.** No fim de cada mês, quem teve média 7 ou mais sobe um ponto de
   força, e quem teve 5 ou menos cai um. O jornal avisa quem.
-- **Centro de treinamento e categoria de base** (F5), do nível 1 ao 5. O treino faz os jogadores evoluírem mais e
-  descansarem mais na semana; a base revela um ou dois jovens a cada temporada, melhores quanto maior o nível.
+- **Os reservas treinam com os titulares.** Quem quase não jogou no mês e é mais fraco que os titulares pode subir
+  um ponto no fim do mês: em um mês a cada dez, e mais um a cada vinte por nível do centro de treinamento (um terço
+  dos meses no nível 5). Nunca passa dos titulares, e quem evoluiu no treino não perde o ponto que um reserva de
+  mais de 30 perde no fim da temporada.
+- **Centro de treinamento e categoria de base** (F5), do nível 1 ao 5. O treino faz os reservas evoluírem, os
+  titulares também, e todos descansarem mais na semana; a base revela um ou dois jovens a cada temporada, melhores quanto maior o nível.
   Um terço à vista, o resto em sete meses, e um custo por mês.
 - **Prêmios da temporada**: o artilheiro e o melhor jogador (melhor média, dez jogos no mínimo) de cada divisão
   rendem dinheiro ao clube, ficam dourados (✪ ✦) e valem um terço a mais na temporada seguinte. O campeão e o vice
