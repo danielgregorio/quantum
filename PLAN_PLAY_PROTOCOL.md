@@ -23,6 +23,10 @@
 > Phase 7 is `quantum playtest` (`quantum/runtime/playtest.py`) and the
 > `Playtest` workflow; its first kept goal is `tests/godot/playtests/rpg.json`.
 >
+> A game server's world (`PLAN_GAME_SERVER.md`, "The play protocol in a world") brings a test world whose
+> clock the harness holds, a `WorldSession` that speaks the server's protocol without Godot, and observations
+> of one player's views; the requests stay these.
+>
 > The rest is the plan as written: what to build, in what order, and how each step is
 > checked. It builds on what the replay harness, the lockstep and the
 > rollback already do.

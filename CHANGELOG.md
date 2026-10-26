@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: `PLAN_GAME_SERVER.md`, the game server as a Quantum application:
+  `<q:application type="gameserver">` and `<q:gameserver>`, a world for five
+  hundred players whose entities, views (what each player sees, a query) and
+  commands (what each may do, a transaction) are declared, the network, the
+  log, the accounts and the admin's page being the Quantum's; NPCs whose
+  agents act only through the world's commands. Phase 0: Outpost, a small
+  world, written as it should read (`projects/outpost/draft`), and what the
+  parser and the game schema refuse of it. Nothing of it runs yet.
 - `q:endpoint`, a component's REST API (API-1 to API-6), brought forward from
   `PLAN_PLATFORMS.md` for PandaFoot's beta reports. A component with
   `<q:endpoint method="POST">` answers JSON: its `q:param`s come from the JSON
