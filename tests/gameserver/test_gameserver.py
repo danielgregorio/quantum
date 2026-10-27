@@ -275,7 +275,8 @@ def test_a_server_killed_mid_way_has_every_command_it_acknowledged(tmp_path):
     finally:
         server.send_signal(signal.SIGTERM)
         try:
-            server.wait(10)
+            said, _ = server.communicate(timeout=60)                      # a loaded machine stops slowly
         except subprocess.TimeoutExpired:
             server.kill()
-    assert (data / 'snapshot.json').exists()                           # a stop writes the world
+            said, _ = server.communicate()
+    assert (data / 'snapshot.json').exists(), f'no snapshot after the stop; the server said: {said}'   # a stop writes the world
