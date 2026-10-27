@@ -429,6 +429,7 @@ class _Compiler:
         self._prefab_scenes_used = pscript.scenes_used
         self._overlays_used: List[tuple] = list(pscript.overlays_used)
         self._posts_used: List[Optional[int]] = list(pscript.posts_used)
+        self._signs_in = pscript.signs_in
         scenes = {}
         self._scenes_used: List[tuple] = []
         self._exits_used: List[tuple] = []
@@ -446,6 +447,10 @@ class _Compiler:
         if self.multiplayer is not None and self._posts_used:
             raise GameCompileError('<qg:post> is not for a qg:multiplayer game: its answer would come to each peer '
                                    'at another tick', self._posts_used[0])
+        if self.world is not None and self.world.accounts == 'site' and not self._signs_in:
+            raise GameCompileError(f'<qg:connect world="{g.connect.get("world")}">: the world\'s players sign in '
+                                   f'(accounts="site"): the game has a <qg:sign-in> to the site before a scene of '
+                                   f'the world', g.connect.line)
         if self.multiplayer is not None and self.multiplayer.get('rollback'):
             _check_rollback(self.multiplayer.get('start') or g.scenes[0].get('name'), scenes,
                             self._scene_goes, self._scene_spawns, g.multiplayer.line)
@@ -1867,6 +1872,7 @@ class _Compiler:
         self._scenes_used.extend(script.scenes_used)
         self._overlays_used.extend(script.overlays_used)
         self._posts_used.extend(script.posts_used)
+        self._signs_in = self._signs_in or script.signs_in
         self._scene_goes[name] = [s for s, _ in script.scenes_used]
         self._scene_spawns[name] = script.prefabs_used[0][1] if script.prefabs_used else None
         for pname, line in script.prefabs_used:

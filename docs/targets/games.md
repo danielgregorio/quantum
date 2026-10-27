@@ -1512,6 +1512,18 @@ Sends data to a web address as JSON (an HTTP POST), and the game goes on: the an
 
 Goes inside: a handler.
 
+### `qg:sign-in`
+
+Signs the player in to the site whose accounts the world's are (qg:connect, a world with accounts="site"): sends data (the account and its password, as the site asks) as qg:post does, and the site answers a ticket, `{"ticket": "..."}`, signed for the world. The game keeps the ticket, not its state: the next scene of the world entered comes in with it, as that account, to its hero where it was. Its qg:on-done hears `reply`, the site's answer without the ticket (its name for the player, say); its qg:on-fail `reason`: the site's refusal (`401: Wrong password`), or `the site gave no ticket`. A ticket lasts a minute and comes in once: sign in again to come back. Over https:// the password is the site's alone.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `to` | text | required | the site's address that signs in, http:// or https://, or an expression ({...}) that gives one |
+| `data` | an expression | required | what is sent: a dictionary ({ {'account': a, 'password': p} }), as JSON |
+| `timeout` | number | `20.0` | seconds to wait for the answer before qg:on-fail |
+
+Goes inside: a handler.
+
 ### `qg:send`
 
 Asks the world (qg:connect) to run one of its commands, as this player: its other attributes are the command's arguments, each a text as written (dir="north") or an expression ({other.id}), all the command's params and no other. The game goes on: the world runs it with its next tick, and what it did comes as the views change, or the refusal comes to qg:on-refused.
@@ -1562,7 +1574,7 @@ Goes inside: `qg:table`.
 
 ### `qg:connect`
 
-The game is a world's client: the world is a `q:application type="gameserver"` that `quantum gameserver run` serves (PLAN_GAME_SERVER.md), and holds the rules; the game draws what the world says each player sees (qg:mirror), asks it what the player does (qg:send) and shows what happens (qg:on-event). The compiler reads the world's file: a command, a view, an event or a field the world has not is an error here, and every kind of its entities needs a qg:prefab of that name to draw it. The game comes into the world as a scene with world="true" is entered, and stays in it from scene to scene. `--q-world=ws://...` on the command line says where the world is, `--q-name=` the player's name. Not with qg:multiplayer.
+The game is a world's client: the world is a `q:application type="gameserver"` that `quantum gameserver run` serves (PLAN_GAME_SERVER.md), and holds the rules; the game draws what the world says each player sees (qg:mirror), asks it what the player does (qg:send) and shows what happens (qg:on-event). The compiler reads the world's file: a command, a view, an event or a field the world has not is an error here, and every kind of its entities needs a qg:prefab of that name to draw it. The game comes into the world as a scene with world="true" is entered, and stays in it from scene to scene. `--q-world=ws://...` on the command line says where the world is, `--q-name=` the player's name. A world of a site's accounts (accounts="site") lets in a player who signed in: the game has a qg:sign-in before its scenes of the world (`--q-ticket=` gives one on the command line, for a test). Not with qg:multiplayer.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
@@ -1687,9 +1699,9 @@ Goes inside: `qg:scene`.
 
 ### `qg:on-done`
 
-What happens when the server a qg:post sent to has answered yes (a 2xx status): `reply` is what it answered, read from its JSON. Holds actions and statements.
+What happens when the server a qg:post (or qg:sign-in) sent to has answered yes (a 2xx status): `reply` is what it answered, read from its JSON. Holds actions and statements.
 
-Goes inside: `qg:post`.
+Goes inside: `qg:post`, `qg:sign-in`.
 
 ### `qg:on-end`
 
@@ -1709,9 +1721,9 @@ Goes inside: `qg:scene`.
 
 ### `qg:on-fail`
 
-What happens when a qg:post did not get through: `reason` says why. Holds actions and statements.
+What happens when a qg:post (or qg:sign-in) did not get through: `reason` says why. Holds actions and statements.
 
-Goes inside: `qg:post`.
+Goes inside: `qg:post`, `qg:sign-in`.
 
 ### `qg:on-refused`
 

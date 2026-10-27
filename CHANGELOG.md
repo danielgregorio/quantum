@@ -10,6 +10,22 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the game server's Phase 4 (`PLAN_GAME_SERVER.md`), accounts,
+  the ledger and players together. `q:currency` and `q:item` are a world's
+  money and things, made, moved and spent only by `q:give`, `q:take`, `q:pay`
+  and `q:loot`, counted in the world's books by where it happened; a hero's
+  gold and bag are private and no `q:set` writes them, and after an hour of
+  bots what the heroes hold is what was made less what was spent. `q:chat`
+  has channels by reach (say, yell, the party's, everyone's), whispers, a
+  limit and a filter; `q:party` and `q:trade` are the world's own commands,
+  and a trade accepted by both at once moves once and whole; `q:quest` and
+  `q:reward` give on the ledger. `accounts="site"` lets a player in with a
+  ticket the site signs (HMAC-SHA256, with `QUANTUM_WORLD_SECRET` from the
+  environment, never a file): `quantum gameserver ticket`, a ticket comes in
+  once, and an account that signs in again takes its hero over where it
+  stands. In the game, `qg:sign-in` asks the site for the ticket and keeps it
+  for the world, not in the game's state.
+
 - Laboratory: the game server's Phase 3 (`PLAN_GAME_SERVER.md`), a world that
   lives by itself. `q:spawn` keeps beasts in an area and makes another
   `respawn=` after one is killed (more at night with `q:clock`); `q:brain`'s
@@ -1014,6 +1030,9 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: a world's connection closed by the server (a message out of
+  the protocol, more than sixty a second) now takes its player out of the
+  world; the hero stayed, and the name could not come back in.
 - `default=""` on a typed `q:param` of an action is an empty value (ACT-2): an
   optional URL, date or e-mail left blank failed its type, and the action
   never ran.

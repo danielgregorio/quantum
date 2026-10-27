@@ -19,6 +19,7 @@ const MAX_HEARD := 256      # events or refusals kept for a scene that does not 
 
 var url := ""
 var player := ""            # the name it said hello with
+var ticket := ""            # or the ticket (qg:sign-in): a site's account
 var peer: WebSocketPeer = null
 var status := "offline"     # offline, connecting, in (the world let it in), closed
 var reason := ""            # why it closed: the server's words, or the network's
@@ -60,9 +61,10 @@ func setup(spec: Dictionary, latency_ms: int) -> void:
 	latency = roundi(latency_ms / 2000.0 * Engine.physics_ticks_per_second)
 
 
-func open(url_: String, name_: String) -> void:
+func open(url_: String, name_: String, ticket_ := "") -> void:
 	url = url_
 	player = name_
+	ticket = ticket_
 	peer = WebSocketPeer.new()
 	peer.inbound_buffer_size = 1 << 23
 	peer.outbound_buffer_size = 1 << 20
@@ -84,7 +86,8 @@ func poll() -> void:
 	if state == WebSocketPeer.STATE_OPEN:
 		if not _hello:
 			_hello = true
-			_write({"type": "hello", "name": player})
+			_write({"type": "hello", "ticket": ticket} if ticket != "" else {"type": "hello", "name": player})
+			ticket = ""             # it comes in once
 			for m in _pending:
 				_send(m)
 			_pending.clear()
@@ -232,10 +235,12 @@ func me() -> Dictionary:
 	return e if e is Dictionary else {}
 
 
-func close() -> void:
+func close(why := "") -> void:
 	if peer != null and status != "closed":
 		peer.close()
 	status = "closed"
+	if why != "":
+		reason = why
 
 
 # what the play protocol observes: the world as this player knows it

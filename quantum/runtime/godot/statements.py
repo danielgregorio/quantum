@@ -102,6 +102,7 @@ class SceneScript:
     tiled_props: Optional[dict] = None   # the scene's Tiled map's properties, for tiled('par')
     world: Optional[object] = None   # the world of qg:connect (world.WorldInfo): what qg:send may ask
     world_scene: bool = False        # a scene with world="true"
+    signs_in: bool = False           # it has a qg:sign-in
 
     def scope(self) -> Scope:
         fields = self.world.fields if self.world is not None else None
@@ -864,7 +865,7 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         return f'Q.open_overlay({json.dumps(el.get("name"))})'
     if el.tag == 'close-overlay':
         return 'Q.close_overlay()'
-    if el.tag == 'post':
+    if el.tag in ('post', 'sign-in'):
         return _post(el, scope, script)
     if el.tag == 'send':
         return _send(el, scope, script)
@@ -878,19 +879,30 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
 
 def _post(el: Element, scope: Scope, script: SceneScript) -> str:
     """qg:post: Q.post with the data, and its qg:on-done and qg:on-fail as methods of this script that take the
-    names of the handler as they are now (as qg:after's do) and then `reply` or `reason`."""
+    names of the handler as they are now (as qg:after's do) and then `reply` or `reason`. qg:sign-in is a post
+    whose answer's ticket the game keeps for the world's hello."""
+    kind = el.tag
     to = str(el.get('to')).strip()
     if is_expression(to):
         address = compile_expression(to, scope, el.line)
     elif re.match(r'https?://\S+$', to):
         address = json.dumps(to)
     else:
-        raise GameCompileError(f'<qg:post to="{to}">: an http:// or https:// address', el.line)
+        raise GameCompileError(f'<qg:{kind} to="{to}">: an http:// or https:// address', el.line)
     if el.get('timeout') <= 0:
-        raise GameCompileError('<qg:post timeout=>: seconds, more than 0', el.line)
+        raise GameCompileError(f'<qg:{kind} timeout=>: seconds, more than 0', el.line)
+    if kind == 'sign-in':
+        if script.world is None:
+            raise GameCompileError('<qg:sign-in>: the game is no world\'s client (qg:connect): there is nothing to '
+                                   'sign in to', el.line)
+        if script.world.accounts != 'site':
+            raise GameCompileError(f'<qg:sign-in>: the world {script.world.name!r} lets in guests by a name '
+                                   f'(accounts="{script.world.accounts}"); a world of a site\'s accounts '
+                                   f'(accounts="site") has its players sign in', el.line)
+        script.signs_in = True
     answers = {c.tag: c for c in el.children if isinstance(c, Element) and c.tag in ('on-done', 'on-fail')}
     if len(answers) != len(el.children):
-        raise GameCompileError('<qg:post> holds one <qg:on-done> and one <qg:on-fail> at most, and nothing else',
+        raise GameCompileError(f'<qg:{kind}> holds one <qg:on-done> and one <qg:on-fail> at most, and nothing else',
                                el.line)
     script.posts_used.append(el.line)
     # a post in its own qg:on-done is the next number. One in a q:function of the application is numbered among
@@ -915,7 +927,7 @@ def _post(el: Element, scope: Scope, script: SceneScript) -> str:
         methods.append(json.dumps(method))
     data = compile_expression(el.get('data'), scope, el.line)
     return (f'Q.post(self, {address}, {data}, {methods[0]}, {methods[1]}, [{", ".join(names)}], '
-            f'{float(el.get("timeout"))!r})')
+            f'{float(el.get("timeout"))!r}{", true" if kind == "sign-in" else ""})')
 
 
 def _tween_value(value: str, scope: Scope, line: Optional[int]) -> str:

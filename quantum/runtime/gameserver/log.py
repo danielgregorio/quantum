@@ -98,8 +98,10 @@ def replay(world: World, entries: List[dict]) -> List[str]:
             world.step([])
         inputs = []
         for e in by_tick[tick]:
-            if e['k'] in ('join', 'leave'):
-                inputs.append((e['k'], e['a']))
+            if e['k'] == 'join':
+                inputs.append(('join', e['a'], e.get('n')))
+            elif e['k'] == 'leave':
+                inputs.append(('leave', e['a']))
             elif e['k'] == 'cmd':
                 inputs.append(('cmd', e['a'], e.get('s'), e.get('n'), e.get('x')))
         out = world.step(inputs)

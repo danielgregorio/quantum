@@ -25,7 +25,7 @@ class Together:
     # -- who is who ----------------------------------------------------------------------------------------------
 
     def hero_of(self, who: Any) -> Optional[dict]:
-        """A player's entity, by its id, its account, or itself."""
+        """A player's entity, by its id, its account, the name it shows (when no other shows it), or itself."""
         if isinstance(who, dict):
             return who if self.is_entity(who) and who.get('_player') else None
         if isinstance(who, str):
@@ -34,6 +34,9 @@ class Together:
             entity = self.entities.get(who)
             if entity is not None and entity.get('_player'):
                 return entity
+            named = [self.entities[e] for e in self.players.values() if self.entities[e].get('name') == who]
+            if len(named) == 1:                     # a site's account is ana@site; its hero shows Ana
+                return named[0]
         return None
 
     def tell(self, name: str, value: Any, accounts: List[str]) -> None:

@@ -142,6 +142,11 @@ def protocol_section():
             '`qg:on-event` and `qg:on-refused` hear. `quantum.runtime.godot_world.WorldTable(world, project, '
             'seats)` plays a test world and the Godot games of its players together, in step; '
             '`PlaySession(project, world=url, name=...)` is one of them.\n\n'
+            'A world of a site\'s accounts (`accounts="site"`) lets a player in with a ticket, not a name: the '
+            'site, which knows the passwords, signs it (`quantum.runtime.gameserver.tickets.issue(account, name, '
+            'secret)`, or `quantum gameserver ticket --account ana@site --name Ana`), and the world checks it with '
+            'the secret both have in their environment, `QUANTUM_WORLD_SECRET` (never in a file). A ticket lasts a '
+            'minute and comes in once; `WorldSession(url, ticket=...)` is such a player.\n\n'
             '`quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks\' time (median, '
             '99th percentile, worst) and what went out, to the world and to each player. '
             '`scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.\n\n')

@@ -68,7 +68,7 @@ Goes inside `<q:application type="gameserver">`.
 | `client=` | text |  | the game the players run (its .q, next to this file) |
 | `tick=` | int | `10` | ticks a second: every command, every rule and every view runs on one |
 | `players=` | int | `500` | how many may be in the world at once; one more is told it is full |
-| `accounts=` | enum: `guest` | `guest` | who may come in: guest, anyone with a name (the site's accounts are Phase 4) |
+| `accounts=` | enum: `guest`, `site` | `guest` | who may come in: guest, anyone with a name; site, a site's account with its ticket (signed with QUANTUM_WORLD_SECRET, from the environment: `quantum gameserver ticket`) |
 
 ### `q:map`
 
@@ -566,7 +566,8 @@ The Core's expressions and their stdlib (`len`, `round`, `min`, `join`...), a wo
 JSON over a WebSocket, a message a frame: what a game, a page or a test speaks to a world.
 
 ```
-client: {"type": "hello", "name": "ana"}                         a guest world's player (Phase 4: a ticket)
+client: {"type": "hello", "name": "ana"}                         a guest world's player
+        {"type": "hello", "ticket": "eyJh...Q.5f..."}             a site's account (accounts="site"): tickets.py
         {"type": "hello", "control": true}                        a test world's (--step) harness: no entity
         {"type": "cmd", "seq": 3, "name": "step", "args": {"dir": "north"}}
         {"type": "ping", "t": 12.5}
@@ -585,11 +586,13 @@ server: {"type": "greeting", "world": "yard", "rate": 10, "step": false}    at o
         {"type": "error", "reason": "..."}                        and the connection closes
 ```
 
-A tick frame goes to a player only when it has something for them: what of each view (q:view) changed for them, and the events (q:emit) where they see (in a test world, every tick: a harness knows its clients heard it). A view's entities are the public fields, and its player's own entity's private ones too; an update holds only the fields that changed. A test world (--step) does not tick by itself: it waits for a "step", so a test is exact and as fast as the machine.
+A tick frame goes to a player only when it has something for them: what of each view (q:view) changed for them, and the events (q:emit) where they see (in a test world, every tick: a harness knows its clients heard it). A view's entities are the public fields, and its player's own entity's private ones too; an update holds only the fields that changed. A test world (--step) does not tick by itself: it waits for a "step", so a test is exact and as fast as the machine. In a world of a site's accounts a hello is a ticket, and one comes in once. An account that signs in again while its connection is still open takes its hero over: the old connection is told so and closed, and the hero stays where it is, in its party, with its trade. The world never sees a password: the site signs the ticket (tickets.py), with the secret the two share in their environments (QUANTUM_WORLD_SECRET).
 
 In Python, `quantum.runtime.gameserver.session` speaks it with the play protocol's words: `serve_world(path)` runs a world in a thread (a test world by default), and `WorldSession(url, name)` is a player, with `observe()`, `act(send=[(command, args)], ticks=n)` and `until(condition)`; an observation is `me`, `views` (by name, then by id), `world` (all of them), `events`, `acks` and `refused`. `WorldSession(url, control=True)` steps a test world for a harness whose players are elsewhere, and `peek()` is the whole world.
 
 A game is a world's client with `qg:connect world="meadow.server.q"` (the games' reference): its compiler reads the world's file, `qg:mirror view=` draws a view, `qg:send command=` asks, `qg:on-event` and `qg:on-refused` hear. `quantum.runtime.godot_world.WorldTable(world, project, seats)` plays a test world and the Godot games of its players together, in step; `PlaySession(project, world=url, name=...)` is one of them.
+
+A world of a site's accounts (`accounts="site"`) lets a player in with a ticket, not a name: the site, which knows the passwords, signs it (`quantum.runtime.gameserver.tickets.issue(account, name, secret)`, or `quantum gameserver ticket --account ana@site --name Ana`), and the world checks it with the secret both have in their environment, `QUANTUM_WORLD_SECRET` (never in a file). A ticket lasts a minute and comes in once; `WorldSession(url, ticket=...)` is such a player.
 
 `quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks' time (median, 99th percentile, worst) and what went out, to the world and to each player. `scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.
 

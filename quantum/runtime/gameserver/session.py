@@ -11,6 +11,8 @@ An observation is what the player knows: its own entity with its private fields 
 that ran (`acks`) and those refused, with why (`refused`), since the last one. In a test world a session's `act`
 steps the world itself; in a live one it waits the world's ticks.
 
+A site's account comes in with its ticket (`WorldSession(url, ticket=tickets.issue(...))`, accounts="site").
+
 A control session (`WorldSession(url, control=True)`, a test world's) has no entity: it steps the world for a
 harness whose players are elsewhere (Godot clients), and `peek()` is the god's view.
 """
@@ -34,7 +36,7 @@ class WorldSessionError(Exception):
 
 @contextlib.contextmanager
 def serve_world(world: Union[str, Path, Any], *, step: bool = True, data: Optional[Path] = None,
-                snapshot_every: float = 300.0, quiet: bool = True):
+                snapshot_every: float = 300.0, quiet: bool = True, secret: Optional[bytes] = None):
     """A world served on this machine, in a thread, on a free port: the server, with `.url` and `.world`."""
     from quantum.runtime.gameserver.server import WorldServer, load
     import asyncio
@@ -43,7 +45,7 @@ def serve_world(world: Union[str, Path, Any], *, step: bool = True, data: Option
     definition = load(str(world)) if isinstance(world, (str, Path)) else world
     with tempfile.TemporaryDirectory() as scratch:
         server = WorldServer(definition, port=0, step=step, data_dir=Path(data) if data else Path(scratch),
-                             snapshot_every=snapshot_every, quiet=quiet)
+                             snapshot_every=snapshot_every, quiet=quiet, secret=secret)
         failure: List[BaseException] = []
 
         def run() -> None:
@@ -67,7 +69,7 @@ def serve_world(world: Union[str, Path, Any], *, step: bool = True, data: Option
 
 class WorldSession:
     def __init__(self, url: str, name: str = 'control', timeout: float = 10.0, control: bool = False,
-                 keep_frames: bool = False):
+                 keep_frames: bool = False, ticket: Optional[str] = None):
         from websockets.sync.client import connect
 
         self.url, self.name, self.timeout, self.control = url, name, timeout, control
@@ -85,7 +87,8 @@ class WorldSession:
         self.frames: List[dict] = []                 # every message the world sent, with keep_frames
         self.keep_frames = keep_frames
         self._seq = 0
-        self._send({'type': 'hello', 'control': True} if control else {'type': 'hello', 'name': name})
+        self._send({'type': 'hello', 'control': True} if control else
+                   {'type': 'hello', 'ticket': ticket} if ticket else {'type': 'hello', 'name': name})
         self._join()
 
     @property
@@ -99,7 +102,10 @@ class WorldSession:
     # -- the wire ------------------------------------------------------------------------------------------------
 
     def _send(self, message: dict) -> None:
-        self.ws.send(json.dumps(message))
+        try:
+            self.ws.send(json.dumps(message))
+        except Exception:  # noqa: BLE001 - the world closed it: what it said last says why
+            self._read(lambda m: False)
 
     def _read(self, until: Callable[[dict], bool]) -> dict:
         deadline = time.monotonic() + self.timeout

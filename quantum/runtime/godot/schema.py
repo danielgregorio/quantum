@@ -50,7 +50,7 @@ ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'c
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
            'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble', 'music', 'travel',
-           'open-url', 'open-overlay', 'close-overlay', 'post', 'send')
+           'open-url', 'open-overlay', 'close-overlay', 'post', 'sign-in', 'send')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -140,7 +140,9 @@ TAGS: Dict[str, Tag] = {
         'the world\'s file: a command, a view, an event or a field the world has not is an error here, and every kind '
         'of its entities needs a qg:prefab of that name to draw it. The game comes into the world as a scene with '
         'world="true" is entered, and stays in it from scene to scene. `--q-world=ws://...` on the command line says '
-        'where the world is, `--q-name=` the player\'s name. Not with qg:multiplayer.',
+        'where the world is, `--q-name=` the player\'s name. A world of a site\'s accounts (accounts="site") lets '
+        'in a player who signed in: the game has a qg:sign-in before its scenes of the world (`--q-ticket=` gives '
+        'one on the command line, for a test). Not with qg:multiplayer.',
         {'world': Attr('str', required=True, doc='the world\'s file (its .server.q), next to the game'),
          'local': Attr('str', 'ws://127.0.0.1:7700', doc='where the world is while the game is made: the address '
                                                        '`quantum gameserver run` serves'),
@@ -1071,6 +1073,21 @@ TAGS: Dict[str, Tag] = {
          'data': Attr('expr', required=True, doc='what is sent: a dictionary ({ {\'text\': text} }), as JSON'),
          'timeout': Attr('float', 20.0, doc='seconds to wait for the answer before qg:on-fail')},
         parents=('handler',)),
+    'sign-in': Tag(
+        'Signs the player in to the site whose accounts the world\'s are (qg:connect, a world with '
+        'accounts="site"): sends data (the account and its password, as the site asks) as qg:post does, and the '
+        'site answers a ticket, `{"ticket": "..."}`, signed for the world. The game keeps the ticket, not its '
+        'state: the next scene of the world entered comes in with it, as that account, to its hero where it was. '
+        'Its qg:on-done hears `reply`, the site\'s answer without the ticket (its name for the player, say); its '
+        'qg:on-fail `reason`: the site\'s refusal (`401: Wrong password`), or `the site gave no ticket`. A '
+        'ticket lasts a minute and comes in once: sign in again to come back. Over https:// the password is '
+        'the site\'s alone.',
+        {'to': Attr('str', required=True, doc='the site\'s address that signs in, http:// or https://, or an '
+                                             'expression ({...}) that gives one'),
+         'data': Attr('expr', required=True, doc='what is sent: a dictionary ({ {\'account\': a, \'password\': '
+                                                 'p} }), as JSON'),
+         'timeout': Attr('float', 20.0, doc='seconds to wait for the answer before qg:on-fail')},
+        parents=('handler',)),
     'send': Tag(
         'Asks the world (qg:connect) to run one of its commands, as this player: its other attributes are the '
         'command\'s arguments, each a text as written (dir="north") or an expression ({other.id}), all the '
@@ -1099,14 +1116,15 @@ TAGS: Dict[str, Tag] = {
         {'command': Attr('ident', None, doc='only that command\'s refusals (every one\'s when not given)')},
         parents=('scene',)),
     'on-done': Tag(
-        'What happens when the server a qg:post sent to has answered yes (a 2xx status): `reply` is what it '
-        'answered, read from its JSON. Holds actions and statements.',
+        'What happens when the server a qg:post (or qg:sign-in) sent to has answered yes (a 2xx status): `reply` is '
+        'what it answered, read from its JSON. Holds actions and statements.',
         {},
-        parents=('post',)),
+        parents=('post', 'sign-in')),
     'on-fail': Tag(
-        'What happens when a qg:post did not get through: `reason` says why. Holds actions and statements.',
+        'What happens when a qg:post (or qg:sign-in) did not get through: `reason` says why. Holds actions and '
+        'statements.',
         {},
-        parents=('post',)),
+        parents=('post', 'sign-in')),
     'quit': Tag(
         'Ends the game: the window closes. In a browser there is nothing to quit to and it does nothing; '
         '`can_quit()` says whether it would.',

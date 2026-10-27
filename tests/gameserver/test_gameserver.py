@@ -122,6 +122,8 @@ def test_a_forged_command_is_refused_and_one_out_of_the_protocol_closes():
             ana.ws.send(json.dumps({'type': 'cmd', 'seq': 'one', 'name': 'step', 'args': {'dir': 'east'}}))
             with pytest.raises(WorldSessionError, match='integer seq'):
                 ana.observe()
+        with WorldSession(server.url, 'ana') as again:          # the connection closed, its player left: back in
+            assert again.me_id == 'hero:ana' and list(server.world.players) == ['ana']
         with pytest.raises(WorldSessionError, match='1 to 24 letters'):
             WorldSession(server.url, 'a name with spaces')
 

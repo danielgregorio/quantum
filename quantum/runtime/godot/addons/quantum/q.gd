@@ -997,7 +997,8 @@ static func save_text(ctx) -> String:
 var _answers: Array = []   # [caller's instance id, method, args, event kind, event data], heard at the next tick
 
 
-static func post(caller: Object, url, data, on_done: String, on_fail: String, args: Array, timeout: float) -> void:
+static func post(caller: Object, url, data, on_done: String, on_fail: String, args: Array, timeout: float,
+		sign_in := false) -> void:
 	var q := _q_node()
 	var address := str(url)
 	if not (address.begins_with("http://") or address.begins_with("https://")):
@@ -1012,7 +1013,7 @@ static func post(caller: Object, url, data, on_done: String, on_fail: String, ar
 	q.add_child(http)
 	# the sender by its id: it may be freed (a scene left) before the answer comes
 	http.request_completed.connect(Callable(q, "_posted").bind(http, caller.get_instance_id(), address, on_done,
-		on_fail, args, timeout))
+		on_fail, args, timeout, sign_in))
 	var err := http.request(address, PackedStringArray(["Content-Type: application/json", "Accept: application/json"]),
 		HTTPClient.METHOD_POST, body)
 	if err != OK:
@@ -1021,7 +1022,8 @@ static func post(caller: Object, url, data, on_done: String, on_fail: String, ar
 
 
 func _posted(result: int, code: int, _headers: PackedStringArray, bytes: PackedByteArray, http: Node,
-		caller: int, address: String, on_done: String, on_fail: String, args: Array, timeout: float) -> void:
+		caller: int, address: String, on_done: String, on_fail: String, args: Array, timeout: float,
+		sign_in: bool) -> void:
 	http.queue_free()
 	if result == HTTPRequest.RESULT_TIMEOUT:
 		_answer(caller, on_fail, args, address, "no answer in %d seconds" % int(round(timeout)))
@@ -1038,6 +1040,18 @@ func _posted(result: int, code: int, _headers: PackedStringArray, bytes: PackedB
 		elif text != "":
 			said = text.left(120)
 		_answer(caller, on_fail, args, address, "%d: %s" % [code, said] if said != "" else str(code))
+		return
+	if sign_in:
+		# qg:sign-in: the ticket is the game's, for the world's hello; not the state's (nor a save's)
+		if not (reply is Dictionary and reply.get("ticket") is String and str(reply["ticket"]) != ""):
+			_answer(caller, on_fail, args, address, "the site gave no ticket")
+			return
+		world_ticket = str(reply["ticket"])
+		reply = reply.duplicate()
+		reply.erase("ticket")
+		if world != null and world.status != "closed":
+			world.close("You signed in again.")   # the next scene of the world comes in with the new ticket
+		_answers.append([caller, on_done, args + [reply], "signed-in", {"to": address}])
 		return
 	_answers.append([caller, on_done, args + [reply], "posted", {"to": address, "status": code}])
 
@@ -1341,6 +1355,7 @@ static func _thing(node):
 var world = null                 # world.gd, once a scene of the world was entered
 var world_url := ""              # --q-world=ws://...: where the world is (else qg:connect's local= or server=)
 var world_player := ""           # --q-name=ana: the name the player comes in with (else qg:connect name=)
+var world_ticket := ""           # qg:sign-in's (or --q-ticket=): a site's account comes in with it, once
 var world_latency := 0           # --q-latency=MS: every message to and from the world held half that, each way
 
 
@@ -1356,7 +1371,8 @@ func world_open(spec: Dictionary, name_: String) -> void:
 		who = "guest-%d" % (randi() % 100000)
 	world = load("res://addons/quantum/world.gd").new()
 	world.setup(spec, world_latency)
-	world.open(url, who)
+	world.open(url, who, world_ticket)
+	world_ticket = ""                # a ticket comes in once: to come back, sign in again
 
 
 static func _world():
@@ -1420,6 +1436,8 @@ func _ready() -> void:
 			world_url = a.substr(10)
 		elif a.begins_with("--q-name="):
 			world_player = a.substr(9)
+		elif a.begins_with("--q-ticket="):
+			world_ticket = a.substr(11)
 		elif a.begins_with("--q-latency="):
 			world_latency = int(a.substr(12))
 

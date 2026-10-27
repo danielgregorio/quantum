@@ -5,7 +5,11 @@
 > Phase 0 done: Outpost written as it should read, before any of its tags exist
 > ([projects/outpost/draft](projects/outpost/draft)), and what the compiler refuses of it (below).
 > Phase 1 done (2026-10-26): the world lives — `quantum/runtime/gameserver`, `quantum gameserver run` and `check`,
-> its reference ([docs/targets/gameserver.md](docs/targets/gameserver.md)) and `tests/gameserver/`. Phase 2 next.
+> its reference ([docs/targets/gameserver.md](docs/targets/gameserver.md)) and `tests/gameserver/`.
+> Phases 2 and 3 done (2026-10-27): views, events and the game's side (`qg:connect`, `qg:mirror`, `qg:send`), the play
+> protocol in a world (`WorldTable`); beasts with brains, fights, loot, the clock and a step shown at once.
+> Phase 4 (2026-10-27): the ledger, the chat, a party, a trade, quests and the site's accounts (tickets,
+> `qg:sign-in`) done; Outpost playable from start to end is what is left of it.
 > Laboratory tier: no tag here carries a stability promise until it ships (`SUPPORT_TIERS.md`).
 
 ## The decision
@@ -336,6 +340,49 @@ connected to a test world, its observation of the views, several seats in one se
 Done when: two Godot clients see each other walk and leave each other's view; a hero's private field never reaches
 another client; a hundred bots walk an hour, the tick and the bandwidth measured.
 
+As built (2026-10-27):
+- The server. `q:view name= where=` is what each player sees, with `it` the entity and `me` the player's: a
+  `near(it, me, n)` view (alone, or with `and` more) reads only the cells of the world's index (16 by 16 tiles)
+  around the player; any other reads every entity, for a small world; a world with none has one, `world`, the whole
+  of it. A view's where= changes nothing: the world's random and the q:functions are refused in it as the world
+  reads. Each tick each player gets what changed in each of its views, as `views: {name: {enter, update, leave}}`:
+  an entity that came in whole, the fields that changed (computed once a tick for everyone, and once for the
+  entity's own player with its private ones), the ids that left. A view is read again whole when the player's own
+  entity changed, else only for what changed in the cells near it. `q:emit event= value= at= to=` is an event sent
+  with the tick (`events`) to the players within reach of where it happened (the most n of the views; a view of the
+  whole world reaches everywhere), to one player (`to=`), or to everyone; a refused command emits nothing.
+- A test world's harness has a door of its own, `hello {"control": true}`: it steps the world with no entity and
+  `peek`s at all of it (every field, who is connected and the last command each sent). A test world says each tick
+  to every player, an empty frame if nothing else, so a harness knows its clients heard it.
+- `tests/gameserver/test_gameserver_views.py`: forty players walking, jumping, shouting, leaving and coming back for
+  120 ticks, and after each tick what each one was sent is what reading the whole world says it sees
+  (`test_the_index_gives_what_reading_the_whole_world_gives`; a broken index fails it on the fifth tick).
+- The game. `qg:connect world="meadow.server.q"`: the compiler reads the world's file, so a `qg:send` of a command
+  it has not or without its params, a `qg:mirror` of a view it has not, a `qg:on-event` of an event it never emits,
+  a field none of its entities has (`me.title`), a kind with no prefab (or a prefab with ai=) are errors with their
+  lines. `qg:mirror view=` draws each entity of a view as the prefab of its kind, walking a step in its speed's time,
+  its `me.<field>` the entity's; `qg:send command=` with the arguments as attributes; `qg:on-event name=` (`value`,
+  `at`, `other`: the mirrored entity) and `qg:on-refused` (`reason`, `command`); `me()`, `entity(id)`,
+  `connected()`; `qg:scene world="true"` (it comes into the world as it is entered, and `qg:camera follow="me"`);
+  `qg:overlay freeze="false"` (the world goes on under it; its keys are the overlay's). `--q-world=` and
+  `--q-name=` on the command line, `PlaySession(world=, name=)` and `play_start(world=, name=)`.
+- The play protocol: an observation of a world's game has `world` (its status, `me`, the views, the entities seen,
+  the world's tick, the commands sent). `quantum.runtime.godot_world.WorldTable(world, project, seats)` is a test
+  world and the headless Godot games of its players, in step: a seat's input, a tick of the world (six of the
+  games'), the server waited for until it has every command they sent, and each game run until it heard the tick.
+  `tests/godot/test_godot_world.py`: two Godot clients see each other walk and leave each other's view, ana's purse
+  never reaches bo's game, a shout is heard by both and a step into a wall is refused with its reason, and under
+  the bag (freeze="false") the world goes on: four tests, twenty seconds, three runs out of three the same.
+- Moved to Phase 3, with qg:health-bar: `qg:bar value=` (a bar of any expression) and a prefab's `frame="{...}"`
+  from its entity's fields.
+- The numbers (`scripts/gameserver-bots.py --bots 100 --seconds 3600`, the agent's machine, a field of 96 by 96
+  tiles and a view of 9): a hundred bots walking an hour, 36000 ticks, none dropped. A tick took 9.4 ms at the
+  median and 17.6 ms at the 99th percentile of a typical ten seconds; 13 of the 360 ten-second intervals had a tick
+  over 50 ms, the worst 216 ms (the machine also ran the other tests at times; the collector of Python's garbage is
+  the other suspect, for Phase 7 to profile). What went to a player: 1.16 KB/s at the median, 2.32 at the most
+  (the plan holds 4 at 500); to the world, 116 KB/s. Of 1.1 million steps sent, 12% were refused (a bot that
+  steps into a wall or before its last step ended), as they should be.
+
 ### Phase 3 — Beasts, fights and prediction (L)
 
 `q:spawn`, `q:brain`/`q:state`/`q:when`, a region with no hero near asleep, `q:kill`/`q:on-death`, `q:loot`,
@@ -343,6 +390,34 @@ another client; a hundred bots walk an hour, the tick and the bandwidth measured
 
 Done when: a rat bites, dies, drops, comes back in 30 s; with 100 to 250 ms of latency injected the hero's steps
 are at once and a refused one is put back without a jump the player can see.
+
+As built (2026-10-27):
+- The world. An entity's other attributes are its fields (`hp="10" attack="2"`); one with hp has max_hp (as hp) and
+  target (''), the convention a fight's rules read. `q:spawn entity= area= count= respawn=` keeps so many in an area,
+  made at free tiles of it from the world's random, and another respawn= after one is killed (`night-count=` with
+  `q:clock day= night=`; in a command, `count=` more now, `for=` a while). `q:brain` of `q:state`s (stand, wander
+  within= of home, chase target= around the walls, flee from= for= then=) with `q:when condition= become=`, run a tick
+  at a time for the entities with a hero within 32 tiles (by the index's cells): a region no one is in sleeps.
+  `q:kill entity= by=` runs the `q:on-death kind= as= by=` of its kind and takes it out (a player's stays: its
+  on-death brings it back); `q:loot of= to=` rolls its `q:drop`s into the receiver's `bag` (items) and `gold` fields
+  (the ledger takes them in Phase 4, in the same words). `q:travel` walks an entity a step at a time along the
+  shortest way around the walls (40 tiles); a q:move ends it. nearest(), fighting(), in_fight(), sees(),
+  is_night(), daytime().
+- All of it is the world's: inside the tick, in the order of the ids, from the seeded random, and journaled: an
+  entity made or taken out in a command is undone with it (a kill refused leaves the beast alive, in its cell, its
+  spawn's count unchanged). The den replays from its snapshot to the same digest, rats and all.
+- The game. predict="true" is allowed on a command whose body is q:requires and one q:move of me to ahead(me, a
+  param): the game gets the world's walls (game.json, as the server keeps them), draws the step at once, and when the
+  world refuses it walks the hero back to where the world says. `--q-latency=MS` (and `latency=` on PlaySession and
+  WorldTable) holds every message half that long each way, counted in the game's ticks, so a test of it is exact.
+  `qg:health-bar value= max=` over a character or a prefab; `qg:bar value= max=` in the HUD.
+- `tests/gameserver/test_gameserver_life.py` (23) and `tests/godot/test_godot_den.py` (3): a rat bites, dies of
+  two blows, leaves cheese and 1 to 3 gold, and comes back 300 ticks (30 s) later; with 100 and 250 ms the step is
+  drawn three ticks after the key, before the world's answer, and a refused one (a hero who shouts stands) walks back
+  at no more than 6 pixels a tick, where the world says.
+- Not yet: a prefab's frame="{...}" from its entity's fields (it moves to Phase 4, with the outfits); the other
+  heroes' steps are walked tile to tile in the step's time (Phase 2's mirror), with no interpolation buffer: none was
+  needed at ten ticks a second.
 
 ### Phase 4 — Accounts, the ledger and together (L)
 
@@ -353,6 +428,44 @@ the other games' are).
 
 Done when: a trade clicked by both at once doubles nothing; the ledger's sum of gold is the sum of what was made
 less what was spent, after an hour of bots; a hero signs out and in on another machine where it was.
+
+As built (2026-10-27):
+- The ledger. `q:currency name= start=` (gold) and `q:item name= price=` with whatever else a thing is (`heals=`,
+  `slot=`, `attack=`) are a world's money and things. They are made, moved and spent only by `q:give`, `q:take`,
+  `q:pay` (`item= count=` or `amount= currency=`) and `q:loot`, and the world's books count each by asset and by
+  where it happened (`q:command buy`, `loot of Rat`, `start`, `left the world`). A hero's gold and `bag` are private
+  fields that no q:set may write (`gold is the ledger's`); the books are journaled as any write, so a command
+  refused makes and spends nothing. balance(), has(), item(), price(), heals(), slot(), bonus().
+  `test_an_hour_of_bots_and_the_books_hold`: twelve heroes buying, selling, eating, tipping, fighting rats, coming
+  and going for 36000 ticks, and what they hold of each thing is what was made less what was spent, every ten
+  minutes and at the end (six seconds).
+- Together. `q:chat channels="say:7, yell:30, party, help" whisper= limit="3/5s" filter="moderate"`: the world's
+  own commands `chat` and `whisper` (a q:command of one of those names is refused), each line an event to those it
+  reaches alone, the worst words starred, more than the limit refused (`Too fast.`); `q:say` is the world's line.
+  `q:party size=` gives `party-invite`, `party-accept`, `party-leave` and a `party` field; `q:trade` gives
+  `trade-offer` (gold and things), `trade-accept`, `trade-cancel`: the second acceptance moves both sides whole, in
+  one transaction, so both clicked in the same tick move once; a new offer takes back the acceptances, a hero who
+  leaves ends its trades. `q:quest name= title= goal="kill:Rat:2" level= reward="gold:20, xp:50, item:sword"` and
+  `q:reward`; quest_goal(), quest_done(), party_of(), party_near().
+- Accounts. `accounts="site"`: a hello is a ticket, not a name. The site signs it (HMAC-SHA256 of the account, the
+  name it shows, when it ends and a random nonce) with `QUANTUM_WORLD_SECRET`, from the environment of both (16
+  characters or more; never a file, never the .q), and the world checks it itself: no call to the site in the
+  hello. A ticket lasts a minute and comes in once. A world of a site's accounts does not start without the secret.
+  The name the hero shows (`account.name`) is the ticket's, written in the join's entry, so the replay is exact. An
+  account that signs in again while its connection is open takes its hero over where it stands, in its party, with
+  its trade (the old connection is told `You signed in somewhere else.`); one whose connection dropped comes back to
+  its hero where it was (`persist="true"`). `quantum gameserver ticket --account ana@site --name Ana`, and
+  `WorldSession(url, ticket=)`. In the game, `qg:sign-in to= data=` is a qg:post whose answer's ticket the game keeps
+  for the world's next hello, out of its state and its saves (its qg:on-done hears the reply without it); a site
+  world's game must have one, a guest world's may not. `--q-ticket=`, `PlaySession(ticket=)`,
+  `WorldTable(secret=)`. `tests/gameserver/test_gameserver_tickets.py` (forged, of another secret, expired, used
+  twice, a name instead: refused; a take-over; a drop and a return) and `tests/godot/test_godot_sign_in.py` (a wrong
+  password heard by qg:on-fail, then the game comes in as ana@site).
+- Fixed on the way: a connection the server closed (a message out of the protocol, too many a second) left its hero
+  in the world and the name locked out; it leaves now.
+- Not yet: Outpost playable (4d, next). The site's side in Quantum: a Core function that signs a ticket in a
+  q:endpoint (`worldTicket(account, name)`, a SPEC rule) is the owner's call; until then the site is any server
+  that signs with `quantum.runtime.gameserver.tickets.issue` (the tests' is Python).
 
 ### Phase 5 — NPCs with AI (M/L) — the owner's first magic
 
@@ -421,3 +534,13 @@ Done when: the numbers below hold for a day of bots.
   `WorldSession`, an observation of one player's views, the god's view, several seats, the replay as a session.
 - 2026-10-26: Phase 1, the world lives: the schema, the rules, the world loop, the protocol (one frame a tick), the
   log and its replay, `quantum gameserver run --step`, the `WorldSession`, the yard and its tests, the reference.
+- 2026-10-27: Phase 2, views and the game: `q:view` on the index of cells with only what changed sent, `q:emit`, a
+  control connection for a test world's harness (the server says every tick in step); `qg:connect` with the world's
+  file read by the compiler, `qg:mirror`, `qg:send`, `qg:on-event`, `qg:on-refused`, `me()`/`entity()`; the play
+  protocol in a world (`WorldTable`, two Godot clients); a hundred bots for an hour (the numbers above).
+- 2026-10-27: Phase 3, beasts, fights and prediction: `q:spawn`, `q:brain`, sleeping regions, `q:kill`/`q:on-death`,
+  `q:loot`, `q:clock`, `q:travel`, all journaled; `predict="true"`, `--q-latency`, `qg:health-bar`, `qg:bar value=`.
+- 2026-10-27: Phase 4, the ledger (books by asset and source, private and guarded fields), together (the chat, a
+  party, a trade in one transaction, quests) and accounts (`accounts="site"`: tickets the world checks itself, one
+  minute and one use, a sign-in again takes the hero over; `qg:sign-in`). The plan said the server checks a ticket
+  "with the site": it checks the site's signature instead, so a hello never waits on the site.

@@ -52,8 +52,9 @@ TAGS: Dict[str, Tag] = {
          'client': Attr('text', doc='the game the players run (its .q, next to this file)'),
          'tick': Attr('int', 10, doc='ticks a second: every command, every rule and every view runs on one'),
          'players': Attr('int', 500, doc='how many may be in the world at once; one more is told it is full'),
-         'accounts': Attr('enum:guest', 'guest',
-                          doc='who may come in: guest, anyone with a name (the site\'s accounts are Phase 4)')},
+         'accounts': Attr('enum:guest|site', 'guest',
+                          doc='who may come in: guest, anyone with a name; site, a site\'s account with its ticket '
+                              '(signed with QUANTUM_WORLD_SECRET, from the environment: `quantum gameserver ticket`)')},
         ('application',)),
     'map': Tag(
         'The world\'s map: a Tiled file the game draws too, so the walls the player sees are the walls the server '

@@ -32,6 +32,7 @@ class WorldInfo:
     hero_kind: str = ''
     predict: Dict[str, str] = field(default_factory=dict)   # a command the game shows at once: its way's param
     walls: Dict[str, object] = field(default_factory=dict)  # the world's walls: width, height, rows of 0 and 1
+    accounts: str = 'guest'                            # guest, or site: its players sign in (qg:sign-in)
 
 
 def read_world(path: Path, line: Optional[int]) -> WorldInfo:
@@ -76,4 +77,4 @@ def read_world(path: Path, line: Optional[int]) -> WorldInfo:
              'rows': [''.join('1' if (x, y) in m.walls else '0' for x in range(m.width)) for y in range(m.height)]}
     return WorldInfo(path, world.name, {c.name: list(c.params) for c in world.commands.values()},
                      list(world.views), events, kinds, fields, private, world.hero.kind,
-                     {c.name: c.predict for c in world.commands.values() if c.predict}, walls)
+                     {c.name: c.predict for c in world.commands.values() if c.predict}, walls, world.accounts)

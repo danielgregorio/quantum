@@ -325,7 +325,7 @@ class World(Life, Ledger, Together):
         self.write(entity, 'at', {'x': to[0], 'y': to[1]}, None, line)
         self.reindex([entity['id']])           # the index follows at once: a brain moving next sees it
 
-    def make(self, spec: EntityDef, account: Optional[str] = None) -> dict:
+    def make(self, spec: EntityDef, account: Optional[str] = None, name: Optional[str] = None) -> dict:
         if spec.per_player:
             eid = f'{spec.name}:{account}'
         else:
@@ -333,7 +333,7 @@ class World(Life, Ledger, Together):
             eid = f'{spec.name}-{self.counters[spec.name]}'
         entity = {'id': eid, 'kind': spec.kind, 'at': None, 'facing': 'south',
                   '_type': spec.name, '_player': account, '_until': 0}
-        scope = {'account': {'name': account, 'id': account}}
+        scope = {'account': {'name': name or account, 'id': account}}
         for f in spec.fields:
             entity[f.name] = plain(self.rules.value(f.value, scope, f.line))
         if spec.states:
@@ -347,7 +347,7 @@ class World(Life, Ledger, Together):
                 entity.setdefault(currency, start)
         return entity
 
-    def _join(self, account: str, out: TickOut) -> None:
+    def _join(self, account: str, out: TickOut, name: Optional[str] = None) -> None:
         if account in self.players:
             return
         if len(self.players) >= self.definition.players:
@@ -356,7 +356,7 @@ class World(Life, Ledger, Together):
         spec = self.definition.hero
         hero = self.stored.pop(account, None) if spec.persist else None
         if hero is None:
-            hero = self.make(spec, account)
+            hero = self.make(spec, account, name)
             self.mint_start(hero)
         self.entities[hero['id']] = hero
         self.players[account] = hero['id']
@@ -442,16 +442,18 @@ class World(Life, Ledger, Together):
         return True, 'ok'
 
     def step(self, inputs: List[tuple]) -> TickOut:
-        """One tick: the inputs in the order they came (('join', account), ('leave', account), ('cmd', account,
-        seq, name, args)), then the rules due."""
+        """One tick: the inputs in the order they came (('join', account[, name]), ('leave', account), ('cmd',
+        account, seq, name, args)), then the rules due. A join's name is the one its hero shows (account.name; a
+        site's account's, from its ticket), else the account."""
         self.tick += 1
         out = TickOut(self.tick)
         self.dirty, self.gone, self.events, self.vars_changed = set(), set(), [], False
         for item in inputs:
             kind, account = item[0], item[1]
             if kind == 'join':
-                self._join(account, out)
-                out.entries.append({'t': self.tick, 'k': 'join', 'a': account})
+                name = item[2] if len(item) > 2 and item[2] != account else None
+                self._join(account, out, name)
+                out.entries.append({'t': self.tick, 'k': 'join', 'a': account, **({'n': name} if name else {})})
             elif kind == 'leave':
                 self._leave(account, out)
                 out.entries.append({'t': self.tick, 'k': 'leave', 'a': account})

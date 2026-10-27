@@ -190,8 +190,9 @@ def main() -> int:
     numbers = {
         'bots': args.bots, 'seconds': round(took), 'field': args.size, 'view': args.view,
         'tick_ms_p50': round(statistics.median(s['tick_ms_p50'] for s in full), 2),
-        'tick_ms_p99': round(max(s['tick_ms_p99'] for s in full), 2),
-        'tick_ms_max': round(max(s['tick_ms_max'] for s in full), 2),
+        'tick_ms_p99': round(statistics.median(s['tick_ms_p99'] for s in full), 2),    # of an interval, typically
+        'tick_ms_max': round(max(s['tick_ms_max'] for s in full), 2),                  # the worst tick of all
+        'intervals_over_50ms': sum(1 for s in full if s['tick_ms_max'] > 50), 'intervals': len(full),
         'player_kb_s_p50': round(statistics.median(s['player_kb_s_p50'] for s in full), 2),
         'player_kb_s_max': round(max(s['player_kb_s_max'] for s in full), 2),
         'world_kb_s': round(statistics.median(s['out_kb_s'] for s in full), 1),

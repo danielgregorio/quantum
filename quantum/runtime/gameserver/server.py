@@ -2,7 +2,8 @@
 
 The protocol is JSON, a message a frame, and small enough to write down here:
 
-    client: {"type": "hello", "name": "ana"}                         a guest world's player (Phase 4: a ticket)
+    client: {"type": "hello", "name": "ana"}                         a guest world's player
+            {"type": "hello", "ticket": "eyJh...Q.5f..."}             a site's account (accounts="site"): tickets.py
             {"type": "hello", "control": true}                        a test world's (--step) harness: no entity
             {"type": "cmd", "seq": 3, "name": "step", "args": {"dir": "north"}}
             {"type": "ping", "t": 12.5}
@@ -24,6 +25,11 @@ A tick frame goes to a player only when it has something for them: what of each 
 and the events (q:emit) where they see (in a test world, every tick: a harness knows its clients heard it). A view's entities are the public fields, and its player's own entity's
 private ones too; an update holds only the fields that changed. A test world (--step) does not tick by itself: it
 waits for a "step", so a test is exact and as fast as the machine.
+
+In a world of a site's accounts a hello is a ticket, and one comes in once. An account that signs in again while its
+connection is still open takes its hero over: the old connection is told so and closed, and the hero stays where it
+is, in its party, with its trade. The world never sees a password: the site signs the ticket (tickets.py), with the
+secret the two share in their environments (QUANTUM_WORLD_SECRET).
 """
 
 from __future__ import annotations
@@ -40,6 +46,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from quantum.runtime.gameserver import tickets
+from quantum.runtime.gameserver.errors import GameServerError
 from quantum.runtime.gameserver.log import WorldLog, replay
 from quantum.runtime.gameserver.model import WorldDef
 from quantum.runtime.gameserver.rules import chebyshev
@@ -82,8 +90,13 @@ def _changed(before: dict, now: dict) -> dict:
 class WorldServer:
     def __init__(self, definition: WorldDef, *, host: str = '127.0.0.1', port: int = 7700, step: bool = False,
                  data_dir: Optional[Path] = None, snapshot_every: float = 300.0, quiet: bool = False,
-                 stats: float = 0.0):
+                 stats: float = 0.0, secret: Optional[bytes] = None):
         self.definition = definition
+        self.secret = secret if secret is not None else tickets.secret_from_env()
+        if definition.accounts == 'site' and not self.secret:
+            raise GameServerError(f'{definition.name}: accounts="site" signs its tickets with {tickets.SECRET_ENV}, '
+                                  'and the environment has none (16 characters or more)')
+        self.used: Dict[str, int] = {}                      # the tickets that came in, till they end
         self.host, self.port = host, port
         self.step_mode = step
         self.data_dir = Path(data_dir) if data_dir else Path('.quantum') / 'gameserver' / definition.name
@@ -94,6 +107,7 @@ class WorldServer:
         self.connections: Dict[str, Connection] = {}
         self.controls: List[Connection] = []
         self.inbox: List[tuple] = []
+        self.welcoming: Set[str] = set()                    # accounts that took their hero over: welcomed next tick
         self._public: Dict[str, dict] = {}                  # each entity as the players have it (as of the last tick)
         self._own: Dict[str, dict] = {}                     # a player's entity as its player has it
         self.bytes_out = 0
@@ -307,10 +321,10 @@ class WorldServer:
             if account in out.full:
                 await self._close(conn, 'The world is full.')
                 continue
-            if account in out.joined:
+            if account in out.joined or (account in self.welcoming and account in world.players):
                 conn.joined = True
                 conn.views = {}
-                await self._send_to(conn, {'type': 'welcome', 'you': out.joined[account], 'tick': out.tick,
+                await self._send_to(conn, {'type': 'welcome', 'you': world.players[account], 'tick': out.tick,
                                            'rate': self.definition.tick_rate, 'world': self.definition.name,
                                            'client': self.definition.client,
                                            'map': self.definition.map.path.name,
@@ -329,6 +343,7 @@ class WorldServer:
                 frame['events'] = events[account]
             if len(frame) > 2 or self.step_mode:      # a test world says every tick: its harness waits for it
                 await self._send_to(conn, frame)
+        self.welcoming.clear()
         for eid in world.gone:
             self._public.pop(eid, None)
             self._own.pop(eid, None)
@@ -343,13 +358,17 @@ class WorldServer:
             pass
 
     async def _close(self, conn: Connection, reason: str) -> None:
+        """The connection told why and closed; its player leaves the world (if it came in, or is coming)."""
         await self._send_to(conn, {'type': 'error', 'reason': reason})
         try:
             await conn.ws.close()
         except Exception:  # noqa: BLE001
             pass
-        if conn.account is not None and self.connections.get(conn.account) is conn:
-            del self.connections[conn.account]
+        account = conn.account
+        if account is not None and self.connections.get(account) is conn:
+            del self.connections[account]
+            if account in self.world.players or any(i[0] == 'join' and i[1] == account for i in self.inbox):
+                self.inbox.append(('leave', account))
 
     # -- a connection ------------------------------------------------------------------------------------------
 
@@ -385,16 +404,22 @@ class WorldServer:
                                                    'rate': self.definition.tick_rate, 'step': True,
                                                    'control': True, 'views': list(self.definition.views)})
                         continue
-                    name = message.get('name')
-                    if not isinstance(name, str) or not _NAME.match(name):
-                        await self._refuse(ws, 'A name is 1 to 24 letters, digits, _ or -.')
+                    who = self._who(message)
+                    if isinstance(who, str):
+                        await self._refuse(ws, who)
                         return
-                    if name in self.connections or name in self.world.players:
-                        await self._refuse(ws, f'{name} is in the world already.')
-                        return
-                    conn = Connection(ws, name)
-                    self.connections[name] = conn
-                    self.inbox.append(('join', name))
+                    account, name = who
+                    conn = Connection(ws, account)
+                    old = self.connections.get(account)
+                    self.connections[account] = conn
+                    if old is not None:                 # a site's account, signed in again: it takes its hero
+                        if old.joined:
+                            self.welcoming.add(account)
+                        await self._close(old, 'You signed in somewhere else.')
+                    elif account not in self.world.players or ('leave', account) in self.inbox:
+                        self.inbox.append(('join', account, name))
+                    else:                               # in the world with no connection: its hero, as it is
+                        self.welcoming.add(account)
                     await self._send_to(conn, {'type': 'greeting', 'world': self.definition.name,
                                                'rate': self.definition.tick_rate, 'step': self.step_mode})
                 elif kind == 'cmd' and conn.account is None:
@@ -439,6 +464,29 @@ class WorldServer:
             elif conn is not None and self.connections.get(conn.account) is conn:
                 del self.connections[conn.account]
                 self.inbox.append(('leave', conn.account))
+
+    def _who(self, message: dict):
+        """(account, name) of a hello, or why it may not come in."""
+        if self.definition.accounts == 'site':
+            if 'ticket' not in message:
+                return 'The players of this world sign in: a hello has a ticket of the site, not a name.'
+            try:
+                ticket = tickets.verify(message['ticket'], self.secret)
+            except tickets.TicketError as e:
+                return str(e)
+            now = time.time()
+            self.used = {t: end for t, end in self.used.items() if end >= now}
+            signature = message['ticket'].rsplit('.', 1)[1]
+            if signature in self.used:
+                return 'The ticket was used already: sign in again.'
+            self.used[signature] = ticket.ends
+            return ticket.account, ticket.name
+        name = message.get('name')
+        if not isinstance(name, str) or not _NAME.match(name):
+            return 'A name is 1 to 24 letters, digits, _ or -.'
+        if name in self.connections or (name in self.world.players and ('leave', name) not in self.inbox):
+            return f'{name} is in the world already.'
+        return name, name
 
     def _peek(self) -> dict:
         """The god's view, for a test: every entity with all its fields but the world's own (_...)."""
@@ -527,6 +575,11 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
                      help='say the numbers (the ticks\' time, what went out) every so often')
     check = sub.add_parser('check', help='read a world against its schema, and say what is wrong')
     check.add_argument('file')
+    ticket = sub.add_parser('ticket', help=f'a ticket into a world of a site\'s accounts (accounts="site"), '
+                                           f'signed with {tickets.SECRET_ENV} from the environment')
+    ticket.add_argument('--account', required=True, help='the site\'s id of the account (its hero: hero:<it>)')
+    ticket.add_argument('--name', default='', help='the name its hero shows (else the account)')
+    ticket.add_argument('--seconds', type=float, default=60.0, help='how long it lasts (a minute)')
 
 
 def load(path: str) -> WorldDef:
@@ -540,12 +593,21 @@ def load(path: str) -> WorldDef:
 
 
 def main(args) -> int:
-    from quantum.runtime.gameserver.errors import GameServerError
-
     command = getattr(args, 'gameserver_command', None)
-    if command not in ('run', 'check'):
-        print('quantum gameserver run FILE | quantum gameserver check FILE')
+    if command not in ('run', 'check', 'ticket'):
+        print('quantum gameserver run FILE | quantum gameserver check FILE | quantum gameserver ticket --account A')
         return 2
+    if command == 'ticket':
+        secret = tickets.secret_from_env()
+        if not secret:
+            print(f'[ERROR] {tickets.SECRET_ENV} is not in the environment (16 characters or more)', file=sys.stderr)
+            return 1
+        try:
+            print(tickets.issue(args.account, args.name, secret, seconds=args.seconds))
+        except tickets.TicketError as e:
+            print(f'[ERROR] {e}', file=sys.stderr)
+            return 1
+        return 0
     try:
         definition = load(args.file)
     except GameServerError as e:
@@ -555,13 +617,17 @@ def main(args) -> int:
         print(f'[OK] {definition.name}: {len(definition.entities)} entities, {len(definition.commands)} commands, '
               f'{len(definition.every)} rules every so often, a map of {definition.map.width}x{definition.map.height}')
         return 0
-    return serve_forever(definition, host=args.host, port=args.port, step=args.step,
-                         data_dir=Path(args.data) if args.data else None, snapshot_every=args.snapshot_every,
-                         stats=args.stats)
+    try:
+        server = WorldServer(definition, host=args.host, port=args.port, step=args.step,
+                             data_dir=Path(args.data) if args.data else None, snapshot_every=args.snapshot_every,
+                             stats=args.stats)
+    except GameServerError as e:
+        print(f'[ERROR] {e}', file=sys.stderr)
+        return 1
+    return serve_forever(server)
 
 
-def serve_forever(definition: WorldDef, **options) -> int:
-    server = WorldServer(definition, **options)
+def serve_forever(server: WorldServer) -> int:
 
     def stop(*_):
         server.stop()

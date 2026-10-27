@@ -131,3 +131,31 @@ def test_the_game_reads_what_a_hero_holds_of_the_ledger(tmp_path):
                                                   "str(me().kills) + ' rats ' + str(me().gold) + ' gold'")
     script = (build_den(tmp_path, source) / 'scripts' / 'scene_den.gd').read_text()
     assert 'Q.wf(Q.world_me(), "gold")' in script
+
+
+SIGN_IN = ('<qg:on-input action="hush"><qg:send command="hush" /></qg:on-input>',
+           '<qg:on-input action="hush"><qg:sign-in to="https://site.example/sign-in" '
+           'data="{ {\'account\': \'ana\', \'password\': note} }"><qg:on-done><q:set name="note" value="in" />'
+           '</qg:on-done></qg:sign-in></qg:on-input>')
+
+
+def test_a_game_signs_in_to_a_world_of_a_sites_accounts_and_only_to_one(tmp_path):
+    source = (DEN / 'den.q').read_text()
+    with pytest.raises(GameCompileError, match='lets in guests by a name'):
+        build_den(tmp_path, source.replace(*SIGN_IN))
+    site = tmp_path / 'site'
+    site.mkdir()
+    build_den(site)
+    world = (site / 'den.server.q').read_text().replace('<q:gameserver name="den"',
+                                                        '<q:gameserver name="den" accounts="site"')
+    (site / 'den.server.q').write_text(world)
+
+    def again(text):
+        src = site / 'den.q'
+        src.write_text(text)
+        return Path(compile_game(QuantumParser(use_cache=False).parse_file(str(src)), str(site / 'godot'),
+                                 source_dir=str(site)))
+    with pytest.raises(GameCompileError, match=r'has a <qg:sign-in> to the site'):
+        again(source)
+    script = (again(source.replace(*SIGN_IN)) / 'scripts' / 'scene_den.gd').read_text()
+    assert 'Q.post(self, "https://site.example/sign-in"' in script and ', true)' in script
