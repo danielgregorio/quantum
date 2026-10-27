@@ -147,6 +147,13 @@ def protocol_section():
             'secret)`, or `quantum gameserver ticket --account ana@site --name Ana`), and the world checks it with '
             'the secret both have in their environment, `QUANTUM_WORLD_SECRET` (never in a file). A ticket lasts a '
             'minute and comes in once; `WorldSession(url, ticket=...)` is such a player.\n\n'
+            'An NPC (`q:npc`) answers off the tick: the server gives its mind the question and the world goes on; '
+            'the answer comes back as an input of a tick, which the log keeps. `quantum gameserver run` asks the '
+            'Core\'s LLM (`QUANTUM_LLM_BASE_URL`, `QUANTUM_NPC_MODEL`); `--no-minds`, or no model, and the NPCs say '
+            'their fallback\'s lines. In a test, `serve_world(path, mind=function)` gives the NPCs a scripted mind: '
+            'a function of the question (`instruction`, `knowledge`, `memory`, `player`, `text`, `tools`) that '
+            'returns the answer: `say` (its words), `do` (the tools to run, each with its `tool` and `args`) and '
+            '`remember` (its note of the player).\n\n'
             '`quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks\' time (median, '
             '99th percentile, worst) and what went out, to the world and to each player. '
             '`scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.\n\n')

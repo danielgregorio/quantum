@@ -5,8 +5,8 @@
        (qg:mirror), sends what the player asks (qg:send) and shows what happens (qg:on-event). The map is the file
        the server reads, so only what moves goes over the network.
 
-       The arrows step (at once: the world's step is predicted). A click on a beast attacks it, on Marta opens her
-       shop, on Captain Rhea her quests, on the ground walks there. B is the bag, C the chat. -->
+       The arrows step (at once: the world's step is predicted). A click on a beast attacks it, on Marta or Captain
+       Rhea talks to her (their minds answer: Phase 5), on the ground walks there. B is the bag, C the chat. -->
 
   <qg:connect world="outpost.server.q" server="wss://outpost.quantumframework.net" local="ws://127.0.0.1:7700" />
 
@@ -49,6 +49,9 @@
   <q:set name="line2" value="" />
   <q:set name="line3" value="" />
   <q:set name="typed" value="" />
+  <q:set name="talking" value="" />
+  <q:set name="words" value="" />
+  <q:set name="said" value="" />
 
   <!-- ===== The title: sign in with the site's account ===== -->
   <qg:scene name="title" width="480" height="270" background="#10141c">
@@ -89,9 +92,10 @@
     <!-- a click: on a beast (or a hero, out of the town), attack it; on Marta, her shop; on Rhea, her quests; on the
          ground, go there -->
     <qg:on-select>
-      <q:if condition="{other != null and other.kind == 'Trader'}">
-        <qg:open-overlay name="shop" />
-        <q:elseif condition="{other != null and other.kind == 'Captain'}"><qg:open-overlay name="quests" /></q:elseif>
+      <q:if condition="{other != null and (other.kind == 'Trader' or other.kind == 'Captain')}">
+        <q:set name="talking" value="{other.id}" />
+        <q:set name="said" value="" />
+        <qg:open-overlay name="talk" />
         <q:elseif condition="{other != null and other.id != me().id}"><qg:send command="attack" who="{other.id}" /></q:elseif>
         <q:else><qg:send command="go" to="{ {'x': cursor.col, 'y': cursor.row} }" /></q:else>
       </q:if>
@@ -107,6 +111,8 @@
       <q:set name="line2" value="{line1}" />
       <q:set name="line1" value="{'[' + value.channel + '] ' + value.who + ': ' + value.text}" />
     </qg:on-event>
+    <qg:on-event name="npc-thinking"><q:set name="said" value="{value.who + ': ...'}" /></qg:on-event>
+    <qg:on-event name="npc-says"><q:set name="said" value="{value.who + ': ' + value.text}" /></qg:on-event>
     <qg:on-refused><q:set name="note" value="{reason}" /></qg:on-refused>
 
     <qg:on-input action="bag"><qg:open-overlay name="bag" /></qg:on-input>
@@ -137,6 +143,21 @@
           <q:else><qg:send command="equip" item="{it.key}" /></q:else>
         </q:if>
       </qg:button>
+    </qg:menu>
+    <qg:on-input action="cancel"><qg:close-overlay /></qg:on-input>
+  </qg:overlay>
+
+  <!-- words to Marta or Rhea: their minds answer in their own time (npc-says); the list and the quests are there
+       too, for whoever would rather not talk -->
+  <qg:overlay name="talk" freeze="false">
+    <qg:hud position="top-center" size="11"><qg:text value="{entity(talking).title if entity(talking) != null else ''}" color="#55ffff" /></qg:hud>
+    <qg:hud position="center" size="10"><qg:text value="{said}" /></qg:hud>
+    <qg:menu x="16" y="170" size="10">
+      <qg:field label="Say" bind="words" max-length="200" />
+      <qg:button label="Tell her"><qg:send command="talk" npc="{talking}" text="{words}" /><q:set name="words" value="" /></qg:button>
+      <qg:button label="The list" if="{entity(talking) != null and entity(talking).kind == 'Trader'}"><qg:open-overlay name="shop" /></qg:button>
+      <qg:button label="Her work" if="{entity(talking) != null and entity(talking).kind == 'Captain'}"><qg:open-overlay name="quests" /></qg:button>
+      <qg:button label="Back"><qg:close-overlay /></qg:button>
     </qg:menu>
     <qg:on-input action="cancel"><qg:close-overlay /></qg:on-input>
   </qg:overlay>
@@ -208,6 +229,9 @@
     <qg:phrase text="Yell" as="Gritar" />
     <qg:phrase text="Help" as="Ajuda" />
     <qg:phrase text="OUTPOST" as="OUTPOST" />
+    <qg:phrase text="Tell her" as="Dizer a ela" />
+    <qg:phrase text="The list" as="A lista" />
+    <qg:phrase text="Her work" as="O trabalho dela" />
     <qg:phrase text="Rats in the sewers (level 1)" as="Ratos nos esgotos (nível 1)" />
     <qg:phrase text="Pelts for the winter (level 3)" as="Peles para o inverno (nível 3)" />
     <qg:phrase text="The Old Bear (level 8)" as="O Urso Velho (nível 8)" />

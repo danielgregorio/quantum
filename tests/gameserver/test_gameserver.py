@@ -39,7 +39,7 @@ HERO = '<q:entity name="hero" kind="Hero" per-player="true" />'
 # --- the file ---------------------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize('body, says, line', [
-    (HERO + '\n<q:npc name="marta" />', '<q:npc> is not a tag of a world', 5),          # Phase 5's
+    (HERO + '\n<q:director every="10m" />', '<q:director> is not a tag of a world', 5),     # Phase 6's
     (HERO + '\n<q:command name="go" speed="2"></q:command>', 'has no attribute speed=', 5),
     (HERO + '\n<q:command name="go" limit="fast"></q:command>', 'limit= is so many in so long', 5),
     (HERO + '\n<q:command name="go"><q:require condition="{me.at ==}" /></q:command>', 'invalid expression', 5),

@@ -166,6 +166,7 @@ Run a world (a q:application type="gameserver").
 | `--data` | where the world keeps its snapshot and log (.quantum/gameserver/&lt;name>) |  |  |
 | `--snapshot-every` |  | `300.0` |  |
 | `--stats` | say the numbers (the ticks' time, what went out) every so often |  |  |
+| `--no-minds` | the NPCs say the lines of their fallback, and no model is asked |  |  |
 
 <a id="cli-gameserver-check"></a>
 

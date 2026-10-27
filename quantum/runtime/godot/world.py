@@ -68,7 +68,7 @@ def read_world(path: Path, line: Optional[int]) -> WorldInfo:
     if world.party_size:
         fields.add('party')
     events |= ({'chat'} if world.chat else set()) | ({'party'} if world.party_size else set()) | (
-        {'trade'} if world.trade else set())
+        {'trade'} if world.trade else set()) | ({'npc-thinking', 'npc-says'} if world.npcs else set())
     if world.ledger:                                    # what a hero holds: its bag and its currencies, its own
         fields |= {'bag'} | set(world.currencies)
         private |= {'bag'} | set(world.currencies)

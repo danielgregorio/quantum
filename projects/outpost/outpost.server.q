@@ -4,8 +4,9 @@
        east of its gate and a cave north-east, where the Old Bear sleeps. A player signs in with the site's account
        and comes into the temple; Captain Rhea at the gate gives the town's quests, Old Marta in her shop sells and
        buys, and the rats, the wolves and the bear fight back. The world holds the rules; the game the players run is
-       outpost.q, next to this file. What Outpost will be (Marta and Rhea who talk, the Director, the admin's page,
-       the history) is draft/outpost.server.q: those tags come with Phases 5 and 6. -->
+       outpost.q, next to this file. Marta and Rhea have minds (Phase 5): a player talks to them, and they answer
+       off the tick, acting only through their tools. What Outpost will be (the Director, the admin's page, the
+       history) is draft/outpost.server.q: those tags come with Phase 6. -->
 
   <q:gameserver name="outpost" client="outpost.q" tick="10" players="500" accounts="site">
 
@@ -39,11 +40,42 @@
       <q:field name="kills" value="0" private="true" />
     </q:entity>
 
-    <!-- the town's two: they stand where they are made, and no one fights them -->
-    <q:entity name="marta" kind="Trader" title="Old Marta">
+    <!-- what the NPCs know: the town's story -->
+    <q:knowledge name="lore">
+      <q:source type="directory" path="lore" pattern="*.md" />
+    </q:knowledge>
+
+    <!-- Old Marta, the trader: she talks, haggles and remembers. Her mind acts only through her tools, which are
+         commands: whatever she is told, a price stays within a fifth of the list's -->
+    <q:npc name="marta" kind="Trader" at="shop-counter" title="Old Marta">
       <q:field name="gold" value="300" private="true" />
-    </q:entity>
-    <q:entity name="rhea" kind="Captain" title="Captain Rhea" />
+      <q:agent model="small" knowledge="lore" memory="per-player" budget="40/day" maxIterations="2">
+        <q:instruction>You are Old Marta, who has kept Outpost's shop for forty winters. You are wary and you love
+          to haggle; you sell and buy only with your tools, and you remember who bargained fairly and who did not.
+          Answer in the player's language, in two sentences at most.</q:instruction>
+        <q:tool command="npc-sell" description="Sell the player an item, at a price you both agreed" />
+        <q:tool command="npc-buy" description="Buy an item from the player, at a price you both agreed" />
+      </q:agent>
+      <q:fallback>
+        <q:line text="Potions, swords, armour. Look at the list." />
+        <q:line text="Mm? Speak up, or buy something." />
+      </q:fallback>
+    </q:npc>
+
+    <!-- Captain Rhea keeps the gate and gives the quests, one at a time, as the player's level allows -->
+    <q:npc name="rhea" kind="Captain" at="gate" title="Captain Rhea">
+      <q:agent model="small" knowledge="lore" memory="per-player" budget="40/day" maxIterations="1">
+        <q:instruction>You are Captain Rhea, who keeps Outpost's gate. You give one quest at a time from your
+          tools, fit for the player's level (sewers from 1, pelts from 3, old-bear from 8), and you reward it when
+          it is done. Brief, a soldier's words, in the player's language.</q:instruction>
+        <q:tool command="give-quest" description="Give the player one of the town's quests: sewers, pelts or old-bear" />
+        <q:tool command="reward-quest" description="Reward the player's quest, if it is done" />
+      </q:agent>
+      <q:fallback>
+        <q:line text="The sewers are full of rats. Ten of them, and come back." />
+        <q:line text="Done? Then say so. Not done? Then go." />
+      </q:fallback>
+    </q:npc>
 
     <!-- the beasts: a brain of states, run by the world; a beast with no hero near sleeps -->
     <q:entity name="rat" kind="Rat" speed="2/s" hp="20" attack="3" defense="0" worth="5">
@@ -83,8 +115,6 @@
     </q:entity>
 
     <!-- where each one lives, and how soon a beast comes back -->
-    <q:spawn entity="marta" area="shop-counter" count="1" />
-    <q:spawn entity="rhea" area="gate" count="1" />
     <q:spawn entity="rat" area="sewers" count="14" respawn="30s" />
     <q:spawn entity="wolf" area="forest" count="10" night-count="20" respawn="60s" />
     <q:spawn entity="bear" area="cave" count="1" respawn="15m" />
@@ -161,7 +191,43 @@
       <q:pay from="{nearest(me, 'Trader', 3)}" to="{me}" amount="{max(price(item), bonus(item, 'worth')) // 2}" />
     </q:command>
 
-    <!-- Rhea's quests: one at a time, as the hero's level allows -->
+    <!-- words to an NPC: its mind answers in its own time (to whoever is near) and may use its tools -->
+    <q:command name="talk" params="npc, text" limit="1/3s">
+      <q:require condition="{entity(npc) != null and near(me, npc, 3)}" else="Come closer." />
+      <q:ask npc="{npc}" text="{text}" />
+    </q:command>
+
+    <!-- ===== The NPCs' tools: commands only an NPC's mind may run (by="npc"), as the player it talks to ===== -->
+
+    <q:command name="npc-sell" params="item, price" by="npc">
+      <q:require condition="{price(item) > 0}" else="Marta does not sell that." />
+      <q:require condition="{price >= price(item) * 4 // 5 and price <= price(item) * 6 // 5}" else="Not at that price." />
+      <q:require condition="{balance(me) >= price}" else="You cannot pay that." />
+      <q:pay from="{me}" to="{npc}" amount="{price}" />
+      <q:give to="{me}" item="{item}" />
+    </q:command>
+    <q:command name="npc-buy" params="item, price" by="npc">
+      <q:require condition="{has(me, item)}" else="You have none." />
+      <q:require condition="{price >= max(price(item), bonus(item, 'worth')) * 2 // 5 and price <= max(price(item), bonus(item, 'worth')) * 3 // 5}"
+                 else="Not at that price." />
+      <q:require condition="{balance(npc) >= price}" else="Marta cannot pay that now." />
+      <q:take from="{me}" item="{item}" />
+      <q:pay from="{npc}" to="{me}" amount="{price}" />
+    </q:command>
+    <q:command name="give-quest" params="quest" by="npc">
+      <q:require condition="{quest_title(quest) != ''}" else="No such quest." />
+      <q:require condition="{len(me.quest) == 0}" else="One quest at a time." />
+      <q:require condition="{me.level >= quest_level(quest)}" else="Come back when you are stronger." />
+      <q:set name="me.quest" value="{ {'name': quest, 'done': 0} }" />
+    </q:command>
+    <q:command name="reward-quest" by="npc">
+      <q:require condition="{quest_done(me)}" else="It is not done." />
+      <q:reward to="{me}" quest="{me.quest.name}" />
+      <q:set name="me.quest" value="{ {} }" />
+      <q:call function="gain" args="{me}, {0}" />
+    </q:command>
+
+    <!-- Rhea's quests, without a word: one at a time, as the hero's level allows -->
     <q:command name="take-quest" params="name">
       <q:require condition="{nearest(me, 'Captain', 3) != null}" else="Captain Rhea is at the gate." />
       <q:require condition="{quest_title(name) != ''}" else="No such quest." />

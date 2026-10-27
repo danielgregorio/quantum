@@ -84,7 +84,7 @@ TAGS: Dict[str, Tag] = {
         {'name': Attr('ident', required=True),
          'value': Attr('value', '', doc='its first value; `account` is the player\'s ({account.name})'),
          'private': Attr('bool', False)},
-        ('entity',)),
+        ('entity', 'npc')),
     'brain': Tag(
         'What an entity of the world does by itself, as states (q:state): in each, a way to move (do=) and the '
         'conditions that change it (q:when). The world runs a brain a tick at a time, for the entities with a '
@@ -239,6 +239,63 @@ TAGS: Dict[str, Tag] = {
          'reward': Attr('text', '', doc='what it gives, separated by commas: a currency, item, or a field of the '
                                         'hero (xp) with its amount')},
         ('gameserver',)),
+    'npc': Tag(
+        'A character of the world with a mind: an entity (kind=, its fields as attributes or q:fields) made at '
+        'the area at= when the world begins, whose words come from its q:agent. A player\'s q:ask gives it their '
+        'words; the world goes on, the NPC is seen thinking (the event npc-thinking), and its answer comes some '
+        'ticks later as the event npc-says ({npc, who, text}) to the asker and those near. What it does is its '
+        'tools\' commands (by="npc"), whose q:requires hold whatever it was told. Without a mind, out of budget '
+        'or too slow, it says a line of its q:fallback. The answer is kept in the log: a replay asks no model.',
+        {'name': Attr('ident', required=True),
+         'kind': Attr('text', required=True, doc='what the game draws it as: a qg:prefab of the client'),
+         'at': Attr('text', required=True, doc='the area of the map where it stands')},
+        ('gameserver',),
+        extra='its fields, as q:entity\'s (title="Old Marta")'),
+    'agent': Tag(
+        'An NPC\'s mind: its q:instruction (who it is), its q:tools (the commands it may run), what it knows '
+        '(knowledge=, a q:knowledge of the world) and remembers of each player (memory=), and how many questions a '
+        'player may ask it a day (budget=, the world\'s day with a q:clock, else 24 hours).',
+        {'model': Attr('text', 'small', doc='the model: small is the environment\'s QUANTUM_NPC_MODEL, else the '
+                                            'Core\'s default; any other is a model\'s name'),
+         'knowledge': Attr('ident', None, doc='a q:knowledge of the world: the texts it may read'),
+         'memory': Attr('enum:per-player|none', 'per-player', doc='per-player: a short note of each player, kept '
+                                                                   'with the hero (persist="true": the next day too)'),
+         'budget': Attr('text', '40/day', doc='questions a player may ask it a day; one more is a fallback line'),
+         'maxIterations': Attr('int', 3, doc='tools it may run in one answer')},
+        ('npc',)),
+    'instruction': Tag(
+        'Who the NPC is and how it speaks: the text of its agent\'s instruction.',
+        {}, ('agent',), text='the instruction'),
+    'tool': Tag(
+        'A tool of an NPC\'s agent: a command of the world with by="npc", which the agent may run as the player '
+        'it talks to, with the arguments it chooses; the command\'s q:requires decide, not the model.',
+        {'command': Attr('ident', required=True),
+         'description': Attr('text', '', doc='what the agent is told it does')},
+        ('agent',)),
+    'fallback': Tag(
+        'What an NPC says with no mind to answer: no model, out of budget, or too slow. Its q:lines, one at '
+        'random (the world\'s random).',
+        {}, ('npc',)),
+    'line': Tag(
+        'A line of an NPC\'s q:fallback.',
+        {'text': Attr('text', required=True)},
+        ('fallback',)),
+    'knowledge': Tag(
+        'Texts the world\'s NPCs may read (the town\'s story): its q:sources, read as the world is loaded.',
+        {'name': Attr('ident', required=True)},
+        ('gameserver',)),
+    'source': Tag(
+        'Where a q:knowledge\'s texts are: a directory (its files of pattern=) or a file, next to the world.',
+        {'type': Attr('enum:directory|file', 'directory'),
+         'path': Attr('text', required=True),
+         'pattern': Attr('text', '*.md')},
+        ('knowledge',)),
+    'ask': Tag(
+        'A player\'s words to an NPC (in a command): it is seen thinking, and answers some ticks later, off the '
+        'tick (q:npc). Refused when the command is.',
+        {'npc': Attr('expr', required=True, doc='the NPC (an entity, or its id)'),
+         'text': Attr('expr', required=True, doc='what the player says')},
+        ('handler',)),
     'reward': Tag(
         'A quest\'s reward, given: its currency and items by the ledger, its other parts added to the hero\'s fields '
         '(xp:100 to its xp). A quest to bring things takes them: the five furs go, spent where the reward is given.',
@@ -255,7 +312,9 @@ TAGS: Dict[str, Tag] = {
          'limit': Attr('rate', doc='at most so many a player (8/s, 1/3s): one more is refused'),
          'predict': Attr('bool', False, doc='the game shows it at once, before the world says yes: a command '
                                             'whose body is q:requires and one q:move of me to ahead(me, a '
-                                            'param); a refusal walks the hero back')},
+                                            'param); a refusal walks the hero back'),
+         'by': Attr('enum:npc', None, doc='npc: only an NPC\'s agent runs it (a q:tool), as the player it talks to '
+                                          '(`me`), the NPC being `npc`; a player who sends it is refused')},
         ('gameserver',)),
     'require': Tag(
         'A condition the command needs: if it does not hold, the command is refused, with else= as the reason.',

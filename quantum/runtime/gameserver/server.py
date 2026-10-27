@@ -49,6 +49,7 @@ from typing import Any, Dict, List, Optional, Set
 from quantum.runtime.gameserver import tickets
 from quantum.runtime.gameserver.errors import GameServerError
 from quantum.runtime.gameserver.log import WorldLog, replay
+from quantum.runtime.gameserver.npc import FALLBACK, answer_of
 from quantum.runtime.gameserver.model import WorldDef
 from quantum.runtime.gameserver.rules import chebyshev
 from quantum.runtime.gameserver.world import TickOut, World
@@ -90,8 +91,13 @@ def _changed(before: dict, now: dict) -> dict:
 class WorldServer:
     def __init__(self, definition: WorldDef, *, host: str = '127.0.0.1', port: int = 7700, step: bool = False,
                  data_dir: Optional[Path] = None, snapshot_every: float = 300.0, quiet: bool = False,
-                 stats: float = 0.0, secret: Optional[bytes] = None):
+                 stats: float = 0.0, secret: Optional[bytes] = None, mind: Optional[Any] = None,
+                 mind_seconds: float = 20.0):
         self.definition = definition
+        self.mind = mind                                    # the NPCs' (npc.py): a function of a question
+        self.mind_seconds = mind_seconds                    # longer, and the NPC says a line of its fallback
+        self._minds_pool = None
+        self._thinking: Set[asyncio.Task] = set()
         self.secret = secret if secret is not None else tickets.secret_from_env()
         if definition.accounts == 'site' and not self.secret:
             raise GameServerError(f'{definition.name}: accounts="site" signs its tickets with {tickets.SECRET_ENV}, '
@@ -159,6 +165,8 @@ class WorldServer:
         began = time.perf_counter()
         inputs, self.inbox = self.inbox, []
         out = self.world.step(inputs)
+        for ask in out.asks:
+            self._think(ask)
         self.log.append(out.entries)
         if self.world.tick % (HEARTBEAT_SECONDS * self.definition.tick_rate) == 0:
             self.log.append([{'t': self.world.tick, 'k': 'tick'}])
@@ -175,6 +183,27 @@ class WorldServer:
             self._interval.append(self.tick_seconds[-1])
         if self.stats_ticks and self.world.tick % self.stats_ticks == 0:
             print(f'[gameserver] stats {json.dumps(self.stats())}', flush=True)
+
+    def _think(self, ask: dict) -> None:
+        """An NPC asked: its mind answers off the tick, and the answer is an input of a tick to come."""
+        if self.mind is None:
+            self.inbox.append(('npc', ask['account'], ask['npc'], dict(FALLBACK)))
+            return
+        task = asyncio.get_running_loop().create_task(self._mind(ask))
+        self._thinking.add(task)
+        task.add_done_callback(self._thinking.discard)
+
+    async def _mind(self, ask: dict) -> None:
+        from concurrent.futures import ThreadPoolExecutor
+        if self._minds_pool is None:
+            self._minds_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix='mind')
+        try:
+            answer = await asyncio.wait_for(asyncio.get_running_loop().run_in_executor(
+                self._minds_pool, self.mind, ask), self.mind_seconds)
+            answer = answer_of(answer)
+        except Exception:  # noqa: BLE001 - a mind that fails or is too slow: the NPC says its lines
+            answer = dict(FALLBACK)
+        self.inbox.append(('npc', ask['account'], ask['npc'], answer))
 
     def stats(self) -> dict:
         """The numbers since the last time they were asked: the ticks' time, and what went out, to each player."""
@@ -524,6 +553,8 @@ class WorldServer:
                 else:
                     await self._clock()
         finally:                                # stopped, or interrupted: the world as it is now, on the disk
+            if self._minds_pool is not None:
+                self._minds_pool.shutdown(wait=False, cancel_futures=True)
             if self._crashed:
                 if self.log._file:
                     self.log._file.close()
@@ -573,6 +604,8 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     run.add_argument('--snapshot-every', type=float, default=300.0, metavar='SECONDS')
     run.add_argument('--stats', type=float, default=0.0, metavar='SECONDS',
                      help='say the numbers (the ticks\' time, what went out) every so often')
+    run.add_argument('--no-minds', action='store_true',
+                     help='the NPCs say the lines of their fallback, and no model is asked')
     check = sub.add_parser('check', help='read a world against its schema, and say what is wrong')
     check.add_argument('file')
     ticket = sub.add_parser('ticket', help=f'a ticket into a world of a site\'s accounts (accounts="site"), '
@@ -618,9 +651,10 @@ def main(args) -> int:
               f'{len(definition.every)} rules every so often, a map of {definition.map.width}x{definition.map.height}')
         return 0
     try:
+        from quantum.runtime.gameserver.npc import LLMMind
         server = WorldServer(definition, host=args.host, port=args.port, step=args.step,
                              data_dir=Path(args.data) if args.data else None, snapshot_every=args.snapshot_every,
-                             stats=args.stats)
+                             stats=args.stats, mind=None if args.no_minds or not definition.npcs else LLMMind())
     except GameServerError as e:
         print(f'[ERROR] {e}', file=sys.stderr)
         return 1

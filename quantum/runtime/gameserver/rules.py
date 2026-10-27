@@ -209,6 +209,9 @@ class Interpreter:
             to = el.get('to', 'all')
             target = 'all' if to.strip() == 'all' else self.evaluate(to, local, line)
             self.world.say(el.get('channel', 'system'), target, self.text(el.get('text'), local, line), line)
+        elif name == 'ask':
+            npc = self.evaluate(el.get('npc'), local, line)
+            self.world.ask(local.get('me'), npc, self.evaluate(el.get('text'), local, line), line)
         elif name == 'reward':
             to = self.world.entity_of(self.evaluate(el.get('to'), local, line), line)
             self.world.reward(to, self.evaluate(el.get('quest'), local, line), line)

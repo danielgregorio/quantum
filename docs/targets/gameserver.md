@@ -100,7 +100,7 @@ Goes inside `<q:gameserver>`.
 
 A field of an entity: what it starts as, and who sees it. A private field goes only to the player whose entity it is; the others go to whoever sees the entity.
 
-Goes inside `<q:entity>`.
+Goes inside `<q:entity>`, `<q:npc>`.
 
 | Attribute | Type | Default | What it is |
 |---|---|---|---|
@@ -343,6 +343,98 @@ Goes inside `<q:gameserver>`.
 | `level=` | int | `1` |  |
 | `reward=` | text |  | what it gives, separated by commas: a currency, item, or a field of the hero (xp) with its amount |
 
+### `q:npc`
+
+A character of the world with a mind: an entity (kind=, its fields as attributes or q:fields) made at the area at= when the world begins, whose words come from its q:agent. A player's q:ask gives it their words; the world goes on, the NPC is seen thinking (the event npc-thinking), and its answer comes some ticks later as the event npc-says ({npc, who, text}) to the asker and those near. What it does is its tools' commands (by="npc"), whose q:requires hold whatever it was told. Without a mind, out of budget or too slow, it says a line of its q:fallback. The answer is kept in the log: a replay asks no model.
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `name=` | ident | required |  |
+| `kind=` | text | required | what the game draws it as: a qg:prefab of the client |
+| `at=` | text | required | the area of the map where it stands |
+
+### `q:agent`
+
+An NPC's mind: its q:instruction (who it is), its q:tools (the commands it may run), what it knows (knowledge=, a q:knowledge of the world) and remembers of each player (memory=), and how many questions a player may ask it a day (budget=, the world's day with a q:clock, else 24 hours).
+
+Goes inside `<q:npc>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `model=` | text | `small` | the model: small is the environment's QUANTUM_NPC_MODEL, else the Core's default; any other is a model's name |
+| `knowledge=` | ident |  | a q:knowledge of the world: the texts it may read |
+| `memory=` | enum: `per-player`, `none` | `per-player` | per-player: a short note of each player, kept with the hero (persist="true": the next day too) |
+| `budget=` | text | `40/day` | questions a player may ask it a day; one more is a fallback line |
+| `maxIterations=` | int | `3` | tools it may run in one answer |
+
+### `q:instruction`
+
+Who the NPC is and how it speaks: the text of its agent's instruction.
+
+Goes inside `<q:agent>`.
+
+### `q:tool`
+
+A tool of an NPC's agent: a command of the world with by="npc", which the agent may run as the player it talks to, with the arguments it chooses; the command's q:requires decide, not the model.
+
+Goes inside `<q:agent>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `command=` | ident | required |  |
+| `description=` | text |  | what the agent is told it does |
+
+### `q:fallback`
+
+What an NPC says with no mind to answer: no model, out of budget, or too slow. Its q:lines, one at random (the world's random).
+
+Goes inside `<q:npc>`.
+
+### `q:line`
+
+A line of an NPC's q:fallback.
+
+Goes inside `<q:fallback>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `text=` | text | required |  |
+
+### `q:knowledge`
+
+Texts the world's NPCs may read (the town's story): its q:sources, read as the world is loaded.
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `name=` | ident | required |  |
+
+### `q:source`
+
+Where a q:knowledge's texts are: a directory (its files of pattern=) or a file, next to the world.
+
+Goes inside `<q:knowledge>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `type=` | enum: `directory`, `file` | `directory` |  |
+| `path=` | text | required |  |
+| `pattern=` | text | `*.md` |  |
+
+### `q:ask`
+
+A player's words to an NPC (in a command): it is seen thinking, and answers some ticks later, off the tick (q:npc). Refused when the command is.
+
+Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `npc=` | expr | required | the NPC (an entity, or its id) |
+| `text=` | expr | required | what the player says |
+
 ### `q:reward`
 
 A quest's reward, given: its currency and items by the ledger, its other parts added to the hero's fields (xp:100 to its xp). A quest to bring things takes them: the five furs go, spent where the reward is given.
@@ -366,6 +458,7 @@ Goes inside `<q:gameserver>`.
 | `params=` | names |  | the arguments it takes: no other, none missing |
 | `limit=` | rate |  | at most so many a player (8/s, 1/3s): one more is refused |
 | `predict=` | bool | `False` | the game shows it at once, before the world says yes: a command whose body is q:requires and one q:move of me to ahead(me, a param); a refusal walks the hero back |
+| `by=` | enum: `npc` |  | npc: only an NPC's agent runs it (a q:tool), as the player it talks to (`me`), the NPC being `npc`; a player who sends it is refused |
 
 ### `q:require`
 
@@ -593,6 +686,8 @@ In Python, `quantum.runtime.gameserver.session` speaks it with the play protocol
 A game is a world's client with `qg:connect world="meadow.server.q"` (the games' reference): its compiler reads the world's file, `qg:mirror view=` draws a view, `qg:send command=` asks, `qg:on-event` and `qg:on-refused` hear. `quantum.runtime.godot_world.WorldTable(world, project, seats)` plays a test world and the Godot games of its players together, in step; `PlaySession(project, world=url, name=...)` is one of them.
 
 A world of a site's accounts (`accounts="site"`) lets a player in with a ticket, not a name: the site, which knows the passwords, signs it (`quantum.runtime.gameserver.tickets.issue(account, name, secret)`, or `quantum gameserver ticket --account ana@site --name Ana`), and the world checks it with the secret both have in their environment, `QUANTUM_WORLD_SECRET` (never in a file). A ticket lasts a minute and comes in once; `WorldSession(url, ticket=...)` is such a player.
+
+An NPC (`q:npc`) answers off the tick: the server gives its mind the question and the world goes on; the answer comes back as an input of a tick, which the log keeps. `quantum gameserver run` asks the Core's LLM (`QUANTUM_LLM_BASE_URL`, `QUANTUM_NPC_MODEL`); `--no-minds`, or no model, and the NPCs say their fallback's lines. In a test, `serve_world(path, mind=function)` gives the NPCs a scripted mind: a function of the question (`instruction`, `knowledge`, `memory`, `player`, `text`, `tools`) that returns the answer: `say` (its words), `do` (the tools to run, each with its `tool` and `args`) and `remember` (its note of the player).
 
 `quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks' time (median, 99th percentile, worst) and what went out, to the world and to each player. `scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.
 

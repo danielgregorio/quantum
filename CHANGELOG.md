@@ -10,6 +10,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the game server's Phase 5 (`PLAN_GAME_SERVER.md`), NPCs with
+  minds. `q:npc` is a character of the world with a `q:agent`: its
+  instruction, its `q:tool`s (commands with `by="npc"`, which only it runs, as
+  the player it talks to), what it knows (`q:knowledge`) and remembers of each
+  player, and a day's budget; `q:fallback` holds its lines for when there is
+  no mind, no budget left, or no answer in time. A player's `q:ask` does not
+  wait: the NPC is seen thinking, its mind answers off the tick, and the
+  answer is an input of the world that the log keeps, so a replay asks no
+  model. Whatever the mind says, the tools' `q:require`s decide. The Core's
+  LLM is the mind (`QUANTUM_NPC_MODEL`); `--no-minds` turns it off. Outpost's
+  Old Marta haggles and Captain Rhea gives the quests.
 - Laboratory: the game server's Phase 4 (`PLAN_GAME_SERVER.md`), accounts,
   the ledger and players together. `q:currency` and `q:item` are a world's
   money and things, made, moved and spent only by `q:give`, `q:take`, `q:pay`

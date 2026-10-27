@@ -192,9 +192,11 @@ class QuantumRunner:
     def _run_gameserver(self, app: ApplicationNode) -> int:
         """A world, served as `quantum gameserver run` serves it (on port 7700)."""
         from quantum.runtime.gameserver import GameServerError, read_world
+        from quantum.runtime.gameserver.npc import LLMMind
         from quantum.runtime.gameserver.server import WorldServer, serve_forever
         try:
-            server = WorldServer(read_world(app))
+            world = read_world(app)
+            server = WorldServer(world, mind=LLMMind() if world.npcs else None)
         except GameServerError as e:
             print(f"[ERROR] {e}")
             return 1

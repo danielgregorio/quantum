@@ -138,6 +138,23 @@ class CommandDef:
     line: Optional[int]
     predict: Optional[str] = None                        # the param of the step the game shows at once
     builtin: Optional[str] = None                        # a command the world's chat, party or trade brings
+    by: Optional[str] = None                             # npc: an NPC's tool, never a player's to send
+
+
+@dataclass
+class NpcDef:
+    """A q:npc: its entity (of the same name) and its mind."""
+    name: str
+    at: str
+    instruction: str
+    tools: Dict[str, str]                                # a command: what the agent is told it does
+    model: str
+    knowledge: Optional[str]
+    memory: bool
+    budget: int                                          # questions a player may ask it a day
+    max_tools: int
+    lines: List[str]
+    line: Optional[int]
 
 
 @dataclass
@@ -223,6 +240,8 @@ class WorldDef:
     quests: Dict[str, QuestDef] = field(default_factory=dict)
     currencies: Dict[str, int] = field(default_factory=dict)          # a currency: what a hero starts with
     items: Dict[str, Dict[str, object]] = field(default_factory=dict)  # an item: what it is
+    npcs: Dict[str, NpcDef] = field(default_factory=dict)
+    knowledge: Dict[str, str] = field(default_factory=dict)            # a q:knowledge: its texts, read
 
     @property
     def ledger(self) -> bool:
@@ -375,14 +394,14 @@ def _read_map(element: ET.Element, base: Path) -> MapDef:
     return MapDef(element.get('name'), path, tmap.width, tmap.height, walls, areas)
 
 
-def _entity(child: ET.Element, tick_rate: int) -> EntityDef:
+def _entity(child: ET.Element, tick_rate: int, ignore: Tuple[str, ...] = ()) -> EntityDef:
     """A q:entity: its fields (q:field, and its other attributes), its brain and its loot."""
     line = _line(child)
     name = child.get('name')
     count, seconds = rate_of(child.get('speed', TAGS['entity'].attrs['speed'].default))
     fields: List[FieldDef] = []
     for attr, raw in child.attrib.items():
-        if attr not in TAGS['entity'].attrs:
+        if attr not in TAGS['entity'].attrs and attr not in ignore:
             fields.append(FieldDef(attr, raw, False, line))
     for f in child:
         if _local(f) == ('q', 'field'):
@@ -494,6 +513,54 @@ def _chat(element: ET.Element, base: Path, line: Optional[int]) -> ChatDef:
     return ChatDef(channels, element.get('whisper') == 'true', words, line)
 
 
+MAX_KNOWLEDGE = 20_000      # characters of a q:knowledge an agent is given
+
+
+def _knowledge(element: ET.Element, base: Path, line: Optional[int]) -> str:
+    """A q:knowledge's texts, read now: each file with its name over it."""
+    parts = []
+    for source in element:
+        if _local(source)[0] == 'comment':
+            continue
+        path = (base / source.get('path')).resolve()
+        if source.get('type', 'directory') == 'file':
+            files = [path] if path.is_file() else []
+        else:
+            files = sorted(path.glob(source.get('pattern', '*.md'))) if path.is_dir() else []
+        if not files:
+            raise GameServerError(f'<q:source path="{source.get("path")}">: there is no such '
+                                  f'{source.get("type", "directory")} (or nothing in it) next to the world',
+                                  _line(source))
+        for f in files:
+            parts.append(f'## {f.stem}\n\n{f.read_text(encoding="utf-8").strip()}')
+    return '\n\n'.join(parts)[:MAX_KNOWLEDGE]
+
+
+def _npc(element: ET.Element, world: WorldDef, line: Optional[int]) -> NpcDef:
+    """A q:npc: an entity of its name (its kind, its fields), made at its area as the world begins, and its mind."""
+    name = element.get('name')
+    world.entities[name] = _entity(element, world.tick_rate, ignore=('at',))
+    world.spawns.append(SpawnDef(name, element.get('at'), 1, None, 600 * world.tick_rate, line))
+    agents = [a for a in element if _local(a) == ('q', 'agent')]
+    if len(agents) > 1:
+        raise GameServerError(f'<q:npc name="{name}"> has one q:agent', line)
+    agent = agents[0] if agents else ET.Element('agent')
+    instruction = ' '.join(' '.join((i.text or '').split()) for i in agent if _local(i) == ('q', 'instruction'))
+    tools = {t.get('command'): t.get('description', '') for t in agent if _local(t) == ('q', 'tool')}
+    budget = agent.get('budget', '40/day')
+    m = re.fullmatch(r'\s*(\d+)\s*/\s*(day|d)\s*', budget)
+    if not m:
+        raise GameServerError(f'<q:agent budget="{budget}">: so many a day (40/day)', _line(agent) or line)
+    lines = [ln.get('text') for fb in element if _local(fb) == ('q', 'fallback') for ln in fb
+             if _local(ln) == ('q', 'line')]
+    if not lines:
+        raise GameServerError(f'<q:npc name="{name}"> needs a q:fallback with a q:line: what it says with no mind '
+                              f'to answer (no model, out of budget, too slow)', line)
+    return NpcDef(name, element.get('at'), instruction, tools, agent.get('model', 'small'), agent.get('knowledge'),
+                  agent.get('memory', 'per-player') == 'per-player', int(m.group(1)),
+                  int(agent.get('maxIterations', 3)), lines, line)
+
+
 def _quest(element: ET.Element, line: Optional[int]) -> QuestDef:
     m = re.match(r'^\s*(kill|bring)\s*:\s*([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(\d+)\s*$', element.get('goal'))
     if not m:
@@ -587,7 +654,8 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
                 limit = (count, max(1, round(seconds * world.tick_rate)))
             params = [p.strip() for p in child.get('params', '').split(',') if p.strip()]
             predict = _predicted(child, params) if child.get('predict') == 'true' else None
-            world.commands[child.get('name')] = CommandDef(child.get('name'), params, limit, child, line, predict)
+            world.commands[child.get('name')] = CommandDef(child.get('name'), params, limit, child, line, predict,
+                                                           by=child.get('by'))
         elif name == 'function':
             if child.get('name') in world.functions:
                 raise GameServerError(f'two functions named {child.get("name")!r}', line)
@@ -651,6 +719,14 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
             for cmd, params in (('trade-offer', ['who', 'gold', 'items']), ('trade-accept', ['who']),
                                 ('trade-cancel', ['who'])):
                 _builtin(world, cmd, params, (4, world.tick_rate), line)
+        elif name == 'npc':
+            if child.get('name') in world.entities or child.get('name') in world.npcs:
+                raise GameServerError(f'two entities named {child.get("name")!r}', line)
+            world.npcs[child.get('name')] = _npc(child, world, line)
+        elif name == 'knowledge':
+            if child.get('name') in world.knowledge:
+                raise GameServerError(f'two q:knowledge named {child.get("name")!r}', line)
+            world.knowledge[child.get('name')] = _knowledge(child, base, line)
         elif name == 'quest':
             if child.get('name') in world.quests:
                 raise GameServerError(f'two quests named {child.get("name")!r}', line)
@@ -675,6 +751,16 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
                                           f'q:function', view.line)
     if world.map is None:
         raise GameServerError('a world needs its q:map', _line(server))
+    for npc in world.npcs.values():
+        for tool in npc.tools:
+            command = world.commands.get(tool)
+            if command is None or command.by != 'npc':
+                raise GameServerError(f'<q:tool command="{tool}"> of {npc.name}: ' + (
+                    'a q:command of the world with by="npc" (an NPC\'s, never a player\'s to send)' if command else
+                    f'the world has no such command ({", ".join(sorted(world.commands)) or "none"})'), npc.line)
+        if npc.knowledge is not None and npc.knowledge not in world.knowledge:
+            raise GameServerError(f'<q:agent knowledge="{npc.knowledge}"> of {npc.name}: the world has no '
+                                  f'q:knowledge of that name', npc.line)
     players = [e for e in world.entities.values() if e.per_player]
     if len(players) != 1:
         raise GameServerError('a world has one entity with per-player="true": the one each player gets' +

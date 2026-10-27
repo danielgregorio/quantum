@@ -13,6 +13,7 @@ import pytest
 
 from quantum.core.parser import QuantumParser
 from quantum.runtime.gameserver import World, read_world
+from quantum.runtime.gameserver.npc import answer_of
 
 OUTPOST = Path(__file__).resolve().parents[2] / 'projects' / 'outpost' / 'outpost.server.q'
 GATE = (40, 29)
@@ -38,6 +39,17 @@ class Player:
         out = self.world.step([('cmd', self.account, self.seq, command, args)])
         refused = out.refused.get(self.account)
         return refused[0]['reason'] if refused else 'ok'
+
+    def talk(self, kind, text, mind):
+        """Words to the NPC of a kind, and its answer as the server would bring it from the mind, a tick later."""
+        npc = next(e for e in self.world.entities.values() if e['kind'] == kind)
+        said = self.do('talk', npc=npc['id'], text=text)
+        if said != 'ok':
+            return said
+        for ask in self.world.asks:
+            self.world.step([('npc', ask['account'], ask['npc'], answer_of(mind(ask)))])
+            return next(e.message['value'] for e in self.world.events
+                        if e.message['name'] == 'npc-says' and self.account in (e.accounts or []))
 
     def at(self):
         return self.me['at']['x'], self.me['at']['y']
@@ -179,4 +191,35 @@ def test_a_party_of_four_brings_down_the_old_bear(world):
     gold = ana.me['gold']
     assert ana.go_near('Captain') and ana.do('turn-in') == 'ok'
     assert ana.me['gold'] == gold + 800 and ana.me['bag'].get('iron-sword') == 1 and 'bear-claw' not in ana.me['bag']
+    assert world.balanced() == {} and world.errors == []
+
+
+def test_marta_and_rhea_act_by_their_tools_and_the_rules_hold(world):
+    """Phase 5 in Outpost: a scripted mind (no model) for each. Rhea gives what she is asked for, and the world
+    gives only what its rules allow: the bear's quest to a hero of level 1 is refused, the sewers' is given. Marta
+    sells meat at the price named, within a fifth of the list's, and not below it."""
+    ana = Player(world, 'ana@site', 'Ana')
+
+    def rhea(ask):
+        quest = 'old-bear' if 'bear' in ask['text'] else 'sewers'
+        return {'say': f'The {quest}, then.', 'do': [{'tool': 'give-quest', 'args': {'quest': quest}}],
+                'remember': 'Wants work.'}
+    assert ana.go_near('Captain')
+    assert ana.talk('Captain', 'Give me the bear!', rhea) == {'npc': 'rhea-1', 'who': 'Captain Rhea',
+                                                            'text': 'The old-bear, then.', 'did': []}
+    assert ana.me['quest'] == {}
+    for _ in range(40):                                                    # talk is once every three seconds
+        ana.step()
+    said = ana.talk('Captain', 'Any work for a newcomer?', rhea)
+    assert said['did'] == ['give-quest'] and ana.me['quest'] == {'name': 'sewers', 'done': 0}
+
+    def marta(ask):
+        price = int(''.join(c for c in ask['text'] if c.isdigit()))
+        return {'say': f'{price} it is.', 'do': [{'tool': 'npc-sell', 'args': {'item': 'meat', 'price': price}}]}
+    assert ana.go((30, 22))
+    assert ana.talk('Trader', 'Meat for 3?', marta)['did'] == []          # the list says 5: 4 at the least
+    for _ in range(40):
+        ana.step()
+    assert ana.talk('Trader', 'Meat for 4?', marta)['did'] == ['npc-sell']
+    assert ana.me['bag'] == {'meat': 1} and ana.me['gold'] == 16
     assert world.balanced() == {} and world.errors == []

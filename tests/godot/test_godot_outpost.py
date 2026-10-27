@@ -60,7 +60,7 @@ def site():
 def outpost(godot, site, tmp_path_factory) -> Path:
     """Outpost as it is, but signing in to the test's site."""
     here = tmp_path_factory.mktemp('outpost')
-    for part in ('assets', 'maps'):
+    for part in ('assets', 'maps', 'lore'):
         shutil.copytree(OUTPOST / part, here / part)
     shutil.copy(OUTPOST / 'outpost.server.q', here / 'outpost.server.q')
     game = (OUTPOST / 'outpost.q').read_text()

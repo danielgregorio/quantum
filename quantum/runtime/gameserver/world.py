@@ -22,6 +22,7 @@ from quantum.runtime.gameserver.errors import Refused, RuleError
 from quantum.runtime.gameserver.ledger import Ledger
 from quantum.runtime.gameserver.life import MISSING, Life
 from quantum.runtime.gameserver.model import EntityDef, ViewDef, WorldDef
+from quantum.runtime.gameserver.npc import Minds
 from quantum.runtime.gameserver.rules import Interpreter, chebyshev, facing_of
 from quantum.runtime.gameserver.together import Together
 
@@ -51,6 +52,7 @@ class TickOut:
     joined: Dict[str, str] = field(default_factory=dict)                     # account: its entity's id
     left: List[str] = field(default_factory=list)
     full: List[str] = field(default_factory=list)                            # who found the world full
+    asks: List[dict] = field(default_factory=list)                           # q:asks, for the minds off the tick
 
 
 def plain(value: Any, depth: int = 0) -> Any:
@@ -88,7 +90,7 @@ def _args_ok(value: Any, depth: int = 0) -> bool:
     return False
 
 
-class World(Life, Ledger, Together):
+class World(Life, Ledger, Together, Minds):
     def __init__(self, definition: WorldDef, seed: int = 0):
         self.definition = definition
         self.tick = 0
@@ -108,6 +110,8 @@ class World(Life, Ledger, Together):
         self.cells: Dict[Tuple[int, int], Set[str]] = {}       # the index: a cell, the entities on its tiles
         self.cell_of: Dict[str, Tuple[int, int]] = {}
         self._events_mark = 0
+        self.asks: List[dict] = []                 # the tick's q:asks (npc.py), for the server's minds
+        self._asks_mark = 0
         # Phase 3: what each q:spawn keeps (its living, and the ticks when the next are due), the entities made for
         # a while (q:spawn for=) and those on their way (q:travel)
         self.spawned: Dict[str, Dict[str, list]] = {str(i): {'alive': [], 'due': []}
@@ -268,6 +272,7 @@ class World(Life, Ledger, Together):
     def _begin(self) -> None:
         self.journal = []
         self._events_mark = len(self.events)
+        self._asks_mark = len(self.asks)
 
     def _commit(self) -> None:
         self.journal = None
@@ -285,6 +290,7 @@ class World(Life, Ledger, Together):
                 touched.add(target['id'])
         self.journal = None
         del self.events[self._events_mark:]
+        del self.asks[self._asks_mark:]
         self.gone = {g for g in self.gone if g not in self.entities}
         self.reindex(touched)                  # an entity undone where it was, made or gone again
         for eid in touched:
@@ -410,6 +416,8 @@ class World(Life, Ledger, Together):
         command = self.definition.commands.get(name) if isinstance(name, str) else None
         if command is None:
             return no(f'There is no command {name!r}.')
+        if command.by == 'npc':
+            return no('Only the townsfolk do that: ask them.')
         if not isinstance(args, dict) or set(args) != set(command.params):
             wanted = ', '.join(command.params) or 'nothing'
             return no(f'{name} takes {wanted}.')
@@ -448,6 +456,7 @@ class World(Life, Ledger, Together):
         self.tick += 1
         out = TickOut(self.tick)
         self.dirty, self.gone, self.events, self.vars_changed = set(), set(), [], False
+        self.asks = []
         for item in inputs:
             kind, account = item[0], item[1]
             if kind == 'join':
@@ -462,11 +471,16 @@ class World(Life, Ledger, Together):
                 ok, result = self._command(account, seq, name, args, out)
                 out.entries.append({'t': self.tick, 'k': 'cmd', 'a': account, 's': seq, 'n': name, 'x': args,
                                     'r': 'ok' if ok else result})
+            elif kind == 'npc':                    # an NPC's answer, come back from its mind (npc.py)
+                _, _, npc, answer = item
+                self.answer(account, npc, answer)
+                out.entries.append({'t': self.tick, 'k': 'npc', 'a': account, 'n': npc, 'x': answer})
         self.live()                            # spawns, the ones made for a while, the travellers, the brains
         for ticks, rule in self.definition.every:
             if self.tick % ticks == 0:
                 self._run(rule, {}, 'q:every')
         self.reindex(self.dirty | self.gone)
+        out.asks = list(self.asks)
         return out
 
     # -- kept, and brought back ------------------------------------------------------------------------------
