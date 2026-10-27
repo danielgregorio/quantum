@@ -206,6 +206,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 				row.add_child(label)
 			var line := LineEdit.new()
 			line.max_length = int(item.get("max_length", 64))
+			line.secret = bool(item.get("secret", false))   # a password: dots
 			line.custom_minimum_size = Vector2(size * 10, 0)
 			line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			line.focus_mode = Control.FOCUS_CLICK
@@ -386,6 +387,8 @@ func quantum_view() -> Dictionary:
 		else:
 			item["field"] = Q.translate(spec.get("label", ""))
 			item["value"] = str(_read(spec["bind"], spec.get("game", false)))
+			if spec.get("secret", false):
+				item["value"] = "*".repeat(item["value"].length())   # seen as the player sees it: dots
 			if _editing == i and _items[i]["line"].has_focus():
 				item["typing"] = true   # this machine's keys type into it
 			if _items[i].has("pending"):

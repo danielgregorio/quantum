@@ -65,7 +65,7 @@ class Table:
 
 def test_a_hero_is_welcomed_by_the_world():
     table = Table(den(), 'ana')
-    assert table.chats('ana') == [{'channel': 'system', 'from': 'world', 'text': 'Welcome to the den, ana.'}]
+    assert table.chats('ana') == [{'channel': 'system', 'who': 'world', 'text': 'Welcome to the den, ana.'}]
 
 
 def test_each_channel_reaches_whom_it_says():
@@ -75,12 +75,12 @@ def test_each_channel_reaches_whom_it_says():
     for n in table.heard:
         table.heard[n].clear()
     assert table.do('ana', 'chat', channel='say', text='hello') == 'ok'
-    line = {'channel': 'say', 'from': 'ana', 'text': 'hello'}
+    line = {'channel': 'say', 'who': 'ana', 'text': 'hello'}
     assert table.chats('ana') == [line] and table.chats('bo') == [line] and table.chats('cy') == []
     assert table.do('ana', 'chat', channel='help', text='where are the rats?') == 'ok'
     assert table.chats('cy')[-1]['text'] == 'where are the rats?'
     assert table.do('ana', 'whisper', to='cy', text='psst') == 'ok'
-    assert table.chats('cy')[-1] == {'channel': 'whisper', 'from': 'ana', 'to': 'cy', 'text': 'psst'}
+    assert table.chats('cy')[-1] == {'channel': 'whisper', 'who': 'ana', 'to': 'cy', 'text': 'psst'}
     assert table.chats('bo')[-1]['text'] == 'where are the rats?'          # bo heard no whisper
     assert table.do('ana', 'chat', channel='trade', text='x') == "There is no channel 'trade' (say, yell, party, help)."
     for _ in range(50):                                          # five seconds: three lines more may be said
@@ -112,7 +112,7 @@ def test_a_party_is_invited_joined_heard_and_left():
     assert [e['id'] for e in world.party_near(ana, 10)] == ['hero:ana']
     assert table.do('bo', 'chat', channel='party', text='far, but heard') == 'ok'
     assert table.chats('ana')[-1]['text'] == 'far, but heard' and table.chats('cy')[-1:] != [
-        {'channel': 'party', 'from': 'bo', 'text': 'far, but heard'}]
+        {'channel': 'party', 'who': 'bo', 'text': 'far, but heard'}]
     table.do('ana', 'party-invite', who='cy')
     table.do('cy', 'party-accept', who='ana')
     assert table.do('ana', 'party-invite', who='di') == 'The party is full.'
@@ -182,11 +182,11 @@ def test_a_chat_line_reaches_a_player_through_the_protocol():
     with serve_world(DEN) as server:
         with WorldSession(server.url, 'ana') as ana, WorldSession(server.url, 'bo') as bo:
             welcome = ana.observe()['events']
-            assert {'name': 'chat', 'value': {'channel': 'system', 'from': 'world',
+            assert {'name': 'chat', 'value': {'channel': 'system', 'who': 'world',
                                               'text': 'Welcome to the den, ana.'}} in welcome
             ana.act(send=[('chat', {'channel': 'say', 'text': 'hi bo'})], ticks=1)
             heard = [e['value'] for e in bo.observe()['events'] if e['name'] == 'chat']
-            assert {'channel': 'say', 'from': 'ana', 'text': 'hi bo'} in heard
+            assert {'channel': 'say', 'who': 'ana', 'text': 'hi bo'} in heard
 
 
 @pytest.mark.parametrize('more, says', [

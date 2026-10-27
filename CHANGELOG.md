@@ -24,7 +24,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   environment, never a file): `quantum gameserver ticket`, a ticket comes in
   once, and an account that signs in again takes its hero over where it
   stands. In the game, `qg:sign-in` asks the site for the ticket and keeps it
-  for the world, not in the game's state.
+  for the world, not in the game's state; `qg:field secret="true"` is a
+  password's box, and `entries()` lists a record (a hero's bag) for a menu.
+  Outpost is playable from start to end (`projects/outpost`, its map and art
+  drawn by `scripts/art/outpost.py`): the sewers' rats, the wolves' furs, and
+  the Old Bear for a party; a test plays all three.
 
 - Laboratory: the game server's Phase 3 (`PLAN_GAME_SERVER.md`), a world that
   lives by itself. `q:spawn` keeps beasts in an area and makes another

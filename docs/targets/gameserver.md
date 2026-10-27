@@ -290,7 +290,7 @@ Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:f
 
 ### `q:chat`
 
-The world's chat: commands `chat` (channel, text) and, with whisper=, `whisper` (to, text) every player may send, heard as the event `chat` ({channel, from, text}) by whom the channel reaches: say:7 is the players within 7 tiles, a channel with no number all of them, `party` the speaker's party. A line is cut at 200 characters and its words in the filter are starred; more than limit= of them and it is refused.
+The world's chat: commands `chat` (channel, text) and, with whisper=, `whisper` (to, text) every player may send, heard as the event `chat` ({channel, who, text}: who said it) by whom the channel reaches: say:7 is the players within 7 tiles, a channel with no number all of them, `party` the speaker's party. A line is cut at 200 characters and its words in the filter are starred; more than limit= of them and it is refused.
 
 Goes inside `<q:gameserver>`.
 
@@ -303,7 +303,7 @@ Goes inside `<q:gameserver>`.
 
 ### `q:say`
 
-A line of the world itself in its chat (from "world"): to= one player's entity, or all.
+A line of the world itself in its chat (its who is "world"): to= one player's entity, or all.
 
 Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
 
@@ -345,7 +345,7 @@ Goes inside `<q:gameserver>`.
 
 ### `q:reward`
 
-A quest's reward, given: its currency and items by the ledger, its other parts added to the hero's fields (xp:100 to its xp).
+A quest's reward, given: its currency and items by the ledger, its other parts added to the hero's fields (xp:100 to its xp). A quest to bring things takes them: the five furs go, spent where the reward is given.
 
 Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
 

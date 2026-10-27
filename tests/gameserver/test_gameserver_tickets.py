@@ -84,7 +84,7 @@ def test_only_a_good_ticket_comes_in_and_only_once(tmp_path):
             assert ana.me_id == 'hero:ana@site'
             seen = ana.observe()
             assert seen['me']['name'] == 'Ana'
-            assert {'channel': 'system', 'from': 'world', 'text': 'Welcome to the den, Ana.'} in [
+            assert {'channel': 'system', 'who': 'world', 'text': 'Welcome to the den, Ana.'} in [
                 e['value'] for e in seen['events'] if e['name'] == 'chat']
             with pytest.raises(WorldSessionError, match='used already'):
                 WorldSession(server.url, ticket=good)
@@ -110,7 +110,7 @@ def test_signing_in_again_takes_the_hero_over_where_it_stands(tmp_path):
                 assert server.world.players == {'ana@site': 'hero:ana@site', 'bo@site': 'hero:bo@site'}
                 again.act(send=[('chat', {'channel': 'party', 'text': 'still here'})], ticks=1)
                 heard = [e['value'] for e in bo.observe()['events'] if e['name'] == 'chat']
-                assert {'channel': 'party', 'from': 'Ana', 'text': 'still here'} in heard
+                assert {'channel': 'party', 'who': 'Ana', 'text': 'still here'} in heard
 
 
 def test_a_dropped_connection_comes_back_to_its_hero_where_it_was(tmp_path):

@@ -1753,6 +1753,7 @@ export const gameTags: TagSchema[] = [
             { name: 'label', description: 'text before the box', type: 'string', default: '' },
             { name: 'max-length', description: '', type: 'number', default: '64' },
             { name: 'shared', description: 'sent to every machine with the inputs, on Enter', type: 'boolean', default: 'false' },
+            { name: 'secret', description: 'a password: the box shows dots, and so does what the play protocol sees of it. The bound state is the game\'s as any other: set it to "" once it is used (a qg:sign-in\'s qg:on-done)', type: 'boolean', default: 'false' },
         ]
     },
     {

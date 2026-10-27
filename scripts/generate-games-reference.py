@@ -305,7 +305,7 @@ def build() -> str:
                  '; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take '
                  'degrees and `atan2(y, x)` gives them (0 to the right, 90 down), `sort()`, `pick()`, `chance()` '
                  'and `join()` are the Core\'s, `fit(v, width)` cuts or pads a text to a column (`fit(v, width, '
-                 '\'right\')` for numbers), `thousands(n, \'.\')` writes 1.500.000, `repeat(text, n)` a bar and `url_encode(text)` puts a text '
+                 '\'right\')` for numbers), `thousands(n, \'.\')` writes 1.500.000, `repeat(text, n)` a bar, `entries(record)` a record as a list of `{key, value}` (a hero\'s bag, for a menu\'s `source=`) and `url_encode(text)` puts a text '
                  'into a web address (`qg:open-url`, a form\'s link with what to fill in); `scene_name()` and '
                  '`focused()` say where the player is, the scene and the option its menu\'s cursor is on (from a '
                  '`qg:overlay`, the scene under it), and `save_text()` is the game as a `qg:save` writes it, as '

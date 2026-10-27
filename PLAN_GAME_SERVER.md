@@ -8,8 +8,8 @@
 > its reference ([docs/targets/gameserver.md](docs/targets/gameserver.md)) and `tests/gameserver/`.
 > Phases 2 and 3 done (2026-10-27): views, events and the game's side (`qg:connect`, `qg:mirror`, `qg:send`), the play
 > protocol in a world (`WorldTable`); beasts with brains, fights, loot, the clock and a step shown at once.
-> Phase 4 (2026-10-27): the ledger, the chat, a party, a trade, quests and the site's accounts (tickets,
-> `qg:sign-in`) done; Outpost playable from start to end is what is left of it.
+> Phase 4 done (2026-10-27): the ledger, the chat, a party, a trade, quests, the site's accounts (tickets,
+> `qg:sign-in`), and Outpost playable from start to end ([projects/outpost](projects/outpost)). Phase 5 next.
 > Laboratory tier: no tag here carries a stability promise until it ships (`SUPPORT_TIERS.md`).
 
 ## The decision
@@ -463,9 +463,25 @@ As built (2026-10-27):
   password heard by qg:on-fail, then the game comes in as ana@site).
 - Fixed on the way: a connection the server closed (a message out of the protocol, too many a second) left its hero
   in the world and the name locked out; it leaves now.
-- Not yet: Outpost playable (4d, next). The site's side in Quantum: a Core function that signs a ticket in a
-  q:endpoint (`worldTicket(account, name)`, a SPEC rule) is the owner's call; until then the site is any server
-  that signs with `quantum.runtime.gameserver.tickets.issue` (the tests' is Python).
+- Outpost, playable (`projects/outpost`). Its map (96 by 64: the town with its temple, Marta's shop and the gate,
+  the sewers under it, the forest, a lake, the cave) and its art are drawn by `scripts/art/outpost.py`, CC0. The
+  world is the draft's without what Phases 5 to 7 bring: Marta and Rhea stand where they are made and their
+  commands (buy, sell, take-quest, turn-in) work near them; Marta's gold is what the heroes paid her, and she buys
+  with it. The game signs in on its title (`qg:field secret="true"` for the password, forgotten once used), and in
+  the world steps, clicks (a beast to attack, Marta for her shop, Rhea for her quests, the ground to walk), shows
+  the hits, the levels, the chat. `tests/gameserver/test_outpost.py` plays it from start to end by its commands: a
+  hero through the sewers (ten rats, level 2, a sword from Marta) and the pelts (wolves to level 3, five furs), and
+  a party of four of level 8 that brings down the Old Bear until a claw falls (the fourth bear, in this world's
+  seed), trades it to the one with the quest, and is paid; the books hold all the while. Three seconds each.
+  `tests/godot/test_godot_outpost.py`: the title, a password in dots, the sign-in, and Ana at the temple with her
+  name and her twenty gold on the HUD.
+- Changed on the way: the chat's line is `{channel, who, text}` (`from` is a word of the game's expressions, so a
+  game could not read it); a quest to bring things takes them when it is rewarded.
+- Not yet: the site's side in Quantum. A Core function that signs a ticket in a q:endpoint (`worldTicket(account,
+  name)`, a SPEC rule) is the owner's call; until then the site is any server that signs with
+  `quantum.runtime.gameserver.tickets.issue` (the tests' is Python). The draft's `areas=`, `safe=`,
+  `announce=`, the party's `share=` and the shop's list from the world (`items_for_sale()`) wait for a world that
+  needs more than Outpost does.
 
 ### Phase 5 — NPCs with AI (M/L) — the owner's first magic
 
@@ -543,4 +559,5 @@ Done when: the numbers below hold for a day of bots.
 - 2026-10-27: Phase 4, the ledger (books by asset and source, private and guarded fields), together (the chat, a
   party, a trade in one transaction, quests) and accounts (`accounts="site"`: tickets the world checks itself, one
   minute and one use, a sign-in again takes the hero over; `qg:sign-in`). The plan said the server checks a ticket
-  "with the site": it checks the site's signature instead, so a hello never waits on the site.
+  "with the site": it checks the site's signature instead, so a hello never waits on the site. Outpost leaves
+  `draft/` for `projects/outpost/`, playable from start to end; the draft stays as what Phases 5 to 7 bring.

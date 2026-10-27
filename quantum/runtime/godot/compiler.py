@@ -1511,6 +1511,11 @@ class _Compiler:
                             raise GameCompileError(f'<qg:field bind="{bind}">: a field holds text; {bind!r} is a {var.type}', c.line)
                         item = {'kind': 'field', 'bind': bind, 'label': c.get('label'), 'max_length': c.get('max-length'),
                                 'game': bind not in script.state}
+                        if c.get('secret'):
+                            if c.get('shared'):
+                                raise GameCompileError(f'<qg:field bind="{bind}">: a secret is not sent to the other '
+                                                       'machines (shared="true")', c.line)
+                            item['secret'] = True
                         body = [b for b in c.children if isinstance(b, (Element, Statement))]
                         if c.get('shared'):
                             # the field a text was sent from, on every machine: the scene, the menu, its place

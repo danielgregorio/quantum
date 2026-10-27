@@ -78,7 +78,7 @@ class Together:
         channels = self.definition.chat.channels
         if not isinstance(channel, str) or channel not in channels:
             raise Refused(f'There is no channel {channel!r} ({", ".join(channels)}).')
-        line = {'channel': channel, 'from': me.get('name', me['id']), 'text': self.clean(text)}
+        line = {'channel': channel, 'who': me.get('name', me['id']), 'text': self.clean(text)}
         if channel == 'party':
             party = self.parties.get(me.get('party') or '')
             if party is None:
@@ -102,7 +102,7 @@ class Together:
         other = self.hero_of(who)
         if other is None:
             raise Refused('Nobody of that name here.')
-        line = {'channel': 'whisper', 'from': me.get('name', me['id']), 'to': other.get('name', other['id']),
+        line = {'channel': 'whisper', 'who': me.get('name', me['id']), 'to': other.get('name', other['id']),
                 'text': self.clean(text)}
         self.tell('chat', line, [me['_player'], other['_player']])
 
@@ -115,7 +115,7 @@ class Together:
             if hero is None:
                 raise RuleError('q:say to= is a player\'s entity, or all', line)
             accounts = [hero['_player']]
-        self.tell('chat', {'channel': channel, 'from': 'world', 'text': str(text)[:MAX_LINE]}, accounts)
+        self.tell('chat', {'channel': channel, 'who': 'world', 'text': str(text)[:MAX_LINE]}, accounts)
 
     # -- parties -----------------------------------------------------------------------------------------------
 
@@ -301,6 +301,9 @@ class Together:
         quest = self.definition.quests.get(name) if isinstance(name, str) else None
         if quest is None:
             raise RuleError(f'q:reward quest=: there is no quest {name!r}', line)
+        kind, what, count = quest.goal
+        if kind == 'bring':                         # what was brought is the quest's: it goes, spent there
+            self.take(to, what, count, None, None, line)
         for key, n in quest.reward:
             if key in self.definition.currencies:
                 self.give(to, None, None, n, key, line)

@@ -119,6 +119,18 @@ static func fit(v, width, align = "left") -> String:
 	return text.lpad(w) if str(align) == "right" else text.rpad(w)
 
 
+# entries(record): its keys and values as a list of {key, value}, by key: a hero's bag ({cheese: 2}) for a
+# menu's source=. Anything but a record is an empty list.
+static func entries(d) -> Array:
+	var out: Array = []
+	if d is Dictionary:
+		var keys: Array = d.keys()
+		keys.sort()
+		for k in keys:
+			out.append({"key": k, "value": d[k]})
+	return out
+
+
 # thousands(n), thousands(n, '.'): a whole number with its thousands apart
 # (1500000 as 1,500,000; as 1.500.000 with '.').
 static func thousands(n, sep = ",") -> String:

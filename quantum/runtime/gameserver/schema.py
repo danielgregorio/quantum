@@ -201,8 +201,8 @@ TAGS: Dict[str, Tag] = {
         ('handler',)),
     'chat': Tag(
         'The world\'s chat: commands `chat` (channel, text) and, with whisper=, `whisper` (to, text) every player may '
-        'send, heard as the event `chat` ({channel, from, text}) by whom the channel reaches: say:7 is the players '
-        'within 7 tiles, a channel with no number all of them, `party` the speaker\'s party. A line is cut at 200 '
+        'send, heard as the event `chat` ({channel, who, text}: who said it) by whom the channel reaches: say:7 is '
+        'the players within 7 tiles, a channel with no number all of them, `party` the speaker\'s party. A line is cut at 200 '
         'characters and its words in the filter are starred; more than limit= of them and it is refused.',
         {'channels': Attr('text', 'say:7', doc='name:tiles, or name for the whole world, separated by commas'),
          'whisper': Attr('bool', False, doc='a line to one player, wherever they are'),
@@ -211,7 +211,7 @@ TAGS: Dict[str, Tag] = {
                                                 'words, one a line, next to the world')},
         ('gameserver',)),
     'say': Tag(
-        'A line of the world itself in its chat (from "world"): to= one player\'s entity, or all.',
+        'A line of the world itself in its chat (its who is "world"): to= one player\'s entity, or all.',
         {'channel': Attr('ident', 'system'),
          'to': Attr('expr', 'all', doc='an entity of a player, or all'),
          'text': Attr('text', required=True)},
@@ -241,7 +241,7 @@ TAGS: Dict[str, Tag] = {
         ('gameserver',)),
     'reward': Tag(
         'A quest\'s reward, given: its currency and items by the ledger, its other parts added to the hero\'s fields '
-        '(xp:100 to its xp).',
+        '(xp:100 to its xp). A quest to bring things takes them: the five furs go, spent where the reward is given.',
         {'to': Attr('expr', required=True),
          'quest': Attr('expr', required=True)},
         ('handler',)),

@@ -501,7 +501,10 @@ TAGS: Dict[str, Tag] = {
         {'bind': Attr('ident', required=True, doc='a q:set of the scene or the game'),
          'label': Attr('str', '', doc='text before the box'),
          'max-length': Attr('int', 64),
-         'shared': Attr('bool', False, doc='sent to every machine with the inputs, on Enter')},
+         'shared': Attr('bool', False, doc='sent to every machine with the inputs, on Enter'),
+         'secret': Attr('bool', False, doc='a password: the box shows dots, and so does what the play protocol '
+                                           'sees of it. The bound state is the game\'s as any other: set it to "" '
+                                           'once it is used (a qg:sign-in\'s qg:on-done)')},
         parents=('menu',)),
     'slider': Tag(
         'A value of a qg:menu that left and right change while it has the focus: how loud a bus is (bus=, '
