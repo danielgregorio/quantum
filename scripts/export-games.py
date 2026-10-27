@@ -9,7 +9,8 @@
     python scripts/export-games.py keep --preset iOS                # an Xcode project (a Mac builds it)
     python scripts/export-games.py --out /some/dir                  # elsewhere than docs/public/games/
 
-The games are every projects/<name>/<name>.q. Each lands in docs/public/games/<name>/:
+The games are every projects/<name>/<name>.q but a world's client (a project with a
+<name>.server.q: it plays only beside its world's server). Each lands in docs/public/games/<name>/:
 the web build as index.html next to its files (threads off, so it runs on
 a static host such as GitHub Pages), and <name>-linux.zip / <name>-windows.zip.
 docs/public/games/manifest.json lists what was built, and
@@ -120,7 +121,8 @@ def templates_dir() -> Path:
 
 
 def games() -> dict:
-    return {p.parent.name: p for p in sorted(REPO.glob('projects/*/*.q')) if p.stem == p.parent.name}
+    return {p.parent.name: p for p in sorted(REPO.glob('projects/*/*.q'))
+            if p.stem == p.parent.name and not p.with_name(f'{p.stem}.server.q').is_file()}
 
 
 def install_templates(source: str = '') -> int:

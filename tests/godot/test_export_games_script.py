@@ -22,6 +22,7 @@ def test_every_project_is_a_game_to_export():
     assert sorted(eg.games()) == ['arena', 'bricks', 'chess', 'crates', 'creeps', 'delve', 'drift', 'hopper', 'keep',
                                   'marches', 'pandafoot', 'pong', 'rally', 'robot', 'rpg', 'siege', 'towers']
     assert eg.games()['pong'] == REPO / 'projects' / 'pong' / 'pong.q'
+    assert (REPO / 'projects' / 'outpost' / 'outpost.server.q').is_file()   # a world's client plays beside its server
 
 
 def test_the_web_preset_runs_without_threads_and_the_desktop_ones_embed_the_pack():
