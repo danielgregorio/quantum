@@ -7,6 +7,7 @@ wrong kind, an expression that does not parse, a map that cannot be read: each i
 
 from __future__ import annotations
 
+import ast
 import math
 import re
 from dataclasses import dataclass, field
@@ -14,8 +15,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 from xml.etree import ElementTree as ET
 
+from quantum.core.expressions import _normalise_js_operators
 from quantum.runtime.gameserver.errors import GameServerError
-from quantum.runtime.gameserver.expressions import parts_of, validate
+from quantum.runtime.gameserver.expressions import parts_of, unbraced, validate
 from quantum.runtime.gameserver.schema import HANDLERS, TAGS, Attr
 
 Q_NS = '{https://quantum.lang/ns}'
@@ -23,6 +25,8 @@ _IDENT = re.compile(r'^[A-Za-z_][A-Za-z0-9_-]*$')
 _RATE = re.compile(r'^\s*(\d+)\s*/\s*(\d*\.?\d*)\s*(ms|s|m|h)\s*$')
 _DURATION = re.compile(r'^\s*(\d*\.?\d+)\s*(ms|s|m|h)\s*$')
 _UNIT = {'ms': 0.001, 's': 1.0, 'm': 60.0, 'h': 3600.0}
+# what a view's where= may not call: the server reads it for each player, outside the ticks the log replays
+NOT_IN_A_VIEW = ('random', 'chance', 'pick', 'now')
 
 
 def rate_of(raw: str) -> Tuple[int, float]:
@@ -88,6 +92,32 @@ class FunctionDef:
 
 
 @dataclass
+class ViewDef:
+    name: str
+    where: Optional[str]                                 # the expression, unbraced; None: every entity
+    radius: Optional[int]                                # n of a near(it, me, n) it needs: read from the index
+    rest: bool                                           # more than the near(): the whole where= is read too
+    line: Optional[int]
+
+
+def near_of(expression: Optional[str]) -> Tuple[Optional[int], bool]:
+    """A where= as (n, rest): n when it needs near(it, me, n) (alone, or with `and` more), and whether there is more
+    to it than that."""
+    if expression is None:
+        return None, False
+    tree = ast.parse(_normalise_js_operators(expression.strip()), mode='eval').body
+    terms = tree.values if isinstance(tree, ast.BoolOp) and isinstance(tree.op, ast.And) else [tree]
+    for term in terms:
+        if (isinstance(term, ast.Call) and isinstance(term.func, ast.Name) and term.func.id == 'near'
+                and not term.keywords and len(term.args) == 3
+                and {a.id for a in term.args[:2] if isinstance(a, ast.Name)} == {'it', 'me'}
+                and isinstance(term.args[2], ast.Constant) and type(term.args[2].value) is int
+                and term.args[2].value >= 0):
+            return term.args[2].value, len(terms) > 1
+    return None, True
+
+
+@dataclass
 class WorldDef:
     name: str
     source: Optional[Path]
@@ -103,6 +133,14 @@ class WorldDef:
     on_join: List[ET.Element] = field(default_factory=list)
     on_leave: List[ET.Element] = field(default_factory=list)
     variables: List[Tuple[str, str, Optional[int]]] = field(default_factory=list)   # (name, value, line)
+    views: Dict[str, ViewDef] = field(default_factory=dict)
+
+    @property
+    def reach(self) -> Optional[int]:
+        """How far a player sees: the most n of the views' near(); None if a view sees the whole world."""
+        if any(v.radius is None for v in self.views.values()):
+            return None
+        return max(v.radius for v in self.views.values())
 
     @property
     def hero(self) -> EntityDef:
@@ -160,7 +198,7 @@ def _check_value(tag: str, name: str, attr: Attr, raw: str, line: Optional[int])
         elif kind in ('text', 'value', 'place'):
             for literal, expression in parts_of(raw):
                 if expression is not None:
-                    validate(expression)
+                    validate(expression, braced=False)
     except GameServerError as e:
         raise GameServerError(f'{where} {e.message}', line)
 
@@ -305,6 +343,24 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
             world.on_leave.append(child)
         elif name == 'set':
             world.variables.append((child.get('name'), child.get('value', ''), line))
+        elif name == 'view':
+            if child.get('name') in world.views:
+                raise GameServerError(f'two views named {child.get("name")!r}', line)
+            where = unbraced(child.get('where')) if child.get('where') is not None else None
+            radius, rest = near_of(where)
+            world.views[child.get('name')] = ViewDef(child.get('name'), where, radius, rest, line)
+    if not world.views:
+        world.views['world'] = ViewDef('world', None, None, False, _line(server))
+    for view in world.views.values():
+        if view.where is None:
+            continue
+        for node in ast.walk(ast.parse(_normalise_js_operators(view.where.strip()), mode='eval')):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                called = node.func.id
+                if called in NOT_IN_A_VIEW or called in world.functions:
+                    raise GameServerError(f'<q:view name="{view.name}"> where= calls {called}(): a view reads the '
+                                          f'world and changes nothing, so not the world\'s random nor a '
+                                          f'q:function', view.line)
     if world.map is None:
         raise GameServerError('a world needs its q:map', _line(server))
     players = [e for e in world.entities.values() if e.per_player]

@@ -48,10 +48,11 @@ class WorldEvaluator(ExpressionEvaluator):
 _CHECKER = WorldEvaluator()
 
 
-def validate(expression: str) -> None:
-    """The expression parses and holds only what an expression may: else a GameServerError."""
+def validate(expression: str, braced: bool = True) -> None:
+    """The expression parses and holds only what an expression may: else a GameServerError. An attribute's text may
+    have its braces (braced); what parts_of took out of them has none, and a { there is a record's."""
     try:
-        _CHECKER.compile(unbraced(expression))
+        _CHECKER.compile(unbraced(expression) if braced else expression)
     except ExpressionError as e:
         raise GameServerError(str(e))
 

@@ -10,7 +10,7 @@ outline: [2, 3]
 > **Laboratory.** The game server is being built, a phase at a time, by
 > [PLAN_GAME_SERVER.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_GAME_SERVER.md); it carries no
 > stability promise and may change in any release (`SUPPORT_TIERS.md`). This page is what is built: Phase 1, the
-> world lives.
+> world lives, and the server's half of Phase 2, what each player sees.
 
 A `q:application type="gameserver"` is a game's world: its map, its entities, what each player may ask it
 (`q:command`) and its rules (`q:every`, `q:on-join`). The author says those; the network, the saving and the
@@ -18,6 +18,12 @@ replay are the Quantum's. A command runs whole or not at all, as the player who 
 not hold, an argument it does not take, a command faster than its `limit=`, and nothing it did stays. The world is
 deterministic (its random is its own, seeded), so a snapshot and the inputs after it are the world: that is how a
 restart loses no command a player was told ran, and how a test is exact.
+
+What a player sees is a query on the world: a `q:view` (`where="{near(it, me, 9)}"`). The server sends each player
+only what changed in each of its views: what came in, the fields that changed (the public ones, and the private
+ones of its own entity), what left. A view near the player reads the world's index, cells of 16 by 16 tiles, not
+the world. Something that happens and is not kept (a hit, a shout) is an event, `q:emit`, sent with the tick to
+whoever sees where it happened.
 
 ```bash
 quantum gameserver check yard.server.q        # read against the schema: what is wrong, with its line
@@ -130,6 +136,30 @@ Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:f
 |---|---|---|---|
 | `entity=` | expr | required |  |
 | `to=` | place | required |  |
+
+### `q:view`
+
+What each player sees of the world, by its name (the game's qg:mirror view=): the entities for which where= holds, with `it` the entity and `me` the player's. Only what changes in it goes to the player: what came into it, the fields that changed (the public ones, and its own entity's private ones) and what left. A where= of near(it, me, n), alone or with `and` more, reads only the cells of the world's index around the player; any other reads every entity, for a small world. A world with no q:view has one, `world`: everything.
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `name=` | ident | required |  |
+| `where=` | expr |  | which entities it holds (all of them if not given); read again when the entity or the player's changes |
+
+### `q:emit`
+
+An event: something that happened, sent with the tick to whoever sees where it happened (the game's qg:on-event name=), and kept nowhere. At a tile or an entity (at=), it goes to the players within reach of their views (a near() view's n; a view of the whole world reaches everywhere); to= one player's entity, to that player; neither, to everyone. It is the command's: a command refused emits nothing.
+
+Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `event=` | ident | required | its name |
+| `value=` | value |  | what it carries: a number, a text, a record |
+| `at=` | place |  | where: an area, a tile or an entity (the event says its id: `of`) |
+| `to=` | expr |  | a player's entity: the event is theirs alone |
 
 ### `q:every`
 
@@ -266,25 +296,32 @@ JSON over a WebSocket, a message a frame: what a game, a page or a test speaks t
 
 ```
 client: {"type": "hello", "name": "ana"}                         a guest world's player (Phase 4: a ticket)
+        {"type": "hello", "control": true}                        a test world's (--step) harness: no entity
         {"type": "cmd", "seq": 3, "name": "step", "args": {"dir": "north"}}
         {"type": "ping", "t": 12.5}
         {"type": "sync"}                                          answered once every frame before it is sent
         {"type": "step", "ticks": 5}                              a test world only (--step)
+        {"type": "peek"}                                          a control connection: the whole world
 server: {"type": "greeting", "world": "yard", "rate": 10, "step": false}    at once: the join waits for a tick
-        {"type": "welcome", "you": "hero:ana", "tick": 41, "rate": 10, "world": "yard", "client": "...", "map": "..."}
+        {"type": "welcome", "you": "hero:ana", "tick": 41, "rate": 10, "world": "yard", "client": "...",
+         "map": "...", "views": ["around"]}
         {"type": "tick", "tick": 42, "ack": [3], "refused": [{"seq": 4, "name": "step", "reason": "Blocked."}],
-         "views": {"world": {"enter": [{...}], "update": [{"id": "hero:bo", "at": {...}}], "leave": ["hero:cy"]}}}
+         "views": {"around": {"enter": [{...}], "update": [{"id": "hero:bo", "at": {...}}], "leave": ["hero:cy"]}},
+         "events": [{"name": "hit", "value": 3, "at": {"x": 4, "y": 2}, "of": "rat-2"}]}
         {"type": "pong", "t": 12.5, "tick": 42} · {"type": "synced", "tick": 42} · {"type": "stepped", "tick": 47}
+        {"type": "peeked", "tick": 47, "entities": {...}, "vars": {...}, "players": {...}, "errors": [...]}
         {"type": "error", "reason": "..."}                        and the connection closes
 ```
 
-A tick frame goes to a player only when it has something for them. In Phase 1 the one view is the whole world ("world"); Phase 2's q:view narrows it to what each player is near. A test world (--step) does not tick by itself: it waits for a "step", so a test is exact and as fast as the machine.
+A tick frame goes to a player only when it has something for them: what of each view (q:view) changed for them, and the events (q:emit) where they see. A view's entities are the public fields, and its player's own entity's private ones too; an update holds only the fields that changed. A test world (--step) does not tick by itself: it waits for a "step", so a test is exact and as fast as the machine.
 
-In Python, `quantum.runtime.gameserver.session` speaks it with the play protocol's words: `serve_world(path)` runs a world in a thread (a test world by default), and `WorldSession(url, name)` is a player, with `observe()`, `act(send=[(command, args)], ticks=n)` and `until(condition)`.
+In Python, `quantum.runtime.gameserver.session` speaks it with the play protocol's words: `serve_world(path)` runs a world in a thread (a test world by default), and `WorldSession(url, name)` is a player, with `observe()`, `act(send=[(command, args)], ticks=n)` and `until(condition)`; an observation is `me`, `views` (by name, then by id), `world` (all of them), `events`, `acks` and `refused`. `WorldSession(url, control=True)` steps a test world for a harness whose players are elsewhere, and `peek()` is the whole world.
 
-## A world, whole
+`quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks' time (median, 99th percentile, worst) and what went out, to the world and to each player. `scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.
 
-`tests/gameserver/worlds/yard/yard.server.q`, the world of the tests: a walled yard, a hero a player gets, a step at four steps a second, coins.
+## Two worlds, whole
+
+`tests/gameserver/worlds/yard/yard.server.q`, the world of Phase 1's tests: a walled yard, a hero a player gets, a step at four steps a second, coins.
 
 ```xml
 <q:application id="yard-server" type="gameserver">
@@ -341,6 +378,72 @@ In Python, `quantum.runtime.gameserver.session` speaks it with the play protocol
     <q:on-join>
       <q:set name="visits" value="{visits + 1}" />
       <q:if condition="{me.at == null}"><q:move entity="{me}" to="gate" /></q:if>
+    </q:on-join>
+  </q:gameserver>
+</q:application>
+```
+
+`tests/gameserver/worlds/meadow/meadow.server.q`, the world of Phase 2's: two views, a private purse, and events to whoever is near, to one player and to all.
+
+```xml
+<q:application id="meadow-server" type="gameserver">
+
+  <!-- The meadow: the world of the game server's Phase 2 tests (PLAN_GAME_SERVER.md). A field of 48 by 32 with a
+       wall across it, three areas far apart (west, east, the square), a view of the tiles within five of a hero and
+       one of the heroes who shout, wherever they are. A purse is private; a shout, a whisper and the bell are
+       events: to whoever sees where, to one player, to everyone. -->
+
+  <q:gameserver name="meadow" tick="10" players="200" client="meadow.q">
+    <q:map name="meadow" tiled="meadow.tmx" />
+
+    <q:entity name="hero" kind="Hero" per-player="true" speed="10/s">
+      <q:field name="name" value="{account.name}" />
+      <q:field name="mood" value="calm" />
+      <q:field name="purse" value="0" private="true" />
+    </q:entity>
+
+    <q:view name="around" where="{near(it, me, 5)}" />
+    <q:view name="loud" where="{it.kind == 'Hero' and it.mood == 'loud'}" />
+
+    <q:command name="step" params="dir">
+      <q:require condition="{walkable(ahead(me, dir))}" else="A wall." />
+      <q:move entity="{me}" to="{ahead(me, dir)}" />
+    </q:command>
+
+    <q:command name="go" params="to">
+      <q:move entity="{me}" to="{to}" />
+    </q:command>
+
+    <q:command name="earn">
+      <q:set name="me.purse" value="{me.purse + 1}" />
+    </q:command>
+
+    <q:command name="shout" params="text">
+      <q:set name="me.mood" value="loud" />
+      <q:emit event="shout" at="{me}" value="{me.name}: {text}" />
+    </q:command>
+
+    <q:command name="hush">
+      <q:set name="me.mood" value="calm" />
+    </q:command>
+
+    <q:command name="whisper" params="to, text">
+      <q:require condition="{entity(to) != null}" else="Nobody of that name." />
+      <q:emit event="whisper" to="{to}" value="{ {'from': me.name, 'text': text} }" />
+    </q:command>
+
+    <q:command name="ring">
+      <q:emit event="bell" value="{tick()}" />
+    </q:command>
+
+    <!-- an event of a command refused is never heard -->
+    <q:command name="boast">
+      <q:emit event="shout" at="{me}" value="I have {me.purse}" />
+      <q:require condition="{me.purse >= 100}" else="Not rich enough." />
+    </q:command>
+
+    <q:on-join>
+      <q:if condition="{me.at == null}"><q:move entity="{me}" to="west" /></q:if>
     </q:on-join>
   </q:gameserver>
 </q:application>

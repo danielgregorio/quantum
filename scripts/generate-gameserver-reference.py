@@ -5,9 +5,9 @@
     python scripts/generate-gameserver-reference.py --check  # exit 1 when the page is stale
 
 The tags and what they mean come from quantum/runtime/gameserver/schema.py, the table a world is read against; the
-functions from quantum/runtime/gameserver/rules.py; the protocol from the server's own docstring; and the example
-is the world of the tests, tests/gameserver/worlds/yard/yard.server.q, whole. So the page cannot say what the server
-does not. tests/docs/test_gameserver_reference_is_generated.py fails when the committed page is not this output.
+functions from quantum/runtime/gameserver/rules.py; the protocol from the server's own docstring; and the examples
+are the worlds of the tests, tests/gameserver/worlds/yard/yard.server.q and meadow/meadow.server.q, whole. So the page
+cannot say what the server does not. tests/docs/test_gameserver_reference_is_generated.py fails when the committed page is not this output.
 """
 
 import sys
@@ -22,6 +22,7 @@ from quantum.runtime.gameserver.schema import TAGS  # noqa: E402
 
 OUT = REPO / 'docs' / 'targets' / 'gameserver.md'
 YARD = REPO / 'tests' / 'gameserver' / 'worlds' / 'yard' / 'yard.server.q'
+MEADOW = REPO / 'tests' / 'gameserver' / 'worlds' / 'meadow' / 'meadow.server.q'
 
 INTRO = '''---
 title: The game server (Laboratory)
@@ -35,7 +36,7 @@ outline: [2, 3]
 > **Laboratory.** The game server is being built, a phase at a time, by
 > [PLAN_GAME_SERVER.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_GAME_SERVER.md); it carries no
 > stability promise and may change in any release (`SUPPORT_TIERS.md`). This page is what is built: Phase 1, the
-> world lives.
+> world lives, and the server's half of Phase 2, what each player sees.
 
 A `q:application type="gameserver"` is a game's world: its map, its entities, what each player may ask it
 (`q:command`) and its rules (`q:every`, `q:on-join`). The author says those; the network, the saving and the
@@ -43,6 +44,12 @@ replay are the Quantum's. A command runs whole or not at all, as the player who 
 not hold, an argument it does not take, a command faster than its `limit=`, and nothing it did stays. The world is
 deterministic (its random is its own, seeded), so a snapshot and the inputs after it are the world: that is how a
 restart loses no command a player was told ran, and how a test is exact.
+
+What a player sees is a query on the world: a `q:view` (`where="{near(it, me, 9)}"`). The server sends each player
+only what changed in each of its views: what came in, the fields that changed (the public ones, and the private
+ones of its own entity), what left. A view near the player reads the world's index, cells of 16 by 16 tiles, not
+the world. Something that happens and is not kept (a hit, a shout) is an event, `q:emit`, sent with the tick to
+whoever sees where it happened.
 
 ```bash
 quantum gameserver check yard.server.q        # read against the schema: what is wrong, with its line
@@ -120,13 +127,23 @@ def protocol_section():
             'a world.\n\n```\n' + block + '\n```\n\n' + rest + '\n\n'
             'In Python, `quantum.runtime.gameserver.session` speaks it with the play protocol\'s words: '
             '`serve_world(path)` runs a world in a thread (a test world by default), and `WorldSession(url, name)` '
-            'is a player, with `observe()`, `act(send=[(command, args)], ticks=n)` and `until(condition)`.\n\n')
+            'is a player, with `observe()`, `act(send=[(command, args)], ticks=n)` and `until(condition)`; an '
+            'observation is `me`, `views` (by name, then by id), `world` (all of them), `events`, `acks` and '
+            '`refused`. `WorldSession(url, control=True)` steps a test world for a harness whose players are '
+            'elsewhere, and `peek()` is the whole world.\n\n'
+            '`quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks\' time (median, '
+            '99th percentile, worst) and what went out, to the world and to each player. '
+            '`scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.\n\n')
 
 
 def example_section():
-    source = YARD.read_text(encoding='utf-8').rstrip('\n')
-    return ('## A world, whole\n\n`tests/gameserver/worlds/yard/yard.server.q`, the world of the tests: a walled '
-            'yard, a hero a player gets, a step at four steps a second, coins.\n\n```xml\n' + source + '\n```\n')
+    yard = YARD.read_text(encoding='utf-8').rstrip('\n')
+    meadow = MEADOW.read_text(encoding='utf-8').rstrip('\n')
+    return ('## Two worlds, whole\n\n`tests/gameserver/worlds/yard/yard.server.q`, the world of Phase 1\'s tests: a '
+            'walled yard, a hero a player gets, a step at four steps a second, coins.\n\n```xml\n' + yard +
+            '\n```\n\n`tests/gameserver/worlds/meadow/meadow.server.q`, the world of Phase 2\'s: two views, a '
+            'private purse, and events to whoever is near, to one player and to all.\n\n```xml\n' + meadow +
+            '\n```\n')
 
 
 def build() -> str:

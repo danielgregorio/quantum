@@ -1,5 +1,5 @@
-"""A world's statements run: q:set, q:if, q:loop, q:call and q:return, as the Core's, and the world's own q:require
-and q:move; and the functions a world's expressions call.
+"""A world's statements run: q:set, q:if, q:loop, q:call and q:return, as the Core's, and the world's own q:require,
+q:move and q:emit; and the functions a world's expressions call.
 
 Every write to the world goes through World.write, so a command that is refused (or fails) is undone whole: the
 world keeps a journal of what each write replaced while a command runs, and plays it back.
@@ -15,7 +15,7 @@ from xml.etree import ElementTree as ET
 from quantum.core.expressions import ExpressionError
 from quantum.runtime.gameserver.errors import Refused, RuleError
 from quantum.runtime.gameserver.expressions import WorldEvaluator, literal, parts_of, text_of, unbraced
-from quantum.runtime.gameserver.model import Q_NS
+from quantum.runtime.gameserver.model import NOT_IN_A_VIEW, Q_NS
 
 # the eight ways a step goes, as the game says them
 DIRECTIONS: Dict[str, Tuple[int, int]] = {
@@ -82,6 +82,8 @@ class Interpreter:
         self.world = world
         self.depth = 0
         self.evaluator = WorldEvaluator(functions=self._functions(), function_resolver=self._resolve)
+        # a view's where=: the functions that read, and none of the q:functions (which could write)
+        self.reader = WorldEvaluator(functions={k: f for k, f in self._functions().items() if k not in NOT_IN_A_VIEW})
 
     # -- expressions -------------------------------------------------------------------------------------------
 
@@ -89,8 +91,13 @@ class Interpreter:
         return ChainMap(local, self.world.vars)
 
     def evaluate(self, raw: str, local: Dict[str, Any], line: Optional[int]) -> Any:
+        """An expression attribute, with or without its braces."""
+        return self.expression(unbraced(raw), local, line)
+
+    def expression(self, expression: str, local: Dict[str, Any], line: Optional[int]) -> Any:
+        """An expression out of its braces (a { in it is a record's)."""
         try:
-            return self.evaluator.evaluate(unbraced(raw), self.scope(local))
+            return self.evaluator.evaluate(expression, self.scope(local))
         except ExpressionError as e:
             raise RuleError(str(e), line)
 
@@ -99,7 +106,7 @@ class Interpreter:
         a number, true, false, null or the text."""
         parts = parts_of(raw)
         if len(parts) == 1 and parts[0][1] is not None and parts[0][0] == '':
-            return self.evaluate(parts[0][1], local, line)
+            return self.expression(parts[0][1], local, line)
         if all(e is None for _, e in parts):
             return literal(raw)
         return self.text(raw, local, line)
@@ -107,7 +114,7 @@ class Interpreter:
     def text(self, raw: str, local: Dict[str, Any], line: Optional[int]) -> str:
         out = []
         for lit, expression in parts_of(raw):
-            out.append(lit if expression is None else text_of(self.evaluate(expression, local, line)))
+            out.append(lit if expression is None else text_of(self.expression(expression, local, line)))
         return ''.join(out)
 
     # -- blocks ------------------------------------------------------------------------------------------------
@@ -150,6 +157,8 @@ class Interpreter:
         elif name == 'move':
             entity = self.evaluate(el.get('entity'), local, line)
             self.world.move(self.world.entity_of(entity, line), self.place(el.get('to'), local, line), line)
+        elif name == 'emit':
+            self.emit(el, local, line)
         else:                                # the schema has let nothing else through
             raise RuleError(f'<q:{name}> does not run in a block', line)
 
@@ -181,7 +190,7 @@ class Interpreter:
         parts = parts_of(raw)
         expressions = [e for _, e in parts if e is not None]
         if expressions:
-            return [self.evaluate(e, local, line) for e in expressions]
+            return [self.expression(e, local, line) for e in expressions]
         out, depth, current = [], 0, []
         for c in raw:
             if c == ',' and depth == 0:
@@ -253,6 +262,39 @@ class Interpreter:
         if tile is None:
             raise RuleError(f'q:move to="{raw}": not a tile, an entity or an area of the map', line)
         return tile
+
+    def emit(self, el: ET.Element, local: Dict[str, Any], line: Optional[int]) -> None:
+        value = self.value(el.get('value'), local, line) if el.get('value') is not None else None
+        tile, of, to = None, None, None
+        if el.get('at') is not None:
+            tile, of = self.spot(el.get('at'), local, line)
+        if el.get('to') is not None:
+            target = self.evaluate(el.get('to'), local, line)
+            entity = self.world.entities.get(target) if isinstance(target, str) else target
+            if not self.world.is_entity(entity) or entity.get('_player') is None:
+                raise RuleError('q:emit to= is not a player\'s entity in the world', line)
+            to = entity['_player']
+        everyone = el.get('at') is None and el.get('to') is None
+        self.world.emit(el.get('event'), value, tile, of, to, everyone, line)
+
+    def spot(self, raw: str, local: Dict[str, Any], line: Optional[int]) -> Tuple[Optional[Tuple[int, int]],
+                                                                                    Optional[str]]:
+        """q:emit at=: the tile, and the entity's id if it is an entity's (an entity nowhere: no tile)."""
+        text = raw.strip()
+        areas = self.world.definition.map.areas
+        if text in areas:
+            return self.world.area_tile(text, line), None
+        value = self.evaluate(text, local, line)
+        if isinstance(value, str) and value in areas:
+            return self.world.area_tile(value, line), None
+        if isinstance(value, str) and value in self.world.entities:
+            value = self.world.entities[value]
+        if self.world.is_entity(value):
+            return self.world.tile_of(value), value['id']
+        tile = self.world.tile_of(value)
+        if tile is None:
+            raise RuleError(f'q:emit at="{raw}": not a tile, an entity or an area of the map', line)
+        return tile, None
 
     # -- the world's functions ---------------------------------------------------------------------------------
 

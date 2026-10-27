@@ -2,7 +2,7 @@
 
 This table is the single source: the model validates a world against it, the reference page is generated from it,
 and a tag with no entry does not exist (the Core used to drop a gameserver's children without a word). It holds
-what has been built (PLAN_GAME_SERVER.md, Phase 1); the tags of the later phases come in with them. Attribute types:
+what has been built (PLAN_GAME_SERVER.md, Phases 1 and 2); the tags of the later phases come in with them. Attribute types:
 
 - `ident`: a name (`[A-Za-z_][A-Za-z0-9_-]*`)
 - `names`: names separated by commas (`dir, speed`)
@@ -100,6 +100,27 @@ TAGS: Dict[str, Tag] = {
         'before the last one ended is refused.',
         {'entity': Attr('expr', required=True),
          'to': Attr('place', required=True)},
+        ('handler',)),
+    'view': Tag(
+        'What each player sees of the world, by its name (the game\'s qg:mirror view=): the entities for which '
+        'where= holds, with `it` the entity and `me` the player\'s. Only what changes in it goes to the player: what '
+        'came into it, the fields that changed (the public ones, and its own entity\'s private ones) and what left. '
+        'A where= of near(it, me, n), alone or with `and` more, reads only the cells of the world\'s index around '
+        'the player; any other reads every entity, for a small world. A world with no q:view has one, `world`: '
+        'everything.',
+        {'name': Attr('ident', required=True),
+         'where': Attr('expr', doc='which entities it holds (all of them if not given); read again when the entity '
+                                   'or the player\'s changes')},
+        ('gameserver',)),
+    'emit': Tag(
+        'An event: something that happened, sent with the tick to whoever sees where it happened (the game\'s '
+        'qg:on-event name=), and kept nowhere. At a tile or an entity (at=), it goes to the players within reach of '
+        'their views (a near() view\'s n; a view of the whole world reaches everywhere); to= one player\'s entity, to '
+        'that player; neither, to everyone. It is the command\'s: a command refused emits nothing.',
+        {'event': Attr('ident', required=True, doc='its name'),
+         'value': Attr('value', '', doc='what it carries: a number, a text, a record'),
+         'at': Attr('place', doc='where: an area, a tile or an entity (the event says its id: `of`)'),
+         'to': Attr('expr', doc='a player\'s entity: the event is theirs alone')},
         ('handler',)),
     'every': Tag(
         'A rule that runs every so often, for the whole world (on the ticks the interval divides). An expression that '

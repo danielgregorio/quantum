@@ -3,20 +3,26 @@
 The protocol is JSON, a message a frame, and small enough to write down here:
 
     client: {"type": "hello", "name": "ana"}                         a guest world's player (Phase 4: a ticket)
+            {"type": "hello", "control": true}                        a test world's (--step) harness: no entity
             {"type": "cmd", "seq": 3, "name": "step", "args": {"dir": "north"}}
             {"type": "ping", "t": 12.5}
             {"type": "sync"}                                          answered once every frame before it is sent
             {"type": "step", "ticks": 5}                              a test world only (--step)
+            {"type": "peek"}                                          a control connection: the whole world
     server: {"type": "greeting", "world": "yard", "rate": 10, "step": false}    at once: the join waits for a tick
-            {"type": "welcome", "you": "hero:ana", "tick": 41, "rate": 10, "world": "yard", "client": "...", "map": "..."}
+            {"type": "welcome", "you": "hero:ana", "tick": 41, "rate": 10, "world": "yard", "client": "...",
+             "map": "...", "views": ["around"]}
             {"type": "tick", "tick": 42, "ack": [3], "refused": [{"seq": 4, "name": "step", "reason": "Blocked."}],
-             "views": {"world": {"enter": [{...}], "update": [{"id": "hero:bo", "at": {...}}], "leave": ["hero:cy"]}}}
+             "views": {"around": {"enter": [{...}], "update": [{"id": "hero:bo", "at": {...}}], "leave": ["hero:cy"]}},
+             "events": [{"name": "hit", "value": 3, "at": {"x": 4, "y": 2}, "of": "rat-2"}]}
             {"type": "pong", "t": 12.5, "tick": 42} · {"type": "synced", "tick": 42} · {"type": "stepped", "tick": 47}
+            {"type": "peeked", "tick": 47, "entities": {...}, "vars": {...}, "players": {...}, "errors": [...]}
             {"type": "error", "reason": "..."}                        and the connection closes
 
-A tick frame goes to a player only when it has something for them. In Phase 1 the one view is the whole world
-("world"); Phase 2's q:view narrows it to what each player is near. A test world (--step) does not tick by itself:
-it waits for a "step", so a test is exact and as fast as the machine.
+A tick frame goes to a player only when it has something for them: what of each view (q:view) changed for them,
+and the events (q:emit) where they see. A view's entities are the public fields, and its player's own entity's
+private ones too; an update holds only the fields that changed. A test world (--step) does not tick by itself: it
+waits for a "step", so a test is exact and as fast as the machine.
 """
 
 from __future__ import annotations
@@ -32,10 +38,11 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from quantum.runtime.gameserver.log import WorldLog, replay
 from quantum.runtime.gameserver.model import WorldDef
+from quantum.runtime.gameserver.rules import chebyshev
 from quantum.runtime.gameserver.world import TickOut, World
 
 _NAME = re.compile(r'^[A-Za-z0-9_-]{1,24}$')
@@ -44,18 +51,37 @@ MESSAGES_A_SECOND = 60
 HEARTBEAT_SECONDS = 10
 
 
+_MISSING = object()
+UNLIMITED = ('step', 'sync', 'peek')        # a test world's harness says these as fast as it runs
+
+
 @dataclass
 class Connection:
     ws: Any
-    account: str
+    account: Optional[str]                                   # None: a control connection
     joined: bool = False
-    sent: Dict[str, dict] = field(default_factory=dict)     # what the player has of each entity
+    views: Dict[str, Set[str]] = field(default_factory=dict)  # what the player has of each view, by id
     window: List[float] = field(default_factory=list)
+    sent_bytes: int = 0
+
+
+def _copy(value: Any) -> Any:
+    """A world's value (numbers, texts, lists and records), copied: what was sent stays as it was sent."""
+    if isinstance(value, dict):
+        return {k: _copy(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_copy(v) for v in value]
+    return value
+
+
+def _changed(before: dict, now: dict) -> dict:
+    return {k: v for k, v in now.items() if before.get(k, _MISSING) != v}
 
 
 class WorldServer:
     def __init__(self, definition: WorldDef, *, host: str = '127.0.0.1', port: int = 7700, step: bool = False,
-                 data_dir: Optional[Path] = None, snapshot_every: float = 300.0, quiet: bool = False):
+                 data_dir: Optional[Path] = None, snapshot_every: float = 300.0, quiet: bool = False,
+                 stats: float = 0.0):
         self.definition = definition
         self.host, self.port = host, port
         self.step_mode = step
@@ -65,7 +91,11 @@ class WorldServer:
         self.world: Optional[World] = None
         self.log: Optional[WorldLog] = None
         self.connections: Dict[str, Connection] = {}
+        self.controls: List[Connection] = []
         self.inbox: List[tuple] = []
+        self._public: Dict[str, dict] = {}                  # each entity as the players have it (as of the last tick)
+        self._own: Dict[str, dict] = {}                     # a player's entity as its player has it
+        self.bytes_out = 0
         self.replayed: List[str] = []
         self.ready = threading.Event()
         self._lock: Optional[asyncio.Lock] = None
@@ -74,6 +104,9 @@ class WorldServer:
         self._last_snapshot = 0
         self._crashed = False
         self.tick_seconds: List[float] = []                 # the last ticks' time, for the numbers of the plan
+        self.stats_ticks = max(1, round(stats * definition.tick_rate)) if stats else 0
+        self._stats_mark: tuple = (time.monotonic(), 0, {})
+        self._interval: List[float] = []                    # the ticks' time since the numbers were last said
 
     def say(self, text: str) -> None:
         if not self.quiet:
@@ -123,67 +156,186 @@ class WorldServer:
         self.world.gone.clear()
         self.tick_seconds.append(time.perf_counter() - began)
         del self.tick_seconds[:-600]
+        if self.stats_ticks:
+            self._interval.append(self.tick_seconds[-1])
+        if self.stats_ticks and self.world.tick % self.stats_ticks == 0:
+            print(f'[gameserver] stats {json.dumps(self.stats())}', flush=True)
 
-    def _view(self, conn: Connection) -> dict:
+    def stats(self) -> dict:
+        """The numbers since the last time they were asked: the ticks' time, and what went out, to each player."""
+        now = time.monotonic()
+        since, out_before, sent_before = self._stats_mark
+        seconds = max(1e-6, now - since)
+        ticks = sorted(self._interval or self.tick_seconds)
+        rates = sorted((c.sent_bytes - sent_before.get(a, 0)) / seconds / 1000
+                       for a, c in self.connections.items() if a in sent_before)
+        self._stats_mark = (now, self.bytes_out, {a: c.sent_bytes for a, c in self.connections.items()})
+        self._interval = []
+
+        def at(values, q):
+            return values[min(len(values) - 1, int(q * len(values)))] if values else 0.0
+        return {'tick': self.world.tick, 'players': len(self.world.players),
+                'entities': len(self.world.entities),
+                'tick_ms_p50': round(at(ticks, 0.5) * 1000, 2), 'tick_ms_p99': round(at(ticks, 0.99) * 1000, 2),
+                'tick_ms_max': round((ticks[-1] if ticks else 0) * 1000, 2),
+                'out_kb_s': round((self.bytes_out - out_before) / seconds / 1000, 2),
+                'player_kb_s_p50': round(at(rates, 0.5), 3), 'player_kb_s_max': round(rates[-1] if rates else 0, 3)}
+
+    def _changes(self) -> tuple:
+        """What changed of each entity this tick, once for every player: (to the others, to its own player). An
+        entity no player has yet has nothing to change."""
         world = self.world
-        enter, update, leave = [], [], []
-        if not conn.sent:
-            ids = sorted(world.entities)
-        else:
-            ids = sorted(world.dirty | (set(world.entities) - set(conn.sent)))
-        for eid in ids:
+        theirs, mine = {}, {}
+        for eid in world.dirty:
             entity = world.entities.get(eid)
             if entity is None:
                 continue
-            seen = world.public(entity, conn.account)
-            before = conn.sent.get(eid)
-            if before is None:
-                enter.append(copy.deepcopy(seen))
-            else:
-                changed = {k: v for k, v in seen.items() if before.get(k, ...) != v}
+            now = _copy(world.public(entity, None))
+            before = self._public.get(eid)
+            if before is not None:
+                changed = _changed(before, now)
                 if changed:
-                    update.append({'id': eid, **copy.deepcopy(changed)})
-            conn.sent[eid] = copy.deepcopy(seen)
-        for eid in sorted(set(conn.sent) - set(world.entities)):
-            leave.append(eid)
-            del conn.sent[eid]
-        view = {}
-        if enter:
-            view['enter'] = enter
-        if update:
-            view['update'] = update
-        if leave:
-            view['leave'] = leave
-        return view
+                    theirs[eid] = {'id': eid, **changed}
+                self._public[eid] = now
+            owner = entity.get('_player')
+            if owner is not None:
+                now = _copy(world.public(entity, owner))
+                before = self._own.get(eid)
+                if before is not None:
+                    changed = _changed(before, now)
+                    if changed:
+                        mine[eid] = {'id': eid, **changed}
+                    self._own[eid] = now
+        return theirs, mine
+
+    def _entering(self, entity: dict, account: str) -> dict:
+        """An entity as it comes into a player's view: kept as they have it, for the changes of the ticks after."""
+        eid = entity['id']
+        if entity.get('_player') == account:
+            if eid not in self._own:
+                self._own[eid] = _copy(self.world.public(entity, account))
+            return self._own[eid]
+        if eid not in self._public:
+            self._public[eid] = _copy(self.world.public(entity, None))
+        return self._public[eid]
+
+    def _view(self, conn: Connection, me: dict, dirty_cells: Dict[tuple, List[str]], theirs: dict,
+              mine: dict) -> Dict[str, dict]:
+        """What of each view changed for this player: the ones that came in, the fields that changed, the ones that
+        left. The view is read again whole when the player's entity changed (it moved, say); else only for what
+        changed near it."""
+        world = self.world
+        me_changed = me['id'] in world.dirty
+        out = {}
+        for view in self.definition.views.values():
+            had = conn.views.get(view.name)
+            if (had is None or me_changed or
+                    (world.vars_changed and view.where is not None and (view.rest or view.radius is None))):
+                members = world.members(view, me)
+            else:
+                members = had - world.gone
+                if view.radius is not None:
+                    tile = world.tile_of(me)
+                    candidates = [eid for eid in had if eid in world.dirty]
+                    if tile is not None:
+                        for cell in world.cells_near(tile, view.radius):
+                            candidates.extend(dirty_cells.get(cell, ()))
+                else:
+                    candidates = world.dirty
+                for eid in candidates:
+                    entity = world.entities.get(eid)
+                    if entity is not None and world.sees(view, entity, me):
+                        members.add(eid)
+                    else:
+                        members.discard(eid)
+            had = had or set()
+            frame = {}
+            enter = sorted(members - had)
+            if enter:
+                frame['enter'] = [self._entering(world.entities[eid], conn.account) for eid in enter]
+            update = [(mine if eid == me['id'] else theirs).get(eid) for eid in sorted(members & had)
+                      if eid in world.dirty]
+            update = [u for u in update if u]
+            if update:
+                frame['update'] = update
+            leave = sorted(had - members)
+            if leave:
+                frame['leave'] = leave
+            if frame:
+                out[view.name] = frame
+            conn.views[view.name] = members
+        return out
+
+    def _events(self) -> Dict[str, List[dict]]:
+        """Each player's events of the tick: theirs (to=), everyone's, and those where they see (at=)."""
+        world = self.world
+        reach = self.definition.reach
+        accounts = [a for a, c in self.connections.items() if c.joined and a in world.players]
+        out: Dict[str, List[dict]] = {}
+        for event in world.events:
+            if event.to is not None:
+                to = [event.to] if event.to in self.connections else []
+            elif event.everyone or (event.tile is not None and reach is None):
+                to = accounts
+            elif event.tile is None:
+                to = []
+            else:
+                to = []
+                for eid in world.near_ids(event.tile, reach):
+                    entity = world.entities[eid]
+                    owner = entity.get('_player')
+                    if (owner is not None and owner in self.connections and world.players.get(owner) == eid
+                            and chebyshev(world.tile_of(entity), event.tile) <= reach):
+                        to.append(owner)
+            for account in to:
+                out.setdefault(account, []).append(event.message)
+        return out
 
     async def _send(self, out: TickOut) -> None:
+        world = self.world
+        theirs, mine = self._changes()
+        dirty_cells: Dict[tuple, List[str]] = {}
+        for eid in world.dirty:
+            cell = world.cell_of.get(eid)
+            if cell is not None:
+                dirty_cells.setdefault(cell, []).append(eid)
+        events = self._events() if world.events else {}
         for account, conn in list(self.connections.items()):
             if account in out.full:
                 await self._close(conn, 'The world is full.')
                 continue
             if account in out.joined:
                 conn.joined = True
-                conn.sent = {}
+                conn.views = {}
                 await self._send_to(conn, {'type': 'welcome', 'you': out.joined[account], 'tick': out.tick,
                                            'rate': self.definition.tick_rate, 'world': self.definition.name,
                                            'client': self.definition.client,
-                                           'map': self.definition.map.path.name})
-            if not conn.joined:
+                                           'map': self.definition.map.path.name,
+                                           'views': list(self.definition.views)})
+            if not conn.joined or account not in world.players:
                 continue
             frame: Dict[str, Any] = {'type': 'tick', 'tick': out.tick}
             if out.acks.get(account):
                 frame['ack'] = out.acks[account]
             if out.refused.get(account):
                 frame['refused'] = out.refused[account]
-            view = self._view(conn)
-            if view:
-                frame['views'] = {'world': view}
+            views = self._view(conn, world.entities[world.players[account]], dirty_cells, theirs, mine)
+            if views:
+                frame['views'] = views
+            if events.get(account):
+                frame['events'] = events[account]
             if len(frame) > 2:
                 await self._send_to(conn, frame)
+        for eid in world.gone:
+            self._public.pop(eid, None)
+            self._own.pop(eid, None)
 
     async def _send_to(self, conn: Connection, message: dict) -> None:
+        data = json.dumps(message, separators=(',', ':'))
+        conn.sent_bytes += len(data)
+        self.bytes_out += len(data)
         try:
-            await conn.ws.send(json.dumps(message, separators=(',', ':')))
+            await conn.ws.send(data)
         except Exception:  # noqa: BLE001 - a closed connection: its reader takes it out
             pass
 
@@ -193,7 +345,7 @@ class WorldServer:
             await conn.ws.close()
         except Exception:  # noqa: BLE001
             pass
-        if self.connections.get(conn.account) is conn:
+        if conn.account is not None and self.connections.get(conn.account) is conn:
             del self.connections[conn.account]
 
     # -- a connection ------------------------------------------------------------------------------------------
@@ -210,7 +362,7 @@ class WorldServer:
                 if kind is None:
                     await self._refuse(ws, 'A message is a JSON object with a type.')
                     return
-                if conn is not None:
+                if conn is not None and not (self.step_mode and kind in UNLIMITED):
                     now = time.monotonic()
                     conn.window = [t for t in conn.window if t > now - 1] + [now]
                     if len(conn.window) > MESSAGES_A_SECOND:
@@ -220,6 +372,16 @@ class WorldServer:
                     if kind != 'hello':
                         await self._refuse(ws, 'Say hello first.')
                         return
+                    if message.get('control'):
+                        if not self.step_mode:
+                            await self._refuse(ws, 'A control connection is a test world\'s (--step).')
+                            return
+                        conn = Connection(ws, None)
+                        self.controls.append(conn)
+                        await self._send_to(conn, {'type': 'greeting', 'world': self.definition.name,
+                                                   'rate': self.definition.tick_rate, 'step': True,
+                                                   'control': True, 'views': list(self.definition.views)})
+                        continue
                     name = message.get('name')
                     if not isinstance(name, str) or not _NAME.match(name):
                         await self._refuse(ws, 'A name is 1 to 24 letters, digits, _ or -.')
@@ -232,6 +394,12 @@ class WorldServer:
                     self.inbox.append(('join', name))
                     await self._send_to(conn, {'type': 'greeting', 'world': self.definition.name,
                                                'rate': self.definition.tick_rate, 'step': self.step_mode})
+                elif kind == 'cmd' and conn.account is None:
+                    await self._close(conn, 'A control connection has no entity: it sends no commands.')
+                    return
+                elif kind == 'peek' and conn.account is None:
+                    async with self._lock:
+                        await self._send_to(conn, self._peek())
                 elif kind == 'cmd':
                     seq, name, args = message.get('seq'), message.get('name'), message.get('args', {})
                     if not isinstance(seq, int) or not isinstance(name, str):
@@ -261,9 +429,19 @@ class WorldServer:
         except Exception:  # noqa: BLE001 - the connection broke: the player leaves
             pass
         finally:
-            if conn is not None and self.connections.get(conn.account) is conn:
+            if conn is not None and conn.account is None:
+                if conn in self.controls:
+                    self.controls.remove(conn)
+            elif conn is not None and self.connections.get(conn.account) is conn:
                 del self.connections[conn.account]
                 self.inbox.append(('leave', conn.account))
+
+    def _peek(self) -> dict:
+        """The god's view, for a test: every entity with all its fields but the world's own (_...)."""
+        world = self.world
+        entities = {eid: {k: v for k, v in e.items() if not k.startswith('_')} for eid, e in world.entities.items()}
+        return {'type': 'peeked', 'tick': world.tick, 'entities': entities, 'vars': world.vars,
+                'players': world.players, 'errors': world.errors[-20:]}
 
     async def _refuse(self, ws, reason: str) -> None:
         try:
@@ -340,6 +518,8 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     run.add_argument('--step', action='store_true', help='a test world: it ticks only when a client says "step"')
     run.add_argument('--data', help='where the world keeps its snapshot and log (.quantum/gameserver/<name>)')
     run.add_argument('--snapshot-every', type=float, default=300.0, metavar='SECONDS')
+    run.add_argument('--stats', type=float, default=0.0, metavar='SECONDS',
+                     help='say the numbers (the ticks\' time, what went out) every so often')
     check = sub.add_parser('check', help='read a world against its schema, and say what is wrong')
     check.add_argument('file')
 
@@ -371,7 +551,8 @@ def main(args) -> int:
               f'{len(definition.every)} rules every so often, a map of {definition.map.width}x{definition.map.height}')
         return 0
     return serve_forever(definition, host=args.host, port=args.port, step=args.step,
-                         data_dir=Path(args.data) if args.data else None, snapshot_every=args.snapshot_every)
+                         data_dir=Path(args.data) if args.data else None, snapshot_every=args.snapshot_every,
+                         stats=args.stats)
 
 
 def serve_forever(definition: WorldDef, **options) -> int:

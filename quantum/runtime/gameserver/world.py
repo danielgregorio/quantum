@@ -3,7 +3,8 @@
 `World.step(inputs)` is one tick: the players who came and went and the commands they sent, in the order they
 arrived, then the rules whose interval the tick falls on. It touches nothing but its own state and its seeded
 random, so the same snapshot and the same inputs give the same world: the log replays it, and a test is a list of
-inputs. What a player sees of it (`public`) is the server's to send.
+inputs. What a player sees of it (`public`, and the views: `members`, `sees`) is the server's to send; the index
+of the world's cells (16 tiles a side) is how a view near a player reads only the entities around them.
 """
 
 from __future__ import annotations
@@ -12,16 +13,29 @@ import copy
 import hashlib
 import json
 import random
+from collections import ChainMap
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
+from quantum.core.expressions import ExpressionError
 from quantum.runtime.gameserver.errors import Refused, RuleError
-from quantum.runtime.gameserver.model import EntityDef, WorldDef
+from quantum.runtime.gameserver.model import EntityDef, ViewDef, WorldDef
 from quantum.runtime.gameserver.rules import Interpreter, chebyshev, facing_of
 
 _MISSING = object()
 MAX_ARGS = 2048          # the size of a command's arguments, as JSON
 MAX_ERRORS = 100
+MAX_EVENTS = 10_000      # q:emit in a tick
+CELL = 16                # the side of a cell of the index, in tiles
+
+
+@dataclass
+class Event:
+    """What a q:emit said: the event as it is sent, where it happened, and to whom it goes."""
+    message: dict
+    tile: Optional[Tuple[int, int]]
+    to: Optional[str]                    # an account: theirs alone
+    everyone: bool                       # neither at= nor to=
 
 
 @dataclass
@@ -85,6 +99,11 @@ class World:
         self.journal: Optional[List[Tuple[dict, str, Any]]] = None
         self.dirty: set = set()                    # entities changed this tick
         self.gone: set = set()                     # entities that left the world this tick
+        self.events: List[Event] = []              # what q:emit said this tick
+        self.vars_changed = False                  # a variable of the world was written this tick
+        self.cells: Dict[Tuple[int, int], Set[str]] = {}       # the index: a cell, the entities on its tiles
+        self.cell_of: Dict[str, Tuple[int, int]] = {}
+        self._events_mark = 0
         self.rules = Interpreter(self)
         self._private = {name: {f.name for f in e.fields if f.private} for name, e in definition.entities.items()}
         for name, value, line in definition.variables:
@@ -137,6 +156,67 @@ class World:
         private = () if entity.get('_player') == viewer else self._private.get(entity.get('_type'), ())
         return {k: v for k, v in entity.items() if not k.startswith('_') and k not in private}
 
+    # -- the index, and the views ------------------------------------------------------------------------------
+
+    def reindex(self, ids: Iterable[str]) -> None:
+        """The cells of these entities, as they are now (one that left the world, or is nowhere, is in none)."""
+        for eid in ids:
+            entity = self.entities.get(eid)
+            tile = self.tile_of(entity) if entity is not None else None
+            cell = (tile[0] // CELL, tile[1] // CELL) if tile else None
+            old = self.cell_of.get(eid)
+            if old == cell:
+                continue
+            if old is not None:
+                members = self.cells[old]
+                members.discard(eid)
+                if not members:
+                    del self.cells[old]
+                del self.cell_of[eid]
+            if cell is not None:
+                self.cells.setdefault(cell, set()).add(eid)
+                self.cell_of[eid] = cell
+
+    @staticmethod
+    def cells_near(tile: Tuple[int, int], n: int) -> List[Tuple[int, int]]:
+        """The cells that a square of n tiles around the tile touches."""
+        return [(cx, cy) for cx in range((tile[0] - n) // CELL, (tile[0] + n) // CELL + 1)
+                for cy in range((tile[1] - n) // CELL, (tile[1] + n) // CELL + 1)]
+
+    def near_ids(self, tile: Tuple[int, int], n: int) -> List[str]:
+        """The entities of the cells that a square of n tiles around the tile touches (some farther than n)."""
+        out: List[str] = []
+        for cell in self.cells_near(tile, n):
+            members = self.cells.get(cell)
+            if members:
+                out.extend(members)
+        return out
+
+    def sees(self, view: ViewDef, entity: dict, me: dict) -> bool:
+        """The entity is in the player's view. A where= that fails is kept in the errors, and sees nothing."""
+        if view.radius is not None:
+            a, b = self.tile_of(entity), self.tile_of(me)
+            if a is None or b is None or chebyshev(a, b) > view.radius:
+                return False
+            if not view.rest:
+                return True
+        if view.where is None:
+            return True
+        try:
+            return bool(self.rules.reader.evaluate(view.where, ChainMap({'it': entity, 'me': me}, self.vars)))
+        except ExpressionError as e:
+            self._error(f'q:view {view.name}', RuleError(str(e), view.line))
+            return False
+
+    def members(self, view: ViewDef, me: dict) -> Set[str]:
+        """The ids of what the player sees in the view."""
+        if view.radius is not None:
+            tile = self.tile_of(me)
+            ids: Iterable[str] = self.near_ids(tile, view.radius) if tile else ()
+        else:
+            ids = self.entities
+        return {eid for eid in ids if self.sees(view, self.entities[eid], me)}
+
     # -- writing, as a transaction -----------------------------------------------------------------------------
 
     def write(self, target: dict, key: str, value: Any, root: Optional[dict], line: Optional[int]) -> None:
@@ -150,9 +230,26 @@ class World:
         owner = root if root is not None else target
         if self.is_entity(owner):
             self.dirty.add(owner['id'])
+        elif owner is self.vars or any(owner is v for v in self.vars.values()):
+            self.vars_changed = True
+
+    def emit(self, name: str, value: Any, tile: Optional[Tuple[int, int]], of: Optional[str], to: Optional[str],
+             everyone: bool, line: Optional[int]) -> None:
+        if len(self.events) >= MAX_EVENTS:
+            raise RuleError(f'q:emit: more than {MAX_EVENTS} events in a tick', line)
+        try:
+            message = {'name': name, 'value': plain(value)}
+        except RuleError as e:
+            raise RuleError(e.message, line)
+        if tile is not None:
+            message['at'] = {'x': tile[0], 'y': tile[1]}
+        if of is not None:
+            message['of'] = of
+        self.events.append(Event(message, tile, to, everyone))
 
     def _begin(self) -> None:
         self.journal = []
+        self._events_mark = len(self.events)
 
     def _commit(self) -> None:
         self.journal = None
@@ -164,6 +261,7 @@ class World:
             else:
                 target[key] = old
         self.journal = None
+        del self.events[self._events_mark:]
 
     def _error(self, where: str, e: RuleError) -> None:
         self.errors.append({'tick': self.tick, 'where': where, 'line': e.line, 'message': e.message})
@@ -286,6 +384,7 @@ class World:
         seq, name, args)), then the rules due."""
         self.tick += 1
         out = TickOut(self.tick)
+        self.dirty, self.gone, self.events, self.vars_changed = set(), set(), [], False
         for item in inputs:
             kind, account = item[0], item[1]
             if kind == 'join':
@@ -302,6 +401,7 @@ class World:
         for ticks, rule in self.definition.every:
             if self.tick % ticks == 0:
                 self._run(rule, {}, 'q:every')
+        self.reindex(self.dirty | self.gone)
         return out
 
     # -- kept, and brought back ------------------------------------------------------------------------------
@@ -326,6 +426,7 @@ class World:
         world.counters = dict(snap['counters'])
         version, state, gauss = snap['rng']
         world.rng.setstate((version, tuple(state), gauss))
+        world.reindex(world.entities)
         return world
 
     def digest(self) -> str:

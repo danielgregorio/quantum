@@ -6,9 +6,13 @@ speaks the server's protocol, with no Godot, with the play protocol's words: `ob
             seen = ana.act(send=[('step', {'dir': 'east'})], ticks=3)
             assert seen['acks'] and bo.observe()['world'][ana.me_id]['at'] == seen['me']['at']
 
-An observation is what the player knows: its own entity with its private fields (`me`), every entity it sees
-(`world`, by id), the commands that ran (`acks`) and those refused, with why (`refused`), since the last one. In a
-test world a session's `act` steps the world itself; in a live one it waits the world's ticks.
+An observation is what the player knows: its own entity with its private fields (`me`), what it sees of each view
+(`views`, by name, then by id) and of them all (`world`, by id), the events where it sees (`events`), the commands
+that ran (`acks`) and those refused, with why (`refused`), since the last one. In a test world a session's `act`
+steps the world itself; in a live one it waits the world's ticks.
+
+A control session (`WorldSession(url, control=True)`, a test world's) has no entity: it steps the world for a
+harness whose players are elsewhere (Godot clients), and `peek()` is the god's view.
 """
 
 from __future__ import annotations
@@ -62,23 +66,35 @@ def serve_world(world: Union[str, Path, Any], *, step: bool = True, data: Option
 
 
 class WorldSession:
-    def __init__(self, url: str, name: str, timeout: float = 10.0):
+    def __init__(self, url: str, name: str = 'control', timeout: float = 10.0, control: bool = False,
+                 keep_frames: bool = False):
         from websockets.sync.client import connect
 
-        self.url, self.name, self.timeout = url, name, timeout
+        self.url, self.name, self.timeout, self.control = url, name, timeout, control
         # entered as its context (websockets 17.1 warns of a connection used without one); left in close()
         self.ws = connect(url, max_size=8 * 1024 * 1024, open_timeout=timeout).__enter__()
         self.me_id: Optional[str] = None
         self.tick = 0
         self.rate = 10
-        self.world: Dict[str, dict] = {}
+        self.views: Dict[str, Dict[str, dict]] = {}
         self.acks: List[int] = []
         self.refused: List[dict] = []
+        self.events: List[dict] = []
         self.welcome: Optional[dict] = None
         self.step_mode: Optional[bool] = None
+        self.frames: List[dict] = []                 # every message the world sent, with keep_frames
+        self.keep_frames = keep_frames
         self._seq = 0
-        self._send({'type': 'hello', 'name': name})
+        self._send({'type': 'hello', 'control': True} if control else {'type': 'hello', 'name': name})
         self._join()
+
+    @property
+    def world(self) -> Dict[str, dict]:
+        """Every entity the player sees, in any of its views."""
+        seen: Dict[str, dict] = {}
+        for view in self.views.values():
+            seen.update(view)
+        return seen
 
     # -- the wire ------------------------------------------------------------------------------------------------
 
@@ -98,6 +114,8 @@ class WorldSession:
             except Exception as e:  # noqa: BLE001 - the server closed
                 raise WorldSessionError(f'{self.name}: the world closed the connection ({e})')
             message = json.loads(raw)
+            if self.keep_frames:
+                self.frames.append(message)
             self._apply(message)
             if until(message):
                 return message
@@ -110,20 +128,22 @@ class WorldSession:
             self.welcome = message
             self.me_id = message['you']
             self.rate = message.get('rate', 10)
-            self.world = {}
+            self.views = {name: {} for name in message.get('views', ['world'])}
         if 'tick' in message:
             self.tick = max(self.tick, message['tick'])
         if kind == 'tick':
             self.acks += message.get('ack', [])
             self.refused += message.get('refused', [])
+            self.events += message.get('events', [])
             for name, view in message.get('views', {}).items():
+                seen = self.views.setdefault(name, {})
                 for entity in view.get('enter', []):
-                    self.world[entity['id']] = entity
+                    seen[entity['id']] = entity
                 for change in view.get('update', []):
-                    self.world.setdefault(change['id'], {'id': change['id']}).update(
+                    seen.setdefault(change['id'], {'id': change['id']}).update(
                         {k: v for k, v in change.items() if k != 'id'})
                 for eid in view.get('leave', []):
-                    self.world.pop(eid, None)
+                    seen.pop(eid, None)
 
     def _join(self) -> None:
         """The join waits for a tick: in a test world this session gives it one (the world steps a tick); in a live
@@ -131,6 +151,8 @@ class WorldSession:
         greeting = self._read(lambda m: m.get('type') == 'greeting')
         self.step_mode = bool(greeting.get('step'))
         self.rate = greeting.get('rate', 10)
+        if self.control:
+            return
         if self.step_mode:
             self._send({'type': 'step', 'ticks': 1})
             self._read(lambda m: m.get('type') == 'stepped')
@@ -153,10 +175,19 @@ class WorldSession:
         return self._observation()
 
     def _observation(self) -> dict:
-        seen = {'tick': self.tick, 'me': copy.deepcopy(self.world.get(self.me_id)),
-                'world': copy.deepcopy(self.world), 'acks': self.acks, 'refused': self.refused}
-        self.acks, self.refused = [], []
+        world = self.world
+        seen = {'tick': self.tick, 'me': copy.deepcopy(world.get(self.me_id)) if self.me_id else None,
+                'world': copy.deepcopy(world), 'views': copy.deepcopy(self.views), 'events': self.events,
+                'acks': self.acks, 'refused': self.refused}
+        self.acks, self.refused, self.events = [], [], []
         return seen
+
+    def peek(self) -> dict:
+        """A control session's: the whole world now, every entity with all its fields (the god's view)."""
+        if not self.control:
+            raise WorldSessionError('peek is a control session\'s (WorldSession(url, control=True))')
+        self._send({'type': 'peek'})
+        return self._read(lambda m: m.get('type') == 'peeked')
 
     def act(self, send: Optional[Iterable[Tuple[str, dict]]] = None, ticks: int = 1) -> dict:
         """Sends the commands, and the world runs `ticks` ticks (the first takes them)."""
@@ -177,17 +208,19 @@ class WorldSession:
     def until(self, condition: Union[str, Callable[[dict], bool]], max_ticks: int = 600,
               send: Optional[Iterable[Tuple[str, dict]]] = None, every: int = 1) -> dict:
         """As act, then a tick at a time until the condition holds (a function of the observation, or an
-        expression over it: "me.at.x == 5"). The observation says whether it did: `until`."""
+        expression over it: "me.at.x == 5"). The observation says whether it did: `until`; its acks, refusals
+        and events are those of every tick it took."""
         holds = condition if callable(condition) else _expression(condition)
         seen = self.act(send, ticks=every)
-        acks, refused = list(seen['acks']), list(seen['refused'])
+        acks, refused, events = list(seen['acks']), list(seen['refused']), list(seen['events'])
         ticks = every
         while not holds(seen) and ticks < max_ticks:
             seen = self.act(ticks=every)
             acks += seen['acks']
             refused += seen['refused']
+            events += seen['events']
             ticks += every
-        seen['acks'], seen['refused'] = acks, refused
+        seen['acks'], seen['refused'], seen['events'] = acks, refused, events
         seen['until'] = bool(holds(seen))
         return seen
 
