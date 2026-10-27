@@ -243,4 +243,41 @@
     <qg:phrase text="leather-armor   80" as="leather-armor   80" />
     <qg:phrase text="iron-sword   300" as="iron-sword   300" />
   </qg:language>
+
+  <qg:language lang="es" name="Español">
+    <qg:phrase text="Account" as="Cuenta" />
+    <qg:phrase text="Password" as="Contraseña" />
+    <qg:phrase text="Enter the world" as="Entrar al mundo" />
+    <qg:phrase text="Signing in..." as="Entrando..." />
+    <qg:phrase text="Coming into the world..." as="Entrando al mundo..." />
+    <qg:phrase text="Level" as="Nivel" />
+    <qg:phrase text="LEVEL" as="NIVEL" />
+    <qg:phrase text="gold" as="oro" />
+    <qg:phrase text="BAG" as="MOCHILA" />
+    <qg:phrase text="Sell" as="Vender" />
+    <qg:phrase text="Back" as="Volver" />
+    <qg:phrase text="Old Marta" as="Vieja Marta" />
+    <qg:phrase text="Captain Rhea" as="Capitana Rhea" />
+    <qg:phrase text="Your quest:" as="Tu misión:" />
+    <qg:phrase text="No quest. Rhea has work." as="Ninguna misión. Rhea tiene trabajo." />
+    <qg:phrase text="It is done" as="Está hecho" />
+    <qg:phrase text="You fell, and woke at the temple." as="Caíste, y despertaste en el templo." />
+    <qg:phrase text="Say" as="Decir" />
+    <qg:phrase text="Yell" as="Gritar" />
+    <qg:phrase text="Help" as="Ayuda" />
+    <qg:phrase text="OUTPOST" as="OUTPOST" />
+    <qg:phrase text="Tell her" as="Decirle" />
+    <qg:phrase text="The list" as="La lista" />
+    <qg:phrase text="Her work" as="Su trabajo" />
+    <qg:phrase text="Rats in the sewers (level 1)" as="Ratas en las cloacas (nivel 1)" />
+    <qg:phrase text="Pelts for the winter (level 3)" as="Pieles para el invierno (nivel 3)" />
+    <qg:phrase text="The Old Bear (level 8)" as="El Viejo Oso (nivel 8)" />
+    <!-- the things keep the world's names, as the bag shows them -->
+    <qg:phrase text="cheese   2" as="cheese   2" />
+    <qg:phrase text="meat   5" as="meat   5" />
+    <qg:phrase text="health-potion   40" as="health-potion   40" />
+    <qg:phrase text="wooden-sword   50" as="wooden-sword   50" />
+    <qg:phrase text="leather-armor   80" as="leather-armor   80" />
+    <qg:phrase text="iron-sword   300" as="iron-sword   300" />
+  </qg:language>
 </q:application>
