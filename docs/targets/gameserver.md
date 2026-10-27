@@ -309,13 +309,16 @@ server: {"type": "greeting", "world": "yard", "rate": 10, "step": false}    at o
          "views": {"around": {"enter": [{...}], "update": [{"id": "hero:bo", "at": {...}}], "leave": ["hero:cy"]}},
          "events": [{"name": "hit", "value": 3, "at": {"x": 4, "y": 2}, "of": "rat-2"}]}
         {"type": "pong", "t": 12.5, "tick": 42} · {"type": "synced", "tick": 42} · {"type": "stepped", "tick": 47}
-        {"type": "peeked", "tick": 47, "entities": {...}, "vars": {...}, "players": {...}, "errors": [...]}
+        {"type": "peeked", "tick": 47, "entities": {...}, "vars": {...}, "players": {...}, "errors": [...],
+         "connected": {"ana": 3}}                                 who is connected, and the seq it sent last
         {"type": "error", "reason": "..."}                        and the connection closes
 ```
 
-A tick frame goes to a player only when it has something for them: what of each view (q:view) changed for them, and the events (q:emit) where they see. A view's entities are the public fields, and its player's own entity's private ones too; an update holds only the fields that changed. A test world (--step) does not tick by itself: it waits for a "step", so a test is exact and as fast as the machine.
+A tick frame goes to a player only when it has something for them: what of each view (q:view) changed for them, and the events (q:emit) where they see (in a test world, every tick: a harness knows its clients heard it). A view's entities are the public fields, and its player's own entity's private ones too; an update holds only the fields that changed. A test world (--step) does not tick by itself: it waits for a "step", so a test is exact and as fast as the machine.
 
 In Python, `quantum.runtime.gameserver.session` speaks it with the play protocol's words: `serve_world(path)` runs a world in a thread (a test world by default), and `WorldSession(url, name)` is a player, with `observe()`, `act(send=[(command, args)], ticks=n)` and `until(condition)`; an observation is `me`, `views` (by name, then by id), `world` (all of them), `events`, `acks` and `refused`. `WorldSession(url, control=True)` steps a test world for a harness whose players are elsewhere, and `peek()` is the whole world.
+
+A game is a world's client with `qg:connect world="meadow.server.q"` (the games' reference): its compiler reads the world's file, `qg:mirror view=` draws a view, `qg:send command=` asks, `qg:on-event` and `qg:on-refused` hear. `quantum.runtime.godot_world.WorldTable(world, project, seats)` plays a test world and the Godot games of its players together, in step; `PlaySession(project, world=url, name=...)` is one of them.
 
 `quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks' time (median, 99th percentile, worst) and what went out, to the world and to each player. `scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.
 

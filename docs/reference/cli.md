@@ -165,6 +165,7 @@ Run a world (a q:application type="gameserver").
 | `--step` | a test world: it ticks only when a client says "step" |  |  |
 | `--data` | where the world keeps its snapshot and log (.quantum/gameserver/&lt;name>) |  |  |
 | `--snapshot-every` |  | `300.0` |  |
+| `--stats` | say the numbers (the ticks' time, what went out) every so often |  |  |
 
 <a id="cli-gameserver-check"></a>
 

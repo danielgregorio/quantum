@@ -131,6 +131,11 @@ def protocol_section():
             'observation is `me`, `views` (by name, then by id), `world` (all of them), `events`, `acks` and '
             '`refused`. `WorldSession(url, control=True)` steps a test world for a harness whose players are '
             'elsewhere, and `peek()` is the whole world.\n\n'
+            'A game is a world\'s client with `qg:connect world="meadow.server.q"` (the games\' reference): its '
+            'compiler reads the world\'s file, `qg:mirror view=` draws a view, `qg:send command=` asks, '
+            '`qg:on-event` and `qg:on-refused` hear. `quantum.runtime.godot_world.WorldTable(world, project, '
+            'seats)` plays a test world and the Godot games of its players together, in step; '
+            '`PlaySession(project, world=url, name=...)` is one of them.\n\n'
             '`quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks\' time (median, '
             '99th percentile, worst) and what went out, to the world and to each player. '
             '`scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.\n\n')

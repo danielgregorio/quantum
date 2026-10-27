@@ -22,6 +22,7 @@ sys.path.insert(0, str(REPO))
 from quantum.runtime.godot import gd  # noqa: E402
 from quantum.runtime.godot.expressions import _ACTION_FUNCTIONS as ACTION_FUNCTIONS  # noqa: E402
 from quantum.runtime.godot.expressions import _FUNCTIONS as FUNCTIONS  # noqa: E402
+from quantum.runtime.godot.expressions import _WORLD_FUNCTIONS as WORLD_FUNCTIONS  # noqa: E402
 from quantum.runtime.godot.expressions import THING_FIELDS  # noqa: E402
 from quantum.runtime.godot.schema import ACTIONS, STATEMENTS, TAGS  # noqa: E402
 from quantum.runtime.godot_bin import GODOT_VERSION  # noqa: E402
@@ -313,7 +314,13 @@ def build() -> str:
                  '(`pressing(\'run\', 2)`): held now, the ticks it has been held (on the tick it is let go, how long '
                  'it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). '
                  'A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: '
-                 + ', '.join(f'`{f}`' for f in sorted(THING_FIELDS)) + ', as its controller has them.\n')
+                 + ', '.join(f'`{f}`' for f in sorted(THING_FIELDS)) + ', as its controller has them. '
+                 'A world\'s client (`qg:connect`) also has '
+                 + ', '.join(f'`{f}()`' for f in WORLD_FUNCTIONS) + ': the player\'s own entity as the world sent '
+                 'it (its private fields too; `{}` until it is seen), an entity the player sees by its id (or null), '
+                 'and whether the world let the player in; the fields of the world\'s entities (`me().purse`, a '
+                 'mirrored prefab\'s `me.name`, a click\'s `other.id`) are read from the world\'s file, and one no '
+                 'entity of it has is a compile error too.\n')
     parts.append(gd_section())
     parts.append('## The games\n\nEach one is written in these tags and nothing else, and replayed '
                  'in CI from input tapes (`tests/godot/test_godot_<name>.py`).\n')

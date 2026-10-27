@@ -196,6 +196,11 @@ class _Compiler:
                 for action in self.actions:
                     inputs.setdefault(action_name(p, action), [])
         self.inputs = inputs
+        # qg:connect: the game is a world's client; the world's file says what it may ask and will see
+        self.world = None
+        self.world_spec = None
+        if g.connect is not None:
+            self._connect(g)
         # the tags of the zones of every scene: handlers may name them like a prefab's
         self._zone_tags = {z.get('tag') for sc in g.scenes for z in sc.find_all('zone')}
         sheets = {}
@@ -308,7 +313,7 @@ class _Compiler:
         self.languages = languages
         prefabs = {}
         self._part_targets: List[tuple] = []
-        pscript = SceneScript('prefabs', game_state=self.game_state, actions=self.actions)
+        pscript = SceneScript('prefabs', game_state=self.game_state, actions=self.actions, world=self.world)
         pscript.buses = set(self.buses)
         compile_game_functions(pscript, g.functions)   # a prefab's handlers call the game's q:functions too
         for name, el in g.prefabs.items():
@@ -467,6 +472,7 @@ class _Compiler:
                 'inputs': inputs,
                 'actions': self.actions,
                 'multiplayer': self.multiplayer,
+                **({'world': self.world_spec} if self.world_spec else {}),
                 'sheets': sheets,
                 'sounds': sounds,
                 'buses': self.buses,
@@ -481,6 +487,25 @@ class _Compiler:
             'scripts': self.scripts,
             'assets': self.assets,
         }
+
+    def _connect(self, g: Game) -> None:
+        from quantum.runtime.godot.world import read_world
+        el = g.connect
+        if g.multiplayer is not None:
+            raise GameCompileError('<qg:connect>: a game is a world\'s client or a qg:multiplayer one, not both (the '
+                                   'world is the server\'s; the lockstep has no server)', el.line)
+        self.world = read_world(self._find(el.get('world'), el.line), el.line)
+        for kind in sorted(self.world.kinds):
+            prefab = g.prefabs.get(kind)
+            if prefab is None:
+                raise GameCompileError(f'<qg:connect world="{el.get("world")}">: the world has entities of kind '
+                                       f'{kind!r}; the game draws each as the qg:prefab of its kind\'s name: declare '
+                                       f'<qg:prefab name="{kind}">', el.line)
+            if prefab.get('ai'):
+                raise GameCompileError(f'<qg:prefab name="{kind}" ai="{prefab.get("ai")}">: an entity of the world '
+                                       f'moves as the world says; its prefab has no ai=', prefab.line)
+        self.world_spec = {'name': self.world.name, 'local': el.get('local'), 'server': el.get('server'),
+                           'kinds': self.world.kinds, 'views': self.world.views, 'hero': self.world.hero_kind}
 
     def _find(self, rel: str, line: Optional[int]) -> Path:
         """A file named in the .q: next to it, or in a folder above it."""
@@ -839,13 +864,18 @@ class _Compiler:
                                    'background': el.get('background'), 'seed': '0', 'save': False, 'y-sort': False,
                                    'ambient': None}, el.line, children=el.children, gd=el.gd)
         spec = self._scene(screen, sheets, prefabs)
-        spec['overlay'] = {'shade': el.get('shade'), **({'action': action} if action else {})}
+        spec['overlay'] = {'shade': el.get('shade'), **({'action': action} if action else {}),
+                           **({} if el.get('freeze') else {'freeze': False})}
         return spec
 
     def _scene(self, scene: Element, sheets: dict, prefabs: dict) -> dict:
         name = scene.get('name')
         scene.children = _expand_lobbies(scene.children, self.multiplayer, bool(self.languages))
-        script = SceneScript(name, game_state=self.game_state)
+        script = SceneScript(name, game_state=self.game_state, world=self.world,
+                             world_scene=bool(scene.get('world')))
+        if scene.get('world') and self.world is None:
+            raise GameCompileError(f'<qg:scene name="{name}" world="true">: the game is no world\'s client '
+                                   f'(qg:connect)', scene.line)
         script.buses = set(self.buses)
         self._states_checked: list = []
         # the characters, by id: names in the scene's expressions, targets of its actions
@@ -894,6 +924,8 @@ class _Compiler:
         map_nodes: Dict[str, dict] = {}
         map_paths: List[dict] = []
         on_input: Dict[str, str] = {}
+        on_event: Dict[str, List[str]] = {}       # a world's event -> its handlers (world="true")
+        on_refused: List[dict] = []
         sequences: List[dict] = []
         on_release: Dict[str, str] = {}
         on_screen: List[dict] = []
@@ -1727,6 +1759,36 @@ class _Compiler:
                 if el.get('fade') < 0:
                     raise GameCompileError('<qg:music fade=>: the seconds of a fade cannot be negative', el.line)
                 music = {'sound': sound, 'fade': el.get('fade'), 'volume': el.get('volume')}
+            elif el.tag in ('mirror', 'on-event', 'on-refused'):
+                if not script.world_scene:
+                    raise GameCompileError(f'<qg:{el.tag}> is in a scene of the world: <qg:scene name="{name}" '
+                                           f'world="true">', el.line)
+                if el.tag == 'mirror':
+                    if el.get('view') not in self.world.views:
+                        raise GameCompileError(f'<qg:mirror view="{el.get("view")}">: the world {self.world.name!r} '
+                                               f'has no such view (it has: {", ".join(self.world.views)})', el.line)
+                    if any(n['kind'] == 'mirror' and n['view'] == el.get('view') for n in nodes):
+                        raise GameCompileError(f'two <qg:mirror view="{el.get("view")}"> in a scene', el.line)
+                    nodes.append({'kind': 'mirror', 'view': el.get('view')})
+                    self._node_elements.append(el)
+                elif el.tag == 'on-event':
+                    event = el.get('name')
+                    if event not in self.world.events:
+                        raise GameCompileError(f'<qg:on-event name="{event}">: the world {self.world.name!r} emits no '
+                                               f'such event (its q:emit say: '
+                                               f'{", ".join(sorted(self.world.events)) or "none"})', el.line)
+                    handlers = on_event.setdefault(event, [])
+                    handlers.append(compile_handler(script, f'_on_event_{_ident(event)}_{len(handlers)}',
+                                                    el.children, el.line, params=('me', 'other', 'value', 'at')))
+                else:
+                    command = el.get('command')
+                    if command is not None and command not in self.world.commands:
+                        raise GameCompileError(f'<qg:on-refused command="{command}">: the world {self.world.name!r} '
+                                               f'has no such command (it has: '
+                                               f'{", ".join(sorted(self.world.commands))})', el.line)
+                    on_refused.append({'command': command, 'handler': compile_handler(
+                        script, f'_on_refused_{len(on_refused)}', el.children, el.line,
+                        params=('me', 'other', 'reason', 'command'))})
             else:
                 raise GameCompileError(f'<qg:{el.tag}> cannot go directly inside a scene', el.line)
         # 3. references between nodes
@@ -1740,8 +1802,12 @@ class _Compiler:
                 raise GameCompileError('<qg:character controller="map"> in a scene without qg:map-node', scene.line)
         for n in nodes:
             for f in (n['follow'] if n['kind'] == 'camera' else []):
+                if f == 'me' and script.world_scene:
+                    continue                 # the player's own entity, mirrored
                 if f not in ids:
-                    raise GameCompileError(f'<qg:camera follow="{f}">: no character with that id', scene.line)
+                    raise GameCompileError(f'<qg:camera follow="{f}">: no character with that id'
+                                           + (' (follow="me" is a scene of the world\'s: world="true")'
+                                              if f == 'me' else ''), scene.line)
             if n['kind'] == 'camera' and n['bounds'] == 'tilemap' and tilemap is None:
                 raise GameCompileError('<qg:camera bounds="tilemap"> in a scene without a tilemap', scene.line)
         tags = {p['tag'] for p in prefabs.values()}
@@ -1823,6 +1889,17 @@ class _Compiler:
             except ValueError:
                 raise GameCompileError(f'<qg:scene seed="{seed}">: a whole number, or an expression ({{...}}) giving one',
                                        scene.line) from None
+        world_spec = {}
+        if script.world_scene:
+            world_spec['world'] = True
+            if on_event:
+                world_spec['on_event'] = on_event
+            if on_refused:
+                world_spec['on_refused'] = on_refused
+            if self.game.connect.get('name') is not None:
+                code = compile_expression(self.game.connect.get('name'), script.scope(), self.game.connect.line)
+                script.functions.append(f'func _q_world_name() -> String:\n\treturn Q.to_str({code})\n')
+                world_spec['world_name'] = '_q_world_name'
         script_file = _script_name(name)
         self.scripts[script_file] = script.source()
         spec = {
@@ -1833,6 +1910,7 @@ class _Compiler:
             'on_screen': on_screen, 'on_death': on_death,
             'on_select': on_select, 'music': music,
             **({'sequences': sequences} if sequences else {}),
+            **world_spec,
         }
         has_map = any(n['kind'] == 'tilemap' for n in nodes)
         if script.travels_used and not has_map:

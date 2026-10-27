@@ -10,6 +10,24 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the game server's Phase 2 (`PLAN_GAME_SERVER.md`), views and
+  the game. A world's `q:view where="{near(it, me, 9)}"` is what each player
+  sees, read from an index of the world's cells, and each player is sent only
+  what changed in it: what came in, the fields that changed (a hero's private
+  ones to its own player only), what left. `q:emit` sends an event with the
+  tick to whoever sees where it happened, to one player or to all. A game is a
+  world's client with `qg:connect world="world.server.q"`, whose file the
+  compiler reads, so a command, a view, an event or a field the world has not
+  is an error as the game compiles: `qg:mirror view=` draws a view's entities
+  as the prefabs of their kinds, walking tile to tile, `qg:send command=` asks
+  the world, `qg:on-event` and `qg:on-refused` hear it, `me()`, `entity()` and
+  `connected()` read it, `qg:scene world="true"` comes into it and
+  `qg:overlay freeze="false"` lets it go on. `WorldTable` plays a test world
+  and the Godot games of its players together, in step; `PlaySession` and
+  `play_start` take `world=` and `name=`. `quantum gameserver run --stats`
+  says the ticks' time and the bandwidth; `scripts/gameserver-bots.py` walks a
+  hundred bots and reads them. A record in braces (`{ {'a': 1} }`) in a world
+  was read as its contents; it is a record.
 - Laboratory: the game server's Phase 1 (`PLAN_GAME_SERVER.md`), the world
   lives. `quantum gameserver run world.server.q` serves a
   `q:application type="gameserver"` on a WebSocket at ten ticks a second

@@ -75,6 +75,7 @@ class Game:
     functions: List[Statement] = field(default_factory=list)   # q:function at the application level: every scene's
     touch: List[Element] = field(default_factory=list)   # qg:touch-button and qg:touch-stick: every scene's
     overlays: Dict[str, Element] = field(default_factory=dict)   # qg:overlay: a panel over any scene
+    connect: Optional[Element] = None   # qg:connect: the game is a world's client
 
 
 def _local(element: ET.Element) -> tuple:
@@ -155,6 +156,9 @@ def _read_attrs(tag: str, element: ET.Element) -> Dict[str, object]:
         if name.startswith('xmlns') or name.startswith('{'):
             continue
         if name not in spec.attrs:
+            if spec.extra:
+                out.setdefault('_extra', {})[name] = raw    # qg:send: the command's arguments, as written
+                continue
             known = ', '.join(sorted(spec.attrs)) or 'none'
             raise GameCompileError(f'<qg:{tag}> has no attribute {name!r} (it has: {known})', line)
         out[name] = _convert(name, spec.attrs[name], raw, line)
@@ -302,6 +306,7 @@ def read_game(app) -> Game:
     functions: List[Statement] = []
     touch: List[Element] = []
     overlays: Dict[str, Element] = {}
+    connect: Optional[Element] = None
     try:
         made = _extended_prefabs(root)
         for child in root:
@@ -333,6 +338,10 @@ def read_game(app) -> Game:
                     if multiplayer is not None:
                         raise GameCompileError('one <qg:multiplayer> per game', el.line)
                     multiplayer = el
+                elif el.tag == 'connect':
+                    if connect is not None:
+                        raise GameCompileError('one <qg:connect> per game: a game is the client of one world', el.line)
+                    connect = el
                 elif el.tag == 'scene':
                     if any(s.get('name') == el.get('name') for s in scenes):
                         raise GameCompileError(f'two scenes named {el.get("name")!r}', el.line)
@@ -366,7 +375,7 @@ def read_game(app) -> Game:
             raise GameCompileError(f'<qg:overlay name="{name}">: a scene has that name; an overlay needs another',
                                    el.line, file=source_path)
     return Game(getattr(app, 'app_id', 'game'), tilesets, sheets, prefabs, scenes, source_path, sounds,
-                game_state, inputs, multiplayer, languages, particles, items, functions, touch, overlays)
+                game_state, inputs, multiplayer, languages, particles, items, functions, touch, overlays, connect)
 
 
 def _child_key(child: ET.Element) -> tuple:

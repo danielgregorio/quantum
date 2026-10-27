@@ -1326,6 +1326,75 @@ static func _thing(node):
 	return node
 
 
+# --- a world: qg:connect, qg:mirror, qg:send (world.gd, mirror.gd) ---
+#
+# The connection is the game's, not a scene's: it opens as a scene of the world (world="true") is entered, and
+# stays open while the game shows a title, a menu or an overlay; the world goes on meanwhile.
+
+var world = null                 # world.gd, once a scene of the world was entered
+var world_url := ""              # --q-world=ws://...: where the world is (else qg:connect's local= or server=)
+var world_player := ""           # --q-name=ana: the name the player comes in with (else qg:connect name=)
+
+
+func world_open(spec: Dictionary, name_: String) -> void:
+	if world != null and world.status != "closed":
+		return
+	var url := world_url
+	if url == "":
+		url = str(spec.get("server", "")) if spec.get("server") != null and not OS.is_debug_build() \
+			else str(spec.get("local", "ws://127.0.0.1:7700"))
+	var who := world_player if world_player != "" else name_
+	if who == "":
+		who = "guest-%d" % (randi() % 100000)
+	world = load("res://addons/quantum/world.gd").new()
+	world.open(url, who)
+
+
+static func _world():
+	var q = (Engine.get_main_loop() as SceneTree).root.get_node_or_null("Q")
+	return q.world if q != null else null
+
+
+# me(): the player's own entity in the world, as the server sent it (its private fields too); {} until it is seen
+static func world_me() -> Dictionary:
+	var w = _world()
+	return w.me() if w != null else {}
+
+
+# entity(id): an entity the player sees, or null
+static func world_entity(id) -> Variant:
+	var w = _world()
+	return w.entity(str(id)) if w != null and id != null else null
+
+
+# connected(): the world let the player in, and the connection holds
+static func world_connected() -> bool:
+	var w = _world()
+	return w != null and w.status == "in"
+
+
+static func world_send(command: String, args: Dictionary) -> void:
+	var w = _world()
+	if w == null:
+		return
+	w.send(command, args)
+
+
+# `x.field` of a world's entity: a field of the entity (a dictionary, or a mirrored node's), else the node's own
+static func wf(v, f: String) -> Variant:
+	if v == null:
+		return null
+	if v is Dictionary:
+		return v.get(f)
+	if v is Object:
+		if (v as Object).has_meta("q_entity"):
+			var e: Dictionary = (v as Object).get_meta("q_entity")
+			if e.has(f):
+				return e[f]
+		return (v as Object).get(f)
+	return null
+
+
 # --- persistence: the q:sets with saved="true" (G calls these) ---
 
 # Where the file goes: --persist-dir=<dir> from the command line (the
@@ -1338,9 +1407,15 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--persist-dir="):
 			persist_dir = a.substr(14)
+		elif a.begins_with("--q-world="):
+			world_url = a.substr(10)
+		elif a.begins_with("--q-name="):
+			world_player = a.substr(9)
 
 
 func _physics_process(_delta: float) -> void:
+	if world != null:
+		world.poll()                 # the world's frames, heard before any scene of the game runs this tick
 	if not _answers.is_empty():
 		_hear_answers()
 	if slow_ticks > 0:

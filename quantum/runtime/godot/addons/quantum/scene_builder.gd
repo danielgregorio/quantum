@@ -77,6 +77,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	scene.q_on_death = scene_spec.get("on_death", {})
 	scene.q_on_release = scene_spec.get("on_release", {})
 	scene.q_sequences = scene_spec.get("sequences", [])
+	scene.q_on_event = scene_spec.get("on_event", {})
+	scene.q_on_refused = scene_spec.get("on_refused", [])
 	scene.q_on_screen = scene_spec.get("on_screen", [])
 	if scene_spec.get("ambient") != null:   # a dark scene: what no qg:light reaches is this colour
 		var dark := CanvasModulate.new()
@@ -229,6 +231,11 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 				exits[node_spec["name"]] = exit
 			"camera":
 				cameras.append(node_spec)   # made last: where its characters stand, after an arrival
+			"mirror":
+				var mirror: Node2D = load("res://addons/quantum/mirror.gd").new()
+				mirror.setup(node_spec, scene, game)
+				scene.add_child(mirror)
+				scene.q_mirrors.append(mirror)
 			"label":
 				if node_spec.get("if") != null and not scene.call(node_spec["if"]):
 					continue
@@ -289,6 +296,8 @@ static func build(game: Dictionary, scene_spec: Dictionary) -> Node2D:
 	for node_spec in cameras:
 		var cam := Camera.new()
 		cam.setup(node_spec, characters)
+		if "me" in node_spec.get("follow", []):
+			cam.set_meta("q_follow_me", true)   # the player's entity in the world: its mirror gives it the node
 		cam.scene_node = scene
 		if node_spec.get("bounds", "tilemap") == "tilemap" and tilemap != null:
 			var size: Vector2 = tilemap.pixel_size()

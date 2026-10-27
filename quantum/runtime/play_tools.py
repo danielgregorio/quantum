@@ -68,12 +68,14 @@ class PlayTools:
 
     def start(self, game: str, frames: bool = False, live: bool = False, host: Optional[int] = None,
               join: Optional[str] = None, transport: Optional[str] = None, lang: Optional[str] = None,
-              seat: Optional[int] = None) -> dict:
+              seat: Optional[int] = None, world: Optional[str] = None, name: Optional[str] = None) -> dict:
         """Opens a game (a name from ``games()``, or a .q) and answers its first observation,
         with the game's actions and its first scene's map. ``live``, ``host``, ``join``, ``seat``:
-        as ``PlaySession``'s (a networked game is live). ``lang``: the language of its texts."""
+        as ``PlaySession``'s (a networked game is live). ``lang``: the language of its texts.
+        ``world`` and ``name``: a world's client comes into that world as that player."""
         session = PlaySession.open(self._source(game), binary=self.binary, frames=frames, live=live,
-                                   host=host, join=join, transport=transport, lang=lang, seat=seat)
+                                   host=host, join=join, transport=transport, lang=lang, seat=seat,
+                                   world=world, name=name)
         self._count += 1
         sid = f's{self._count}'
         self.sessions[sid] = session

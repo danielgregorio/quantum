@@ -411,6 +411,7 @@ A screen of the game. The first one is where the game starts.
 | `save` | true / false | `false` | entering the scene saves the game to continue here (qg:save), as a room of an adventure does |
 | `y-sort` | true / false | `false` | characters and things are drawn by how low they stand, the lower in front: depth seen from above (a layer= still comes first) |
 | `ambient` | `#rrggbb` |  | a dark scene: the light where no qg:light reaches (#000000 is black, #ffffff as drawn); its solid tiles cast the shadows of the lights with shadows="true" |
+| `world` | true / false | `false` | a scene of the world (qg:connect): entering it comes into the world, and it may hold qg:mirror, qg:on-event and qg:on-refused; a qg:camera there may follow="me", the player's own entity |
 
 Goes inside: `q:application`.
 
@@ -1510,6 +1511,16 @@ Sends data to a web address as JSON (an HTTP POST), and the game goes on: the an
 
 Goes inside: a handler.
 
+### `qg:send`
+
+Asks the world (qg:connect) to run one of its commands, as this player: its other attributes are the command's arguments, each a text as written (dir="north") or an expression ({other.id}), all the command's params and no other. The game goes on: the world runs it with its next tick, and what it did comes as the views change, or the refusal comes to qg:on-refused.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `command` | a name | required | a q:command of the world |
+
+Goes inside: a handler.
+
 ## Other tags
 
 ### `qg:asset`
@@ -1547,6 +1558,19 @@ A column of a qg:table: its heading and, for each row, what it shows.
 | `color` | text |  | #rrggbb, or an expression of the row giving one (red when negative) |
 
 Goes inside: `qg:table`.
+
+### `qg:connect`
+
+The game is a world's client: the world is a `q:application type="gameserver"` that `quantum gameserver run` serves (PLAN_GAME_SERVER.md), and holds the rules; the game draws what the world says each player sees (qg:mirror), asks it what the player does (qg:send) and shows what happens (qg:on-event). The compiler reads the world's file: a command, a view, an event or a field the world has not is an error here, and every kind of its entities needs a qg:prefab of that name to draw it. The game comes into the world as a scene with world="true" is entered, and stays in it from scene to scene. `--q-world=ws://...` on the command line says where the world is, `--q-name=` the player's name. Not with qg:multiplayer.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `world` | text | required | the world's file (its .server.q), next to the game |
+| `local` | text | `ws://127.0.0.1:7700` | where the world is while the game is made: the address `quantum gameserver run` serves |
+| `server` | text |  | where the world is for whoever plays the game exported (wss://...); local= when not given |
+| `name` | an expression |  | the name the player comes in with, in a world of guests: an expression of the game's state ({user}), read as the first scene of the world is entered; a guest's number when not given |
+
+Goes inside: `q:application`.
 
 ### `qg:dialogue`
 
@@ -1634,6 +1658,16 @@ One line of a qg:dialogue: who says it, and what. With qg:choice inside, the pla
 
 Goes inside: `qg:dialogue`.
 
+### `qg:mirror`
+
+Draws a view of the world (a q:view of the world's file): each entity the player sees in it is an instance of the qg:prefab named as its kind, which comes when the entity comes into the view and goes when it leaves. Its `me` (a label's {me.name}) reads the entity's fields, and the scene's handlers see it as `other` (a click on it: {other.id}). A step to the next tile is walked in the time the world gives a step of its kind; a move farther, a jump. The tiles are the scene's qg:tilemap's (16 pixels without one). In a scene with world="true".
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `view` | a name | required | a q:view of the world; `world` when it has none |
+
+Goes inside: `qg:scene`.
+
 ### `qg:on-done`
 
 What happens when the server a qg:post sent to has answered yes (a 2xx status): `reply` is what it answered, read from its JSON. Holds actions and statements.
@@ -1646,11 +1680,31 @@ What happens when a qg:dialogue has shown its last line, or when a qg:tween is d
 
 Goes inside: `qg:dialogue`, `qg:tween`, `qg:travel`.
 
+### `qg:on-event`
+
+What the scene does when the world says something happened where the player sees (a q:emit of the world): `value` is what the event carries, `at` where (x and y in pixels, col and row the tile; null if nowhere), and `other` the mirrored entity it is of, if one is drawn. In a scene with world="true".
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | a name | required | the event= of a q:emit of the world |
+
+Goes inside: `qg:scene`.
+
 ### `qg:on-fail`
 
 What happens when a qg:post did not get through: `reason` says why. Holds actions and statements.
 
 Goes inside: `qg:post`.
+
+### `qg:on-refused`
+
+What the scene does when the world refuses a qg:send: `reason` is what it said (its q:require's else=: "A wall."), `command` which it was. In a scene with world="true".
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `command` | a name |  | only that command's refusals (every one's when not given) |
+
+Goes inside: `qg:scene`.
 
 ### `qg:on-screen-enter`
 
@@ -1694,6 +1748,7 @@ A panel over whatever screen is shown, reached from every scene: a report of a b
 | `action` | a name |  | an action that opens it from any scene and closes it: a qg:input's key (F9), a qg:touch-button's [!] on every screen |
 | `shade` | number | `0.6` | how much the scene under it is darkened: 0, not at all; 1, hidden |
 | `background` | `#rrggbb` | `#000000` | the colour of the shade |
+| `freeze` | true / false | `true` | false: the scene under it goes on (a world's, which never stands still: its entities walk, its events are heard), but its keys are the overlay's |
 
 Goes inside: `q:application`.
 
@@ -1851,7 +1906,7 @@ Goes inside: `qg:scene`, `qg:overlay`.
 
 ## Statements
 
-Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. A `q:set` directly in a scene whose value is computed (a function, the game's state, `random()`) is set as the scene is entered, after its seed, in the order written. `<q:set name="team.points">` sets a field of a record in place (in the list that holds it too), and `index=` an item of a list or a key of a dictionary. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `tr_n()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `cost()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`, `pick()`, `chance()`, `join()`, `fit()`, `thousands()`, `repeat()`, `url_encode()`, `scene_name()`, `focused()`, `save_text()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), `sort()`, `pick()`, `chance()` and `join()` are the Core's, `fit(v, width)` cuts or pads a text to a column (`fit(v, width, 'right')` for numbers), `thousands(n, '.')` writes 1.500.000, `repeat(text, n)` a bar and `url_encode(text)` puts a text into a web address (`qg:open-url`, a form's link with what to fill in); `scene_name()` and `focused()` say where the player is, the scene and the option its menu's cursor is on (from a `qg:overlay`, the scene under it), and `save_text()` is the game as a `qg:save` writes it, as text (a report carries it). `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them.
+Inside a handler, a `q:function`, or (for `q:if`, `q:loop`, `q:call`) directly in a scene, where they run as it is entered: `q:set`, `q:if`, `q:loop`, `q:function`, `q:return`, `q:call` (`q:else` and `q:elseif` inside a `q:if`). A `q:set` directly in a scene declares the scene's state; in `q:application`, the game's, kept across scenes — with `saved="true"`, between runs. A `q:function` directly in a scene is the scene's; in `q:application`, every scene's (and the prefabs' handlers'), reading the game's state, its parameters and its own variables. A `q:set` directly in a scene whose value is computed (a function, the game's state, `random()`) is set as the scene is entered, after its seed, in the order written. `<q:set name="team.points">` sets a field of a record in place (in the list that holds it too), and `index=` an item of a list or a key of a dictionary. An expression may call `len()`, `str()`, `int()`, `float()`, `abs()`, `min()`, `max()`, `round()`, `floor()`, `ceil()`, `sqrt()`, `random()`, `count()`, `thing_at()`, `tile_at()`, `net_status()`, `net_players()`, `net_player()`, `url_param()`, `paused()`, `talking()`, `tr()`, `tr_n()`, `language()`, `hovered()`, `has_save()`, `volume()`, `fullscreen()`, `distance()`, `nearest()`, `sees()`, `cost()`, `held()`, `can_quit()`, `ticks()`, `sin()`, `cos()`, `atan2()`, `sort()`, `carrying()`, `pick()`, `chance()`, `join()`, `fit()`, `thousands()`, `repeat()`, `url_encode()`, `scene_name()`, `focused()`, `save_text()`; `ticks()` is the ticks the scene has played (not while paused), `sin()` and `cos()` take degrees and `atan2(y, x)` gives them (0 to the right, 90 down), `sort()`, `pick()`, `chance()` and `join()` are the Core's, `fit(v, width)` cuts or pads a text to a column (`fit(v, width, 'right')` for numbers), `thousands(n, '.')` writes 1.500.000, `repeat(text, n)` a bar and `url_encode(text)` puts a text into a web address (`qg:open-url`, a form's link with what to fill in); `scene_name()` and `focused()` say where the player is, the scene and the option its menu's cursor is on (from a `qg:overlay`, the scene under it), and `save_text()` is the game as a `qg:save` writes it, as text (a report carries it). `pressing()`, `pressed_for()`, `strength()` read an action of player 1, or of another (`pressing('run', 2)`): held now, the ticks it has been held (on the tick it is let go, how long it was), how far it is pressed (0 or 1 under qg:multiplayer, where only pressed or not travels). A field a thing does not have (`hero.foo`) is a compile error that lists the fields it has: `col`, `doing`, `facing`, `health`, `name`, `on_ceiling`, `on_floor`, `on_wall`, `player`, `row`, `state`, `tag`, `vx`, `vy`, `x`, `y`, as its controller has them. A world's client (`qg:connect`) also has `me()`, `entity()`, `connected()`: the player's own entity as the world sent it (its private fields too; `{}` until it is seen), an entity the player sees by its id (or null), and whether the world let the player in; the fields of the world's entities (`me().purse`, a mirrored prefab's `me.name`, a click's `other.id`) are read from the world's file, and one no entity of it has is a compile error too.
 
 ## `gd:` attributes
 

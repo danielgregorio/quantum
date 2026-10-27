@@ -522,6 +522,8 @@ func observation() -> Dictionary:
 	var q = root.get_node_or_null("Q")
 	if q != null and q.music_playing != "":
 		obs["music"] = q.music_playing   # what is heard: the scene's qg:music
+	if q != null and q.world != null:   # a world's client: the world as this player knows it (qg:connect)
+		obs["world"] = q.world.observation()
 	return obs
 
 

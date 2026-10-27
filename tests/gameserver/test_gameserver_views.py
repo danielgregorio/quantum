@@ -103,10 +103,13 @@ def test_an_update_holds_only_what_changed_and_a_private_field_only_its_player_h
                       for e in v.get('enter', []) + v.get('update', []) if e['id'] == 'hero:ana']
             assert of_ana and all('purse' not in e for e in of_ana), of_ana
             assert set(of_ana[-1]) == {'id', 'at', 'facing'}, of_ana     # it moved, and faces east: no more
-            # what changed of bo's purse goes to bo, and no one else hears of it
+            # what changed of ana's purse goes to ana, and no one else hears of it: a test world says each tick to
+            # everyone, and bo's three say nothing more
             before = len([f for f in bo.frames if f.get('type') == 'tick'])
             ana.act(send=[('earn', {})], ticks=3)
-            assert len([f for f in bo.frames if f.get('type') == 'tick']) == before
+            bo.observe()
+            new = [f for f in bo.frames if f.get('type') == 'tick'][before:]
+            assert len(new) == 3 and all(set(f) == {'type', 'tick'} for f in new), new
 
 
 def test_a_view_of_the_whole_world_with_a_condition():

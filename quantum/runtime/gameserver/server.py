@@ -16,11 +16,12 @@ The protocol is JSON, a message a frame, and small enough to write down here:
              "views": {"around": {"enter": [{...}], "update": [{"id": "hero:bo", "at": {...}}], "leave": ["hero:cy"]}},
              "events": [{"name": "hit", "value": 3, "at": {"x": 4, "y": 2}, "of": "rat-2"}]}
             {"type": "pong", "t": 12.5, "tick": 42} · {"type": "synced", "tick": 42} · {"type": "stepped", "tick": 47}
-            {"type": "peeked", "tick": 47, "entities": {...}, "vars": {...}, "players": {...}, "errors": [...]}
+            {"type": "peeked", "tick": 47, "entities": {...}, "vars": {...}, "players": {...}, "errors": [...],
+             "connected": {"ana": 3}}                                 who is connected, and the seq it sent last
             {"type": "error", "reason": "..."}                        and the connection closes
 
 A tick frame goes to a player only when it has something for them: what of each view (q:view) changed for them,
-and the events (q:emit) where they see. A view's entities are the public fields, and its player's own entity's
+and the events (q:emit) where they see (in a test world, every tick: a harness knows its clients heard it). A view's entities are the public fields, and its player's own entity's
 private ones too; an update holds only the fields that changed. A test world (--step) does not tick by itself: it
 waits for a "step", so a test is exact and as fast as the machine.
 """
@@ -29,7 +30,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import copy
 import json
 import re
 import signal
@@ -63,6 +63,7 @@ class Connection:
     views: Dict[str, Set[str]] = field(default_factory=dict)  # what the player has of each view, by id
     window: List[float] = field(default_factory=list)
     sent_bytes: int = 0
+    last_seq: int = 0                                        # the seq of the last command it sent
 
 
 def _copy(value: Any) -> Any:
@@ -324,7 +325,7 @@ class WorldServer:
                 frame['views'] = views
             if events.get(account):
                 frame['events'] = events[account]
-            if len(frame) > 2:
+            if len(frame) > 2 or self.step_mode:      # a test world says every tick: its harness waits for it
                 await self._send_to(conn, frame)
         for eid in world.gone:
             self._public.pop(eid, None)
@@ -406,6 +407,7 @@ class WorldServer:
                         await self._close(conn, 'A command has an integer seq and a name.')
                         return
                     self.inbox.append(('cmd', conn.account, seq, name, args))
+                    conn.last_seq = seq
                 elif kind == 'ping':
                     await self._send_to(conn, {'type': 'pong', 't': message.get('t'), 'tick': self.world.tick})
                 elif kind == 'sync':
@@ -441,7 +443,8 @@ class WorldServer:
         world = self.world
         entities = {eid: {k: v for k, v in e.items() if not k.startswith('_')} for eid, e in world.entities.items()}
         return {'type': 'peeked', 'tick': world.tick, 'entities': entities, 'vars': world.vars,
-                'players': world.players, 'errors': world.errors[-20:]}
+                'players': world.players, 'errors': world.errors[-20:],
+                'connected': {a: c.last_seq for a, c in self.connections.items()}}
 
     async def _refuse(self, ws, reason: str) -> None:
         try:

@@ -82,6 +82,13 @@ _FUNCTIONS = {
     'save_text': 'Q.save_text(self)',        # the game as a qg:save writes it, as text (a report carries it)
 }
 
+# The built-ins of a world's client (qg:connect): what the player knows of the world
+_WORLD_FUNCTIONS = {
+    'me': 'Q.world_me()',                    # the player's own entity, its private fields too ({} until seen)
+    'entity': 'Q.world_entity({0})',         # an entity the player sees, by its id, or null
+    'connected': 'Q.world_connected()',      # the world let the player in, and the connection holds
+}
+
 # The built-ins that read a player's action: the action's name, and the player (1 when not given).
 # What an action is held with travels in the lockstep as pressed or not, so strength() is 0 or 1 there.
 _ACTION_FUNCTIONS = {
@@ -122,7 +129,8 @@ class Scope:
     def __init__(self, names: Iterable[str] = (), parent: Optional['Scope'] = None,
                  functions: Iterable[str] = (), game_names: Iterable[str] = (), node_ids: Iterable[str] = (),
                  things: Iterable[str] = (), node_fields: Optional[Dict[str, frozenset]] = None,
-                 actions: Optional[Iterable[str]] = None, tiled: Optional[dict] = None):
+                 actions: Optional[Iterable[str]] = None, tiled: Optional[dict] = None,
+                 world_fields: Optional[Iterable[str]] = None):
         self.names: Set[str] = set(names)
         self.functions: Set[str] = set(functions)
         self.game_names: Set[str] = set(game_names)
@@ -131,6 +139,8 @@ class Scope:
         self.node_fields = node_fields or {}      # a character id -> what its controller has
         self.actions = set(actions) if actions is not None else None   # the game's actions (None: unchecked)
         self.tiled = tiled   # the scene's Tiled map's properties (None: no map)
+        # the fields of a world's entities (qg:connect), read through Q.wf; None: the game is no world's client
+        self.world_fields = frozenset(world_fields) if world_fields is not None else None
         self.parent = parent
 
     def has(self, name: str) -> bool:
@@ -170,12 +180,19 @@ class Scope:
         return Scope(names, parent=self, things=things)
 
     def fields_of(self, name: str) -> Optional[frozenset]:
-        """What `name.field` may read, or None when the name may hold anything (a q:set, a parameter)."""
+        """What `name.field` may read, or None when the name may hold anything (a q:set, a parameter). A thing of
+        a world's client may be a mirrored entity: it has the entities' fields too."""
         if name in self.names:
-            return THING_FIELDS if name in self.things else None
+            return (THING_FIELDS | (self.world() or frozenset())) if name in self.things else None
         if name in self.node_ids:
             return self.node_fields.get(name, THING_FIELDS)
         return self.parent.fields_of(name) if self.parent is not None else None
+
+    def world(self) -> Optional[frozenset]:
+        """The fields of the world's entities, if the game is a world's client."""
+        if self.world_fields is not None:
+            return self.world_fields
+        return self.parent.world() if self.parent is not None else None
 
     def tiled_properties(self) -> Optional[dict]:
         if self.tiled is not None:
@@ -314,6 +331,10 @@ class _Emitter:
             return f'Q.cell_{node.attr}({self.emit(node.value)})'
         if node.attr in ('on_floor', 'on_wall', 'on_ceiling'):   # what a body touched as it last moved
             return f'Q.touching({self.emit(node.value)}, "{node.attr[3:]}")'
+        world = self.scope.world()
+        if world is not None and node.attr in world:
+            # a field of a world's entity: of me(), of entity(id), of a mirrored thing (its node's, else)
+            return f'Q.wf({self.emit(node.value)}, "{node.attr}")'
         return f'{self.emit(node.value)}.{node.attr}'
 
     def _Subscript(self, node: ast.Subscript) -> str:
@@ -356,6 +377,13 @@ class _Emitter:
                 return templates[len(args)].format(*args)
             if name in _ACTION_FUNCTIONS:
                 return _ACTION_FUNCTIONS[name].format(self._action(name, node.args, args))
+            if name in _WORLD_FUNCTIONS and not self.scope.has_function(name):
+                if self.scope.world() is None:
+                    raise self.fail(f'{name}() is a world\'s: the game is no world\'s client (qg:connect)')
+                wanted = _WORLD_FUNCTIONS[name].count('{')
+                if len(args) != wanted:
+                    raise self.fail(f'{name}() takes {wanted} argument(s), {len(args)} given')
+                return _WORLD_FUNCTIONS[name].format(*args)
             if name == 'tiled':
                 return self._tiled(node.args, args)
             if self.scope.has_function(name):

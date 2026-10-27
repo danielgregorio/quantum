@@ -35,13 +35,14 @@ class Tag:
     # 'handler' is any block that holds statements (on-collision, q:if...).
     parents: Tuple[str, ...] = ()
     text: Optional[str] = None   # what the element's text is, if it may have any
+    extra: Optional[str] = None  # what its other attributes are, when it takes any (qg:send: the arguments)
 
 
 # The tags that hold a handler: actions (and q: statements), run when it fires.
 HANDLERS = ('on-collision', 'on-fall', 'on-input', 'on-select', 'on-hit', 'on-ko', 'on-death', 'on-tile',
             'on-animation-end', 'on-locked', 'on-damage', 'timer', 'button', 'on-end', 'on-separate',
             'on-screen-exit', 'on-screen-enter', 'for-each', 'after', 'when', 'choice', 'field', 'on-done',
-            'on-fail')
+            'on-fail', 'on-event', 'on-refused')
 
 # The actions a handler can hold, besides q: statements.
 ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'checkpoint', 'goto-scene',
@@ -49,7 +50,7 @@ ACTIONS = ('destroy', 'bounce', 'play', 'respawn', 'become', 'spawn', 'swap', 'c
            'say', 'save', 'continue', 'next-language', 'tween', 'velocity', 'emit', 'set-tile',
            'play-animation', 'give', 'take', 'reset-items', 'for-each', 'time-scale', 'quit', 'start-now', 'watch',
            'after', 'beam', 'camera-to', 'attach', 'detach', 'volume', 'fullscreen', 'rumble', 'music', 'travel',
-           'open-url', 'open-overlay', 'close-overlay', 'post')
+           'open-url', 'open-overlay', 'close-overlay', 'post', 'send')
 
 TAGS: Dict[str, Tag] = {
     'tileset': Tag(
@@ -131,6 +132,23 @@ TAGS: Dict[str, Tag] = {
                                           'it — a title, a lobby — run on each machine alone'),
          'transport': Attr('enum:enet|websocket', 'enet',
                            doc='enet (desktop to desktop), or websocket (a browser build can join a desktop host)')},
+        parents=('application',)),
+    'connect': Tag(
+        'The game is a world\'s client: the world is a `q:application type="gameserver"` that `quantum gameserver '
+        'run` serves (PLAN_GAME_SERVER.md), and holds the rules; the game draws what the world says each player sees '
+        '(qg:mirror), asks it what the player does (qg:send) and shows what happens (qg:on-event). The compiler reads '
+        'the world\'s file: a command, a view, an event or a field the world has not is an error here, and every kind '
+        'of its entities needs a qg:prefab of that name to draw it. The game comes into the world as a scene with '
+        'world="true" is entered, and stays in it from scene to scene. `--q-world=ws://...` on the command line says '
+        'where the world is, `--q-name=` the player\'s name. Not with qg:multiplayer.',
+        {'world': Attr('str', required=True, doc='the world\'s file (its .server.q), next to the game'),
+         'local': Attr('str', 'ws://127.0.0.1:7700', doc='where the world is while the game is made: the address '
+                                                       '`quantum gameserver run` serves'),
+         'server': Attr('str', None, doc='where the world is for whoever plays the game exported (wss://...); '
+                                         'local= when not given'),
+         'name': Attr('expr', None, doc='the name the player comes in with, in a world of guests: an expression '
+                                        'of the game\'s state ({user}), read as the first scene of the world is '
+                                        'entered; a guest\'s number when not given')},
         parents=('application',)),
     'sound': Tag(
         'A sound the game can play (qg:play).',
@@ -309,7 +327,10 @@ TAGS: Dict[str, Tag] = {
                                            'front: depth seen from above (a layer= still comes first)'),
          'ambient': Attr('color', None, doc='a dark scene: the light where no qg:light reaches (#000000 is black, '
                                             '#ffffff as drawn); its solid tiles cast the shadows of the lights with '
-                                            'shadows="true"')},
+                                            'shadows="true"'),
+         'world': Attr('bool', False, doc='a scene of the world (qg:connect): entering it comes into the world, '
+                                          'and it may hold qg:mirror, qg:on-event and qg:on-refused; a qg:camera '
+                                          'there may follow="me", the player\'s own entity')},
         parents=('application',)),
     'overlay': Tag(
         'A panel over whatever screen is shown, reached from every scene: a report of a beta, help, a quick menu. '
@@ -324,7 +345,10 @@ TAGS: Dict[str, Tag] = {
          'action': Attr('ident', None, doc='an action that opens it from any scene and closes it: a qg:input\'s '
                                             'key (F9), a qg:touch-button\'s [!] on every screen'),
          'shade': Attr('float', 0.6, doc='how much the scene under it is darkened: 0, not at all; 1, hidden'),
-         'background': Attr('color', '#000000', doc='the colour of the shade')},
+         'background': Attr('color', '#000000', doc='the colour of the shade'),
+         'freeze': Attr('bool', True, doc='false: the scene under it goes on (a world\'s, which never stands still: '
+                                          'its entities walk, its events are heard), but its keys are the '
+                                          'overlay\'s')},
         parents=('application',)),
     'tilemap': Tag(
         'The level: CSV rows of tile numbers (0 is empty, n is tile n-1 of the tileset), '
@@ -1036,6 +1060,33 @@ TAGS: Dict[str, Tag] = {
          'data': Attr('expr', required=True, doc='what is sent: a dictionary ({ {\'text\': text} }), as JSON'),
          'timeout': Attr('float', 20.0, doc='seconds to wait for the answer before qg:on-fail')},
         parents=('handler',)),
+    'send': Tag(
+        'Asks the world (qg:connect) to run one of its commands, as this player: its other attributes are the '
+        'command\'s arguments, each a text as written (dir="north") or an expression ({other.id}), all the '
+        'command\'s params and no other. The game goes on: the world runs it with its next tick, and what it did '
+        'comes as the views change, or the refusal comes to qg:on-refused.',
+        {'command': Attr('ident', required=True, doc='a q:command of the world')},
+        parents=('handler',), extra='the command\'s arguments'),
+    'mirror': Tag(
+        'Draws a view of the world (a q:view of the world\'s file): each entity the player sees in it is an '
+        'instance of the qg:prefab named as its kind, which comes when the entity comes into the view and goes when '
+        'it leaves. Its `me` (a label\'s {me.name}) reads the entity\'s fields, and the scene\'s handlers see it as '
+        '`other` (a click on it: {other.id}). A step to the next tile is walked in the time the world gives a step '
+        'of its kind; a move farther, a jump. The tiles are the scene\'s qg:tilemap\'s (16 pixels without one). '
+        'In a scene with world="true".',
+        {'view': Attr('ident', required=True, doc='a q:view of the world; `world` when it has none')},
+        parents=('scene',)),
+    'on-event': Tag(
+        'What the scene does when the world says something happened where the player sees (a q:emit of the world): '
+        '`value` is what the event carries, `at` where (x and y in pixels, col and row the tile; null if nowhere), '
+        'and `other` the mirrored entity it is of, if one is drawn. In a scene with world="true".',
+        {'name': Attr('ident', required=True, doc='the event= of a q:emit of the world')},
+        parents=('scene',)),
+    'on-refused': Tag(
+        'What the scene does when the world refuses a qg:send: `reason` is what it said (its q:require\'s else=: '
+        '"A wall."), `command` which it was. In a scene with world="true".',
+        {'command': Attr('ident', None, doc='only that command\'s refusals (every one\'s when not given)')},
+        parents=('scene',)),
     'on-done': Tag(
         'What happens when the server a qg:post sent to has answered yes (a 2xx status): `reply` is what it '
         'answered, read from its JSON. Holds actions and statements.',

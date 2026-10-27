@@ -100,14 +100,17 @@ class SceneScript:
     node_fields: Dict[str, frozenset] = field(default_factory=dict)   # a character id -> its controller's fields
     actions: Optional[List[str]] = None   # the game's actions, for pressing('run') and the like
     tiled_props: Optional[dict] = None   # the scene's Tiled map's properties, for tiled('par')
+    world: Optional[object] = None   # the world of qg:connect (world.WorldInfo): what qg:send may ask
+    world_scene: bool = False        # a scene with world="true"
 
     def scope(self) -> Scope:
+        fields = self.world.fields if self.world is not None else None
         if self.game_wide:
             return Scope((), functions=self.game_functions, game_names=self.game_state.keys(),
-                         actions=self.actions)
+                         actions=self.actions, world_fields=fields)
         return Scope(self.state.keys(), functions=self.function_names, game_names=self.game_state.keys(),
                      node_ids=self.node_ids, node_fields=self.node_fields, actions=self.actions,
-                     tiled=self.tiled_props)
+                     tiled=self.tiled_props, world_fields=fields)
 
     enter: List[Node] = field(default_factory=list)   # statements directly in the scene: run on enter
     # a scene's q:sets whose value= is computed (a function, the game's state, random()): (name, GDScript),
@@ -491,6 +494,35 @@ def split_args(text: str) -> List[str]:
     return [a.strip() for a in out if a.strip()]
 
 
+def _send(el: Element, scope: Scope, script: SceneScript) -> str:
+    """qg:send command="step" dir="north": a command of the world, its arguments the other attributes (a text as
+    written, or an expression in braces), all of its params and no other."""
+    world = script.world
+    command = el.get('command')
+    if world is None:
+        raise GameCompileError(f'<qg:send command="{command}">: the game is no world\'s client (qg:connect)', el.line)
+    if command not in world.commands:
+        raise GameCompileError(f'<qg:send command="{command}">: the world {world.name!r} has no such command '
+                               f'(it has: {", ".join(sorted(world.commands)) or "none"})', el.line)
+    args = dict(el.get('_extra') or {})
+    params = world.commands[command]
+    if set(args) != set(params):
+        missing, extra = sorted(set(params) - set(args)), sorted(set(args) - set(params))
+        said = '; '.join(([f'it needs {", ".join(f"{m}=" for m in missing)}'] if missing else [])
+                         + ([f'it takes no {", ".join(f"{x}=" for x in extra)}'] if extra else []))
+        raise GameCompileError(f'<qg:send command="{command}">: {said} (its params: '
+                               f'{", ".join(params) or "none"})', el.line)
+    items = []
+    for name in params:
+        raw = args[name].strip()
+        if raw.startswith('{') and raw.endswith('}'):
+            code = compile_expression(raw, scope, el.line)
+        else:
+            code = json.dumps(args[name], ensure_ascii=False)
+        items.append(f'{json.dumps(name)}: {code}')
+    return f'Q.world_send({json.dumps(command)}, {{{", ".join(items)}}})'
+
+
 def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
     target = el.get('target')
     if target is not None and not scope.has(target):
@@ -834,6 +866,8 @@ def _compile_action(el: Element, scope: Scope, script: SceneScript) -> str:
         return 'Q.close_overlay()'
     if el.tag == 'post':
         return _post(el, scope, script)
+    if el.tag == 'send':
+        return _send(el, scope, script)
     if el.tag == 'checkpoint':
         at = el.get('at')
         if not scope.has(at):
