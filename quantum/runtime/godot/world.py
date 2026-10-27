@@ -47,8 +47,9 @@ def read_world(path: Path, line: Optional[int]) -> WorldInfo:
     except SystemExit as e:
         raise GameCompileError(f'<qg:connect world="{path.name}">: {e}', line) from None
     events: Set[str] = set()
-    blocks = ([c.body for c in world.commands.values()] + [b for _, b in world.every] + world.on_join
-              + world.on_leave + [f.body for f in world.functions.values()])
+    blocks = ([c.body for c in world.commands.values() if c.body is not None] + [b for _, b in world.every]
+              + world.on_join + world.on_leave + [f.body for f in world.functions.values()]
+              + [d.body for d in world.deaths])
     for block in blocks:
         for el in block.iter(f'{Q_NS}emit'):
             events.add(el.get('event'))
@@ -63,6 +64,10 @@ def read_world(path: Path, line: Optional[int]) -> WorldInfo:
             fields.add(f.name)
             if f.private:
                 private.add(f.name)
+    if world.party_size:
+        fields.add('party')
+    events |= ({'chat'} if world.chat else set()) | ({'party'} if world.party_size else set()) | (
+        {'trade'} if world.trade else set())
     if world.ledger:                                    # what a hero holds: its bag and its currencies, its own
         fields |= {'bag'} | set(world.currencies)
         private |= {'bag'} | set(world.currencies)

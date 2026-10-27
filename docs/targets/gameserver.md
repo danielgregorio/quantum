@@ -288,6 +288,72 @@ Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:f
 | `amount=` | expr | required |  |
 | `currency=` | ident |  |  |
 
+### `q:chat`
+
+The world's chat: commands `chat` (channel, text) and, with whisper=, `whisper` (to, text) every player may send, heard as the event `chat` ({channel, from, text}) by whom the channel reaches: say:7 is the players within 7 tiles, a channel with no number all of them, `party` the speaker's party. A line is cut at 200 characters and its words in the filter are starred; more than limit= of them and it is refused.
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `channels=` | text | `say:7` | name:tiles, or name for the whole world, separated by commas |
+| `whisper=` | bool | `False` | a line to one player, wherever they are |
+| `limit=` | rate | `3/5s` | lines a player may say |
+| `filter=` | text | `moderate` | moderate (a short list of the worst words), none, or a file of words, one a line, next to the world |
+
+### `q:say`
+
+A line of the world itself in its chat (from "world"): to= one player's entity, or all.
+
+Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `channel=` | ident | `system` |  |
+| `to=` | expr | `all` | an entity of a player, or all |
+| `text=` | text | required |  |
+
+### `q:party`
+
+Players who go together: commands `party-invite` (who), `party-accept` (who: the one who invited) and `party-leave`. A player's entity has a public field `party` (the party's id, '' for none); party_of(x) and party_near(x, n) read it, and a party's channel of the chat is its own.
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `size=` | int | `5` | how many at most |
+
+### `q:trade`
+
+A trade between two players, done whole or not at all: commands `trade-offer` (who, gold, items: a record of counts), `trade-accept` (who) and `trade-cancel` (who). When both accept the same offers, both sides move at once, on the ledger; a new offer takes back both acceptances. Each change is the event `trade` to both.
+
+Goes inside `<q:gameserver>`.
+
+### `q:quest`
+
+A quest the world may give: what to do (goal= kill:Kind:n, or bring:item:n), from which level, and its reward (gold:60, xp:100, item:sword). A hero's quest is a field it has (quest: {name, done}); quest_goal(), quest_done(), quest_level() and quest_title() read it, and q:reward gives the reward.
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `name=` | ident | required |  |
+| `title=` | text | required |  |
+| `goal=` | text | required | kill:Kind:n or bring:item:n |
+| `level=` | int | `1` |  |
+| `reward=` | text |  | what it gives, separated by commas: a currency, item, or a field of the hero (xp) with its amount |
+
+### `q:reward`
+
+A quest's reward, given: its currency and items by the ledger, its other parts added to the hero's fields (xp:100 to its xp).
+
+Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `to=` | expr | required |  |
+| `quest=` | expr | required |  |
+
 ### `q:command`
 
 What a player may ask the world, by its name and with its params (the client's qg:send). It runs whole or not at all, as the player who sent it (`me`, their entity): a q:require that does not hold, an argument that is not one of params=, a command sent faster than limit=, or an expression that fails, and nothing it did stays; the player is told why.
@@ -486,6 +552,12 @@ The Core's expressions and their stdlib (`len`, `round`, `min`, `join`...), a wo
 | `heals(item)` | the item's heals= (0 if it has none) |
 | `slot(item)` | the item's slot= ('' if it has none) |
 | `bonus(item, name)` | a number of the item: bonus(sword, 'attack'); 0 if it has none |
+| `party_of(x)` | the entities of the party of x (x alone, with no party) |
+| `party_near(x, n)` | those of them within n tiles of x (10 if not given) |
+| `quest_goal(x)` | what x's quest asks: kill:Kind or bring:item ('' with none) |
+| `quest_done(x)` | x's quest is done: so many killed (its quest's done) or brought (held) |
+| `quest_level(name)` | the level a quest asks |
+| `quest_title(name)` | a quest's title |
 | `sqrt(x)` | its square root |
 | `now()` | refused: it is the machine's clock, and a world is replayed; its time is tick() and seconds() |
 
@@ -671,10 +743,18 @@ A game is a world's client with `qg:connect world="meadow.server.q"` (the games'
     <q:item name="cheese" price="2" heals="5" />
     <q:item name="sword" price="8" slot="weapon" attack="3" />
 
+    <!-- together: a chat (near, far, the party's, everyone's help), a party of three, a trade, a quest -->
+    <q:chat channels="say:7, yell:30, party, help" whisper="true" limit="3/5s" filter="moderate" />
+    <q:party size="3" />
+    <q:trade />
+    <q:quest name="rats" title="Rats in the square" goal="kill:Rat:2" level="1" reward="gold:20, xp:50, item:sword" />
+
     <q:entity name="hero" kind="Hero" per-player="true" speed="10/s" hp="30" attack="5" defense="1">
       <q:field name="name" value="{account.name}" />
       <q:field name="mood" value="calm" />
       <q:field name="kills" value="0" />
+      <q:field name="xp" value="0" private="true" />
+      <q:field name="quest" value="{ {} }" private="true" />
     </q:entity>
 
     <q:entity name="rat" kind="Rat" speed="2/s" hp="10" attack="2" defense="0">
@@ -738,6 +818,18 @@ A game is a world's client with `qg:connect world="meadow.server.q"` (the games'
       <q:pay from="{me}" to="{who}" amount="{amount}" />
     </q:command>
 
+    <!-- a quest, taken and turned in -->
+    <q:command name="take-quest" params="name">
+      <q:require condition="{quest_title(name) != ''}" else="No such quest." />
+      <q:require condition="{len(me.quest) == 0}" else="One quest at a time." />
+      <q:set name="me.quest" value="{ {'name': name, 'done': 0} }" />
+    </q:command>
+    <q:command name="turn-in">
+      <q:require condition="{quest_done(me)}" else="It is not done." />
+      <q:reward to="{me}" quest="{me.quest.name}" />
+      <q:set name="me.quest" value="{ {} }" />
+    </q:command>
+
     <!-- three rats in the east, for five seconds -->
     <q:command name="call-rats">
       <q:spawn entity="rat" area="east" count="3" for="5s" />
@@ -764,6 +856,9 @@ A game is a world's client with `qg:connect world="meadow.server.q"` (the games'
       <q:loot of="{rat}" to="{killer}" />
       <q:set name="killer.kills" value="{killer.kills + 1}" />
       <q:set name="killer.target" value="{''}" />
+      <q:if condition="{quest_goal(killer) == 'kill:Rat'}">
+        <q:set name="killer.quest.done" value="{killer.quest.done + 1}" />
+      </q:if>
     </q:on-death>
 
     <!-- a hero who falls wakes at the west, whole -->
@@ -776,6 +871,7 @@ A game is a world's client with `qg:connect world="meadow.server.q"` (the games'
 
     <q:on-join>
       <q:if condition="{me.at == null}"><q:move entity="{me}" to="west" /></q:if>
+      <q:say to="{me}" text="Welcome to the den, {me.name}." />
     </q:on-join>
   </q:gameserver>
 </q:application>

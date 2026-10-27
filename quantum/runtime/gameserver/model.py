@@ -137,6 +137,7 @@ class CommandDef:
     body: ET.Element
     line: Optional[int]
     predict: Optional[str] = None                        # the param of the step the game shows at once
+    builtin: Optional[str] = None                        # a command the world's chat, party or trade brings
 
 
 @dataclass
@@ -174,6 +175,28 @@ def near_of(expression: Optional[str]) -> Tuple[Optional[int], bool]:
 
 
 @dataclass
+class ChatDef:
+    channels: Dict[str, Optional[int]]                   # a channel: its reach in tiles (None: the world; party)
+    whisper: bool
+    words: List[str]                                     # the filter's
+    line: Optional[int]
+
+
+@dataclass
+class QuestDef:
+    name: str
+    title: str
+    goal: Tuple[str, str, int]                           # (kill or bring, the kind or the item, how many)
+    level: int
+    reward: List[Tuple[str, int]]                        # (a currency, item:name, or a field; how many)
+    line: Optional[int]
+
+
+# The worst words, starred by the chat's filter="moderate" (a world may give its own file instead).
+MODERATE = ('fuck', 'shit', 'cunt', 'nigger', 'faggot', 'retard', 'porra', 'caralho', 'buceta', 'viado', 'puta')
+
+
+@dataclass
 class WorldDef:
     name: str
     source: Optional[Path]
@@ -194,6 +217,10 @@ class WorldDef:
     deaths: List[DeathDef] = field(default_factory=list)
     day_ticks: Optional[int] = None                      # q:clock: a day, in ticks
     night: float = 0.0                                   # the part of a day that is night
+    chat: Optional[ChatDef] = None
+    party_size: Optional[int] = None                     # q:party
+    trade: bool = False                                  # q:trade
+    quests: Dict[str, QuestDef] = field(default_factory=dict)
     currencies: Dict[str, int] = field(default_factory=dict)          # a currency: what a hero starts with
     items: Dict[str, Dict[str, object]] = field(default_factory=dict)  # an item: what it is
 
@@ -441,6 +468,51 @@ def _brain(spec: EntityDef, element: ET.Element, tick_rate: int) -> None:
             raise GameServerError(f'<q:state then="{state.then}">: the brain has no such state', state.line)
 
 
+def _builtin(world: WorldDef, name: str, params: List[str], limit, line: Optional[int]) -> None:
+    if name in world.commands:
+        raise GameServerError(f'the world has a q:command {name!r}, a name its chat, party or trade brings', line)
+    world.commands[name] = CommandDef(name, params, limit, None, line, builtin=name)
+
+
+def _chat(element: ET.Element, base: Path, line: Optional[int]) -> ChatDef:
+    channels: Dict[str, Optional[int]] = {}
+    for part in element.get('channels', 'say:7').split(','):
+        name, _, reach = part.strip().partition(':')
+        if not _IDENT.match(name) or (reach and not reach.isdigit()):
+            raise GameServerError(f'<q:chat channels=>: {part.strip()!r} is a name, or name:tiles', line)
+        channels[name] = int(reach) if reach else None
+    words: List[str] = []
+    kind = element.get('filter', 'moderate')
+    if kind == 'moderate':
+        words = list(MODERATE)
+    elif kind != 'none':
+        path = (base / kind).resolve()
+        if not path.is_file():
+            raise GameServerError(f'<q:chat filter="{kind}">: moderate, none, or a file of words next to the world '
+                                  f'(there is no {path})', line)
+        words = [w.strip().lower() for w in path.read_text(encoding='utf-8').splitlines() if w.strip()]
+    return ChatDef(channels, element.get('whisper') == 'true', words, line)
+
+
+def _quest(element: ET.Element, line: Optional[int]) -> QuestDef:
+    m = re.match(r'^\s*(kill|bring)\s*:\s*([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(\d+)\s*$', element.get('goal'))
+    if not m:
+        raise GameServerError(f'<q:quest goal="{element.get("goal")}">: kill:Kind:n or bring:item:n', line)
+    reward = []
+    for part in [p.strip() for p in element.get('reward', '').split(',') if p.strip()]:
+        key, _, value = part.rpartition(':')
+        if not key or not value.strip():
+            raise GameServerError(f'<q:quest reward=>: {part!r} is name:amount (gold:60, xp:100, item:sword)', line)
+        if key == 'item' or key.startswith('item:'):
+            reward.append((f'item:{value.strip()}' if key == 'item' else key, 1 if key == 'item' else int(value)))
+        elif value.strip().isdigit():
+            reward.append((key.strip(), int(value)))
+        else:
+            raise GameServerError(f'<q:quest reward=>: {part!r}: its amount is a whole number', line)
+    return QuestDef(element.get('name'), element.get('title'), (m.group(1), m.group(2), int(m.group(3))),
+                    int(element.get('level', 1)), reward, line)
+
+
 def _predicted(command: ET.Element, params: List[str]) -> str:
     """predict="true": the body is q:requires and one q:move of me to ahead(me, a param); that param."""
     statements = [c for c in command if _local(c)[0] != 'comment']
@@ -503,6 +575,10 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
                 raise GameServerError(f'two entities named {child.get("name")!r}', line)
             world.entities[child.get('name')] = _entity(child, world.tick_rate)
         elif name == 'command':
+            if child.get('name') in world.commands and world.commands[child.get('name')].builtin:
+                raise GameServerError(f'<q:command name="{child.get("name")}">: the world\'s '
+                                      f'{world.commands[child.get("name")].builtin.split("-")[0]} has that command '
+                                      f'(put the q:command before it to see what is taken)', line)
             if child.get('name') in world.commands:
                 raise GameServerError(f'two commands named {child.get("name")!r}', line)
             limit = None
@@ -557,6 +633,28 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
                 raise GameServerError(f'two items named {child.get("name")!r}', line)
             from quantum.runtime.gameserver.expressions import literal
             world.items[child.get('name')] = {k: literal(v) for k, v in child.attrib.items() if k != 'name'}
+        elif name == 'chat':
+            if world.chat is not None:
+                raise GameServerError('a world has one q:chat', line)
+            world.chat = _chat(child, base, line)
+            count, seconds = rate_of(child.get('limit', '3/5s'))
+            limit = (count, max(1, round(seconds * world.tick_rate)))
+            _builtin(world, 'chat', ['channel', 'text'], limit, line)
+            if world.chat.whisper:
+                _builtin(world, 'whisper', ['to', 'text'], limit, line)
+        elif name == 'party':
+            world.party_size = int(child.get('size', 5))
+            for cmd, params in (('party-invite', ['who']), ('party-accept', ['who']), ('party-leave', [])):
+                _builtin(world, cmd, params, (4, world.tick_rate), line)
+        elif name == 'trade':
+            world.trade = True
+            for cmd, params in (('trade-offer', ['who', 'gold', 'items']), ('trade-accept', ['who']),
+                                ('trade-cancel', ['who'])):
+                _builtin(world, cmd, params, (4, world.tick_rate), line)
+        elif name == 'quest':
+            if child.get('name') in world.quests:
+                raise GameServerError(f'two quests named {child.get("name")!r}', line)
+            world.quests[child.get('name')] = _quest(child, line)
         elif name == 'view':
             if child.get('name') in world.views:
                 raise GameServerError(f'two views named {child.get("name")!r}', line)

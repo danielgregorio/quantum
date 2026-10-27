@@ -15,10 +15,18 @@
     <q:item name="cheese" price="2" heals="5" />
     <q:item name="sword" price="8" slot="weapon" attack="3" />
 
+    <!-- together: a chat (near, far, the party's, everyone's help), a party of three, a trade, a quest -->
+    <q:chat channels="say:7, yell:30, party, help" whisper="true" limit="3/5s" filter="moderate" />
+    <q:party size="3" />
+    <q:trade />
+    <q:quest name="rats" title="Rats in the square" goal="kill:Rat:2" level="1" reward="gold:20, xp:50, item:sword" />
+
     <q:entity name="hero" kind="Hero" per-player="true" speed="10/s" hp="30" attack="5" defense="1">
       <q:field name="name" value="{account.name}" />
       <q:field name="mood" value="calm" />
       <q:field name="kills" value="0" />
+      <q:field name="xp" value="0" private="true" />
+      <q:field name="quest" value="{ {} }" private="true" />
     </q:entity>
 
     <q:entity name="rat" kind="Rat" speed="2/s" hp="10" attack="2" defense="0">
@@ -82,6 +90,18 @@
       <q:pay from="{me}" to="{who}" amount="{amount}" />
     </q:command>
 
+    <!-- a quest, taken and turned in -->
+    <q:command name="take-quest" params="name">
+      <q:require condition="{quest_title(name) != ''}" else="No such quest." />
+      <q:require condition="{len(me.quest) == 0}" else="One quest at a time." />
+      <q:set name="me.quest" value="{ {'name': name, 'done': 0} }" />
+    </q:command>
+    <q:command name="turn-in">
+      <q:require condition="{quest_done(me)}" else="It is not done." />
+      <q:reward to="{me}" quest="{me.quest.name}" />
+      <q:set name="me.quest" value="{ {} }" />
+    </q:command>
+
     <!-- three rats in the east, for five seconds -->
     <q:command name="call-rats">
       <q:spawn entity="rat" area="east" count="3" for="5s" />
@@ -108,6 +128,9 @@
       <q:loot of="{rat}" to="{killer}" />
       <q:set name="killer.kills" value="{killer.kills + 1}" />
       <q:set name="killer.target" value="{''}" />
+      <q:if condition="{quest_goal(killer) == 'kill:Rat'}">
+        <q:set name="killer.quest.done" value="{killer.quest.done + 1}" />
+      </q:if>
     </q:on-death>
 
     <!-- a hero who falls wakes at the west, whole -->
@@ -120,6 +143,7 @@
 
     <q:on-join>
       <q:if condition="{me.at == null}"><q:move entity="{me}" to="west" /></q:if>
+      <q:say to="{me}" text="Welcome to the den, {me.name}." />
     </q:on-join>
   </q:gameserver>
 </q:application>

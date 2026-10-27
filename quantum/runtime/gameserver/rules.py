@@ -60,6 +60,12 @@ FUNCTION_DOCS: Dict[str, str] = {
     'heals(item)': "the item's heals= (0 if it has none)",
     'slot(item)': "the item's slot= ('' if it has none)",
     'bonus(item, name)': 'a number of the item: bonus(sword, \'attack\'); 0 if it has none',
+    'party_of(x)': 'the entities of the party of x (x alone, with no party)',
+    'party_near(x, n)': 'those of them within n tiles of x (10 if not given)',
+    'quest_goal(x)': "what x's quest asks: kill:Kind or bring:item ('' with none)",
+    'quest_done(x)': "x's quest is done: so many killed (its quest's done) or brought (held)",
+    'quest_level(name)': 'the level a quest asks',
+    'quest_title(name)': "a quest's title",
     'sqrt(x)': 'its square root',
     'now()': "refused: it is the machine's clock, and a world is replayed; its time is tick() and seconds()",
 }
@@ -199,6 +205,13 @@ class Interpreter:
             payer = self.world.entity_of(self.evaluate(el.get('from'), local, line), line)
             to = self.world.entity_of(self.evaluate(el.get('to'), local, line), line)
             self.world.pay(payer, to, self.evaluate(el.get('amount'), local, line), el.get('currency'), line)
+        elif name == 'say':
+            to = el.get('to', 'all')
+            target = 'all' if to.strip() == 'all' else self.evaluate(to, local, line)
+            self.world.say(el.get('channel', 'system'), target, self.text(el.get('text'), local, line), line)
+        elif name == 'reward':
+            to = self.world.entity_of(self.evaluate(el.get('to'), local, line), line)
+            self.world.reward(to, self.evaluate(el.get('quest'), local, line), line)
         elif name == 'spawn':
             ticks = (max(1, round(seconds_of(el.get('for')) * self.world.definition.tick_rate))
                      if el.get('for') else None)
@@ -421,6 +434,10 @@ class Interpreter:
             'nearest': world.nearest, 'fighting': world.fighting, 'in_fight': world.in_fight, 'sees': world.line_of_sight,
             'is_night': world.is_night, 'daytime': world.daytime,
             'balance': world.balance, 'has': world.has, 'item': world.item_of,
+            'party_of': world.party_of, 'party_near': world.party_near, 'quest_goal': world.quest_goal,
+            'quest_done': world.quest_done,
+            'quest_level': lambda q: world.definition.quests[q].level if q in world.definition.quests else 0,
+            'quest_title': lambda q: world.definition.quests[q].title if q in world.definition.quests else '',
             'price': lambda i: world.item_value(i, 'price', 0), 'heals': lambda i: world.item_value(i, 'heals', 0),
             'slot': lambda i: world.item_value(i, 'slot', ''),
             'bonus': lambda i, name: world.item_value(i, name, 0) if isinstance(world.item_value(i, name, 0),

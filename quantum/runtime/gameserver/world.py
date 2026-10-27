@@ -23,6 +23,7 @@ from quantum.runtime.gameserver.ledger import Ledger
 from quantum.runtime.gameserver.life import MISSING, Life
 from quantum.runtime.gameserver.model import EntityDef, ViewDef, WorldDef
 from quantum.runtime.gameserver.rules import Interpreter, chebyshev, facing_of
+from quantum.runtime.gameserver.together import Together
 
 _MISSING = MISSING
 MAX_ARGS = 2048          # the size of a command's arguments, as JSON
@@ -38,6 +39,7 @@ class Event:
     tile: Optional[Tuple[int, int]]
     to: Optional[str]                    # an account: theirs alone
     everyone: bool                       # neither at= nor to=
+    accounts: Optional[List[str]] = None  # these players alone (the chat, a party, a trade)
 
 
 @dataclass
@@ -86,7 +88,7 @@ def _args_ok(value: Any, depth: int = 0) -> bool:
     return False
 
 
-class World(Life, Ledger):
+class World(Life, Ledger, Together):
     def __init__(self, definition: WorldDef, seed: int = 0):
         self.definition = definition
         self.tick = 0
@@ -116,6 +118,8 @@ class World(Life, Ledger):
         # Phase 4: the ledger's books, {made|spent: {asset: {where: n}}}, and where the world is as it writes them
         self.books: Dict[str, Dict[str, Dict[str, int]]] = {'made': {}, 'spent': {}}
         self.source = 'world'
+        self.parties: Dict[str, dict] = {}         # a party: {members, invited}
+        self.trades: Dict[str, dict] = {}          # two players' ids, sorted: {between, offers, accepted}
         self.rules = Interpreter(self)
         ledger = ({'bag'} | set(definition.currencies)) if definition.ledger else set()
         self._private = {name: {f.name for f in e.fields if f.private} | ledger    # what one holds is its own
@@ -335,6 +339,8 @@ class World(Life, Ledger):
         if spec.states:
             entity['state'] = spec.initial
             entity['_since'] = self.tick
+        if self.definition.party_size and spec.per_player:
+            entity.setdefault('party', '')
         if self.definition.ledger and spec.per_player:      # a hero holds: a bag, and each currency
             entity.setdefault('bag', {})
             for currency, start in self.definition.currencies.items():
@@ -368,6 +374,7 @@ class World(Life, Ledger):
         hero = self.entities[eid]
         for block in self.definition.on_leave:
             self._run(block, {'me': hero}, 'q:on-leave')
+        self.part(hero)
         del self.entities[eid]
         del self.players[account]
         if self.definition.hero.persist:
@@ -419,7 +426,10 @@ class World(Life, Ledger):
         self.source = f'q:command {name}'
         self._begin()
         try:
-            self.rules.run(command.body, {'me': self.entities[eid], **args})
+            if command.builtin:
+                self.builtin(command.builtin, self.entities[eid], args)
+            else:
+                self.rules.run(command.body, {'me': self.entities[eid], **args})
         except Refused as r:
             self._rollback()
             return no(r.reason)
@@ -464,7 +474,7 @@ class World(Life, Ledger):
         return copy.deepcopy({
             'world': self.definition.name, 'tick': self.tick, 'vars': self.vars, 'entities': self.entities,
             'stored': self.stored, 'players': self.players, 'rates': self.rates, 'counters': self.counters,
-            'spawned': self.spawned, 'books': self.books,
+            'spawned': self.spawned, 'books': self.books, 'parties': self.parties, 'trades': self.trades,
             'rng': [version, list(state), gauss],
         })
 
@@ -482,6 +492,8 @@ class World(Life, Ledger):
         world.rng.setstate((version, tuple(state), gauss))
         world.spawned = copy.deepcopy(snap.get('spawned', world.spawned))
         world.books = copy.deepcopy(snap.get('books', world.books))
+        world.parties = copy.deepcopy(snap.get('parties', {}))
+        world.trades = copy.deepcopy(snap.get('trades', {}))
         world.expiring = {eid for eid, e in world.entities.items() if '_expires' in e}
         world.travelers = {eid for eid, e in world.entities.items() if e.get('_path')}
         world.reindex(world.entities)

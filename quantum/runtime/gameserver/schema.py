@@ -198,6 +198,52 @@ TAGS: Dict[str, Tag] = {
          'amount': Attr('expr', required=True),
          'currency': Attr('ident')},
         ('handler',)),
+    'chat': Tag(
+        'The world\'s chat: commands `chat` (channel, text) and, with whisper=, `whisper` (to, text) every player may '
+        'send, heard as the event `chat` ({channel, from, text}) by whom the channel reaches: say:7 is the players '
+        'within 7 tiles, a channel with no number all of them, `party` the speaker\'s party. A line is cut at 200 '
+        'characters and its words in the filter are starred; more than limit= of them and it is refused.',
+        {'channels': Attr('text', 'say:7', doc='name:tiles, or name for the whole world, separated by commas'),
+         'whisper': Attr('bool', False, doc='a line to one player, wherever they are'),
+         'limit': Attr('rate', '3/5s', doc='lines a player may say'),
+         'filter': Attr('text', 'moderate', doc='moderate (a short list of the worst words), none, or a file of '
+                                                'words, one a line, next to the world')},
+        ('gameserver',)),
+    'say': Tag(
+        'A line of the world itself in its chat (from "world"): to= one player\'s entity, or all.',
+        {'channel': Attr('ident', 'system'),
+         'to': Attr('expr', 'all', doc='an entity of a player, or all'),
+         'text': Attr('text', required=True)},
+        ('handler',)),
+    'party': Tag(
+        'Players who go together: commands `party-invite` (who), `party-accept` (who: the one who invited) and '
+        '`party-leave`. A player\'s entity has a public field `party` (the party\'s id, \'\' for none); '
+        'party_of(x) and party_near(x, n) read it, and a party\'s channel of the chat is its own.',
+        {'size': Attr('int', 5, doc='how many at most')},
+        ('gameserver',)),
+    'trade': Tag(
+        'A trade between two players, done whole or not at all: commands `trade-offer` (who, gold, items: a record '
+        'of counts), `trade-accept` (who) and `trade-cancel` (who). When both accept the same offers, both sides '
+        'move at once, on the ledger; a new offer takes back both acceptances. Each change is the event `trade` to '
+        'both.',
+        {}, ('gameserver',)),
+    'quest': Tag(
+        'A quest the world may give: what to do (goal= kill:Kind:n, or bring:item:n), from which level, and its '
+        'reward (gold:60, xp:100, item:sword). A hero\'s quest is a field it has (quest: {name, done}); '
+        'quest_goal(), quest_done(), quest_level() and quest_title() read it, and q:reward gives the reward.',
+        {'name': Attr('ident', required=True),
+         'title': Attr('text', required=True),
+         'goal': Attr('text', required=True, doc='kill:Kind:n or bring:item:n'),
+         'level': Attr('int', 1),
+         'reward': Attr('text', '', doc='what it gives, separated by commas: a currency, item, or a field of the '
+                                        'hero (xp) with its amount')},
+        ('gameserver',)),
+    'reward': Tag(
+        'A quest\'s reward, given: its currency and items by the ledger, its other parts added to the hero\'s fields '
+        '(xp:100 to its xp).',
+        {'to': Attr('expr', required=True),
+         'quest': Attr('expr', required=True)},
+        ('handler',)),
     'command': Tag(
         'What a player may ask the world, by its name and with its params (the client\'s qg:send). It runs whole or '
         'not at all, as the player who sent it (`me`, their entity): a q:require that does not hold, an argument '

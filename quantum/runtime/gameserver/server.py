@@ -274,7 +274,9 @@ class WorldServer:
         accounts = [a for a, c in self.connections.items() if c.joined and a in world.players]
         out: Dict[str, List[dict]] = {}
         for event in world.events:
-            if event.to is not None:
+            if event.accounts is not None:
+                to = [a for a in event.accounts if a in self.connections]
+            elif event.to is not None:
                 to = [event.to] if event.to in self.connections else []
             elif event.everyone or (event.tile is not None and reach is None):
                 to = accounts
