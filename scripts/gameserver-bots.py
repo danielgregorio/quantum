@@ -24,6 +24,7 @@ import statistics
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -93,6 +94,15 @@ def free_port() -> int:
 
 
 async def bot(url: str, name: str, until: float, got: dict) -> None:
+    from websockets.exceptions import ConnectionClosed
+
+    try:
+        await _walk(url, name, until, got)
+    except ConnectionClosed:
+        got['dropped'] += 1                  # counted, and the others go on: a measure is not lost to one
+
+
+async def _walk(url: str, name: str, until: float, got: dict) -> None:
     from websockets.asyncio.client import connect
 
     rng = random.Random(name)
@@ -119,11 +129,13 @@ async def bot(url: str, name: str, until: float, got: dict) -> None:
             await ws.send(json.dumps({'type': 'cmd', 'seq': seq, 'name': 'step', 'args': {'dir': way}}))
             got['sent'] += 1
             await asyncio.sleep(0.3 + rng.random() * 0.05)          # four steps a second, as the hero walks
+        if reader.done() and reader.exception() is not None:
+            raise reader.exception()
         reader.cancel()
 
 
 async def bots(url: str, count: int, seconds: float) -> dict:
-    got = {'bytes': 0, 'frames': 0, 'sent': 0, 'acks': 0, 'refused': 0}
+    got = {'bytes': 0, 'frames': 0, 'sent': 0, 'acks': 0, 'refused': 0, 'dropped': 0}
     until = time.monotonic() + seconds
     await asyncio.gather(*(bot(url, f'bot-{i}', until, got) for i in range(count)))
     return got
@@ -148,18 +160,26 @@ def main() -> int:
             cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
             env={**os.environ, 'PYTHONUNBUFFERED': '1'})
         lines = []
-        try:
+        listening = threading.Event()
+
+        def drain() -> None:              # read all the server says: a pipe left full would stop its loop
             for line in server.stdout:
                 lines.append(line)
                 if ' on ws://' in line:
-                    break
+                    listening.set()
+            listening.set()
+
+        reader = threading.Thread(target=drain, daemon=True)
+        reader.start()
+        try:
+            listening.wait(60)
             began = time.monotonic()
             got = asyncio.run(bots(f'ws://127.0.0.1:{port}', args.bots, args.seconds))
             took = time.monotonic() - began
         finally:
             server.terminate()
-            rest, _ = server.communicate(timeout=60)
-            lines += rest.splitlines(keepends=True)
+            server.wait(timeout=60)
+            reader.join(10)
 
     stats = [json.loads(m.group(1)) for m in (re.search(r'stats (\{.*\})', line) for line in lines) if m]
     full = [s for s in stats if s['players'] >= args.bots]
@@ -175,7 +195,7 @@ def main() -> int:
         'player_kb_s_p50': round(statistics.median(s['player_kb_s_p50'] for s in full), 2),
         'player_kb_s_max': round(max(s['player_kb_s_max'] for s in full), 2),
         'world_kb_s': round(statistics.median(s['out_kb_s'] for s in full), 1),
-        'steps_sent': got['sent'], 'steps_ran': got['acks'], 'refused': got['refused'],
+        'steps_sent': got['sent'], 'steps_ran': got['acks'], 'refused': got['refused'], 'dropped': got['dropped'],
         'received_mb': round(got['bytes'] / 1e6, 1), 'frames': got['frames'],
     }
     print(json.dumps(numbers, indent=2))
