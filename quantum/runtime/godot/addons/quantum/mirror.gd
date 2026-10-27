@@ -47,12 +47,13 @@ func _physics_process(_delta: float) -> void:
 			_drop(id)
 	for id in seen:
 		var e: Dictionary = seen[id]
-		var at = e.get("at")
-		if not at is Dictionary:
+		var shown = world.shown(id)       # the player's own: where its guessed step is (predict)
+		if shown == null:
 			if nodes.has(id):
 				_drop(id)                # nowhere: not drawn
 			continue
-		var tile := Vector2i(int(at.get("x", 0)), int(at.get("y", 0)))
+		var tile: Vector2i = shown
+		var at := {"x": tile.x, "y": tile.y}
 		if not nodes.has(id):
 			_make(id, e, tile)
 			continue
@@ -81,10 +82,13 @@ func _make(id: String, e: Dictionary, tile: Vector2i) -> void:
 	if not game.get("prefabs", {}).has(kind):
 		return                           # the compiler saw a prefab for every kind of the world
 	var node: Node2D = load("res://addons/quantum/scene_builder.gd").instance(game, scene_node, kind,
-		pixel_of(e["at"]))
+		pixel_of({"x": tile.x, "y": tile.y}))
 	node.name = id.replace(":", "_").replace("/", "_").replace(".", "_").replace("@", "_").replace("%", "_")
 	node.set_meta("q_entity", e)
 	node.set_meta("q_entity_id", id)
+	var looks = node.get_node_or_null("Looks")
+	if looks != null:
+		looks._update()                  # its labels and bars read the entity now, not a tick later
 	nodes[id] = node
 	_at[id] = tile
 	if id == Q.world.you and scene_node != null:

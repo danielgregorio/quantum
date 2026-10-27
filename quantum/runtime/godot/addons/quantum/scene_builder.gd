@@ -415,7 +415,7 @@ static func looks(node: Node2D, spec: Dictionary, game: Dictionary, caller: Obje
 		sprite.flip_v = true
 	if spec.get("layer") != null:
 		node.z_index = int(spec["layer"])
-	for key in ["labels", "visible", "particles", "trail", "lights"]:
+	for key in ["labels", "bars", "visible", "particles", "trail", "lights"]:
 		if spec.get(key) != null:
 			var keeper: Node2D = Looks.new()
 			keeper.setup(spec, caller, game, node)

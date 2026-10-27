@@ -1489,7 +1489,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A kind of thing the scene places with qg:instance. With ai= it moves.',
         category: 'Game',
-        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:on-damage', 'qg:on-death', 'qg:label', 'qg:light', 'qg:behavior', 'qg:on-animation-end', 'qg:on-locked'],
+        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:on-damage', 'qg:on-death', 'qg:label', 'qg:light', 'qg:behavior', 'qg:on-animation-end', 'qg:health-bar', 'qg:on-locked'],
         attributes: [
             { name: 'name', description: '', required: true, type: 'string' },
             { name: 'tag', description: 'what collisions see it as (`with="coin"`)', type: 'string' },
@@ -1613,7 +1613,7 @@ export const gameTags: TagSchema[] = [
         namespace: 'qg',
         description: 'A body the player moves: a platformer, or a walker on a world map.',
         category: 'Game',
-        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:label', 'qg:light', 'qg:on-hit', 'qg:on-fall', 'qg:move', 'qg:behavior', 'qg:on-tile', 'qg:on-animation-end', 'qg:on-ko'],
+        allowedChildren: ['qg:state', 'qg:animation', 'qg:on-separate', 'qg:on-screen-exit', 'qg:on-screen-enter', 'qg:on-collision', 'qg:label', 'qg:light', 'qg:on-hit', 'qg:on-fall', 'qg:move', 'qg:behavior', 'qg:on-tile', 'qg:on-animation-end', 'qg:on-ko', 'qg:health-bar'],
         attributes: [
             { name: 'id', description: '', required: true, type: 'string' },
             { name: 'controller', description: 'grid: steps from cell to cell of the tilemap; the tiles of a layer with collision, and the things, stop it, and stepping into a thing runs its qg:on-collision with the thing\'s tag; `me.col` and `me.row` are its cell. pointer: as grid, and a click (its player\'s qg:cursor) walks it to that cell by the shortest way around the walls and things. behavior: made of the parts its qg:behavior lists', required: true, type: 'enum', values: ['platformer', 'map', 'topdown', 'ship', 'fighter', 'grid', 'pointer', 'behavior'] },
@@ -2427,13 +2427,29 @@ export const gameTags: TagSchema[] = [
         ]
     },
     {
-        name: 'bar',
+        name: 'health-bar',
         namespace: 'qg',
-        description: 'A bar in the HUD: a number against its maximum — a q:set, or a fighter\'s health as `id.health`.',
+        description: 'A bar over a character or a prefab, kept up every tick: value= against max= (a mirrored entity\'s {me.hp} and {me.max_hp}). Only seen.',
         category: 'Game',
         attributes: [
-            { name: 'bind', description: 'a q:set of the scene or the game, or a fighter\'s id and .health (p1.health)', required: true, type: 'string' },
-            { name: 'max', description: '', type: 'number', default: '100' },
+            { name: 'value', description: '', required: true, type: 'expression' },
+            { name: 'max', description: '', required: true, type: 'expression' },
+            { name: 'dx', description: '', type: 'number', default: '0' },
+            { name: 'dy', description: 'from its middle, in pixels', type: 'number', default: '-10' },
+            { name: 'width', description: '', type: 'number', default: '14' },
+            { name: 'height', description: '', type: 'number', default: '2' },
+            { name: 'color', description: '', type: 'string', default: '#40e040' },
+        ]
+    },
+    {
+        name: 'bar',
+        namespace: 'qg',
+        description: 'A bar in the HUD: a number against its maximum — a q:set, or a fighter\'s health as `id.health` (bind=), or any expression (value=: a world\'s {me().hp}).',
+        category: 'Game',
+        attributes: [
+            { name: 'bind', description: 'a q:set of the scene or the game, or a fighter\'s id and .health (p1.health)', type: 'string' },
+            { name: 'value', description: 'instead of bind=: an expression read every tick', type: 'expression' },
+            { name: 'max', description: 'a number, or an expression read every tick', type: 'expression', default: '100' },
             { name: 'width', description: '', type: 'number', default: '100' },
             { name: 'height', description: '', type: 'number', default: '10' },
             { name: 'color', description: '', type: 'string', default: '#e04040' },

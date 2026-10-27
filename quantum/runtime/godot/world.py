@@ -30,6 +30,8 @@ class WorldInfo:
     fields: Set[str] = field(default_factory=set)      # every field of every entity, and id, kind, at, facing
     private: Set[str] = field(default_factory=set)     # the private ones: a player sees only its own entity's
     hero_kind: str = ''
+    predict: Dict[str, str] = field(default_factory=dict)   # a command the game shows at once: its way's param
+    walls: Dict[str, object] = field(default_factory=dict)  # the world's walls: width, height, rows of 0 and 1
 
 
 def read_world(path: Path, line: Optional[int]) -> WorldInfo:
@@ -55,9 +57,15 @@ def read_world(path: Path, line: Optional[int]) -> WorldInfo:
     private: Set[str] = set()
     for e in world.entities.values():
         kinds[e.kind] = round(e.step_ticks / world.tick_rate, 4)
+        if e.states:
+            fields.add('state')
         for f in e.fields:
             fields.add(f.name)
             if f.private:
                 private.add(f.name)
+    m = world.map
+    walls = {'width': m.width, 'height': m.height,
+             'rows': [''.join('1' if (x, y) in m.walls else '0' for x in range(m.width)) for y in range(m.height)]}
     return WorldInfo(path, world.name, {c.name: list(c.params) for c in world.commands.values()},
-                     list(world.views), events, kinds, fields, private, world.hero.kind)
+                     list(world.views), events, kinds, fields, private, world.hero.kind,
+                     {c.name: c.predict for c in world.commands.values() if c.predict}, walls)

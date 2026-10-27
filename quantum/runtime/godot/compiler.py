@@ -505,7 +505,9 @@ class _Compiler:
                 raise GameCompileError(f'<qg:prefab name="{kind}" ai="{prefab.get("ai")}">: an entity of the world '
                                        f'moves as the world says; its prefab has no ai=', prefab.line)
         self.world_spec = {'name': self.world.name, 'local': el.get('local'), 'server': el.get('server'),
-                           'kinds': self.world.kinds, 'views': self.world.views, 'hero': self.world.hero_kind}
+                           'kinds': self.world.kinds, 'views': self.world.views, 'hero': self.world.hero_kind,
+                           **({'predict': self.world.predict, 'walls': self.world.walls} if self.world.predict
+                              else {})}
 
     def _find(self, rel: str, line: Optional[int]) -> Path:
         """A file named in the .q: next to it, or in a folder above it."""
@@ -1587,16 +1589,35 @@ class _Compiler:
                 items = []
                 for c in el.children:
                     if isinstance(c, Element) and c.tag == 'bar':
-                        bind = str(c.get('bind'))
-                        if '.' in bind:
-                            node, prop = bind.split('.', 1)
-                            if node not in ids or prop != 'health':
-                                raise GameCompileError(
-                                    f'<qg:bar bind="{bind}">: a fighter of this scene and .health (p1.health)', c.line)
-                        elif bind not in script.state and bind not in self.game_state:
-                            raise GameCompileError(f'<qg:bar bind="{bind}">: no q:set of that name', c.line)
-                        items.append({'kind': 'bar', 'bind': bind, 'max': c.get('max'), 'width': c.get('width'),
-                                      'height': c.get('height'), 'color': c.get('color')})
+                        if (c.get('bind') is None) == (c.get('value') is None):
+                            raise GameCompileError('<qg:bar> takes bind= or value=, one of them', c.line)
+                        bars = sum(1 for n in nodes if n['kind'] == 'hud' for i in n['items'] if i['kind'] == 'bar')
+                        bars += sum(1 for i in items if i['kind'] == 'bar')
+                        bar = {'kind': 'bar', 'width': c.get('width'), 'height': c.get('height'),
+                               'color': c.get('color')}
+                        if c.get('bind') is not None:
+                            bind = str(c.get('bind'))
+                            if '.' in bind:
+                                node, prop = bind.split('.', 1)
+                                if node not in ids or prop != 'health':
+                                    raise GameCompileError(
+                                        f'<qg:bar bind="{bind}">: a fighter of this scene and .health (p1.health)',
+                                        c.line)
+                            elif bind not in script.state and bind not in self.game_state:
+                                raise GameCompileError(f'<qg:bar bind="{bind}">: no q:set of that name', c.line)
+                            bar['bind'] = bind
+                        else:
+                            bar['value_method'] = f'_q_bar_{bars}'
+                            script.functions.append(f'func _q_bar_{bars}() -> float:\n\treturn float(Q.number('
+                                                    f'{compile_expression(c.get("value"), script.scope(), c.line)}))\n')
+                        try:
+                            bar['max'] = float(str(c.get('max')).strip().strip('{}'))
+                        except ValueError:
+                            bar['max'] = 100.0
+                            bar['max_method'] = f'_q_bar_{bars}_max'
+                            script.functions.append(f'func _q_bar_{bars}_max() -> float:\n\treturn float(Q.number('
+                                                    f'{compile_expression(c.get("max"), script.scope(), c.line)}))\n')
+                        items.append(bar)
                         gdprops.attach(items[-1], 'ProgressBar', c.gd, '<qg:bar>', c.line)
                         continue
                     if isinstance(c, Element) and c.tag == 'inventory':
@@ -2266,6 +2287,19 @@ def _looks(el: Element, script: SceneScript, prefix: str, particles: dict) -> di
         labels.append(label)
     if labels:
         out['labels'] = labels
+    bars = []
+    for i, hb in enumerate(el.find_all('health-bar')):
+        method = f'{prefix}_bar_{i}'
+        script.functions.append(f'func {method}(me) -> float:\n\treturn float(Q.number('
+                                f'{compile_expression(hb.get("value"), scope, hb.line)}))\n')
+        script.functions.append(f'func {method}_max(me) -> float:\n\treturn float(Q.number('
+                                f'{compile_expression(hb.get("max"), scope, hb.line)}))\n')
+        if hb.get('width') < 1 or hb.get('height') < 1:
+            raise GameCompileError('<qg:health-bar>: width= and height= 1 or more', hb.line)
+        bars.append({'method': method, 'dx': hb.get('dx'), 'dy': hb.get('dy'), 'width': hb.get('width'),
+                     'height': hb.get('height'), 'color': hb.get('color')})
+    if bars:
+        out['bars'] = bars
     lights = []
     for lt in el.find_all('light'):
         if lt.get('x') is not None or lt.get('y') is not None:

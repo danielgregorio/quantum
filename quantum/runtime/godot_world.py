@@ -24,7 +24,8 @@ from quantum.runtime.godot_play import PlayError, PlaySession
 
 class WorldTable:
     def __init__(self, world: Union[str, Path], project: Union[str, Path], seats: Iterable[str],
-                 binary: Optional[Path] = None, timeout: float = 60.0):
+                 binary: Optional[Path] = None, timeout: float = 60.0, latency: Optional[int] = None):
+        """latency (ms): each game's messages to and from the world held half that long each way."""
         self.timeout = timeout
         self._serving = serve_world(world)
         self.server = self._serving.__enter__()
@@ -33,7 +34,8 @@ class WorldTable:
             self.control = WorldSession(self.server.url, control=True)
             self.frames = max(1, round(60 / self.server.definition.tick_rate))
             for seat in seats:
-                self.games[seat] = PlaySession(project, binary=binary, world=self.server.url, name=seat)
+                self.games[seat] = PlaySession(project, binary=binary, world=self.server.url, name=seat,
+                                               latency=latency)
             self._come_in()
         except BaseException:
             self.close()

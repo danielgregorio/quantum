@@ -943,10 +943,21 @@ TAGS: Dict[str, Tag] = {
         'an item held 0 times is not shown.',
         {'size': Attr('int', None, doc='the font size of the numbers')},
         parents=('hud',)),
+    'health-bar': Tag(
+        'A bar over a character or a prefab, kept up every tick: value= against max= (a mirrored entity\'s '
+        '{me.hp} and {me.max_hp}). Only seen.',
+        {'value': Attr('expr', required=True),
+         'max': Attr('expr', required=True),
+         'dx': Attr('float', 0.0), 'dy': Attr('float', -10.0, doc='from its middle, in pixels'),
+         'width': Attr('int', 14), 'height': Attr('int', 2),
+         'color': Attr('color', '#40e040')},
+        parents=('character', 'prefab')),
     'bar': Tag(
-        'A bar in the HUD: a number against its maximum — a q:set, or a fighter\'s health as `id.health`.',
-        {'bind': Attr('str', required=True, doc='a q:set of the scene or the game, or a fighter\'s id and .health (p1.health)'),
-         'max': Attr('float', 100.0),
+        'A bar in the HUD: a number against its maximum — a q:set, or a fighter\'s health as `id.health` (bind=), or '
+        'any expression (value=: a world\'s {me().hp}).',
+        {'bind': Attr('str', None, doc='a q:set of the scene or the game, or a fighter\'s id and .health (p1.health)'),
+         'value': Attr('expr', None, doc='instead of bind=: an expression read every tick'),
+         'max': Attr('expr', '100', doc='a number, or an expression read every tick'),
          'width': Attr('int', 100), 'height': Attr('int', 10),
          'color': Attr('color', '#e04040')},
         parents=('hud',)),

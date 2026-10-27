@@ -760,12 +760,13 @@ Goes inside: `qg:hud`.
 
 ### `qg:bar`
 
-A bar in the HUD: a number against its maximum — a q:set, or a fighter's health as `id.health`.
+A bar in the HUD: a number against its maximum — a q:set, or a fighter's health as `id.health` (bind=), or any expression (value=: a world's {me().hp}).
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|
-| `bind` | text | required | a q:set of the scene or the game, or a fighter's id and .health (p1.health) |
-| `max` | number | `100.0` |  |
+| `bind` | text |  | a q:set of the scene or the game, or a fighter's id and .health (p1.health) |
+| `value` | an expression |  | instead of bind=: an expression read every tick |
+| `max` | an expression | `100` | a number, or an expression read every tick |
 | `width` | integer | `100` |  |
 | `height` | integer | `10` |  |
 | `color` | `#rrggbb` | `#e04040` |  |
@@ -1586,6 +1587,22 @@ Lines someone says, shown one at a time in a box at the bottom of the screen (qg
 | `box` | a name |  | a qg:spritesheet with slice=: the box is drawn with it, stretched (a frame) |
 
 Goes inside: `qg:scene`, `qg:overlay`.
+
+### `qg:health-bar`
+
+A bar over a character or a prefab, kept up every tick: value= against max= (a mirrored entity's {me.hp} and {me.max_hp}). Only seen.
+
+| Attribute | Type | Default | Meaning |
+|---|---|---|---|
+| `value` | an expression | required |  |
+| `max` | an expression | required |  |
+| `dx` | number | `0.0` |  |
+| `dy` | number | `-10.0` | from its middle, in pixels |
+| `width` | integer | `14` |  |
+| `height` | integer | `2` |  |
+| `color` | `#rrggbb` | `#40e040` |  |
+
+Goes inside: `qg:character`, `qg:prefab`.
 
 ### `qg:icon`
 

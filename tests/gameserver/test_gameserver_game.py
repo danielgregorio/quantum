@@ -77,3 +77,50 @@ def test_a_game_that_is_no_worlds_client_has_no_world(tmp_path):
              '<qg:hud><qg:text value="{me().name}" /></qg:hud></qg:scene></q:application>')
     with pytest.raises(GameCompileError, match=r"me\(\) is a world's"):
         build(tmp_path, plain)
+
+
+# --- Phase 3: the step shown at once, and the bars --------------------------------------------------------------
+
+DEN = Path(__file__).resolve().parent / 'worlds' / 'den'
+
+
+def build_den(tmp_path: Path, source: str = None) -> Path:
+    for name in ('den.server.q', 'den.tmx', 'den.png', 'folk.png', 'rat.png'):
+        shutil.copy(DEN / name, tmp_path / name)
+    src = tmp_path / 'den.q'
+    src.write_text(source or (DEN / 'den.q').read_text(), encoding='utf-8')
+    return Path(compile_game(QuantumParser(use_cache=False).parse_file(str(src)), str(tmp_path / 'godot'),
+                             source_dir=str(tmp_path)))
+
+
+def test_the_game_knows_the_steps_it_may_show_at_once_and_the_walls(tmp_path):
+    world = json.loads((build_den(tmp_path) / 'game.json').read_text())['world']
+    assert world['predict'] == {'step': 'dir'} and world['kinds'] == {'Hero': 0.1, 'Rat': 0.5}
+    walls = world['walls']
+    assert (walls['width'], walls['height']) == (48, 32) and walls['rows'][16][10:38] == '1' * 28
+    assert walls['rows'][3][3] == '0' and walls['rows'][0] == '1' * 48
+
+
+def test_a_health_bar_and_a_bar_of_an_expression(tmp_path):
+    out = build_den(tmp_path)
+    game = json.loads((out / 'game.json').read_text())
+    assert game['prefabs']['Rat']['bars'][0]['method'] == '_Rat_bar_0'
+    prefabs = (out / 'scripts' / 'prefabs.gd').read_text()
+    assert 'func _Rat_bar_0_max(me) -> float:' in prefabs and 'Q.wf(me, "max_hp")' in prefabs
+    hud = next(n for n in game['scenes']['den']['nodes'] if n['kind'] == 'hud')
+    bar = next(i for i in hud['items'] if i['kind'] == 'bar')
+    assert bar['value_method'] == '_q_bar_0' and bar['max_method'] == '_q_bar_0_max'
+
+
+@pytest.mark.parametrize('change, says', [
+    (('<qg:bar value="{me().hp}"', '<qg:bar bind="note" value="{me().hp}"'), 'bind= or value=, one of them'),
+    (('<qg:health-bar value="{me.hp}" max="{me.max_hp}" dy="-9" />',
+      '<qg:health-bar value="{me.hp}" max="{me.max_hp}" width="0" />'), 'width= and height= 1 or more'),
+    (('max="{me.max_hp}" dy="-8"', 'max="{me.top}" dy="-8"'), 'me.top: no such field'),
+])
+def test_what_the_bars_refuse(tmp_path, change, says):
+    source = (DEN / 'den.q').read_text()
+    assert change[0] in source
+    with pytest.raises(GameCompileError) as e:
+        build_den(tmp_path, source.replace(change[0], change[1], 1))
+    assert says in str(e.value), str(e.value)

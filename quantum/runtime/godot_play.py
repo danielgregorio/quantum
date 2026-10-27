@@ -125,7 +125,7 @@ class PlaySession:
                  persist_dir: Optional[Path] = None, timeout: float = 120, frames: bool = False,
                  live: bool = False, host: Optional[int] = None, join: Optional[str] = None,
                  transport: Optional[str] = None, lang: Optional[str] = None, seat: Optional[int] = None,
-                 world: Optional[str] = None, name: Optional[str] = None):
+                 world: Optional[str] = None, name: Optional[str] = None, latency: Optional[int] = None):
         """``lang``: the language of the game's texts (a ``qg:language``: ``"pt"``); the game's
         own texts by default, whatever this machine's language. ``live``: the game runs at its own speed, 60 ticks a second, and does not wait
         for requests (against a person, or a peer that does not wait). ``host`` (a port) or
@@ -135,6 +135,8 @@ class PlaySession:
         else the lowest free one. The host sits in seat 1. ``world`` (``ws://host:port``) and
         ``name``: a world's client (qg:connect) comes into that world as that player
         (``--q-world``/``--q-name``); its observation has ``world``, what the player knows of it.
+        ``latency`` (ms): every message to and from the world held half that long each way, in the
+        game's ticks (``--q-latency``).
         A test world (``--step``) waits for its harness: ``quantum.runtime.godot_world.WorldTable``
         plays one and the games of its players together."""
         self.project_dir = Path(project_dir)
@@ -155,6 +157,8 @@ class PlaySession:
             self._net.append(f'--q-world={world}')
         if name is not None:
             self._net.append(f'--q-name={name}')
+        if latency is not None:
+            self._net.append(f'--q-latency={int(latency)}')
         self._net.append(f'--q-lang={lang or "en"}')   # an observation reads the same on every machine
         self._tmp = tempfile.TemporaryDirectory(prefix='quantum-play-')
         # what the game had saved when the session began: a restored game starts from it again

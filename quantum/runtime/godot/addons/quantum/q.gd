@@ -52,6 +52,13 @@ static func to_str(v) -> String:
 	return str(v)
 
 
+# A number for a bar: what an expression gave, or 0 for what is not one (a world's field not seen yet).
+static func number(v) -> float:
+	if v is int or v is float:
+		return float(v)
+	return 0.0
+
+
 # `len()` of a string, an array or a dictionary.
 static func len(v) -> int:
 	if v is String:
@@ -1334,6 +1341,7 @@ static func _thing(node):
 var world = null                 # world.gd, once a scene of the world was entered
 var world_url := ""              # --q-world=ws://...: where the world is (else qg:connect's local= or server=)
 var world_player := ""           # --q-name=ana: the name the player comes in with (else qg:connect name=)
+var world_latency := 0           # --q-latency=MS: every message to and from the world held half that, each way
 
 
 func world_open(spec: Dictionary, name_: String) -> void:
@@ -1347,6 +1355,7 @@ func world_open(spec: Dictionary, name_: String) -> void:
 	if who == "":
 		who = "guest-%d" % (randi() % 100000)
 	world = load("res://addons/quantum/world.gd").new()
+	world.setup(spec, world_latency)
 	world.open(url, who)
 
 
@@ -1411,6 +1420,8 @@ func _ready() -> void:
 			world_url = a.substr(10)
 		elif a.begins_with("--q-name="):
 			world_player = a.substr(9)
+		elif a.begins_with("--q-latency="):
+			world_latency = int(a.substr(12))
 
 
 func _physics_process(_delta: float) -> void:
