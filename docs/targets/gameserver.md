@@ -10,7 +10,7 @@ outline: [2, 3]
 > **Laboratory.** The game server is being built, a phase at a time, by
 > [PLAN_GAME_SERVER.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_GAME_SERVER.md); it carries no
 > stability promise and may change in any release (`SUPPORT_TIERS.md`). This page is what is built: Phase 1, the
-> world lives, and the server's half of Phase 2, what each player sees.
+> world lives; Phase 2, what each player sees; and Phase 3, a world that lives by itself.
 
 A `q:application type="gameserver"` is a game's world: its map, its entities, what each player may ask it
 (`q:command`) and its rules (`q:every`, `q:on-join`). The author says those; the network, the saving and the
@@ -24,6 +24,11 @@ only what changed in each of its views: what came in, the fields that changed (t
 ones of its own entity), what left. A view near the player reads the world's index, cells of 16 by 16 tiles, not
 the world. Something that happens and is not kept (a hit, a shout) is an event, `q:emit`, sent with the tick to
 whoever sees where it happened.
+
+A world lives by itself too: `q:spawn` keeps beasts in an area and makes another `respawn=` after one dies, a
+`q:brain` of `q:state`s moves each (wander, chase, flee, stand) with `q:when` to change state, `q:kill` and
+`q:on-death` end one, `q:loot` hands out what it leaves, `q:clock` makes the night, and `q:travel` walks a hero
+around the walls. A beast with no hero within 32 tiles sleeps: it costs nothing.
 
 ```bash
 quantum gameserver check yard.server.q        # read against the schema: what is wrong, with its line
@@ -103,6 +108,124 @@ Goes inside `<q:entity>`.
 | `value=` | value |  | its first value; `account` is the player's ({account.name}) |
 | `private=` | bool | `False` |  |
 
+### `q:brain`
+
+What an entity of the world does by itself, as states (q:state): in each, a way to move (do=) and the conditions that change it (q:when). The world runs a brain a tick at a time, for the entities with a hero near (within 32 tiles); one with no hero near sleeps. Its entity has a public field `state`.
+
+Goes inside `<q:entity>`.
+
+### `q:state`
+
+A state of a brain: what the entity does in it, read every tick (`it` is the entity). stand stays; wander steps now and then within within= tiles of where it was made; chase steps towards target= (and stops next to it); flee steps away from from=, for for= and then becomes then=. target= is kept in the entity's `target` (its id, or '' for none) every tick.
+
+Goes inside `<q:brain>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `name=` | ident | required |  |
+| `initial=` | bool | `False` | the state it is made in (else the first) |
+| `do=` | enum: `stand`, `wander`, `chase`, `flee` | `stand` |  |
+| `within=` | int | `5` | wander: how far from home, in tiles |
+| `target=` | expr |  | chase: an entity (or its id), or null |
+| `from=` | expr |  | flee: an entity (or its id) |
+| `for=` | duration |  | flee: how long, before then= |
+| `then=` | ident |  | flee: the state after for= |
+
+### `q:when`
+
+In a state: when the condition holds, the entity becomes another state (the first q:when that holds, each tick, before it moves).
+
+Goes inside `<q:state>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `condition=` | expr | required |  |
+| `become=` | ident | required |  |
+
+### `q:loot`
+
+In a q:entity: what it leaves when it is killed, its q:drops. In a block (of= and to=): the drops of an entity rolled, from the world's random, and given: an item to the receiver's `bag` (a record of counts), gold to its `gold` (the ledger of Phase 4 will keep them instead).
+
+Goes inside `<q:entity>`, a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `of=` | expr |  | in a block: the entity whose loot it is |
+| `to=` | expr |  | in a block: who gets it |
+
+### `q:drop`
+
+One thing of a loot: an item (so many, with a chance) or gold (so much).
+
+Goes inside `<q:loot>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `item=` | ident |  | its name |
+| `gold=` | range |  | how much gold: 3, or 0-3 |
+| `count=` | range | `1` | how many of the item: 1, or 1-3 |
+| `chance=` | number | `1` | 0 to 1 |
+
+### `q:spawn`
+
+Entities of a kind kept in an area: made at the first tick, at walkable tiles of it no entity stands on, and each one killed made again respawn= later. In q:gameserver it lasts; in a block (a command), it makes count= more now, for for= if given.
+
+Goes inside `<q:gameserver>`, a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `entity=` | ident | required | a q:entity of the world (not the players') |
+| `area=` | ident | required | an area of the map |
+| `count=` | int | `1` |  |
+| `night-count=` | int |  | how many at night (q:clock) |
+| `respawn=` | duration | `60s` | how long after one is killed another is made |
+| `for=` | duration |  | in a block: they go after so long |
+
+### `q:kill`
+
+An entity's end: the world's q:on-death for its kind run, then it goes (a player's stays: its q:on-death brings it back), and its q:spawn makes another respawn= later.
+
+Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `entity=` | expr | required |  |
+| `by=` | expr |  | who killed it: the on-death's by= |
+
+### `q:on-death`
+
+What happens when an entity of these kinds is killed (q:kill), before it goes: as= names it, by= its killer (null if none).
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `kind=` | names | required | the kinds: Rat, Wolf |
+| `as=` | ident | `it` | the name the block gives the killed one |
+| `by=` | ident | `killer` | the name it gives the killer |
+
+### `q:clock`
+
+The world's day: so long a day, the last part of it night. `is_night()` and `daytime()` (0 to 1) read it, and a q:spawn's night-count= follows it.
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `day=` | duration | `60m` |  |
+| `night=` | number | `0.25` | how much of a day is night: 0 to 1 |
+
+### `q:travel`
+
+An entity on its way to a place, a step at a time at its speed, around the walls (the shortest way, within 40 tiles); a q:move or another q:travel of it ends the way.
+
+Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `entity=` | expr | required |  |
+| `to=` | place | required |  |
+
 ### `q:command`
 
 What a player may ask the world, by its name and with its params (the client's qg:send). It runs whole or not at all, as the player who sent it (`me`, their entity): a q:require that does not hold, an argument that is not one of params=, a command sent faster than limit=, or an expression that fails, and nothing it did stays; the player is told why.
@@ -114,6 +237,7 @@ Goes inside `<q:gameserver>`.
 | `name=` | ident | required |  |
 | `params=` | names |  | the arguments it takes: no other, none missing |
 | `limit=` | rate |  | at most so many a player (8/s, 1/3s): one more is refused |
+| `predict=` | bool | `False` | the game shows it at once, before the world says yes: a command whose body is q:requires and one q:move of me to ahead(me, a param); a refusal walks the hero back |
 
 ### `q:require`
 
@@ -287,6 +411,12 @@ The Core's expressions and their stdlib (`len`, `round`, `min`, `join`...), a wo
 | `random(a, b)` | a whole number from a to b; random() a number from 0 to 1. The world's own seeded source: a replay draws the same |
 | `chance(p)` | true with the probability p (0 to 1), from the same source |
 | `pick(list)` | one of a list, from the same source |
+| `nearest(x, kind, n)` | the nearest entity of that kind within n tiles of x (32 if not given), not x itself; null if none |
+| `fighting()` | the entities next to the one they target (their `target`): a fight, a blow each every so often |
+| `in_fight(x)` | it is in a fight: next to its target, or the target of one next to it |
+| `sees(a, b)` | no wall on the straight line between them |
+| `is_night()` | it is night (q:clock); false with no clock |
+| `daytime()` | how far into its day the world is, 0 to 1 (q:clock) |
 | `sqrt(x)` | its square root |
 | `now()` | refused: it is the machine's clock, and a world is replayed; its time is tick() and seconds() |
 
@@ -322,7 +452,7 @@ A game is a world's client with `qg:connect world="meadow.server.q"` (the games'
 
 `quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks' time (median, 99th percentile, worst) and what went out, to the world and to each player. `scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.
 
-## Two worlds, whole
+## Three worlds, whole
 
 `tests/gameserver/worlds/yard/yard.server.q`, the world of Phase 1's tests: a walled yard, a hero a player gets, a step at four steps a second, coins.
 
@@ -444,6 +574,109 @@ A game is a world's client with `qg:connect world="meadow.server.q"` (the games'
       <q:emit event="shout" at="{me}" value="I have {me.purse}" />
       <q:require condition="{me.purse >= 100}" else="Not rich enough." />
     </q:command>
+
+    <q:on-join>
+      <q:if condition="{me.at == null}"><q:move entity="{me}" to="west" /></q:if>
+    </q:on-join>
+  </q:gameserver>
+</q:application>
+```
+
+`tests/gameserver/worlds/den/den.server.q`, the world of Phase 3's: a rat with a brain that bites, dies, leaves its loot and comes back, a fight, a hero's fall, a clock, a way around a wall and a step the game shows at once.
+
+```xml
+<q:application id="den-server" type="gameserver">
+
+  <!-- The den: the world of the game server's Phase 3 tests (PLAN_GAME_SERVER.md), on the meadow's map. A rat lives in
+       the square: it roams near where it was made, bites a hero who comes near, dies of two blows, leaves cheese and
+       a little gold to whoever killed it, and comes back thirty seconds later. At night there are two. A hero walks
+       there by a click (q:travel, around the wall), and a step is shown by the game at once (predict). -->
+
+  <q:gameserver name="den" tick="10" players="10" client="den.q">
+    <q:map name="den" tiled="den.tmx" />
+    <q:clock day="10m" night="0.25" />
+
+    <q:entity name="hero" kind="Hero" per-player="true" speed="10/s" hp="30" attack="5" defense="1">
+      <q:field name="name" value="{account.name}" />
+      <q:field name="mood" value="calm" />
+      <q:field name="kills" value="0" />
+      <q:field name="bag" value="{ {} }" private="true" />
+      <q:field name="gold" value="0" private="true" />
+    </q:entity>
+
+    <q:entity name="rat" kind="Rat" speed="2/s" hp="10" attack="2" defense="0">
+      <q:brain>
+        <q:state name="roam" initial="true" do="wander" within="2">
+          <q:when condition="{nearest(it, 'Hero', 3) != null}" become="bite" />
+        </q:state>
+        <q:state name="bite" do="chase" target="{nearest(it, 'Hero', 6)}">
+          <q:when condition="{it.hp < 3}" become="flee" />
+          <q:when condition="{it.target == ''}" become="roam" />
+        </q:state>
+        <q:state name="flee" do="flee" from="{nearest(it, 'Hero', 8)}" for="3s" then="roam" />
+      </q:brain>
+      <q:loot><q:drop item="cheese" /><q:drop gold="1-3" /></q:loot>
+    </q:entity>
+
+    <q:spawn entity="rat" area="square" count="1" night-count="2" respawn="30s" />
+
+    <q:view name="around" where="{near(it, me, 8)}" />
+
+    <!-- a step the game shows at once: the world says yes, or the hero walks back. A loud hero stands. -->
+    <q:command name="step" params="dir" predict="true">
+      <q:require condition="{walkable(ahead(me, dir))}" else="A wall." />
+      <q:require condition="{me.mood != 'loud'}" else="You are shouting." />
+      <q:move entity="{me}" to="{ahead(me, dir)}" />
+    </q:command>
+
+    <q:command name="go" params="to">
+      <q:travel entity="{me}" to="{to}" />
+    </q:command>
+
+    <q:command name="attack" params="who">
+      <q:require condition="{entity(who) != null and sees(me, who)}" else="You cannot see it." />
+      <q:set name="me.target" value="{who}" />
+    </q:command>
+
+    <q:command name="shout">
+      <q:set name="me.mood" value="loud" />
+    </q:command>
+    <q:command name="hush">
+      <q:set name="me.mood" value="calm" />
+    </q:command>
+
+    <!-- three rats in the east, for five seconds -->
+    <q:command name="call-rats">
+      <q:spawn entity="rat" area="east" count="3" for="5s" />
+    </q:command>
+
+    <!-- a blow a second, from each one next to its target -->
+    <q:every interval="1s">
+      <q:loop items="{fighting()}" var="a">
+        <q:call function="strike" args="{a}, {entity(a.target)}" />
+      </q:loop>
+    </q:every>
+
+    <q:function name="strike" params="a, b">
+      <q:set name="hit" value="{max(1, a.attack - b.defense)}" />
+      <q:set name="b.hp" value="{b.hp - hit}" />
+      <q:emit event="hit" at="{b}" value="{hit}" />
+      <q:if condition="{b.hp <= 0}"><q:kill entity="{b}" by="{a}" /></q:if>
+    </q:function>
+
+    <q:on-death kind="Rat" as="rat" by="killer">
+      <q:loot of="{rat}" to="{killer}" />
+      <q:set name="killer.kills" value="{killer.kills + 1}" />
+      <q:set name="killer.target" value="{''}" />
+    </q:on-death>
+
+    <!-- a hero who falls wakes at the west, whole -->
+    <q:on-death kind="Hero" as="hero">
+      <q:set name="hero.hp" value="{hero.max_hp}" />
+      <q:set name="hero.target" value="{''}" />
+      <q:move entity="{hero}" to="west" />
+      <q:emit event="fallen" at="{hero}" />
+    </q:on-death>
 
     <q:on-join>
       <q:if condition="{me.at == null}"><q:move entity="{me}" to="west" /></q:if>

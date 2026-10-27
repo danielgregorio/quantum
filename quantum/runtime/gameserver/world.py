@@ -19,10 +19,11 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from quantum.core.expressions import ExpressionError
 from quantum.runtime.gameserver.errors import Refused, RuleError
+from quantum.runtime.gameserver.life import MISSING, Life
 from quantum.runtime.gameserver.model import EntityDef, ViewDef, WorldDef
 from quantum.runtime.gameserver.rules import Interpreter, chebyshev, facing_of
 
-_MISSING = object()
+_MISSING = MISSING
 MAX_ARGS = 2048          # the size of a command's arguments, as JSON
 MAX_ERRORS = 100
 MAX_EVENTS = 10_000      # q:emit in a tick
@@ -84,7 +85,7 @@ def _args_ok(value: Any, depth: int = 0) -> bool:
     return False
 
 
-class World:
+class World(Life):
     def __init__(self, definition: WorldDef, seed: int = 0):
         self.definition = definition
         self.tick = 0
@@ -104,6 +105,13 @@ class World:
         self.cells: Dict[Tuple[int, int], Set[str]] = {}       # the index: a cell, the entities on its tiles
         self.cell_of: Dict[str, Tuple[int, int]] = {}
         self._events_mark = 0
+        # Phase 3: what each q:spawn keeps (its living, and the ticks when the next are due), the entities made for
+        # a while (q:spawn for=) and those on their way (q:travel)
+        self.spawned: Dict[str, Dict[str, list]] = {str(i): {'alive': [], 'due': []}
+                                                    for i in range(len(definition.spawns))}
+        self.expiring: Set[str] = set()
+        self.travelers: Set[str] = set()
+        self.dying: Set[str] = set()
         self.rules = Interpreter(self)
         self._private = {name: {f.name for f in e.fields if f.private} for name, e in definition.entities.items()}
         for name, value, line in definition.variables:
@@ -255,13 +263,36 @@ class World:
         self.journal = None
 
     def _rollback(self) -> None:
+        touched = set()
         for target, key, old in reversed(self.journal or []):
             if old is _MISSING:
                 target.pop(key, None)
             else:
                 target[key] = old
+            if target is self.entities:
+                touched.add(key)
+            elif isinstance(target, dict) and isinstance(target.get('id'), str):
+                touched.add(target['id'])
         self.journal = None
         del self.events[self._events_mark:]
+        self.gone = {g for g in self.gone if g not in self.entities}
+        self.reindex(touched)                  # an entity undone where it was, made or gone again
+        for eid in touched:
+            entity = self.entities.get(eid)
+            for kept, key in ((self.travelers, '_path'), (self.expiring, '_expires')):
+                if entity is not None and entity.get(key):
+                    kept.add(eid)
+                else:
+                    kept.discard(eid)
+
+    def put(self, container: dict, key: str, value: Any) -> None:
+        """A key of a container of the world set (or, with _MISSING, taken out), as a transaction's: undone with it."""
+        if self.journal is not None:
+            self.journal.append((container, key, container.get(key, _MISSING)))
+        if value is _MISSING:
+            container.pop(key, None)
+        else:
+            container[key] = value
 
     def _error(self, where: str, e: RuleError) -> None:
         self.errors.append({'tick': self.tick, 'where': where, 'line': e.line, 'message': e.message})
@@ -282,6 +313,7 @@ class World:
             self.write(entity, '_until', self.tick + spec.step_ticks, None, line)
             self.write(entity, 'facing', facing_of(here, to), None, line)
         self.write(entity, 'at', {'x': to[0], 'y': to[1]}, None, line)
+        self.reindex([entity['id']])           # the index follows at once: a brain moving next sees it
 
     def make(self, spec: EntityDef, account: Optional[str] = None) -> dict:
         if spec.per_player:
@@ -294,6 +326,9 @@ class World:
         scope = {'account': {'name': account, 'id': account}}
         for f in spec.fields:
             entity[f.name] = plain(self.rules.value(f.value, scope, f.line))
+        if spec.states:
+            entity['state'] = spec.initial
+            entity['_since'] = self.tick
         return entity
 
     def _join(self, account: str, out: TickOut) -> None:
@@ -398,6 +433,7 @@ class World:
                 ok, result = self._command(account, seq, name, args, out)
                 out.entries.append({'t': self.tick, 'k': 'cmd', 'a': account, 's': seq, 'n': name, 'x': args,
                                     'r': 'ok' if ok else result})
+        self.live()                            # spawns, the ones made for a while, the travellers, the brains
         for ticks, rule in self.definition.every:
             if self.tick % ticks == 0:
                 self._run(rule, {}, 'q:every')
@@ -411,6 +447,7 @@ class World:
         return copy.deepcopy({
             'world': self.definition.name, 'tick': self.tick, 'vars': self.vars, 'entities': self.entities,
             'stored': self.stored, 'players': self.players, 'rates': self.rates, 'counters': self.counters,
+            'spawned': self.spawned,
             'rng': [version, list(state), gauss],
         })
 
@@ -426,6 +463,9 @@ class World:
         world.counters = dict(snap['counters'])
         version, state, gauss = snap['rng']
         world.rng.setstate((version, tuple(state), gauss))
+        world.spawned = copy.deepcopy(snap.get('spawned', world.spawned))
+        world.expiring = {eid for eid, e in world.entities.items() if '_expires' in e}
+        world.travelers = {eid for eid, e in world.entities.items() if e.get('_path')}
         world.reindex(world.entities)
         return world
 

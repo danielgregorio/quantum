@@ -23,6 +23,7 @@ from quantum.runtime.gameserver.schema import TAGS  # noqa: E402
 OUT = REPO / 'docs' / 'targets' / 'gameserver.md'
 YARD = REPO / 'tests' / 'gameserver' / 'worlds' / 'yard' / 'yard.server.q'
 MEADOW = REPO / 'tests' / 'gameserver' / 'worlds' / 'meadow' / 'meadow.server.q'
+DEN = REPO / 'tests' / 'gameserver' / 'worlds' / 'den' / 'den.server.q'
 
 INTRO = '''---
 title: The game server (Laboratory)
@@ -36,7 +37,7 @@ outline: [2, 3]
 > **Laboratory.** The game server is being built, a phase at a time, by
 > [PLAN_GAME_SERVER.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_GAME_SERVER.md); it carries no
 > stability promise and may change in any release (`SUPPORT_TIERS.md`). This page is what is built: Phase 1, the
-> world lives, and the server's half of Phase 2, what each player sees.
+> world lives; Phase 2, what each player sees; and Phase 3, a world that lives by itself.
 
 A `q:application type="gameserver"` is a game's world: its map, its entities, what each player may ask it
 (`q:command`) and its rules (`q:every`, `q:on-join`). The author says those; the network, the saving and the
@@ -50,6 +51,11 @@ only what changed in each of its views: what came in, the fields that changed (t
 ones of its own entity), what left. A view near the player reads the world's index, cells of 16 by 16 tiles, not
 the world. Something that happens and is not kept (a hit, a shout) is an event, `q:emit`, sent with the tick to
 whoever sees where it happened.
+
+A world lives by itself too: `q:spawn` keeps beasts in an area and makes another `respawn=` after one dies, a
+`q:brain` of `q:state`s moves each (wander, chase, flee, stand) with `q:when` to change state, `q:kill` and
+`q:on-death` end one, `q:loot` hands out what it leaves, `q:clock` makes the night, and `q:travel` walks a hero
+around the walls. A beast with no hero within 32 tiles sleeps: it costs nothing.
 
 ```bash
 quantum gameserver check yard.server.q        # read against the schema: what is wrong, with its line
@@ -144,11 +150,14 @@ def protocol_section():
 def example_section():
     yard = YARD.read_text(encoding='utf-8').rstrip('\n')
     meadow = MEADOW.read_text(encoding='utf-8').rstrip('\n')
-    return ('## Two worlds, whole\n\n`tests/gameserver/worlds/yard/yard.server.q`, the world of Phase 1\'s tests: a '
-            'walled yard, a hero a player gets, a step at four steps a second, coins.\n\n```xml\n' + yard +
+    den = DEN.read_text(encoding='utf-8').rstrip('\n')
+    return ('## Three worlds, whole\n\n`tests/gameserver/worlds/yard/yard.server.q`, the world of Phase 1\'s tests: '
+            'a walled yard, a hero a player gets, a step at four steps a second, coins.\n\n```xml\n' + yard +
             '\n```\n\n`tests/gameserver/worlds/meadow/meadow.server.q`, the world of Phase 2\'s: two views, a '
             'private purse, and events to whoever is near, to one player and to all.\n\n```xml\n' + meadow +
-            '\n```\n')
+            '\n```\n\n`tests/gameserver/worlds/den/den.server.q`, the world of Phase 3\'s: a rat with a brain '
+            'that bites, dies, leaves its loot and comes back, a fight, a hero\'s fall, a clock, a way around a wall '
+            'and a step the game shows at once.\n\n```xml\n' + den + '\n```\n')
 
 
 def build() -> str:

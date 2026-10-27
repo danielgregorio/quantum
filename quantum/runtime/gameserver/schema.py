@@ -2,7 +2,7 @@
 
 This table is the single source: the model validates a world against it, the reference page is generated from it,
 and a tag with no entry does not exist (the Core used to drop a gameserver's children without a word). It holds
-what has been built (PLAN_GAME_SERVER.md, Phases 1 and 2); the tags of the later phases come in with them. Attribute types:
+what has been built (PLAN_GAME_SERVER.md, Phases 1 to 3); the tags of the later phases come in with them. Attribute types:
 
 - `ident`: a name (`[A-Za-z_][A-Za-z0-9_-]*`)
 - `names`: names separated by commas (`dir, speed`)
@@ -10,7 +10,8 @@ what has been built (PLAN_GAME_SERVER.md, Phases 1 and 2); the tags of the later
 - `value`: a number, true or false, or a text as written; or, all of it in braces, an expression (`{[]}`)
 - `expr`: an expression, with or without its braces
 - `place`: an area of the map by its name (`temple`), or an expression giving a tile or an entity
-- `int`, `bool`
+- `int`, `bool`, `number` (a whole number or not: 0.5)
+- `range`: a whole number, or two with a dash between: `3`, `0-3`
 - `rate`: so many in so long: `8/s`, `1/3s`, `30/m`
 - `duration`: `500ms`, `2s`, `5m`, `1h`
 - `enum:a|b|c`
@@ -38,9 +39,10 @@ class Tag:
     # q:every, q:on-join, q:on-leave, a q:function, and q:if, q:elseif, q:else and q:loop inside them).
     parents: Tuple[str, ...] = ()
     text: Optional[str] = None
+    extra: Optional[str] = None      # what its other attributes are, when it takes any (q:entity: its fields)
 
 
-HANDLERS = ('command', 'every', 'on-join', 'on-leave', 'function', 'if', 'elseif', 'else', 'loop')
+HANDLERS = ('command', 'every', 'on-join', 'on-leave', 'on-death', 'function', 'if', 'elseif', 'else', 'loop')
 
 TAGS: Dict[str, Tag] = {
     'gameserver': Tag(
@@ -72,7 +74,9 @@ TAGS: Dict[str, Tag] = {
          'persist': Attr('bool', False, doc='kept between a player\'s sessions (with per-player)'),
          'speed': Attr('rate', '4/s', doc='steps a second: a step (a q:move to a tile next to it) takes so long, '
                                           'and another waits for it')},
-        ('gameserver',)),
+        ('gameserver',),
+        extra='its fields, public, with their first values (hp="20" attack="3"): one that fights has hp, and with '
+              'it max_hp (as hp, unless given) and target (none, \'\')'),
     'field': Tag(
         'A field of an entity: what it starts as, and who sees it. A private field goes only to the player whose '
         'entity it is; the others go to whoever sees the entity.',
@@ -80,6 +84,81 @@ TAGS: Dict[str, Tag] = {
          'value': Attr('value', '', doc='its first value; `account` is the player\'s ({account.name})'),
          'private': Attr('bool', False)},
         ('entity',)),
+    'brain': Tag(
+        'What an entity of the world does by itself, as states (q:state): in each, a way to move (do=) and the '
+        'conditions that change it (q:when). The world runs a brain a tick at a time, for the entities with a '
+        'hero near (within 32 tiles); one with no hero near sleeps. Its entity has a public field `state`.',
+        {}, ('entity',)),
+    'state': Tag(
+        'A state of a brain: what the entity does in it, read every tick (`it` is the entity). stand stays; '
+        'wander steps now and then within within= tiles of where it was made; chase steps towards target= (and '
+        'stops next to it); flee steps away from from=, for for= and then becomes then=. target= is kept in the '
+        'entity\'s `target` (its id, or \'\' for none) every tick.',
+        {'name': Attr('ident', required=True),
+         'initial': Attr('bool', False, doc='the state it is made in (else the first)'),
+         'do': Attr('enum:stand|wander|chase|flee', 'stand'),
+         'within': Attr('int', 5, doc='wander: how far from home, in tiles'),
+         'target': Attr('expr', doc='chase: an entity (or its id), or null'),
+         'from': Attr('expr', doc='flee: an entity (or its id)'),
+         'for': Attr('duration', doc='flee: how long, before then='),
+         'then': Attr('ident', doc='flee: the state after for=')},
+        ('brain',)),
+    'when': Tag(
+        'In a state: when the condition holds, the entity becomes another state (the first q:when that holds, '
+        'each tick, before it moves).',
+        {'condition': Attr('expr', required=True),
+         'become': Attr('ident', required=True)},
+        ('state',)),
+    'loot': Tag(
+        'In a q:entity: what it leaves when it is killed, its q:drops. In a block (of= and to=): the drops of an '
+        'entity rolled, from the world\'s random, and given: an item to the receiver\'s `bag` (a record of counts), '
+        'gold to its `gold` (the ledger of Phase 4 will keep them instead).',
+        {'of': Attr('expr', doc='in a block: the entity whose loot it is'),
+         'to': Attr('expr', doc='in a block: who gets it')},
+        ('entity', 'handler')),
+    'drop': Tag(
+        'One thing of a loot: an item (so many, with a chance) or gold (so much).',
+        {'item': Attr('ident', doc='its name'),
+         'gold': Attr('range', doc='how much gold: 3, or 0-3'),
+         'count': Attr('range', '1', doc='how many of the item: 1, or 1-3'),
+         'chance': Attr('number', 1, doc='0 to 1')},
+        ('loot',)),
+    'spawn': Tag(
+        'Entities of a kind kept in an area: made at the first tick, at walkable tiles of it no entity stands on, '
+        'and each one killed made again respawn= later. In q:gameserver it lasts; in a block (a command), it makes '
+        'count= more now, for for= if given.',
+        {'entity': Attr('ident', required=True, doc='a q:entity of the world (not the players\')'),
+         'area': Attr('ident', required=True, doc='an area of the map'),
+         'count': Attr('int', 1),
+         'night-count': Attr('int', doc='how many at night (q:clock)'),
+         'respawn': Attr('duration', '60s', doc='how long after one is killed another is made'),
+         'for': Attr('duration', doc='in a block: they go after so long')},
+        ('gameserver', 'handler')),
+    'kill': Tag(
+        'An entity\'s end: the world\'s q:on-death for its kind run, then it goes (a player\'s stays: its '
+        'q:on-death brings it back), and its q:spawn makes another respawn= later.',
+        {'entity': Attr('expr', required=True),
+         'by': Attr('expr', doc='who killed it: the on-death\'s by=')},
+        ('handler',)),
+    'on-death': Tag(
+        'What happens when an entity of these kinds is killed (q:kill), before it goes: as= names it, by= its '
+        'killer (null if none).',
+        {'kind': Attr('names', required=True, doc='the kinds: Rat, Wolf'),
+         'as': Attr('ident', 'it', doc='the name the block gives the killed one'),
+         'by': Attr('ident', 'killer', doc='the name it gives the killer')},
+        ('gameserver',)),
+    'clock': Tag(
+        'The world\'s day: so long a day, the last part of it night. `is_night()` and `daytime()` (0 to 1) read '
+        'it, and a q:spawn\'s night-count= follows it.',
+        {'day': Attr('duration', '60m'),
+         'night': Attr('number', 0.25, doc='how much of a day is night: 0 to 1')},
+        ('gameserver',)),
+    'travel': Tag(
+        'An entity on its way to a place, a step at a time at its speed, around the walls (the shortest way, '
+        'within 40 tiles); a q:move or another q:travel of it ends the way.',
+        {'entity': Attr('expr', required=True),
+         'to': Attr('place', required=True)},
+        ('handler',)),
     'command': Tag(
         'What a player may ask the world, by its name and with its params (the client\'s qg:send). It runs whole or '
         'not at all, as the player who sent it (`me`, their entity): a q:require that does not hold, an argument '
@@ -87,7 +166,10 @@ TAGS: Dict[str, Tag] = {
         'it did stays; the player is told why.',
         {'name': Attr('ident', required=True),
          'params': Attr('names', '', doc='the arguments it takes: no other, none missing'),
-         'limit': Attr('rate', doc='at most so many a player (8/s, 1/3s): one more is refused')},
+         'limit': Attr('rate', doc='at most so many a player (8/s, 1/3s): one more is refused'),
+         'predict': Attr('bool', False, doc='the game shows it at once, before the world says yes: a command '
+                                            'whose body is q:requires and one q:move of me to ahead(me, a '
+                                            'param); a refusal walks the hero back')},
         ('gameserver',)),
     'require': Tag(
         'A condition the command needs: if it does not hold, the command is refused, with else= as the reason.',

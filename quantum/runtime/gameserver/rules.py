@@ -1,5 +1,5 @@
 """A world's statements run: q:set, q:if, q:loop, q:call and q:return, as the Core's, and the world's own q:require,
-q:move and q:emit; and the functions a world's expressions call.
+q:move, q:emit, q:spawn, q:kill, q:loot and q:travel; and the functions a world's expressions call.
 
 Every write to the world goes through World.write, so a command that is refused (or fails) is undone whole: the
 world keeps a journal of what each write replaced while a command runs, and plays it back.
@@ -15,7 +15,7 @@ from xml.etree import ElementTree as ET
 from quantum.core.expressions import ExpressionError
 from quantum.runtime.gameserver.errors import Refused, RuleError
 from quantum.runtime.gameserver.expressions import WorldEvaluator, literal, parts_of, text_of, unbraced
-from quantum.runtime.gameserver.model import NOT_IN_A_VIEW, Q_NS
+from quantum.runtime.gameserver.model import NOT_IN_A_VIEW, Q_NS, seconds_of
 
 # the eight ways a step goes, as the game says them
 DIRECTIONS: Dict[str, Tuple[int, int]] = {
@@ -46,6 +46,13 @@ FUNCTION_DOCS: Dict[str, str] = {
                     'a replay draws the same',
     'chance(p)': 'true with the probability p (0 to 1), from the same source',
     'pick(list)': 'one of a list, from the same source',
+    'nearest(x, kind, n)': 'the nearest entity of that kind within n tiles of x (32 if not given), not x itself; '
+                           'null if none',
+    'fighting()': 'the entities next to the one they target (their `target`): a fight, a blow each every so often',
+    'in_fight(x)': 'it is in a fight: next to its target, or the target of one next to it',
+    'sees(a, b)': 'no wall on the straight line between them',
+    'is_night()': "it is night (q:clock); false with no clock",
+    'daytime()': "how far into its day the world is, 0 to 1 (q:clock)",
     'sqrt(x)': 'its square root',
     'now()': "refused: it is the machine's clock, and a world is replayed; its time is tick() and seconds()",
 }
@@ -155,10 +162,29 @@ class Interpreter:
             if not truthy(self.evaluate(el.get('condition'), local, line)):
                 raise Refused(self.text(el.get('else', 'Not allowed.'), local, line))
         elif name == 'move':
-            entity = self.evaluate(el.get('entity'), local, line)
-            self.world.move(self.world.entity_of(entity, line), self.place(el.get('to'), local, line), line)
+            entity = self.world.entity_of(self.evaluate(el.get('entity'), local, line), line)
+            self.world.stop_travel(entity, line)
+            self.world.move(entity, self.place(el.get('to'), local, line), line)
         elif name == 'emit':
             self.emit(el, local, line)
+        elif name == 'travel':
+            entity = self.world.entity_of(self.evaluate(el.get('entity'), local, line), line)
+            self.world.stop_travel(entity, line)
+            self.world.travel(entity, self.place(el.get('to'), local, line), line)
+        elif name == 'kill':
+            entity = self.world.entity_of(self.evaluate(el.get('entity'), local, line), line)
+            by = self.world._entity(self.evaluate(el.get('by'), local, line)) if el.get('by') else None
+            self.world.kill(entity, by, line)
+        elif name == 'loot':
+            if el.get('of') is None or el.get('to') is None:
+                raise RuleError('q:loot in a block takes of= and to=', line)
+            of = self.world.entity_of(self.evaluate(el.get('of'), local, line), line)
+            to = self.world.entity_of(self.evaluate(el.get('to'), local, line), line)
+            self.world.loot(of, to, line)
+        elif name == 'spawn':
+            ticks = (max(1, round(seconds_of(el.get('for')) * self.world.definition.tick_rate))
+                     if el.get('for') else None)
+            self.world.spawn_now(el.get('entity'), el.get('area'), int(el.get('count', 1)), ticks, line)
         else:                                # the schema has let nothing else through
             raise RuleError(f'<q:{name}> does not run in a block', line)
 
@@ -371,6 +397,8 @@ class Interpreter:
             'in_area': in_area, 'area': area, 'heroes': heroes, 'entities': entities, 'entity': entity,
             'tick': lambda: world.tick, 'seconds': lambda: world.tick / world.definition.tick_rate,
             'random': random, 'chance': chance, 'pick': pick, 'now': now, 'sqrt': math.sqrt,
+            'nearest': world.nearest, 'fighting': world.fighting, 'in_fight': world.in_fight, 'sees': world.line_of_sight,
+            'is_night': world.is_night, 'daytime': world.daytime,
         }
 
 
