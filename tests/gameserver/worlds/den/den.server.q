@@ -1,20 +1,24 @@
 <q:application id="den-server" type="gameserver">
 
-  <!-- The den: the world of the game server's Phase 3 tests (PLAN_GAME_SERVER.md), on the meadow's map. A rat lives in
-       the square: it roams near where it was made, bites a hero who comes near, dies of two blows, leaves cheese and
-       a little gold to whoever killed it, and comes back thirty seconds later. At night there are two. A hero walks
-       there by a click (q:travel, around the wall), and a step is shown by the game at once (predict). -->
+  <!-- The den: the world of the game server's Phase 3 and 4 tests (PLAN_GAME_SERVER.md), on the meadow's map. A rat
+       lives in the square: it roams near where it was made, bites a hero who comes near, dies of two blows, leaves
+       cheese and a little gold to whoever killed it, and comes back thirty seconds later. At night there are two. A
+       hero walks there by a click (q:travel, around the wall), and a step is shown by the game at once (predict).
+       Gold and things are the ledger's: bought, sold, eaten, given, looted, and counted. -->
 
   <q:gameserver name="den" tick="10" players="10" client="den.q">
     <q:map name="den" tiled="den.tmx" />
     <q:clock day="10m" night="0.25" />
 
+    <!-- the ledger: gold, and two things; a hero comes in with ten gold -->
+    <q:currency name="gold" start="10" />
+    <q:item name="cheese" price="2" heals="5" />
+    <q:item name="sword" price="8" slot="weapon" attack="3" />
+
     <q:entity name="hero" kind="Hero" per-player="true" speed="10/s" hp="30" attack="5" defense="1">
       <q:field name="name" value="{account.name}" />
       <q:field name="mood" value="calm" />
       <q:field name="kills" value="0" />
-      <q:field name="bag" value="{ {} }" private="true" />
-      <q:field name="gold" value="0" private="true" />
     </q:entity>
 
     <q:entity name="rat" kind="Rat" speed="2/s" hp="10" attack="2" defense="0">
@@ -58,6 +62,26 @@
       <q:set name="me.mood" value="calm" />
     </q:command>
 
+    <!-- the ledger's commands: a thing bought for its price, sold for half, eaten, gold given -->
+    <q:command name="buy" params="item">
+      <q:require condition="{item(item) != null}" else="No such thing." />
+      <q:take from="{me}" amount="{price(item)}" />
+      <q:give to="{me}" item="{item}" />
+    </q:command>
+    <q:command name="sell" params="item">
+      <q:take from="{me}" item="{item}" />
+      <q:give to="{me}" amount="{price(item) // 2}" />
+    </q:command>
+    <q:command name="eat" params="item">
+      <q:require condition="{heals(item) > 0}" else="Not to eat." />
+      <q:take from="{me}" item="{item}" />
+      <q:set name="me.hp" value="{min(me.max_hp, me.hp + heals(item))}" />
+    </q:command>
+    <q:command name="tip" params="who, amount">
+      <q:require condition="{entity(who) != null and who != me.id}" else="Nobody to tip." />
+      <q:pay from="{me}" to="{who}" amount="{amount}" />
+    </q:command>
+
     <!-- three rats in the east, for five seconds -->
     <q:command name="call-rats">
       <q:spawn entity="rat" area="east" count="3" for="5s" />
@@ -66,7 +90,10 @@
     <!-- a blow a second, from each one next to its target -->
     <q:every interval="1s">
       <q:loop items="{fighting()}" var="a">
-        <q:call function="strike" args="{a}, {entity(a.target)}" />
+        <!-- one killed earlier in this second strikes nothing, and is struck by no one -->
+        <q:if condition="{entity(a.id) != null and entity(a.target) != null}">
+          <q:call function="strike" args="{a}, {entity(a.target)}" />
+        </q:if>
       </q:loop>
     </q:every>
 

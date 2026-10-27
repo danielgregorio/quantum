@@ -124,3 +124,10 @@ def test_what_the_bars_refuse(tmp_path, change, says):
     with pytest.raises(GameCompileError) as e:
         build_den(tmp_path, source.replace(change[0], change[1], 1))
     assert says in str(e.value), str(e.value)
+
+
+def test_the_game_reads_what_a_hero_holds_of_the_ledger(tmp_path):
+    source = (DEN / 'den.q').read_text().replace("str(me().kills) + ' rats'",
+                                                  "str(me().kills) + ' rats ' + str(me().gold) + ' gold'")
+    script = (build_den(tmp_path, source) / 'scripts' / 'scene_den.gd').read_text()
+    assert 'Q.wf(Q.world_me(), "gold")' in script

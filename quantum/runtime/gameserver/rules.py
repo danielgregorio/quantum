@@ -53,6 +53,13 @@ FUNCTION_DOCS: Dict[str, str] = {
     'sees(a, b)': 'no wall on the straight line between them',
     'is_night()': "it is night (q:clock); false with no clock",
     'daytime()': "how far into its day the world is, 0 to 1 (q:clock)",
+    'balance(x, currency)': "what x has of a currency (the world's first, if not given)",
+    'has(x, item, n)': 'x has n of the item in its bag (1, if not given)',
+    'item(name)': "what the item is: its q:item's attributes, as a record; null if there is no such item",
+    'price(item)': "the item's price= (0 if it has none)",
+    'heals(item)': "the item's heals= (0 if it has none)",
+    'slot(item)': "the item's slot= ('' if it has none)",
+    'bonus(item, name)': 'a number of the item: bonus(sword, \'attack\'); 0 if it has none',
     'sqrt(x)': 'its square root',
     'now()': "refused: it is the machine's clock, and a world is replayed; its time is tick() and seconds()",
 }
@@ -181,6 +188,17 @@ class Interpreter:
             of = self.world.entity_of(self.evaluate(el.get('of'), local, line), line)
             to = self.world.entity_of(self.evaluate(el.get('to'), local, line), line)
             self.world.loot(of, to, line)
+        elif name in ('give', 'take'):
+            holder = self.world.entity_of(self.evaluate(el.get('to' if name == 'give' else 'from'), local, line), line)
+            item = self.evaluate(el.get('item'), local, line) if el.get('item') is not None else None
+            count = self.evaluate(el.get('count', '1'), local, line) if item is not None else None
+            amount = self.evaluate(el.get('amount'), local, line) if el.get('amount') is not None else None
+            (self.world.give if name == 'give' else self.world.take)(holder, item, count, amount,
+                                                                     el.get('currency'), line)
+        elif name == 'pay':
+            payer = self.world.entity_of(self.evaluate(el.get('from'), local, line), line)
+            to = self.world.entity_of(self.evaluate(el.get('to'), local, line), line)
+            self.world.pay(payer, to, self.evaluate(el.get('amount'), local, line), el.get('currency'), line)
         elif name == 'spawn':
             ticks = (max(1, round(seconds_of(el.get('for')) * self.world.definition.tick_rate))
                      if el.get('for') else None)
@@ -273,6 +291,9 @@ class Interpreter:
         key = parts[-1]
         if target is root and self.world.is_entity(root) and (key in READ_ONLY or key.startswith('_')):
             raise RuleError(f'q:set name="{name}": an entity\'s {key} is the world\'s', line)
+        if self.world.is_entity(root) and parts[1] in self.world.ledger_fields():
+            raise RuleError(f'q:set name="{name}": {parts[1]} is the ledger\'s: q:give, q:take and q:pay change it',
+                            line)
         self.world.write(target, key, value, root, line)
 
     def place(self, raw: str, local: Dict[str, Any], line: Optional[int]) -> Tuple[int, int]:
@@ -399,6 +420,11 @@ class Interpreter:
             'random': random, 'chance': chance, 'pick': pick, 'now': now, 'sqrt': math.sqrt,
             'nearest': world.nearest, 'fighting': world.fighting, 'in_fight': world.in_fight, 'sees': world.line_of_sight,
             'is_night': world.is_night, 'daytime': world.daytime,
+            'balance': world.balance, 'has': world.has, 'item': world.item_of,
+            'price': lambda i: world.item_value(i, 'price', 0), 'heals': lambda i: world.item_value(i, 'heals', 0),
+            'slot': lambda i: world.item_value(i, 'slot', ''),
+            'bonus': lambda i, name: world.item_value(i, name, 0) if isinstance(world.item_value(i, name, 0),
+                                                                                 (int, float)) else 0,
         }
 
 

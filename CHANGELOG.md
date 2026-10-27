@@ -10,6 +10,18 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the game server's Phase 3 (`PLAN_GAME_SERVER.md`), a world that
+  lives by itself. `q:spawn` keeps beasts in an area and makes another
+  `respawn=` after one is killed (more at night with `q:clock`); `q:brain`'s
+  `q:state`s make an entity stand, wander, chase or flee, and `q:when`
+  changes its state; a beast with no hero within 32 tiles sleeps. `q:kill`
+  runs the `q:on-death` of its kind, `q:loot` gives its `q:drop`s, and
+  `q:travel` walks a hero around the walls. An entity's other attributes are
+  its fields (`hp="10"`, and with it `max_hp` and `target`). All of it is in
+  the tick, journaled and replayed exactly. In the game, a command with
+  `predict="true"` is drawn at once and walked back if the world refuses it;
+  `--q-latency=MS` puts latency between a game and its world for a test;
+  `qg:health-bar` and `qg:bar value=` show health from the world.
 - Laboratory: the game server's Phase 2 (`PLAN_GAME_SERVER.md`), views and
   the game. A world's `q:view where="{near(it, me, 9)}"` is what each player
   sees, read from an index of the world's cells, and each player is sent only

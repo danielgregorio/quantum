@@ -19,6 +19,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from quantum.core.expressions import ExpressionError
 from quantum.runtime.gameserver.errors import Refused, RuleError
+from quantum.runtime.gameserver.ledger import Ledger
 from quantum.runtime.gameserver.life import MISSING, Life
 from quantum.runtime.gameserver.model import EntityDef, ViewDef, WorldDef
 from quantum.runtime.gameserver.rules import Interpreter, chebyshev, facing_of
@@ -85,7 +86,7 @@ def _args_ok(value: Any, depth: int = 0) -> bool:
     return False
 
 
-class World(Life):
+class World(Life, Ledger):
     def __init__(self, definition: WorldDef, seed: int = 0):
         self.definition = definition
         self.tick = 0
@@ -112,8 +113,13 @@ class World(Life):
         self.expiring: Set[str] = set()
         self.travelers: Set[str] = set()
         self.dying: Set[str] = set()
+        # Phase 4: the ledger's books, {made|spent: {asset: {where: n}}}, and where the world is as it writes them
+        self.books: Dict[str, Dict[str, Dict[str, int]]] = {'made': {}, 'spent': {}}
+        self.source = 'world'
         self.rules = Interpreter(self)
-        self._private = {name: {f.name for f in e.fields if f.private} for name, e in definition.entities.items()}
+        ledger = ({'bag'} | set(definition.currencies)) if definition.ledger else set()
+        self._private = {name: {f.name for f in e.fields if f.private} | ledger    # what one holds is its own
+                         for name, e in definition.entities.items()}
         for name, value, line in definition.variables:
             self.vars[name] = plain(self.rules.value(value, {}, line))
 
@@ -329,6 +335,10 @@ class World(Life):
         if spec.states:
             entity['state'] = spec.initial
             entity['_since'] = self.tick
+        if self.definition.ledger and spec.per_player:      # a hero holds: a bag, and each currency
+            entity.setdefault('bag', {})
+            for currency, start in self.definition.currencies.items():
+                entity.setdefault(currency, start)
         return entity
 
     def _join(self, account: str, out: TickOut) -> None:
@@ -341,10 +351,12 @@ class World(Life):
         hero = self.stored.pop(account, None) if spec.persist else None
         if hero is None:
             hero = self.make(spec, account)
+            self.mint_start(hero)
         self.entities[hero['id']] = hero
         self.players[account] = hero['id']
         self.dirty.add(hero['id'])
         self.gone.discard(hero['id'])
+        self.reindex([hero['id']])                 # where it stands, in the index at once: a brain may look
         out.joined[account] = hero['id']
         for block in self.definition.on_join:
             self._run(block, {'me': hero}, 'q:on-join')
@@ -360,12 +372,16 @@ class World(Life):
         del self.players[account]
         if self.definition.hero.persist:
             self.stored[account] = hero
+        else:
+            self.spend_all(hero, 'left the world')
         self.gone.add(eid)
         self.dirty.discard(eid)
+        self.reindex([eid])                        # out of the index at once: no brain finds it this tick
         out.left.append(account)
 
     def _run(self, block, local: Dict[str, Any], where: str) -> bool:
         """A rule's run, as a transaction: what fails is undone and kept in the errors."""
+        self.source = where
         self._begin()
         try:
             self.rules.run(block, local)
@@ -400,6 +416,7 @@ class World(Life):
                 self.rates[key] = recent
                 return no('Too fast.')
             self.rates[key] = recent + [self.tick]
+        self.source = f'q:command {name}'
         self._begin()
         try:
             self.rules.run(command.body, {'me': self.entities[eid], **args})
@@ -447,7 +464,7 @@ class World(Life):
         return copy.deepcopy({
             'world': self.definition.name, 'tick': self.tick, 'vars': self.vars, 'entities': self.entities,
             'stored': self.stored, 'players': self.players, 'rates': self.rates, 'counters': self.counters,
-            'spawned': self.spawned,
+            'spawned': self.spawned, 'books': self.books,
             'rng': [version, list(state), gauss],
         })
 
@@ -464,6 +481,7 @@ class World(Life):
         version, state, gauss = snap['rng']
         world.rng.setstate((version, tuple(state), gauss))
         world.spawned = copy.deepcopy(snap.get('spawned', world.spawned))
+        world.books = copy.deepcopy(snap.get('books', world.books))
         world.expiring = {eid for eid, e in world.entities.items() if '_expires' in e}
         world.travelers = {eid for eid, e in world.entities.items() if e.get('_path')}
         world.reindex(world.entities)

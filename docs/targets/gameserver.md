@@ -226,6 +226,68 @@ Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:f
 | `entity=` | expr | required |  |
 | `to=` | place | required |  |
 
+### `q:currency`
+
+A money of the world, kept by its ledger: a hero has it in a private field of its name (gold), which only q:give, q:take, q:pay and q:loot change (a q:set of it is refused), and the world counts what was made and spent of it, by where. The first currency is the one q:pay and q:give amount= pay in when none is named.
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `name=` | ident | required |  |
+| `start=` | int | `0` | what a hero has of it when it is made |
+
+### `q:item`
+
+A thing of the world: a hero holds items in its private `bag` (a record of counts), which only the ledger changes. Its other attributes are what it is (price="40" heals="50" slot="weapon" attack="7"), read by price(), heals(), slot(), bonus() and item(). With one q:item, every item given, taken or dropped is one.
+
+Goes inside `<q:gameserver>`.
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `name=` | ident | required |  |
+
+### `q:give`
+
+Something made for an entity: an item (count= of it) or an amount of a currency, counted by the ledger as made here.
+
+Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `to=` | expr | required |  |
+| `item=` | expr |  | the item's name (or amount=) |
+| `count=` | expr | `1` |  |
+| `amount=` | expr |  | of the currency (or item=) |
+| `currency=` | ident |  | which (the first, if not given) |
+
+### `q:take`
+
+Something an entity has, taken and spent: an item (count=) or an amount. Not enough, and the command is refused (Not enough gold.).
+
+Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `from=` | expr | required |  |
+| `item=` | expr |  |  |
+| `count=` | expr | `1` |  |
+| `amount=` | expr |  |  |
+| `currency=` | ident |  |  |
+
+### `q:pay`
+
+An amount from one entity to another: nothing is made or spent. Not enough, and the command is refused.
+
+Goes inside a block (a `q:command`, `q:every`, `q:on-join`, `q:on-leave`, a `q:function`, and the `q:if`, `q:elseif`, `q:else` and `q:loop` in them).
+
+| Attribute | Type | Default | What it is |
+|---|---|---|---|
+| `from=` | expr | required |  |
+| `to=` | expr | required |  |
+| `amount=` | expr | required |  |
+| `currency=` | ident |  |  |
+
 ### `q:command`
 
 What a player may ask the world, by its name and with its params (the client's qg:send). It runs whole or not at all, as the player who sent it (`me`, their entity): a q:require that does not hold, an argument that is not one of params=, a command sent faster than limit=, or an expression that fails, and nothing it did stays; the player is told why.
@@ -417,6 +479,13 @@ The Core's expressions and their stdlib (`len`, `round`, `min`, `join`...), a wo
 | `sees(a, b)` | no wall on the straight line between them |
 | `is_night()` | it is night (q:clock); false with no clock |
 | `daytime()` | how far into its day the world is, 0 to 1 (q:clock) |
+| `balance(x, currency)` | what x has of a currency (the world's first, if not given) |
+| `has(x, item, n)` | x has n of the item in its bag (1, if not given) |
+| `item(name)` | what the item is: its q:item's attributes, as a record; null if there is no such item |
+| `price(item)` | the item's price= (0 if it has none) |
+| `heals(item)` | the item's heals= (0 if it has none) |
+| `slot(item)` | the item's slot= ('' if it has none) |
+| `bonus(item, name)` | a number of the item: bonus(sword, 'attack'); 0 if it has none |
 | `sqrt(x)` | its square root |
 | `now()` | refused: it is the machine's clock, and a world is replayed; its time is tick() and seconds() |
 
@@ -587,21 +656,25 @@ A game is a world's client with `qg:connect world="meadow.server.q"` (the games'
 ```xml
 <q:application id="den-server" type="gameserver">
 
-  <!-- The den: the world of the game server's Phase 3 tests (PLAN_GAME_SERVER.md), on the meadow's map. A rat lives in
-       the square: it roams near where it was made, bites a hero who comes near, dies of two blows, leaves cheese and
-       a little gold to whoever killed it, and comes back thirty seconds later. At night there are two. A hero walks
-       there by a click (q:travel, around the wall), and a step is shown by the game at once (predict). -->
+  <!-- The den: the world of the game server's Phase 3 and 4 tests (PLAN_GAME_SERVER.md), on the meadow's map. A rat
+       lives in the square: it roams near where it was made, bites a hero who comes near, dies of two blows, leaves
+       cheese and a little gold to whoever killed it, and comes back thirty seconds later. At night there are two. A
+       hero walks there by a click (q:travel, around the wall), and a step is shown by the game at once (predict).
+       Gold and things are the ledger's: bought, sold, eaten, given, looted, and counted. -->
 
   <q:gameserver name="den" tick="10" players="10" client="den.q">
     <q:map name="den" tiled="den.tmx" />
     <q:clock day="10m" night="0.25" />
 
+    <!-- the ledger: gold, and two things; a hero comes in with ten gold -->
+    <q:currency name="gold" start="10" />
+    <q:item name="cheese" price="2" heals="5" />
+    <q:item name="sword" price="8" slot="weapon" attack="3" />
+
     <q:entity name="hero" kind="Hero" per-player="true" speed="10/s" hp="30" attack="5" defense="1">
       <q:field name="name" value="{account.name}" />
       <q:field name="mood" value="calm" />
       <q:field name="kills" value="0" />
-      <q:field name="bag" value="{ {} }" private="true" />
-      <q:field name="gold" value="0" private="true" />
     </q:entity>
 
     <q:entity name="rat" kind="Rat" speed="2/s" hp="10" attack="2" defense="0">
@@ -645,6 +718,26 @@ A game is a world's client with `qg:connect world="meadow.server.q"` (the games'
       <q:set name="me.mood" value="calm" />
     </q:command>
 
+    <!-- the ledger's commands: a thing bought for its price, sold for half, eaten, gold given -->
+    <q:command name="buy" params="item">
+      <q:require condition="{item(item) != null}" else="No such thing." />
+      <q:take from="{me}" amount="{price(item)}" />
+      <q:give to="{me}" item="{item}" />
+    </q:command>
+    <q:command name="sell" params="item">
+      <q:take from="{me}" item="{item}" />
+      <q:give to="{me}" amount="{price(item) // 2}" />
+    </q:command>
+    <q:command name="eat" params="item">
+      <q:require condition="{heals(item) > 0}" else="Not to eat." />
+      <q:take from="{me}" item="{item}" />
+      <q:set name="me.hp" value="{min(me.max_hp, me.hp + heals(item))}" />
+    </q:command>
+    <q:command name="tip" params="who, amount">
+      <q:require condition="{entity(who) != null and who != me.id}" else="Nobody to tip." />
+      <q:pay from="{me}" to="{who}" amount="{amount}" />
+    </q:command>
+
     <!-- three rats in the east, for five seconds -->
     <q:command name="call-rats">
       <q:spawn entity="rat" area="east" count="3" for="5s" />
@@ -653,7 +746,10 @@ A game is a world's client with `qg:connect world="meadow.server.q"` (the games'
     <!-- a blow a second, from each one next to its target -->
     <q:every interval="1s">
       <q:loop items="{fighting()}" var="a">
-        <q:call function="strike" args="{a}, {entity(a.target)}" />
+        <!-- one killed earlier in this second strikes nothing, and is struck by no one -->
+        <q:if condition="{entity(a.id) != null and entity(a.target) != null}">
+          <q:call function="strike" args="{a}, {entity(a.target)}" />
+        </q:if>
       </q:loop>
     </q:every>
 

@@ -94,6 +94,7 @@ class Life:
         self.put(self.entities, entity['id'], entity)
         self.dirty.add(entity['id'])
         self.reindex([entity['id']])
+        self.mint_start(entity)
         return entity
 
     def spawn_now(self, name: str, area: str, count: int, for_ticks: Optional[int], line: Optional[int]) -> None:
@@ -112,8 +113,9 @@ class Life:
                 self.expiring.add(entity['id'])
 
     def remove(self, entity: dict) -> None:
-        """An entity out of the world (its spawn makes another respawn= later)."""
+        """An entity out of the world (its spawn makes another respawn= later); what it held, spent."""
         eid = entity['id']
+        self.spend_all(entity, f'gone: {entity.get("kind")}')
         self.put(self.entities, eid, MISSING)
         self.gone.add(eid)
         self.dirty.discard(eid)
@@ -145,6 +147,19 @@ class Life:
     def loot(self, of: dict, to: dict, line: Optional[int]) -> None:
         """q:loot: the drops of an entity, rolled: an item to the receiver's bag, gold to its gold."""
         spec = self.definition.entities.get(of.get('_type'))
+        if self.definition.ledger:                           # made by the ledger, booked as this kind's loot
+            before, self.source = self.source, f'loot of {of.get("kind")}'
+            try:
+                for drop in (spec.loot if spec else []):
+                    if self.rng.random() >= drop.chance:
+                        continue
+                    if drop.item is not None:
+                        self.give(to, drop.item, self.rng.randint(*drop.count), None, None, line)
+                    else:
+                        self.give(to, None, None, self.rng.randint(*drop.gold), None, line)
+            finally:
+                self.source = before
+            return
         for drop in (spec.loot if spec else []):
             if self.rng.random() >= drop.chance:
                 continue
@@ -181,6 +196,7 @@ class Life:
     # -- a tick of the world's own life ---------------------------------------------------------------------------
 
     def live(self) -> None:
+        self.source = 'q:spawn'
         self._spawns()
         for eid in sorted(self.expiring):
             entity = self.entities.get(eid)
@@ -239,6 +255,7 @@ class Life:
             if tile is not None:
                 cells.update(self.cells_near(tile, AWAKE))
         awake = sorted({eid for cell in cells for eid in self.cells.get(cell, ())})
+        self.source = 'q:brain'
         for eid in awake:
             entity = self.entities.get(eid)
             spec = self.definition.entities.get(entity.get('_type')) if entity else None

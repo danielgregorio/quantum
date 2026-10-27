@@ -2,7 +2,7 @@
 
 This table is the single source: the model validates a world against it, the reference page is generated from it,
 and a tag with no entry does not exist (the Core used to drop a gameserver's children without a word). It holds
-what has been built (PLAN_GAME_SERVER.md, Phases 1 to 3); the tags of the later phases come in with them. Attribute types:
+what has been built (PLAN_GAME_SERVER.md, Phases 1 to 4); the tags of the later phases come in with them. Attribute types:
 
 - `ident`: a name (`[A-Za-z_][A-Za-z0-9_-]*`)
 - `names`: names separated by commas (`dir, speed`)
@@ -158,6 +158,45 @@ TAGS: Dict[str, Tag] = {
         'within 40 tiles); a q:move or another q:travel of it ends the way.',
         {'entity': Attr('expr', required=True),
          'to': Attr('place', required=True)},
+        ('handler',)),
+    'currency': Tag(
+        'A money of the world, kept by its ledger: a hero has it in a private field of its name (gold), which only '
+        'q:give, q:take, q:pay and q:loot change (a q:set of it is refused), and the world counts what was made and '
+        'spent of it, by where. The first currency is the one q:pay and q:give amount= pay in when none is named.',
+        {'name': Attr('ident', required=True),
+         'start': Attr('int', 0, doc='what a hero has of it when it is made')},
+        ('gameserver',)),
+    'item': Tag(
+        'A thing of the world: a hero holds items in its private `bag` (a record of counts), which only the ledger '
+        'changes. Its other attributes are what it is (price="40" heals="50" slot="weapon" attack="7"), read by '
+        'price(), heals(), slot(), bonus() and item(). With one q:item, every item given, taken or dropped is one.',
+        {'name': Attr('ident', required=True)},
+        ('gameserver',),
+        extra='what it is: numbers or texts, read by price(), heals(), slot(), bonus(item, name) and item(name)'),
+    'give': Tag(
+        'Something made for an entity: an item (count= of it) or an amount of a currency, counted by the ledger as '
+        'made here.',
+        {'to': Attr('expr', required=True),
+         'item': Attr('expr', doc='the item\'s name (or amount=)'),
+         'count': Attr('expr', '1'),
+         'amount': Attr('expr', doc='of the currency (or item=)'),
+         'currency': Attr('ident', doc='which (the first, if not given)')},
+        ('handler',)),
+    'take': Tag(
+        'Something an entity has, taken and spent: an item (count=) or an amount. Not enough, and the command is '
+        'refused (Not enough gold.).',
+        {'from': Attr('expr', required=True),
+         'item': Attr('expr'),
+         'count': Attr('expr', '1'),
+         'amount': Attr('expr'),
+         'currency': Attr('ident')},
+        ('handler',)),
+    'pay': Tag(
+        'An amount from one entity to another: nothing is made or spent. Not enough, and the command is refused.',
+        {'from': Attr('expr', required=True),
+         'to': Attr('expr', required=True),
+         'amount': Attr('expr', required=True),
+         'currency': Attr('ident')},
         ('handler',)),
     'command': Tag(
         'What a player may ask the world, by its name and with its params (the client\'s qg:send). It runs whole or '

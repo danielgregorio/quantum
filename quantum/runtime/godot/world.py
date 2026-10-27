@@ -63,6 +63,9 @@ def read_world(path: Path, line: Optional[int]) -> WorldInfo:
             fields.add(f.name)
             if f.private:
                 private.add(f.name)
+    if world.ledger:                                    # what a hero holds: its bag and its currencies, its own
+        fields |= {'bag'} | set(world.currencies)
+        private |= {'bag'} | set(world.currencies)
     m = world.map
     walls = {'width': m.width, 'height': m.height,
              'rows': [''.join('1' if (x, y) in m.walls else '0' for x in range(m.width)) for y in range(m.height)]}

@@ -194,6 +194,13 @@ class WorldDef:
     deaths: List[DeathDef] = field(default_factory=list)
     day_ticks: Optional[int] = None                      # q:clock: a day, in ticks
     night: float = 0.0                                   # the part of a day that is night
+    currencies: Dict[str, int] = field(default_factory=dict)          # a currency: what a hero starts with
+    items: Dict[str, Dict[str, object]] = field(default_factory=dict)  # an item: what it is
+
+    @property
+    def ledger(self) -> bool:
+        """The world keeps a ledger: its bag and its currencies' fields are the ledger's alone."""
+        return bool(self.currencies or self.items)
 
     @property
     def reach(self) -> Optional[int]:
@@ -541,6 +548,15 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
                 raise GameServerError(f'<q:clock night="{night}">: the part of a day that is night, 0 to 1', line)
             world.day_ticks = max(1, round(seconds_of(child.get('day', '60m')) * world.tick_rate))
             world.night = night
+        elif name == 'currency':
+            if child.get('name') in world.currencies or child.get('name') in ('bag',) + RESERVED:
+                raise GameServerError(f'<q:currency name="{child.get("name")}">: a name the world has already', line)
+            world.currencies[child.get('name')] = int(child.get('start', 0))
+        elif name == 'item':
+            if child.get('name') in world.items:
+                raise GameServerError(f'two items named {child.get("name")!r}', line)
+            from quantum.runtime.gameserver.expressions import literal
+            world.items[child.get('name')] = {k: literal(v) for k, v in child.attrib.items() if k != 'name'}
         elif name == 'view':
             if child.get('name') in world.views:
                 raise GameServerError(f'two views named {child.get("name")!r}', line)
@@ -576,6 +592,19 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
                                   f'({", ".join(sorted(world.map.areas)) or "none"})', sp.line)
         if sp.night_count is not None and world.day_ticks is None:
             raise GameServerError('<q:spawn night-count=>: the world has no q:clock, so no night', sp.line)
+    if world.items:
+        for e in world.entities.values():
+            for drop in e.loot:
+                if drop.item is not None and drop.item not in world.items:
+                    raise GameServerError(f'<q:drop item="{drop.item}">: the world has no q:item of that name '
+                                          f'({", ".join(sorted(world.items))})', drop.line)
+    for e in world.entities.values():
+        if any(d.gold is not None for d in e.loot) and world.ledger and not world.currencies:
+            raise GameServerError('<q:drop gold=>: the world keeps a ledger with no q:currency', e.line)
+        for f in e.fields:
+            if f.name in world.currencies and not f.private:
+                raise GameServerError(f'<q:entity name="{e.name}"> {f.name}: a currency is private, its holder\'s',
+                                      f.line)
     for death in world.deaths:
         for kind in death.kinds:
             if kind not in kinds:

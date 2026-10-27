@@ -72,7 +72,7 @@ def test_a_rat_bites_dies_drops_and_comes_back_in_thirty_seconds():
         world.step([])
         assert world.tick < 200
     died = world.tick
-    assert ana['bag'] == {'cheese': 1} and 1 <= ana['gold'] <= 3 and ana['kills'] == 1 and ana['target'] == ''
+    assert ana['bag'] == {'cheese': 1} and 11 <= ana['gold'] <= 13 and ana['kills'] == 1 and ana['target'] == ''
     assert rats(world) == [] and world.spawned['0']['due'] == [died + 300]
     while not rats(world):
         world.step([])
