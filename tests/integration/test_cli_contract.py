@@ -143,7 +143,8 @@ class TestSubcommandsAnswer:
     # "status", which is actually a subcommand of `migrate` — the test failed
     # by my mistake, not by a defect of the CLI.
     TOP = ["run", "start", "stop", "pkg", "jobs", "mq",
-           "migrate", "admin", "console", "desktop", "pixel", "check", "test", "play", "playtest", "relay"]
+           "migrate", "admin", "console", "desktop", "pixel", "check", "test", "play", "playtest", "relay",
+           "gameserver"]
 
     @pytest.mark.parametrize("command", TOP)
     def test_the_subcommand_help_works(self, command):

@@ -1,0 +1,394 @@
+"""`quantum gameserver run`: a world on a WebSocket, a tick at a time.
+
+The protocol is JSON, a message a frame, and small enough to write down here:
+
+    client: {"type": "hello", "name": "ana"}                         a guest world's player (Phase 4: a ticket)
+            {"type": "cmd", "seq": 3, "name": "step", "args": {"dir": "north"}}
+            {"type": "ping", "t": 12.5}
+            {"type": "sync"}                                          answered once every frame before it is sent
+            {"type": "step", "ticks": 5}                              a test world only (--step)
+    server: {"type": "greeting", "world": "yard", "rate": 10, "step": false}    at once: the join waits for a tick
+            {"type": "welcome", "you": "hero:ana", "tick": 41, "rate": 10, "world": "yard", "client": "...", "map": "..."}
+            {"type": "tick", "tick": 42, "ack": [3], "refused": [{"seq": 4, "name": "step", "reason": "Blocked."}],
+             "views": {"world": {"enter": [{...}], "update": [{"id": "hero:bo", "at": {...}}], "leave": ["hero:cy"]}}}
+            {"type": "pong", "t": 12.5, "tick": 42} · {"type": "synced", "tick": 42} · {"type": "stepped", "tick": 47}
+            {"type": "error", "reason": "..."}                        and the connection closes
+
+A tick frame goes to a player only when it has something for them. In Phase 1 the one view is the whole world
+("world"); Phase 2's q:view narrows it to what each player is near. A test world (--step) does not tick by itself:
+it waits for a "step", so a test is exact and as fast as the machine.
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import copy
+import json
+import re
+import signal
+import sys
+import threading
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from quantum.runtime.gameserver.log import WorldLog, replay
+from quantum.runtime.gameserver.model import WorldDef
+from quantum.runtime.gameserver.world import TickOut, World
+
+_NAME = re.compile(r'^[A-Za-z0-9_-]{1,24}$')
+MAX_MESSAGE = 16 * 1024
+MESSAGES_A_SECOND = 60
+HEARTBEAT_SECONDS = 10
+
+
+@dataclass
+class Connection:
+    ws: Any
+    account: str
+    joined: bool = False
+    sent: Dict[str, dict] = field(default_factory=dict)     # what the player has of each entity
+    window: List[float] = field(default_factory=list)
+
+
+class WorldServer:
+    def __init__(self, definition: WorldDef, *, host: str = '127.0.0.1', port: int = 7700, step: bool = False,
+                 data_dir: Optional[Path] = None, snapshot_every: float = 300.0, quiet: bool = False):
+        self.definition = definition
+        self.host, self.port = host, port
+        self.step_mode = step
+        self.data_dir = Path(data_dir) if data_dir else Path('.quantum') / 'gameserver' / definition.name
+        self.snapshot_ticks = max(1, round(snapshot_every * definition.tick_rate))
+        self.quiet = quiet
+        self.world: Optional[World] = None
+        self.log: Optional[WorldLog] = None
+        self.connections: Dict[str, Connection] = {}
+        self.inbox: List[tuple] = []
+        self.replayed: List[str] = []
+        self.ready = threading.Event()
+        self._lock: Optional[asyncio.Lock] = None
+        self._stop: Optional[asyncio.Event] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._last_snapshot = 0
+        self._crashed = False
+        self.tick_seconds: List[float] = []                 # the last ticks' time, for the numbers of the plan
+
+    def say(self, text: str) -> None:
+        if not self.quiet:
+            print(f'[gameserver] {text}', flush=True)
+
+    @property
+    def url(self) -> str:
+        return f'ws://{self.host}:{self.port}'
+
+    # -- the world, from its log -----------------------------------------------------------------------------
+
+    def _restore(self) -> None:
+        self.log = WorldLog(self.data_dir)
+        snap, entries = self.log.load()
+        self.world = World.from_snapshot(self.definition, snap) if snap else World(self.definition)
+        start = self.world.tick
+        self.replayed = replay(self.world, entries)
+        for line in self.replayed:
+            self.say(f'replay: {line}')
+        self.log.open(snap['tick'] if snap else 0)
+        self._last_snapshot = snap['tick'] if snap else 0
+        if self.world.players:                 # they were in when it stopped: they are not now
+            out = self.world.step([('leave', a) for a in sorted(self.world.players)])
+            self.log.append(out.entries)
+            self.log.flush()
+        self.world.dirty.clear()
+        self.world.gone.clear()
+        if entries or snap:
+            self.say(f'{self.definition.name}: back at tick {self.world.tick} (snapshot {start}, '
+                     f'{len(entries)} entries again)')
+
+    # -- a tick ------------------------------------------------------------------------------------------------
+
+    async def _tick(self) -> None:
+        began = time.perf_counter()
+        inputs, self.inbox = self.inbox, []
+        out = self.world.step(inputs)
+        self.log.append(out.entries)
+        if self.world.tick % (HEARTBEAT_SECONDS * self.definition.tick_rate) == 0:
+            self.log.append([{'t': self.world.tick, 'k': 'tick'}])
+        self.log.flush()                       # on the disk before anyone is told it ran
+        if self.world.tick - self._last_snapshot >= self.snapshot_ticks:
+            self.log.write_snapshot(self.world)
+            self._last_snapshot = self.world.tick
+        await self._send(out)
+        self.world.dirty.clear()
+        self.world.gone.clear()
+        self.tick_seconds.append(time.perf_counter() - began)
+        del self.tick_seconds[:-600]
+
+    def _view(self, conn: Connection) -> dict:
+        world = self.world
+        enter, update, leave = [], [], []
+        if not conn.sent:
+            ids = sorted(world.entities)
+        else:
+            ids = sorted(world.dirty | (set(world.entities) - set(conn.sent)))
+        for eid in ids:
+            entity = world.entities.get(eid)
+            if entity is None:
+                continue
+            seen = world.public(entity, conn.account)
+            before = conn.sent.get(eid)
+            if before is None:
+                enter.append(copy.deepcopy(seen))
+            else:
+                changed = {k: v for k, v in seen.items() if before.get(k, ...) != v}
+                if changed:
+                    update.append({'id': eid, **copy.deepcopy(changed)})
+            conn.sent[eid] = copy.deepcopy(seen)
+        for eid in sorted(set(conn.sent) - set(world.entities)):
+            leave.append(eid)
+            del conn.sent[eid]
+        view = {}
+        if enter:
+            view['enter'] = enter
+        if update:
+            view['update'] = update
+        if leave:
+            view['leave'] = leave
+        return view
+
+    async def _send(self, out: TickOut) -> None:
+        for account, conn in list(self.connections.items()):
+            if account in out.full:
+                await self._close(conn, 'The world is full.')
+                continue
+            if account in out.joined:
+                conn.joined = True
+                conn.sent = {}
+                await self._send_to(conn, {'type': 'welcome', 'you': out.joined[account], 'tick': out.tick,
+                                           'rate': self.definition.tick_rate, 'world': self.definition.name,
+                                           'client': self.definition.client,
+                                           'map': self.definition.map.path.name})
+            if not conn.joined:
+                continue
+            frame: Dict[str, Any] = {'type': 'tick', 'tick': out.tick}
+            if out.acks.get(account):
+                frame['ack'] = out.acks[account]
+            if out.refused.get(account):
+                frame['refused'] = out.refused[account]
+            view = self._view(conn)
+            if view:
+                frame['views'] = {'world': view}
+            if len(frame) > 2:
+                await self._send_to(conn, frame)
+
+    async def _send_to(self, conn: Connection, message: dict) -> None:
+        try:
+            await conn.ws.send(json.dumps(message, separators=(',', ':')))
+        except Exception:  # noqa: BLE001 - a closed connection: its reader takes it out
+            pass
+
+    async def _close(self, conn: Connection, reason: str) -> None:
+        await self._send_to(conn, {'type': 'error', 'reason': reason})
+        try:
+            await conn.ws.close()
+        except Exception:  # noqa: BLE001
+            pass
+        if self.connections.get(conn.account) is conn:
+            del self.connections[conn.account]
+
+    # -- a connection ------------------------------------------------------------------------------------------
+
+    async def _handler(self, ws) -> None:
+        conn: Optional[Connection] = None
+        try:
+            async for raw in ws:
+                try:
+                    message = json.loads(raw)
+                    kind = message.get('type') if isinstance(message, dict) else None
+                except (ValueError, TypeError):
+                    kind, message = None, None
+                if kind is None:
+                    await self._refuse(ws, 'A message is a JSON object with a type.')
+                    return
+                if conn is not None:
+                    now = time.monotonic()
+                    conn.window = [t for t in conn.window if t > now - 1] + [now]
+                    if len(conn.window) > MESSAGES_A_SECOND:
+                        await self._close(conn, f'More than {MESSAGES_A_SECOND} messages a second.')
+                        return
+                if conn is None:
+                    if kind != 'hello':
+                        await self._refuse(ws, 'Say hello first.')
+                        return
+                    name = message.get('name')
+                    if not isinstance(name, str) or not _NAME.match(name):
+                        await self._refuse(ws, 'A name is 1 to 24 letters, digits, _ or -.')
+                        return
+                    if name in self.connections or name in self.world.players:
+                        await self._refuse(ws, f'{name} is in the world already.')
+                        return
+                    conn = Connection(ws, name)
+                    self.connections[name] = conn
+                    self.inbox.append(('join', name))
+                    await self._send_to(conn, {'type': 'greeting', 'world': self.definition.name,
+                                               'rate': self.definition.tick_rate, 'step': self.step_mode})
+                elif kind == 'cmd':
+                    seq, name, args = message.get('seq'), message.get('name'), message.get('args', {})
+                    if not isinstance(seq, int) or not isinstance(name, str):
+                        await self._close(conn, 'A command has an integer seq and a name.')
+                        return
+                    self.inbox.append(('cmd', conn.account, seq, name, args))
+                elif kind == 'ping':
+                    await self._send_to(conn, {'type': 'pong', 't': message.get('t'), 'tick': self.world.tick})
+                elif kind == 'sync':
+                    async with self._lock:
+                        await self._send_to(conn, {'type': 'synced', 'tick': self.world.tick})
+                elif kind == 'step':
+                    if not self.step_mode:
+                        await self._close(conn, 'This world keeps its own time (no --step).')
+                        return
+                    ticks = message.get('ticks', 1)
+                    if not isinstance(ticks, int) or not 0 <= ticks <= 100_000:
+                        await self._close(conn, 'step: ticks is a number from 0 to 100000.')
+                        return
+                    async with self._lock:
+                        for _ in range(ticks):
+                            await self._tick()
+                        await self._send_to(conn, {'type': 'stepped', 'tick': self.world.tick})
+                else:
+                    await self._close(conn, f'There is no message of type {kind!r}.')
+                    return
+        except Exception:  # noqa: BLE001 - the connection broke: the player leaves
+            pass
+        finally:
+            if conn is not None and self.connections.get(conn.account) is conn:
+                del self.connections[conn.account]
+                self.inbox.append(('leave', conn.account))
+
+    async def _refuse(self, ws, reason: str) -> None:
+        try:
+            await ws.send(json.dumps({'type': 'error', 'reason': reason}))
+            await ws.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+    # -- running -----------------------------------------------------------------------------------------------
+
+    async def run(self) -> None:
+        from websockets.asyncio.server import serve
+
+        self._loop = asyncio.get_running_loop()
+        self._lock = asyncio.Lock()
+        self._stop = asyncio.Event()
+        self._restore()
+        try:
+            async with serve(self._handler, self.host, self.port, max_size=MAX_MESSAGE) as server:
+                self.port = server.sockets[0].getsockname()[1]
+                self.say(f'{self.definition.name} on {self.url}' + (' (a test world: it ticks on "step")'
+                                                                      if self.step_mode else
+                                                                      f' at {self.definition.tick_rate} ticks a second'))
+                self.ready.set()
+                if self.step_mode:
+                    await self._stop.wait()
+                else:
+                    await self._clock()
+        finally:                                # stopped, or interrupted: the world as it is now, on the disk
+            if self._crashed:
+                if self.log._file:
+                    self.log._file.close()
+            else:
+                self.log.write_snapshot(self.world)
+                self.log.close()
+
+    async def _clock(self) -> None:
+        period = 1.0 / self.definition.tick_rate
+        loop = asyncio.get_running_loop()
+        due = loop.time()
+        while not self._stop.is_set():
+            due += period
+            delay = due - loop.time()
+            if delay < -1.0:                   # a second behind: the world takes its time, not the lost ticks
+                due = loop.time()
+                delay = 0
+            try:
+                await asyncio.wait_for(self._stop.wait(), timeout=max(0.0, delay))
+                break
+            except asyncio.TimeoutError:
+                pass
+            async with self._lock:
+                await self._tick()
+
+    def stop(self) -> None:
+        """From any thread: the world writes its snapshot and the server ends."""
+        if self._loop and self._stop:
+            self._loop.call_soon_threadsafe(self._stop.set)
+
+    def crash(self) -> None:
+        """For a test: the server ends as if killed, with no snapshot: what is on the disk is the log."""
+        self._crashed = True
+        self.stop()
+
+
+# -- the command line ------------------------------------------------------------------------------------------
+
+def add_arguments(parser: argparse.ArgumentParser) -> None:
+    sub = parser.add_subparsers(dest='gameserver_command')
+    run = sub.add_parser('run', help='run a world (a q:application type="gameserver")')
+    run.add_argument('file', help='the world\'s .q')
+    run.add_argument('--host', default='127.0.0.1')
+    run.add_argument('--port', type=int, default=7700)
+    run.add_argument('--step', action='store_true', help='a test world: it ticks only when a client says "step"')
+    run.add_argument('--data', help='where the world keeps its snapshot and log (.quantum/gameserver/<name>)')
+    run.add_argument('--snapshot-every', type=float, default=300.0, metavar='SECONDS')
+    check = sub.add_parser('check', help='read a world against its schema, and say what is wrong')
+    check.add_argument('file')
+
+
+def load(path: str) -> WorldDef:
+    from quantum.core.parser import QuantumParser
+    from quantum.runtime.gameserver.model import read_world
+
+    app = QuantumParser(use_cache=False).parse_file(path)
+    if app.app_type != 'gameserver':
+        raise SystemExit(f'{path}: a q:application type="gameserver" is a world; this one is type="{app.app_type}"')
+    return read_world(app, path)
+
+
+def main(args) -> int:
+    from quantum.runtime.gameserver.errors import GameServerError
+
+    command = getattr(args, 'gameserver_command', None)
+    if command not in ('run', 'check'):
+        print('quantum gameserver run FILE | quantum gameserver check FILE')
+        return 2
+    try:
+        definition = load(args.file)
+    except GameServerError as e:
+        print(f'[ERROR] {e}')
+        return 1
+    if command == 'check':
+        print(f'[OK] {definition.name}: {len(definition.entities)} entities, {len(definition.commands)} commands, '
+              f'{len(definition.every)} rules every so often, a map of {definition.map.width}x{definition.map.height}')
+        return 0
+    return serve_forever(definition, host=args.host, port=args.port, step=args.step,
+                         data_dir=Path(args.data) if args.data else None, snapshot_every=args.snapshot_every)
+
+
+def serve_forever(definition: WorldDef, **options) -> int:
+    server = WorldServer(definition, **options)
+
+    def stop(*_):
+        server.stop()
+
+    try:
+        signal.signal(signal.SIGTERM, stop)
+    except ValueError:                          # not the main thread
+        pass
+    try:
+        asyncio.run(server.run())
+    except KeyboardInterrupt:
+        pass
+    except OSError as e:
+        print(f'[ERROR] {e}', file=sys.stderr)
+        return 1
+    return 0

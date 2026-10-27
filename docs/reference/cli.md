@@ -145,6 +145,37 @@ Play a game step by step (or serve it to an agent, --mcp).
 | `--lang` | the language of the game's texts, when it has it (pt, es...) |  |  |
 | `--transport` | the network's transport (websocket: the one a browser joins) |  | `enet`, `websocket` |
 
+<a id="cli-gameserver"></a>
+
+## `quantum gameserver`
+
+Run a world: a q:application type="gameserver" (PLAN_GAME_SERVER.md).
+
+<a id="cli-gameserver-run"></a>
+
+### `quantum gameserver run`
+
+Run a world (a q:application type="gameserver").
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `file` | the world's .q |  |  |
+| `--host` |  | `127.0.0.1` |  |
+| `--port` |  | `7700` |  |
+| `--step` | a test world: it ticks only when a client says "step" |  |  |
+| `--data` | where the world keeps its snapshot and log (.quantum/gameserver/&lt;name>) |  |  |
+| `--snapshot-every` |  | `300.0` |  |
+
+<a id="cli-gameserver-check"></a>
+
+### `quantum gameserver check`
+
+Read a world against its schema, and say what is wrong.
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `file` |  |  |  |
+
 <a id="cli-relay"></a>
 
 ## `quantum relay`

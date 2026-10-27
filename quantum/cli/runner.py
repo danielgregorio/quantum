@@ -176,6 +176,8 @@ class QuantumRunner:
             return self._build_game(app, debug)
         elif app.app_type == 'hive':
             return self._build_hive(app, debug)
+        elif app.app_type == 'gameserver':
+            return self._run_gameserver(app)
         elif app.app_type == 'screen':
             return self._build_screen(app, debug)
         elif app.app_type == 'terminal':
@@ -186,6 +188,17 @@ class QuantumRunner:
         else:
             print(f"[ERROR] Application type '{app.app_type}' not supported")
             return 1
+
+    def _run_gameserver(self, app: ApplicationNode) -> int:
+        """A world, served as `quantum gameserver run` serves it (on port 7700)."""
+        from quantum.runtime.gameserver import GameServerError, read_world
+        from quantum.runtime.gameserver.server import serve_forever
+        try:
+            definition = read_world(app)
+        except GameServerError as e:
+            print(f"[ERROR] {e}")
+            return 1
+        return serve_forever(definition)
 
     def _build_game(self, app: ApplicationNode, debug: bool = False) -> int:
         """Build a Godot 4 project from a game application."""
@@ -422,6 +435,10 @@ Examples:
     play_parser.add_argument('--transport', choices=['enet', 'websocket'],
                              help="the network's transport (websocket: the one a browser joins)")
 
+    gameserver_parser = subparsers.add_parser('gameserver', help='Run a world: a q:application type="gameserver" (PLAN_GAME_SERVER.md)')
+    from quantum.runtime.gameserver.server import add_arguments as add_gameserver_arguments
+    add_gameserver_arguments(gameserver_parser)
+
     relay_parser = subparsers.add_parser('relay', help='Where browsers meet to play a networked game (rooms over WebSocket)')
     from quantum.runtime.game_relay import add_arguments as add_relay_arguments
     add_relay_arguments(relay_parser)
@@ -530,6 +547,10 @@ def main():
     elif args.command == 'play':
         from quantum.cli.play import main as play_main
         sys.exit(play_main(args))
+
+    elif args.command == 'gameserver':
+        from quantum.runtime.gameserver.server import main as gameserver_main
+        sys.exit(gameserver_main(args))
 
     elif args.command == 'relay':
         from quantum.runtime.game_relay import main as relay_main

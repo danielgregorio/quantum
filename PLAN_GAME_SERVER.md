@@ -4,6 +4,8 @@
 > players** at once; of the magic, **the NPCs with AI** come first, right after the base (Phases 1 to 4).
 > Phase 0 done: Outpost written as it should read, before any of its tags exist
 > ([projects/outpost/draft](projects/outpost/draft)), and what the compiler refuses of it (below).
+> Phase 1 done (2026-10-26): the world lives — `quantum/runtime/gameserver`, `quantum gameserver run` and `check`,
+> its reference ([docs/targets/gameserver.md](docs/targets/gameserver.md)) and `tests/gameserver/`. Phase 2 next.
 > Laboratory tier: no tag here carries a stability promise until it ships (`SUPPORT_TIERS.md`).
 
 ## The decision
@@ -110,10 +112,14 @@ from the server's file, what lives where.
 
 | From the client | From the server |
 |---|---|
-| `hello {ticket}` | `welcome {me, world, tick, views}` |
-| `cmd {seq, name, args}` | `ack {seq}` · `refused {seq, reason}` |
-| `chat {channel, text}` | `view {name, enter, update, leave}` |
-| `ping {t}` | `event {name, at, ...}` · `chat {...}` · `pong {t}` |
+| `hello {name}` (a guest; Phase 4: `{ticket}`) | `greeting {world, rate, step}` at once, `welcome {you, tick, ...}` at the join's tick |
+| `cmd {seq, name, args}` | `tick {tick, ack, refused, views: {name: {enter, update, leave}}}`: one frame a tick, to a player it has something for |
+| `ping {t}` · `sync` | `pong {t, tick}` · `synced {tick}`, once every frame before it is sent |
+| `step {ticks}` (a test world only) | `stepped {tick}` · `error {reason}`, and the connection closes |
+
+As built (Phase 1): what a tick has for a player goes in one frame, its acknowledgements, refusals and views
+together, so a client applies a tick whole; the events (`q:emit`, Phase 2) and the chat (Phase 4) join it there.
+The protocol is written down in `quantum/runtime/gameserver/server.py` and on the reference page.
 
 - **Accounts** are the site's (`accounts="site"`: the Core's `auth_service`). `qg:sign-in` asks the site for a short
   ticket over HTTPS; the game opens the WebSocket with it; the server checks it with the site and loads the hero of
@@ -301,6 +307,25 @@ protocol, which is the test client (`tests/gameserver/`).
 Done when: a client signs in as a guest, steps, and is refused a wall, a step faster than `limit=` and a forged
 argument; two clients see the same world; the server stopped mid-way and started again has every committed command.
 
+As built (2026-10-26):
+- `quantum/runtime/gameserver`: the schema (a tag with no entry does not exist, and says so with its line: the Core's
+  silent drop is over), the model, the rules on the Core's own expression evaluator (each expression parsed once),
+  the world a tick at a time, the log, the server and the session. `quantum gameserver run FILE [--step]` and
+  `quantum gameserver check FILE`; `quantum run` of a world serves it.
+- A command is a transaction: every write is journaled while it runs and undone if it is refused or fails. A step
+  is a `q:move` to a tile next to the entity: it faces that way, takes its `speed=`, and one before the last ended is
+  refused (`Still moving.`). A move never puts an entity in a wall.
+- The world's random is its own (`random`, `chance`, `pick`, seeded and kept in the snapshot); `now()` is refused.
+  The same inputs make the same world, to the hash (`World.digest()`), and a snapshot with the inputs after it is
+  the world.
+- The log flushes and syncs a tick's lines before its frames are sent; a heartbeat every ten seconds keeps the
+  world's time. A server killed with SIGKILL and started again has every command it acknowledged
+  (`test_a_server_killed_mid_way_has_every_command_it_acknowledged`); a stop writes the snapshot.
+- `tests/gameserver/`: the yard (`worlds/yard`, a walled yard of 12 by 8 in Tiled), 26 tests, three seconds.
+- A first number for the risk below: 500 heroes each sending a step in the same tick (the worst case; walking is
+  four steps a second) took 26 ms at the median and 42 ms at the 99th percentile of a hundred ticks, on the agent's
+  machine, without the views' differences (Phase 2 measures those).
+
 ### Phase 2 — Views and the game (L)
 
 `q:view` with the spatial index and the differences, the private fields, `q:emit`. In the game: `qg:connect`,
@@ -394,3 +419,5 @@ Done when: the numbers below hold for a day of bots.
   read and what the compiler refuses of it.
 - 2026-10-26: the play protocol in a world (the owner asked how it changes): a test world's step clock, the
   `WorldSession`, an observation of one player's views, the god's view, several seats, the replay as a session.
+- 2026-10-26: Phase 1, the world lives: the schema, the rules, the world loop, the protocol (one frame a tick), the
+  log and its replay, `quantum gameserver run --step`, the `WorldSession`, the yard and its tests, the reference.
