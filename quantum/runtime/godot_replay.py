@@ -43,7 +43,7 @@ LEAVING = 'Unable to send packet on channel'
 
 def typed_at(tape: Tape, tick: int, text: str) -> Tape:
     """Adds to the tape: on ``tick`` the player types ``text`` into the text box being typed in
-    (a qg:field chosen before); ``\\n`` is Enter."""
+    (a qg:field chosen before); ``\\n`` is Enter, ``\\u001b`` Escape."""
     tape.setdefault(tick, []).append(('type', text))
     return tape
 

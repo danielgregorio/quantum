@@ -13,7 +13,7 @@ extends SceneTree
 # Requests:
 #   {"op": "observe"}
 #   {"op": "act", "ticks": N, "hold": [...], "tap": [...], "press": [...], "release": [...], "cursor": [x, y],
-#    "text": "Ana\n"}   text: typed into the text box being typed in (a qg:field chosen), "\n" Enter
+#    "text": "Ana\n"}   text: typed into the text box being typed in (a qg:field chosen), "\n" Enter, "\u001b" Escape
 #   {"op": "until", "max_ticks": N, "condition": {...}, ...the same actions as act}
 #   either may carry "player": N, the actions named as player 1's ("left") and pressed as player N's
 #                     ("p3_left" on one machine; in a networked game, N is the session's own seat)

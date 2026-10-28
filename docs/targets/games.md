@@ -818,7 +818,7 @@ Goes inside: `qg:menu`.
 
 ### `qg:field`
 
-A text box of a qg:menu, bound to a string state: what is typed is the state. Typing is local to the machine (an address) — the lockstep does not carry it. A shared field (shared="true") is a draft until Enter sends it: the text goes with the player's input for a tick, and on that tick, on every machine of a networked game, it becomes the bound state and what the field holds runs, with `sender` (the seat that sent it) and `text` — names, a short chat. While a field is typed in, the keys type and play nothing.
+A text box of a qg:menu, bound to a string state: what is typed is the state. Typing is local to the machine (an address) — the lockstep does not carry it. A shared field (shared="true") is a draft until Enter sends it: the text goes with the player's input for a tick, and on that tick, on every machine of a networked game, it becomes the bound state and what the field holds runs, with `sender` (the seat that sent it) and `text` — names, a short chat. While a field is typed in, the keys type and play nothing; Enter, Escape or a click away from the box ends the typing (the click goes on to what is under the pointer), and the key that ended it plays only once let go.
 
 | Attribute | Type | Default | Meaning |
 |---|---|---|---|

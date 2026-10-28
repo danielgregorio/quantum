@@ -257,7 +257,8 @@ class PlaySession:
         ``reflex`` replaces the reflexes (``[]`` clears them); ``ticks=0`` only sets them.
         ``player``: the actions are named as player 1's (``left``) and pressed as player
         N's (``p3_left``) in a game on one machine; in a networked game, N is this session's seat.
-        ``text`` is typed into the text box being typed in (a ``qg:field`` chosen); ``\\n`` is Enter."""
+        ``text`` is typed into the text box being typed in (a ``qg:field`` chosen); ``\\n`` is Enter,
+        ``\\u001b`` Escape."""
         return self.request(self._actions('act', hold, tap, press, release, cursor, reflex, player, text,
                                           ticks=ticks))
 

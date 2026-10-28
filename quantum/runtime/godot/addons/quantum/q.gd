@@ -1482,7 +1482,7 @@ var samples: int = 0   # how many times the keys were taken (sample_local): a ta
 
 
 func _input(event: InputEvent) -> void:
-	if not event.is_pressed() or event.is_echo() or typing():
+	if not event.is_pressed() or event.is_echo() or (typing() and not event is InputEventMouseButton):
 		return
 	for a in InputMap.get_actions():
 		var name_ := String(a)
@@ -1490,13 +1490,23 @@ func _input(event: InputEvent) -> void:
 			_taps[name_] = true
 
 
+var _typed_last: bool = false   # a text box had the keyboard when the keys were last taken
+var _held_as_typed: Dictionary = {}     # what was held as the typing ended: it plays once let go
+
+
 # This machine's keys, for the tick: what is held, with its strength, and what
 # was tapped since the last tick. The lockstep sends it; alone, it is the input.
-# While a text box is being typed in (qg:field), the keys type: they play nothing.
+# While a text box is being typed in (qg:field), the keys type: they play
+# nothing, but a click still does (the menu ends the typing with it). As the
+# typing ends (Enter, Escape, a click away), what was held for it plays only
+# once let go: the Enter that sent the text does not choose the box again.
 func sample_local() -> Dictionary:
 	samples += 1
 	var next := {}
-	if typing():
+	var keys_type := typing()
+	var clicked := InputMap.has_action("click") and (Input.get_action_strength("click") > 0.0 or _taps.has("click"))
+	if keys_type and not clicked:
+		_typed_last = true
 		_taps.clear()
 		return next
 	for a in InputMap.get_actions():
@@ -1510,6 +1520,14 @@ func sample_local() -> Dictionary:
 		if not next.has(name_):
 			next[name_] = 1.0
 	_taps.clear()
+	if _typed_last and not keys_type:
+		_held_as_typed = next.duplicate()
+	_typed_last = keys_type
+	for name_ in _held_as_typed.keys():
+		if Input.get_action_strength(name_) > 0.0:
+			next.erase(name_)
+		else:
+			_held_as_typed.erase(name_)
 	return next
 
 
@@ -1520,13 +1538,16 @@ func typing() -> bool:
 
 
 # Typing, as the keyboard would, into the text box being typed in: "\n" is
-# Enter. The play protocol and the replay type with it ("type" in a tape).
+# Enter, "\u001b" Escape. The play protocol and the replay type with it ("type" in a tape).
 func type_text(text: String) -> void:
 	for ch in text:
 		var k := InputEventKey.new()
 		if ch == "\n":
 			k.keycode = KEY_ENTER
 			k.physical_keycode = KEY_ENTER
+		elif ch == "\u001b":
+			k.keycode = KEY_ESCAPE
+			k.physical_keycode = KEY_ESCAPE
 		else:
 			k.unicode = ch.unicode_at(0)
 			k.keycode = OS.find_keycode_from_string(ch.to_upper())   # a letter's key, as a keyboard sends

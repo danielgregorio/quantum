@@ -35,7 +35,7 @@ decide where it should go; a rule without "when" always holds. play_start with j
 a seat of a person's networked game, the lowest free one or seat=N (live: it runs at the person's speed,
 so let reflexes play between calls; `net` in each answer says the seat and whether the game is
 playing). In a game for several on one machine, player=N on play_act and play_until presses player N's
-keys with player 1's names ("left"). text= types into the text box chosen (a menu's field); "\n" is Enter. play_snapshot and
+keys with player 1's names ("left"). text= types into the text box chosen (a menu's field); "\n" is Enter, "\u001b" Escape. play_snapshot and
 play_restore try a choice and come back (not in a live game). play_tape saves the session
 as a replay test. Close what you open with play_end."""
 
@@ -112,7 +112,7 @@ def build_server(tools: Optional[PlayTools] = None):
         only sets them). player: the actions named as player 1's ("left") are pressed as
         player N's, in a game for several on one machine (in a networked one, your seat).
         text: typed into the text box chosen (a field of a menu; "\\n" is Enter, which sends
-        a shared one to every player)."""
+        a shared one to every player; "\\u001b" is Escape)."""
         return _dump(tools.act(session, hold=hold or [], tap=tap or [], press=press or [],
                                release=release or [], cursor=cursor, ticks=ticks, reflex=reflex,
                                player=player, text=text))

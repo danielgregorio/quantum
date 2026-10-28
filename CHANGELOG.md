@@ -1045,6 +1045,15 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: a text box of a game's menu (`qg:field`) no longer holds a
+  player who uses the mouse. Once a box was clicked, the keys typed and the
+  mouse played nothing until Enter: a click on Send or Back did nothing, and
+  the screen seemed frozen (PandaFoot's report panel). A click away from the
+  box now ends the typing and goes on to what is under the pointer; Escape
+  ends it too (it kept the keyboard and every key played nothing); and the
+  key that ends it plays only once let go, so Enter still held does not open
+  the box again and Escape does not close the screen. The play protocol and
+  a replay type Escape as `"\u001b"`.
 - Laboratory: a world's connection closed by the server (a message out of
   the protocol, more than sixty a second) now takes its player out of the
   world; the hero stayed, and the name could not come back in.

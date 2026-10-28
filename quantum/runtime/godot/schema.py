@@ -497,7 +497,8 @@ TAGS: Dict[str, Tag] = {
         'draft until Enter sends it: the text goes with the player\'s input for a tick, and on that tick, on '
         'every machine of a networked game, it becomes the bound state and what the field holds runs, with '
         '`sender` (the seat that sent it) and `text` — names, a short chat. While a field is typed in, the '
-        'keys type and play nothing.',
+        'keys type and play nothing; Enter, Escape or a click away from the box ends the typing (the click goes '
+        'on to what is under the pointer), and the key that ended it plays only once let go.',
         {'bind': Attr('ident', required=True, doc='a q:set of the scene or the game'),
          'label': Attr('str', '', doc='text before the box'),
          'max-length': Attr('int', 64),
