@@ -12,7 +12,7 @@
 > `qg:sign-in`), and Outpost playable from start to end ([projects/outpost](projects/outpost)).
 > Phase 5 (2026-10-27): NPCs with minds, off the tick, their tools the world's commands; with a scripted mind in the
 > tests. A real conversation with a local model is what is left of it.
-> Proposed 2026-10-29: the world's engine in Rust, before Phase 6 ([PLAN_WORLD_ENGINE.md](PLAN_WORLD_ENGINE.md)).
+> Approved 2026-10-29: the world's engine in Rust, before Phase 6 ([PLAN_WORLD_ENGINE.md](PLAN_WORLD_ENGINE.md)).
 > At 500 bots the Python tick takes 91 ms at the median: the plan's numbers do not hold in Python.
 > Laboratory tier: no tag here carries a stability promise until it ships (`SUPPORT_TIERS.md`).
 

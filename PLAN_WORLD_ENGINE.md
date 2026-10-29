@@ -1,6 +1,6 @@
 # The world's engine — Quantum's tags above, Rust beneath
 
-> Status: proposed 2026-10-29, not approved. The owner's ask: the world is still written in Quantum's tags
+> Status: approved 2026-10-29. The owner's ask: the world is still written in Quantum's tags
 > (`q:gameserver`, `PLAN_GAME_SERVER.md`), but what runs it is Rust, and on every core of the machine.
 > It comes after PR #95 (Phases 2 to 5) and before Phase 6 of `PLAN_GAME_SERVER.md`; it takes the place of
 > "PyPy if the numbers ask for it" in that plan's Phase 7.
