@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
-"""A hundred bots walk a world, and the world's numbers are measured (PLAN_GAME_SERVER.md, Phase 2).
+"""Bots walk a world, and the world's numbers are measured (PLAN_GAME_SERVER.md, Phase 2; PLAN_WORLD_ENGINE.md, E0).
 
 The world is made for the run: a field of SIZE by SIZE tiles walled round, a hero that walks four steps a second,
-a view of the tiles within VIEW of it. The server runs in its own process at ten ticks a second (`quantum gameserver
-run --stats`), so the bots do not take its time; the bots are one asyncio process, each walking a few steps one way
-and then another, as a player does. What it says at the end is the server's own measure of its ticks (the median,
-the 99th percentile, the worst) and of what it sent each player, and what the bots received.
+a view of the tiles within VIEW of it, and BEASTS that wander the field and chase a hero who comes near. Or it is a
+world of its own (--world: Outpost, say; a world of a site's accounts gets a ticket for each bot). The server runs in
+its own process at ten ticks a second (`quantum gameserver run --stats`), on its own cores when the machine has four
+or more (the bots on the others), so the bots do not take its time; the bots are one asyncio process, each walking
+a few steps one way and then another, as a player does. What it says at the end is the server's own measure of its
+ticks (the median, the 99th percentile, the worst), of what it sent each player and of its memory, and what the bots
+received. --sweep measures one count of bots after another and writes the table of PLAN_WORLD_ENGINE.md.
 
-    python scripts/gameserver-bots.py --bots 100 --seconds 3600          # an hour
+    python scripts/gameserver-bots.py --bots 100 --seconds 3600                 # an hour
     python scripts/gameserver-bots.py --bots 100 --seconds 60 --json numbers.json
+    python scripts/gameserver-bots.py --sweep 100,200,500 --seconds 60          # the plan's table
+    python scripts/gameserver-bots.py --bots 500 --beasts 1500 --seconds 600    # the plan's numbers
+    python scripts/gameserver-bots.py --bots 200 --world projects/outpost/outpost.server.q
+    python scripts/gameserver-bots.py --bots 200 --url ws://world.example:7700  # a server elsewhere: the bots alone
 """
 
 from __future__ import annotations
@@ -27,6 +34,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
 REPO = Path(__file__).resolve().parents[1]
 WAYS = ('north', 'south', 'east', 'west', 'northeast', 'northwest', 'southeast', 'southwest')
@@ -60,9 +68,21 @@ def tmx_of(width: int, height: int, walls=(), areas=None) -> str:
             f' <objectgroup id="3" name="areas">\n{objects} </objectgroup>\n</map>\n')
 
 
-def world_of(directory: Path, size: int, view: int, bots: int) -> Path:
-    (directory / 'field.tmx').write_text(tmx_of(size, size))
+def world_of(directory: Path, size: int, view: int, bots: int, beasts: int = 0) -> Path:
+    (directory / 'field.tmx').write_text(tmx_of(size, size, areas={'field': (1, 1, size - 2, size - 2)}))
     path = directory / 'field.server.q'
+    beast = f'''    <q:entity name="beast" kind="Beast" speed="2/s">
+      <q:brain>
+        <q:state name="roam" initial="true" do="wander" within="3">
+          <q:when condition="{{nearest(it, 'Hero', 3) != null}}" become="chase" />
+        </q:state>
+        <q:state name="chase" do="chase" target="{{nearest(it, 'Hero', 6)}}">
+          <q:when condition="{{it.target == ''}}" become="roam" />
+        </q:state>
+      </q:brain>
+    </q:entity>
+    <q:spawn entity="beast" area="field" count="{beasts}" respawn="30s" />
+''' if beasts else ''
     path.write_text(f'''<q:application id="field-server" type="gameserver">
   <q:gameserver name="field" tick="10" players="{bots + 10}">
     <q:map name="field" tiled="field.tmx" />
@@ -70,7 +90,7 @@ def world_of(directory: Path, size: int, view: int, bots: int) -> Path:
       <q:field name="name" value="{{account.name}}" />
       <q:field name="steps" value="0" private="true" />
     </q:entity>
-    <q:view name="around" where="{{near(it, me, {view})}}" />
+{beast}    <q:view name="around" where="{{near(it, me, {view})}}" />
     <q:command name="step" params="dir" limit="8/s">
       <q:require condition="{{walkable(ahead(me, dir))}}" else="A wall." />
       <q:move entity="{{me}}" to="{{ahead(me, dir)}}" />
@@ -93,21 +113,21 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-async def bot(url: str, name: str, until: float, got: dict) -> None:
+async def bot(url: str, name: str, until: float, got: dict, ticket: str = '') -> None:
     from websockets.exceptions import ConnectionClosed
 
     try:
-        await _walk(url, name, until, got)
-    except ConnectionClosed:
+        await _walk(url, name, until, got, ticket)
+    except (ConnectionClosed, OSError):
         got['dropped'] += 1                  # counted, and the others go on: a measure is not lost to one
 
 
-async def _walk(url: str, name: str, until: float, got: dict) -> None:
+async def _walk(url: str, name: str, until: float, got: dict, ticket: str = '') -> None:
     from websockets.asyncio.client import connect
 
     rng = random.Random(name)
     async with connect(url, max_size=8 * 1024 * 1024) as ws:
-        await ws.send(json.dumps({'type': 'hello', 'name': name}))
+        await ws.send(json.dumps({'type': 'hello', 'ticket': ticket} if ticket else {'type': 'hello', 'name': name}))
         seq, way, left = 0, rng.choice(WAYS), 0
 
         async def read() -> None:
@@ -134,31 +154,58 @@ async def _walk(url: str, name: str, until: float, got: dict) -> None:
         reader.cancel()
 
 
-async def bots(url: str, count: int, seconds: float) -> dict:
+async def bots(url: str, count: int, seconds: float, tickets: Optional[Dict[str, str]] = None) -> dict:
     got = {'bytes': 0, 'frames': 0, 'sent': 0, 'acks': 0, 'refused': 0, 'dropped': 0}
     until = time.monotonic() + seconds
-    await asyncio.gather(*(bot(url, f'bot-{i}', until, got) for i in range(count)))
+    await asyncio.gather(*(bot(url, f'bot-{i}', until, got, (tickets or {}).get(f'bot-{i}', ''))
+                           for i in range(count)))
     return got
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--bots', type=int, default=100)
-    parser.add_argument('--seconds', type=float, default=60)
-    parser.add_argument('--size', type=int, default=96, help='the field\'s side, in tiles')
-    parser.add_argument('--view', type=int, default=9, help='how far a hero sees, in tiles')
-    parser.add_argument('--json', help='write the numbers here too')
-    args = parser.parse_args()
+def cores_split() -> Tuple[Optional[set], Optional[set]]:
+    """The server's cores and the bots': half and half, on a machine of four or more; else (None, None), all for both."""
+    try:
+        cores = sorted(os.sched_getaffinity(0))
+    except AttributeError:                    # not Linux: no affinity to set
+        return None, None
+    if len(cores) < 4:
+        return None, None
+    half = len(cores) // 2
+    return set(cores[:half]), set(cores[half:])
 
+
+def measure(args, count: int) -> dict:
+    """One run: a server (unless --url), `count` bots for --seconds, the numbers."""
+    if args.url:
+        got = asyncio.run(bots(args.url, count, args.seconds))
+        return {'bots': count, 'seconds': round(args.seconds), 'url': args.url, **_bots_side(got)}
+    server_cores, bot_cores = (None, None) if args.no_split else cores_split()
     with tempfile.TemporaryDirectory() as scratch:
         directory = Path(scratch)
-        world = world_of(directory, args.size, args.view, args.bots)
+        env = {**os.environ, 'PYTHONUNBUFFERED': '1'}
+        tickets_for = None
+        if args.world:
+            world = Path(args.world).resolve()
+            if 'accounts="site"' in world.read_text(encoding='utf-8'):
+                from quantum.runtime.gameserver import tickets
+                secret = os.urandom(24).hex()
+                env[tickets.SECRET_ENV] = secret
+                tickets_for = {f'bot-{i}': tickets.issue(f'bot-{i}', f'Bot {i}', secret.encode(),
+                                                         seconds=args.seconds + 120) for i in range(count)}
+        else:
+            world = world_of(directory, args.size, args.view, count, args.beasts)
         port = free_port()
+
+        def pin() -> None:
+            if server_cores:
+                os.sched_setaffinity(0, server_cores)
         server = subprocess.Popen(
             [sys.executable, '-m', 'quantum.cli.runner', 'gameserver', 'run', str(world), '--port', str(port),
-             '--data', str(directory / 'data'), '--stats', '10'],
-            cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-            env={**os.environ, 'PYTHONUNBUFFERED': '1'})
+             '--data', str(directory / 'data'), '--stats', '10', '--no-minds'],
+            cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
+            preexec_fn=pin if server_cores else None)
+        if bot_cores:
+            os.sched_setaffinity(0, bot_cores)
         lines = []
         listening = threading.Event()
 
@@ -174,7 +221,7 @@ def main() -> int:
         try:
             listening.wait(60)
             began = time.monotonic()
-            got = asyncio.run(bots(f'ws://127.0.0.1:{port}', args.bots, args.seconds))
+            got = asyncio.run(bots(f'ws://127.0.0.1:{port}', count, args.seconds, tickets_for))
             took = time.monotonic() - began
         finally:
             server.terminate()
@@ -182,13 +229,17 @@ def main() -> int:
             reader.join(10)
 
     stats = [json.loads(m.group(1)) for m in (re.search(r'stats (\{.*\})', line) for line in lines) if m]
-    full = [s for s in stats if s['players'] >= args.bots]
+    full = [s for s in stats if s['players'] >= count]
     if not full:
         print(''.join(lines[-20:]))
-        print('the server said no numbers with every bot in')
-        return 1
-    numbers = {
-        'bots': args.bots, 'seconds': round(took), 'field': args.size, 'view': args.view,
+        raise SystemExit(f'the server said no numbers with every one of the {count} bots in')
+    if len(full) > 1:
+        full = full[1:]                  # the first holds the bots coming in and the beasts being made: not the world
+    return {
+        'bots': count, 'seconds': round(took), 'world': world.name if args.world else 'field', 'field': args.size,
+        'view': args.view, 'beasts': round(statistics.median(s.get('beasts', 0) for s in full)),
+        'server_cores': len(server_cores) if server_cores else None,
+        'bot_cores': len(bot_cores) if bot_cores else None,
         'tick_ms_p50': round(statistics.median(s['tick_ms_p50'] for s in full), 2),
         'tick_ms_p99': round(statistics.median(s['tick_ms_p99'] for s in full), 2),    # of an interval, typically
         'tick_ms_max': round(max(s['tick_ms_max'] for s in full), 2),                  # the worst tick of all
@@ -196,12 +247,56 @@ def main() -> int:
         'player_kb_s_p50': round(statistics.median(s['player_kb_s_p50'] for s in full), 2),
         'player_kb_s_max': round(max(s['player_kb_s_max'] for s in full), 2),
         'world_kb_s': round(statistics.median(s['out_kb_s'] for s in full), 1),
-        'steps_sent': got['sent'], 'steps_ran': got['acks'], 'refused': got['refused'], 'dropped': got['dropped'],
-        'received_mb': round(got['bytes'] / 1e6, 1), 'frames': got['frames'],
+        'memory_mb': round(max(s.get('memory_mb', 0) for s in full)),
+        **_bots_side(got), 'stats': stats,
     }
-    print(json.dumps(numbers, indent=2))
+
+
+def _bots_side(got: dict) -> dict:
+    return {'steps_sent': got['sent'], 'steps_ran': got['acks'], 'refused': got['refused'], 'dropped': got['dropped'],
+            'received_mb': round(got['bytes'] / 1e6, 1), 'frames': got['frames']}
+
+
+def table(runs: List[dict]) -> str:
+    """The runs as the table of PLAN_WORLD_ENGINE.md."""
+    rows = ['| Bots | Beasts | Tick, median | Tick, 99th percentile | Worst | Each player receives | Memory | Dropped |',
+            '|---|---|---|---|---|---|---|---|']
+    for r in runs:
+        if 'tick_ms_p50' not in r:
+            rows.append(f"| {r['bots']} | | (a server elsewhere: its own numbers) | | | | | {r['dropped']} |")
+            continue
+        rows.append(f"| {r['bots']} | {r['beasts']} | {r['tick_ms_p50']} ms | {r['tick_ms_p99']} ms | "
+                    f"{r['tick_ms_max']} ms | {r['player_kb_s_p50']} KB/s | {r['memory_mb']} MB | {r['dropped']} |")
+    return '\n'.join(rows)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--bots', type=int, default=100)
+    parser.add_argument('--sweep', help='several counts of bots, one run each, and the table of them: 100,200,500')
+    parser.add_argument('--seconds', type=float, default=60)
+    parser.add_argument('--size', type=int, default=96, help='the field\'s side, in tiles')
+    parser.add_argument('--view', type=int, default=9, help='how far a hero sees, in tiles')
+    parser.add_argument('--beasts', type=int, default=0, help='beasts that wander the field and chase a hero near')
+    parser.add_argument('--world', help='a world of its own to walk in, in place of the field (its command `step`)')
+    parser.add_argument('--url', help='a server already running elsewhere: the bots alone, against it')
+    parser.add_argument('--no-split', action='store_true',
+                        help='the server and the bots on every core (else half each, on four cores or more)')
+    parser.add_argument('--json', help='write the numbers here too')
+    args = parser.parse_args()
+
+    counts = [int(c) for c in args.sweep.split(',')] if args.sweep else [args.bots]
+    runs = []
+    for count in counts:
+        numbers = measure(args, count)
+        runs.append(numbers)
+        print(json.dumps({k: v for k, v in numbers.items() if k != 'stats'}, indent=2), flush=True)
+    if len(runs) > 1 or args.sweep:
+        print(table(runs))
     if args.json:
-        Path(args.json).write_text(json.dumps({'numbers': numbers, 'stats': stats}, indent=2))
+        Path(args.json).write_text(json.dumps({'runs': runs, 'table': table(runs)} if args.sweep else
+                                              {'numbers': {k: v for k, v in runs[0].items() if k != 'stats'},
+                                               'stats': runs[0].get('stats', [])}, indent=2))
     return 0
 
 

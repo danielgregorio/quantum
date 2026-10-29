@@ -4,6 +4,8 @@
 > (`q:gameserver`, `PLAN_GAME_SERVER.md`), but what runs it is Rust, and on every core of the machine.
 > It comes after PR #95 (Phases 2 to 5) and before Phase 6 of `PLAN_GAME_SERVER.md`; it takes the place of
 > "PyPy if the numbers ask for it" in that plan's Phase 7.
+> E0 done (2026-10-29): `quantum gameserver conform` and the load's gauge; the Python engine's numbers, with players
+> alone and with 1500 beasts, are in the record below. With the beasts, their brains are 85% of the tick.
 
 ## Why
 
@@ -178,3 +180,43 @@ Done when: the table of E0 holds for a day, on the machine the world will live o
 
 Not a new language: an author never writes Rust. Not a change to the protocol or to the game's side. Not
 parallel rules: a zone's world is one thread of writes, on purpose, so that its log is the world.
+
+## Record
+
+### E0 (2026-10-29)
+
+Built: `frames.py`, what each player is told of a tick, made apart from the network (the server sends it; the
+harness compares it); `quantum gameserver conform`, against the record or a second engine; `quantum gameserver run
+--digest-every`; and in `scripts/gameserver-bots.py`, `--beasts`, `--world` (a world of a site's accounts gets a
+ticket for each bot), `--url`, the server and the bots on half the cores each, and `--sweep`. The harness passes for
+the Python engine against itself on meadow, den and Outpost, and finds a forged result, a forged digest, a field
+written on one tick and a frame said once more on the tick they happen
+(`tests/gameserver/test_gameserver_conform.py`).
+
+The Python engine, four cores (two for the server, two for the bots), a 96 by 96 field, a view of 9 tiles:
+
+    python scripts/gameserver-bots.py --sweep 100,200,500 --seconds 60
+
+| Bots | Beasts | Tick, median | Tick, 99th percentile | Worst | Each player receives | Memory | Dropped |
+|---|---|---|---|---|---|---|---|
+| 100 | 0 | 11.1 ms | 21.8 ms | 29.9 ms | 1.17 KB/s | 47 MB | 0 |
+| 200 | 0 | 23.7 ms | 89.1 ms | 382.2 ms | 1.73 KB/s | 54 MB | 0 |
+| 500 | 0 | 76.9 ms | 125.9 ms | 137.5 ms | 3.57 KB/s | 74 MB | 0 |
+
+    python scripts/gameserver-bots.py --bots 500 --beasts 1500 --seconds 240
+
+| Bots | Beasts | Tick, median | Tick, 99th percentile | Worst | Each player receives | Memory | Dropped |
+|---|---|---|---|---|---|---|---|
+| 500 | 1500 | 372.5 ms | 630.2 ms | 658.0 ms | 2.86 KB/s | 81 MB | 0 |
+
+With the plan's load the world runs fewer than three ticks a second, of its ten: the bots sent 362,485 steps in four
+minutes and 84,306 ran. Where the tick goes with 100 bots and 1500 beasts (cProfile, 93 ticks): the beasts' brains
+85% (their `q:when` conditions, evaluated by the interpreter for each beast every tick, half of it, and `nearest`
+reading the index, a third), the views and the sending 10%. With players alone it was the other way round: the views
+and the sending 71%, the rules 26%, the beasts 3%.
+
+So the order stays, and what each phase buys is clearer: E1 takes the players' share; the beasts' share is E2's
+bytecode and E3's brains thinking in parallel. A cost found on the way, fixed in Python because it was the
+algorithm's and not the language's: a spawn of many beasts listed an area's free tiles tile by tile, for each beast
+(200 beasts took 6.6 s on the first tick); they are read from the index's cells now, the same tiles in the same
+order, so the same draw lands on the same tile.
