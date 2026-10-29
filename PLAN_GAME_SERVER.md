@@ -12,6 +12,8 @@
 > `qg:sign-in`), and Outpost playable from start to end ([projects/outpost](projects/outpost)).
 > Phase 5 (2026-10-27): NPCs with minds, off the tick, their tools the world's commands; with a scripted mind in the
 > tests. A real conversation with a local model is what is left of it.
+> Proposed 2026-10-29: the world's engine in Rust, before Phase 6 ([PLAN_WORLD_ENGINE.md](PLAN_WORLD_ENGINE.md)).
+> At 500 bots the Python tick takes 91 ms at the median: the plan's numbers do not hold in Python.
 > Laboratory tier: no tag here carries a stability promise until it ships (`SUPPORT_TIERS.md`).
 
 ## The decision
@@ -537,9 +539,10 @@ an admin approves, the wolves come; the page shows the gold made and spent per h
 
 ### Phase 7 — Five hundred, at home (L)
 
-`q:bots` and `quantum gameserver audit`; a load test of 500 bot connections and 1500 beasts; profiling, MessagePack,
-PyPy if the numbers ask for it (the Core runs on it: `pypy_compat.py`); `q:room`; the world as a container on the
-homelab behind the Cloudflare Tunnel (the beta's receiver's kit), its backups, its metrics.
+`q:bots` and `quantum gameserver audit`; a load test of 500 bot connections and 1500 beasts; profiling, MessagePack;
+`q:room`; the world as a container on the homelab behind the Cloudflare Tunnel (the beta's receiver's kit), its
+backups, its metrics. The speed itself is the Rust engine's ([PLAN_WORLD_ENGINE.md](PLAN_WORLD_ENGINE.md)), in
+place of PyPy.
 
 Done when: the numbers below hold for a day of bots.
 
@@ -558,7 +561,8 @@ Done when: the numbers below hold for a day of bots.
 
 - **Python in the tick.** A grid at 10 ticks a second, views read from the index's cells, regions with no player
   asleep. If the profile asks for more: MessagePack, PyPy, the index and the differences in a compiled module.
-  Phase 2 measures it with a hundred bots, long before 500.
+  Phase 2 measures it with a hundred bots, long before 500. Measured again on 2026-10-29 at 200 and 500 bots: it
+  does not hold (91 ms at the median with 500), so the engine moves to Rust ([PLAN_WORLD_ENGINE.md](PLAN_WORLD_ENGINE.md)).
 - **The models cost money and time.** An NPC answers off the tick, cached, on a small model, within a budget a player
   a day and a world a day; without one, the fallback. The tests use a scripted model.
 - **A model told to misbehave.** It acts only through commands, whose `q:require` hold whatever it says; the Director
