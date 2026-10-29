@@ -167,6 +167,21 @@ Run a world (a q:application type="gameserver").
 | `--snapshot-every` |  | `300.0` |  |
 | `--stats` | say the numbers (the ticks' time, what went out) every so often |  |  |
 | `--no-minds` | the NPCs say the lines of their fallback, and no model is asked |  |  |
+| `--digest-every` | write the world's digest into its log every so often, for `conform` to check a replay against (a digest copies the whole world: a pause of its own) |  |  |
+
+<a id="cli-gameserver-conform"></a>
+
+### `quantum gameserver conform`
+
+Run a world's log again on an engine, against the record or another engine, and say the first tick where they differ (PLAN_WORLD_ENGINE.md).
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `file` | the world's .q |  |  |
+| `--data` | its snapshot and log (.quantum/gameserver/&lt;name>) |  |  |
+| `--engine` | the engine to run it on (python) | `python` |  |
+| `--against` | a second engine: the two compared tick by tick, frames and all |  |  |
+| `--digest-every` | compare the two worlds' digests every so many ticks (0: only at the end) | `1` |  |
 
 <a id="cli-gameserver-check"></a>
 
