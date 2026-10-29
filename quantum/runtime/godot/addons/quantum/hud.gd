@@ -136,7 +136,8 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			bar.add_theme_stylebox_override("background", back)
 			Q.apply_gd(bar, item.get("gd"))
 			box.add_child(bar)
-			_labels.append({"bar": bar, "bind": item["bind"]})
+			_labels.append({"bar": bar, "bind": item.get("bind"), "value_method": item.get("value_method"),
+				"max_method": item.get("max_method")})
 			continue
 		if item["kind"] == "counter" or item["kind"] == "text":
 			var label := Label.new()
@@ -171,7 +172,8 @@ func quantum_view() -> Dictionary:
 		if entry.has("icon"):
 			shown.append({"icon": entry["shown"]})
 		elif entry.has("bar"):
-			shown.append({"bar": entry["bind"], "value": entry["bar"].value, "max": entry["bar"].max_value})
+			shown.append({"bar": entry["bind"] if entry["bind"] != null else entry["value_method"],
+				"value": entry["bar"].value, "max": entry["bar"].max_value})
 		elif entry.has("inventory"):
 			shown.append({"inventory": entry["shown"]})
 		elif entry.has("table"):
@@ -209,7 +211,9 @@ func _refresh() -> void:
 				entry["icon"].texture = Q.frame_texture(entry["sheet"], f)
 			continue
 		if entry.has("bar"):
-			var v = _bound(entry["bind"])
+			if entry.get("max_method") != null:
+				entry["bar"].max_value = maxf(0.001, float(_scene.call(entry["max_method"])))
+			var v = _scene.call(entry["value_method"]) if entry.get("value_method") != null else _bound(entry["bind"])
 			entry["bar"].value = float(v) if v != null else 0.0
 			continue
 		if entry.has("inventory"):

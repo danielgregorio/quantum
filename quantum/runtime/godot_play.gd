@@ -13,7 +13,7 @@ extends SceneTree
 # Requests:
 #   {"op": "observe"}
 #   {"op": "act", "ticks": N, "hold": [...], "tap": [...], "press": [...], "release": [...], "cursor": [x, y],
-#    "text": "Ana\n"}   text: typed into the text box being typed in (a qg:field chosen), "\n" Enter
+#    "text": "Ana\n"}   text: typed into the text box being typed in (a qg:field chosen), "\n" Enter, "\u001b" Escape
 #   {"op": "until", "max_ticks": N, "condition": {...}, ...the same actions as act}
 #   either may carry "player": N, the actions named as player 1's ("left") and pressed as player N's
 #                     ("p3_left" on one machine; in a networked game, N is the session's own seat)
@@ -522,6 +522,8 @@ func observation() -> Dictionary:
 	var q = root.get_node_or_null("Q")
 	if q != null and q.music_playing != "":
 		obs["music"] = q.music_playing   # what is heard: the scene's qg:music
+	if q != null and q.world != null:   # a world's client: the world as this player knows it (qg:connect)
+		obs["world"] = q.world.observation()
 	return obs
 
 

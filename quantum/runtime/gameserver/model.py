@@ -7,6 +7,7 @@ wrong kind, an expression that does not parse, a map that cannot be read: each i
 
 from __future__ import annotations
 
+import ast
 import math
 import re
 from dataclasses import dataclass, field
@@ -14,15 +15,20 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 from xml.etree import ElementTree as ET
 
+from quantum.core.expressions import _normalise_js_operators
 from quantum.runtime.gameserver.errors import GameServerError
-from quantum.runtime.gameserver.expressions import parts_of, validate
+from quantum.runtime.gameserver.expressions import parts_of, unbraced, validate
 from quantum.runtime.gameserver.schema import HANDLERS, TAGS, Attr
 
 Q_NS = '{https://quantum.lang/ns}'
 _IDENT = re.compile(r'^[A-Za-z_][A-Za-z0-9_-]*$')
 _RATE = re.compile(r'^\s*(\d+)\s*/\s*(\d*\.?\d*)\s*(ms|s|m|h)\s*$')
 _DURATION = re.compile(r'^\s*(\d*\.?\d+)\s*(ms|s|m|h)\s*$')
+_RANGE = re.compile(r'^\s*(\d+)\s*(?:-\s*(\d+)\s*)?$')
 _UNIT = {'ms': 0.001, 's': 1.0, 'm': 60.0, 'h': 3600.0}
+RESERVED = ('id', 'kind', 'at', 'facing', 'state')       # every entity's own fields
+# what a view's where= may not call: the server reads it for each player, outside the ticks the log replays
+NOT_IN_A_VIEW = ('random', 'chance', 'pick', 'now')
 
 
 def rate_of(raw: str) -> Tuple[int, float]:
@@ -32,6 +38,15 @@ def rate_of(raw: str) -> Tuple[int, float]:
         raise ValueError(raw)
     count, many, unit = int(m.group(1)), m.group(2), m.group(3)
     return count, (float(many) if many else 1.0) * _UNIT[unit]
+
+
+def range_of(raw: str) -> Tuple[int, int]:
+    """'3' as (3, 3); '0-3' as (0, 3)."""
+    m = _RANGE.match(raw or '')
+    if not m or (m.group(2) is not None and int(m.group(2)) < int(m.group(1))):
+        raise ValueError(raw)
+    low = int(m.group(1))
+    return low, int(m.group(2)) if m.group(2) is not None else low
 
 
 def seconds_of(raw: str) -> float:
@@ -60,6 +75,28 @@ class FieldDef:
 
 
 @dataclass
+class StateDef:
+    name: str
+    do: str                                              # stand, wander, chase, flee
+    within: int
+    target: Optional[str]                                # expressions, unbraced
+    away_from: Optional[str]
+    for_ticks: Optional[int]
+    then: Optional[str]
+    whens: List[Tuple[str, str, Optional[int]]]          # (condition, become, line)
+    line: Optional[int]
+
+
+@dataclass
+class DropDef:
+    item: Optional[str]
+    gold: Optional[Tuple[int, int]]
+    count: Tuple[int, int]
+    chance: float
+    line: Optional[int]
+
+
+@dataclass
 class EntityDef:
     name: str
     kind: str
@@ -67,6 +104,28 @@ class EntityDef:
     persist: bool
     step_ticks: int                                      # how many ticks a step takes
     fields: List[FieldDef]
+    line: Optional[int]
+    states: Dict[str, StateDef] = field(default_factory=dict)
+    initial: Optional[str] = None                        # the brain's first state
+    loot: List[DropDef] = field(default_factory=list)
+
+
+@dataclass
+class SpawnDef:
+    entity: str
+    area: str
+    count: int
+    night_count: Optional[int]
+    respawn_ticks: int
+    line: Optional[int]
+
+
+@dataclass
+class DeathDef:
+    kinds: List[str]
+    as_name: str
+    by_name: str
+    body: ET.Element
     line: Optional[int]
 
 
@@ -77,6 +136,25 @@ class CommandDef:
     limit: Optional[Tuple[int, int]]                     # so many in so many ticks
     body: ET.Element
     line: Optional[int]
+    predict: Optional[str] = None                        # the param of the step the game shows at once
+    builtin: Optional[str] = None                        # a command the world's chat, party or trade brings
+    by: Optional[str] = None                             # npc: an NPC's tool, never a player's to send
+
+
+@dataclass
+class NpcDef:
+    """A q:npc: its entity (of the same name) and its mind."""
+    name: str
+    at: str
+    instruction: str
+    tools: Dict[str, str]                                # a command: what the agent is told it does
+    model: str
+    knowledge: Optional[str]
+    memory: bool
+    budget: int                                          # questions a player may ask it a day
+    max_tools: int
+    lines: List[str]
+    line: Optional[int]
 
 
 @dataclass
@@ -85,6 +163,54 @@ class FunctionDef:
     params: List[str]
     body: ET.Element
     line: Optional[int]
+
+
+@dataclass
+class ViewDef:
+    name: str
+    where: Optional[str]                                 # the expression, unbraced; None: every entity
+    radius: Optional[int]                                # n of a near(it, me, n) it needs: read from the index
+    rest: bool                                           # more than the near(): the whole where= is read too
+    line: Optional[int]
+
+
+def near_of(expression: Optional[str]) -> Tuple[Optional[int], bool]:
+    """A where= as (n, rest): n when it needs near(it, me, n) (alone, or with `and` more), and whether there is more
+    to it than that."""
+    if expression is None:
+        return None, False
+    tree = ast.parse(_normalise_js_operators(expression.strip()), mode='eval').body
+    terms = tree.values if isinstance(tree, ast.BoolOp) and isinstance(tree.op, ast.And) else [tree]
+    for term in terms:
+        if (isinstance(term, ast.Call) and isinstance(term.func, ast.Name) and term.func.id == 'near'
+                and not term.keywords and len(term.args) == 3
+                and {a.id for a in term.args[:2] if isinstance(a, ast.Name)} == {'it', 'me'}
+                and isinstance(term.args[2], ast.Constant) and type(term.args[2].value) is int
+                and term.args[2].value >= 0):
+            return term.args[2].value, len(terms) > 1
+    return None, True
+
+
+@dataclass
+class ChatDef:
+    channels: Dict[str, Optional[int]]                   # a channel: its reach in tiles (None: the world; party)
+    whisper: bool
+    words: List[str]                                     # the filter's
+    line: Optional[int]
+
+
+@dataclass
+class QuestDef:
+    name: str
+    title: str
+    goal: Tuple[str, str, int]                           # (kill or bring, the kind or the item, how many)
+    level: int
+    reward: List[Tuple[str, int]]                        # (a currency, item:name, or a field; how many)
+    line: Optional[int]
+
+
+# The worst words, starred by the chat's filter="moderate" (a world may give its own file instead).
+MODERATE = ('fuck', 'shit', 'cunt', 'nigger', 'faggot', 'retard', 'porra', 'caralho', 'buceta', 'viado', 'puta')
 
 
 @dataclass
@@ -103,6 +229,31 @@ class WorldDef:
     on_join: List[ET.Element] = field(default_factory=list)
     on_leave: List[ET.Element] = field(default_factory=list)
     variables: List[Tuple[str, str, Optional[int]]] = field(default_factory=list)   # (name, value, line)
+    views: Dict[str, ViewDef] = field(default_factory=dict)
+    spawns: List[SpawnDef] = field(default_factory=list)
+    deaths: List[DeathDef] = field(default_factory=list)
+    day_ticks: Optional[int] = None                      # q:clock: a day, in ticks
+    night: float = 0.0                                   # the part of a day that is night
+    chat: Optional[ChatDef] = None
+    party_size: Optional[int] = None                     # q:party
+    trade: bool = False                                  # q:trade
+    quests: Dict[str, QuestDef] = field(default_factory=dict)
+    currencies: Dict[str, int] = field(default_factory=dict)          # a currency: what a hero starts with
+    items: Dict[str, Dict[str, object]] = field(default_factory=dict)  # an item: what it is
+    npcs: Dict[str, NpcDef] = field(default_factory=dict)
+    knowledge: Dict[str, str] = field(default_factory=dict)            # a q:knowledge: its texts, read
+
+    @property
+    def ledger(self) -> bool:
+        """The world keeps a ledger: its bag and its currencies' fields are the ledger's alone."""
+        return bool(self.currencies or self.items)
+
+    @property
+    def reach(self) -> Optional[int]:
+        """How far a player sees: the most n of the views' near(); None if a view sees the whole world."""
+        if any(v.radius is None for v in self.views.values()):
+            return None
+        return max(v.radius for v in self.views.values())
 
     @property
     def hero(self) -> EntityDef:
@@ -137,6 +288,10 @@ def _check_value(tag: str, name: str, attr: Attr, raw: str, line: Optional[int])
                 raise ValueError
         elif kind == 'int':
             int(raw)
+        elif kind == 'number':
+            float(raw)
+        elif kind == 'range':
+            range_of(raw)
         elif kind == 'bool':
             if raw not in ('true', 'false'):
                 raise ValueError
@@ -151,7 +306,8 @@ def _check_value(tag: str, name: str, attr: Attr, raw: str, line: Optional[int])
     except ValueError:
         what = {'ident': 'a name', 'names': 'names separated by commas', 'int': 'a whole number',
                 'bool': 'true or false', 'rate': 'so many in so long (8/s, 1/3s)',
-                'duration': 'a time (500ms, 2s, 5m)'}[kind]
+                'duration': 'a time (500ms, 2s, 5m)', 'number': 'a number',
+                'range': 'a whole number, or two with a dash (0-3)'}[kind]
         raise GameServerError(f'{where} is {what}, not {raw!r}', line)
     # an expression is checked now, not at the first tick that reaches it
     try:
@@ -160,7 +316,7 @@ def _check_value(tag: str, name: str, attr: Attr, raw: str, line: Optional[int])
         elif kind in ('text', 'value', 'place'):
             for literal, expression in parts_of(raw):
                 if expression is not None:
-                    validate(expression)
+                    validate(expression, braced=False)
     except GameServerError as e:
         raise GameServerError(f'{where} {e.message}', line)
 
@@ -184,6 +340,17 @@ def _check(element: ET.Element, parent: str) -> None:
         raise GameServerError(f'<q:{name}> goes in {where}, not in <q:{parent}>', line)
     for attr in element.attrib:
         if attr not in spec.attrs:
+            if spec.extra:
+                if attr in RESERVED:
+                    raise GameServerError(f'<q:{name}> {attr}=: every entity has id, kind, at, facing (and state, '
+                                          f'with a brain) already', line)
+                if not _IDENT.match(attr) or attr.startswith('_'):
+                    raise GameServerError(f'<q:{name}> {attr}=: {spec.extra}; {attr} is not a name a field may '
+                                          f'have', line)
+                for literal, expression in parts_of(element.attrib[attr]):
+                    if expression is not None:
+                        validate(expression, braced=False)
+                continue
             known = ', '.join(spec.attrs) or 'none'
             raise GameServerError(f'<q:{name}> has no attribute {attr}= (it has: {known})', line)
     for attr, a in spec.attrs.items():
@@ -225,6 +392,210 @@ def _read_map(element: ET.Element, base: Path) -> MapDef:
         y1 = max(y0, int(math.ceil((zone.y + zone.height) / th)) - 1)
         areas[zone.name] = (x0, y0, x1, y1)
     return MapDef(element.get('name'), path, tmap.width, tmap.height, walls, areas)
+
+
+def _entity(child: ET.Element, tick_rate: int, ignore: Tuple[str, ...] = ()) -> EntityDef:
+    """A q:entity: its fields (q:field, and its other attributes), its brain and its loot."""
+    line = _line(child)
+    name = child.get('name')
+    count, seconds = rate_of(child.get('speed', TAGS['entity'].attrs['speed'].default))
+    fields: List[FieldDef] = []
+    for attr, raw in child.attrib.items():
+        if attr not in TAGS['entity'].attrs and attr not in ignore:
+            fields.append(FieldDef(attr, raw, False, line))
+    for f in child:
+        if _local(f) == ('q', 'field'):
+            fields.append(FieldDef(f.get('name'), f.get('value', ''), f.get('private') == 'true', _line(f)))
+    names = [f.name for f in fields]
+    twice = sorted({n for n in names if names.count(n) > 1})
+    if twice:
+        raise GameServerError(f'<q:entity name="{name}"> has {", ".join(twice)} twice (an attribute and a q:field)',
+                              line)
+    reserved = set(RESERVED) & set(names)
+    if reserved:
+        raise GameServerError(f'<q:entity name="{name}"> declares {", ".join(sorted(reserved))}: every entity has '
+                              f'id, kind, at, facing (and state, with a brain) already', line)
+    if 'hp' in names:                                    # one that fights: its health's top, and whom it fights
+        if 'max_hp' not in names:
+            hp = next(f for f in fields if f.name == 'hp')
+            fields.append(FieldDef('max_hp', hp.value, hp.private, hp.line))
+        if 'target' not in names:
+            fields.append(FieldDef('target', '', False, line))
+    spec = EntityDef(name, child.get('kind'), child.get('per-player') == 'true', child.get('persist') == 'true',
+                     max(1, math.ceil(tick_rate * seconds / count)), fields, line)
+    for part in child:
+        kind = _local(part)
+        if kind == ('q', 'brain'):
+            if spec.states:
+                raise GameServerError(f'<q:entity name="{name}"> has one q:brain', _line(part))
+            if spec.per_player:
+                raise GameServerError('<q:brain> in a player\'s entity: its player is its brain', _line(part))
+            _brain(spec, part, tick_rate)
+        elif kind == ('q', 'loot'):
+            if part.get('of') is not None or part.get('to') is not None:
+                raise GameServerError('<q:loot of= to=> is a block\'s (it gives an entity\'s loot); in a q:entity '
+                                      'it holds q:drops', _line(part))
+            for d in part:
+                if _local(d)[0] == 'comment':
+                    continue
+                if (d.get('item') is None) == (d.get('gold') is None):
+                    raise GameServerError('<q:drop> is an item= or gold=, one of them', _line(d))
+                chance = float(d.get('chance', 1))
+                if not 0 <= chance <= 1:
+                    raise GameServerError(f'<q:drop chance="{chance}">: 0 to 1', _line(d))
+                spec.loot.append(DropDef(d.get('item'), range_of(d.get('gold')) if d.get('gold') else None,
+                                         range_of(d.get('count', '1')), chance, _line(d)))
+    return spec
+
+
+def _brain(spec: EntityDef, element: ET.Element, tick_rate: int) -> None:
+    for st in element:
+        if _local(st)[0] == 'comment':
+            continue
+        sline = _line(st)
+        whens = [(unbraced(w.get('condition')), w.get('become'), _line(w)) for w in st
+                 if _local(w) == ('q', 'when')]
+        do = st.get('do', 'stand')
+        if do == 'chase' and st.get('target') is None:
+            raise GameServerError(f'<q:state name="{st.get("name")}" do="chase"> needs target=', sline)
+        if do == 'flee' and st.get('from') is None:
+            raise GameServerError(f'<q:state name="{st.get("name")}" do="flee"> needs from=', sline)
+        if (st.get('for') is None) != (st.get('then') is None):
+            raise GameServerError(f'<q:state name="{st.get("name")}">: for= and then= go together', sline)
+        state = StateDef(st.get('name'), do, int(st.get('within', 5)),
+                         unbraced(st.get('target')) if st.get('target') else None,
+                         unbraced(st.get('from')) if st.get('from') else None,
+                         max(1, round(seconds_of(st.get('for')) * tick_rate)) if st.get('for') else None,
+                         st.get('then'), whens, sline)
+        if state.name in spec.states:
+            raise GameServerError(f'two states named {state.name!r} in the brain of {spec.name!r}', sline)
+        spec.states[state.name] = state
+        if st.get('initial') == 'true':
+            if spec.initial is not None:
+                raise GameServerError(f'two initial states in the brain of {spec.name!r}', sline)
+            spec.initial = state.name
+    if not spec.states:
+        raise GameServerError(f'<q:brain> of {spec.name!r} has no q:state', _line(element))
+    if spec.initial is None:
+        spec.initial = next(iter(spec.states))
+    for state in spec.states.values():
+        for _, become, wline in state.whens:
+            if become not in spec.states:
+                raise GameServerError(f'<q:when become="{become}">: the brain has no such state '
+                                      f'({", ".join(spec.states)})', wline)
+        if state.then is not None and state.then not in spec.states:
+            raise GameServerError(f'<q:state then="{state.then}">: the brain has no such state', state.line)
+
+
+def _builtin(world: WorldDef, name: str, params: List[str], limit, line: Optional[int]) -> None:
+    if name in world.commands:
+        raise GameServerError(f'the world has a q:command {name!r}, a name its chat, party or trade brings', line)
+    world.commands[name] = CommandDef(name, params, limit, None, line, builtin=name)
+
+
+def _chat(element: ET.Element, base: Path, line: Optional[int]) -> ChatDef:
+    channels: Dict[str, Optional[int]] = {}
+    for part in element.get('channels', 'say:7').split(','):
+        name, _, reach = part.strip().partition(':')
+        if not _IDENT.match(name) or (reach and not reach.isdigit()):
+            raise GameServerError(f'<q:chat channels=>: {part.strip()!r} is a name, or name:tiles', line)
+        channels[name] = int(reach) if reach else None
+    words: List[str] = []
+    kind = element.get('filter', 'moderate')
+    if kind == 'moderate':
+        words = list(MODERATE)
+    elif kind != 'none':
+        path = (base / kind).resolve()
+        if not path.is_file():
+            raise GameServerError(f'<q:chat filter="{kind}">: moderate, none, or a file of words next to the world '
+                                  f'(there is no {path})', line)
+        words = [w.strip().lower() for w in path.read_text(encoding='utf-8').splitlines() if w.strip()]
+    return ChatDef(channels, element.get('whisper') == 'true', words, line)
+
+
+MAX_KNOWLEDGE = 20_000      # characters of a q:knowledge an agent is given
+
+
+def _knowledge(element: ET.Element, base: Path, line: Optional[int]) -> str:
+    """A q:knowledge's texts, read now: each file with its name over it."""
+    parts = []
+    for source in element:
+        if _local(source)[0] == 'comment':
+            continue
+        path = (base / source.get('path')).resolve()
+        if source.get('type', 'directory') == 'file':
+            files = [path] if path.is_file() else []
+        else:
+            files = sorted(path.glob(source.get('pattern', '*.md'))) if path.is_dir() else []
+        if not files:
+            raise GameServerError(f'<q:source path="{source.get("path")}">: there is no such '
+                                  f'{source.get("type", "directory")} (or nothing in it) next to the world',
+                                  _line(source))
+        for f in files:
+            parts.append(f'## {f.stem}\n\n{f.read_text(encoding="utf-8").strip()}')
+    return '\n\n'.join(parts)[:MAX_KNOWLEDGE]
+
+
+def _npc(element: ET.Element, world: WorldDef, line: Optional[int]) -> NpcDef:
+    """A q:npc: an entity of its name (its kind, its fields), made at its area as the world begins, and its mind."""
+    name = element.get('name')
+    world.entities[name] = _entity(element, world.tick_rate, ignore=('at',))
+    world.spawns.append(SpawnDef(name, element.get('at'), 1, None, 600 * world.tick_rate, line))
+    agents = [a for a in element if _local(a) == ('q', 'agent')]
+    if len(agents) > 1:
+        raise GameServerError(f'<q:npc name="{name}"> has one q:agent', line)
+    agent = agents[0] if agents else ET.Element('agent')
+    instruction = ' '.join(' '.join((i.text or '').split()) for i in agent if _local(i) == ('q', 'instruction'))
+    tools = {t.get('command'): t.get('description', '') for t in agent if _local(t) == ('q', 'tool')}
+    budget = agent.get('budget', '40/day')
+    m = re.fullmatch(r'\s*(\d+)\s*/\s*(day|d)\s*', budget)
+    if not m:
+        raise GameServerError(f'<q:agent budget="{budget}">: so many a day (40/day)', _line(agent) or line)
+    lines = [ln.get('text') for fb in element if _local(fb) == ('q', 'fallback') for ln in fb
+             if _local(ln) == ('q', 'line')]
+    if not lines:
+        raise GameServerError(f'<q:npc name="{name}"> needs a q:fallback with a q:line: what it says with no mind '
+                              f'to answer (no model, out of budget, too slow)', line)
+    return NpcDef(name, element.get('at'), instruction, tools, agent.get('model', 'small'), agent.get('knowledge'),
+                  agent.get('memory', 'per-player') == 'per-player', int(m.group(1)),
+                  int(agent.get('maxIterations', 3)), lines, line)
+
+
+def _quest(element: ET.Element, line: Optional[int]) -> QuestDef:
+    m = re.match(r'^\s*(kill|bring)\s*:\s*([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(\d+)\s*$', element.get('goal'))
+    if not m:
+        raise GameServerError(f'<q:quest goal="{element.get("goal")}">: kill:Kind:n or bring:item:n', line)
+    reward = []
+    for part in [p.strip() for p in element.get('reward', '').split(',') if p.strip()]:
+        key, _, value = part.rpartition(':')
+        if not key or not value.strip():
+            raise GameServerError(f'<q:quest reward=>: {part!r} is name:amount (gold:60, xp:100, item:sword)', line)
+        if key == 'item' or key.startswith('item:'):
+            reward.append((f'item:{value.strip()}' if key == 'item' else key, 1 if key == 'item' else int(value)))
+        elif value.strip().isdigit():
+            reward.append((key.strip(), int(value)))
+        else:
+            raise GameServerError(f'<q:quest reward=>: {part!r}: its amount is a whole number', line)
+    return QuestDef(element.get('name'), element.get('title'), (m.group(1), m.group(2), int(m.group(3))),
+                    int(element.get('level', 1)), reward, line)
+
+
+def _predicted(command: ET.Element, params: List[str]) -> str:
+    """predict="true": the body is q:requires and one q:move of me to ahead(me, a param); that param."""
+    statements = [c for c in command if _local(c)[0] != 'comment']
+    moves = [c for c in statements if _local(c) == ('q', 'move')]
+    others = [c for c in statements if _local(c) not in (('q', 'move'), ('q', 'require'))]
+    why = None
+    if len(moves) != 1 or others:
+        why = 'its body is q:requires and one q:move'
+    else:
+        m = re.match(r'^ahead\(\s*me\s*,\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)$', unbraced(moves[0].get('to')).strip())
+        if unbraced(moves[0].get('entity')).strip() != 'me' or not m or m.group(1) not in params:
+            why = 'its q:move is of me to ahead(me, one of its params)'
+        else:
+            return m.group(1)
+    raise GameServerError(f'<q:command name="{command.get("name")}" predict="true">: the game shows a step it can '
+                          f'foresee: {why}', _line(command))
 
 
 def read_world(app, source: Optional[str] = None) -> WorldDef:
@@ -269,17 +640,12 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
         elif name == 'entity':
             if child.get('name') in world.entities:
                 raise GameServerError(f'two entities named {child.get("name")!r}', line)
-            count, seconds = rate_of(child.get('speed', TAGS['entity'].attrs['speed'].default))
-            fields = [FieldDef(f.get('name'), f.get('value', ''), f.get('private') == 'true', _line(f))
-                      for f in child]
-            reserved = {'id', 'kind', 'at', 'facing'} & {f.name for f in fields}
-            if reserved:
-                raise GameServerError(f'<q:entity name="{child.get("name")}"> declares {", ".join(sorted(reserved))}: '
-                                      f'every entity has id, kind, at and facing already', line)
-            world.entities[child.get('name')] = EntityDef(
-                child.get('name'), child.get('kind'), child.get('per-player') == 'true',
-                child.get('persist') == 'true', max(1, math.ceil(world.tick_rate * seconds / count)), fields, line)
+            world.entities[child.get('name')] = _entity(child, world.tick_rate)
         elif name == 'command':
+            if child.get('name') in world.commands and world.commands[child.get('name')].builtin:
+                raise GameServerError(f'<q:command name="{child.get("name")}">: the world\'s '
+                                      f'{world.commands[child.get("name")].builtin.split("-")[0]} has that command '
+                                      f'(put the q:command before it to see what is taken)', line)
             if child.get('name') in world.commands:
                 raise GameServerError(f'two commands named {child.get("name")!r}', line)
             limit = None
@@ -287,7 +653,9 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
                 count, seconds = rate_of(child.get('limit'))
                 limit = (count, max(1, round(seconds * world.tick_rate)))
             params = [p.strip() for p in child.get('params', '').split(',') if p.strip()]
-            world.commands[child.get('name')] = CommandDef(child.get('name'), params, limit, child, line)
+            predict = _predicted(child, params) if child.get('predict') == 'true' else None
+            world.commands[child.get('name')] = CommandDef(child.get('name'), params, limit, child, line, predict,
+                                                           by=child.get('by'))
         elif name == 'function':
             if child.get('name') in world.functions:
                 raise GameServerError(f'two functions named {child.get("name")!r}', line)
@@ -305,12 +673,127 @@ def _read(root: ET.Element, file: Optional[Path]) -> WorldDef:
             world.on_leave.append(child)
         elif name == 'set':
             world.variables.append((child.get('name'), child.get('value', ''), line))
+        elif name == 'spawn':
+            if child.get('for') is not None:
+                raise GameServerError('<q:spawn for=> is a block\'s (a command that makes some for a while); '
+                                      'in q:gameserver a spawn lasts', line)
+            world.spawns.append(SpawnDef(child.get('entity'), child.get('area'), int(child.get('count', 1)),
+                                         int(child.get('night-count')) if child.get('night-count') else None,
+                                         max(1, round(seconds_of(child.get('respawn', '60s')) * world.tick_rate)),
+                                         line))
+        elif name == 'on-death':
+            kinds = [k.strip() for k in child.get('kind').split(',') if k.strip()]
+            world.deaths.append(DeathDef(kinds, child.get('as', 'it'), child.get('by', 'killer'), child, line))
+        elif name == 'clock':
+            if world.day_ticks is not None:
+                raise GameServerError('a world has one q:clock', line)
+            night = float(child.get('night', 0.25))
+            if not 0 <= night <= 1:
+                raise GameServerError(f'<q:clock night="{night}">: the part of a day that is night, 0 to 1', line)
+            world.day_ticks = max(1, round(seconds_of(child.get('day', '60m')) * world.tick_rate))
+            world.night = night
+        elif name == 'currency':
+            if child.get('name') in world.currencies or child.get('name') in ('bag',) + RESERVED:
+                raise GameServerError(f'<q:currency name="{child.get("name")}">: a name the world has already', line)
+            world.currencies[child.get('name')] = int(child.get('start', 0))
+        elif name == 'item':
+            if child.get('name') in world.items:
+                raise GameServerError(f'two items named {child.get("name")!r}', line)
+            from quantum.runtime.gameserver.expressions import literal
+            world.items[child.get('name')] = {k: literal(v) for k, v in child.attrib.items() if k != 'name'}
+        elif name == 'chat':
+            if world.chat is not None:
+                raise GameServerError('a world has one q:chat', line)
+            world.chat = _chat(child, base, line)
+            count, seconds = rate_of(child.get('limit', '3/5s'))
+            limit = (count, max(1, round(seconds * world.tick_rate)))
+            _builtin(world, 'chat', ['channel', 'text'], limit, line)
+            if world.chat.whisper:
+                _builtin(world, 'whisper', ['to', 'text'], limit, line)
+        elif name == 'party':
+            world.party_size = int(child.get('size', 5))
+            for cmd, params in (('party-invite', ['who']), ('party-accept', ['who']), ('party-leave', [])):
+                _builtin(world, cmd, params, (4, world.tick_rate), line)
+        elif name == 'trade':
+            world.trade = True
+            for cmd, params in (('trade-offer', ['who', 'gold', 'items']), ('trade-accept', ['who']),
+                                ('trade-cancel', ['who'])):
+                _builtin(world, cmd, params, (4, world.tick_rate), line)
+        elif name == 'npc':
+            if child.get('name') in world.entities or child.get('name') in world.npcs:
+                raise GameServerError(f'two entities named {child.get("name")!r}', line)
+            world.npcs[child.get('name')] = _npc(child, world, line)
+        elif name == 'knowledge':
+            if child.get('name') in world.knowledge:
+                raise GameServerError(f'two q:knowledge named {child.get("name")!r}', line)
+            world.knowledge[child.get('name')] = _knowledge(child, base, line)
+        elif name == 'quest':
+            if child.get('name') in world.quests:
+                raise GameServerError(f'two quests named {child.get("name")!r}', line)
+            world.quests[child.get('name')] = _quest(child, line)
+        elif name == 'view':
+            if child.get('name') in world.views:
+                raise GameServerError(f'two views named {child.get("name")!r}', line)
+            where = unbraced(child.get('where')) if child.get('where') is not None else None
+            radius, rest = near_of(where)
+            world.views[child.get('name')] = ViewDef(child.get('name'), where, radius, rest, line)
+    if not world.views:
+        world.views['world'] = ViewDef('world', None, None, False, _line(server))
+    for view in world.views.values():
+        if view.where is None:
+            continue
+        for node in ast.walk(ast.parse(_normalise_js_operators(view.where.strip()), mode='eval')):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                called = node.func.id
+                if called in NOT_IN_A_VIEW or called in world.functions:
+                    raise GameServerError(f'<q:view name="{view.name}"> where= calls {called}(): a view reads the '
+                                          f'world and changes nothing, so not the world\'s random nor a '
+                                          f'q:function', view.line)
     if world.map is None:
         raise GameServerError('a world needs its q:map', _line(server))
+    for npc in world.npcs.values():
+        for tool in npc.tools:
+            command = world.commands.get(tool)
+            if command is None or command.by != 'npc':
+                raise GameServerError(f'<q:tool command="{tool}"> of {npc.name}: ' + (
+                    'a q:command of the world with by="npc" (an NPC\'s, never a player\'s to send)' if command else
+                    f'the world has no such command ({", ".join(sorted(world.commands)) or "none"})'), npc.line)
+        if npc.knowledge is not None and npc.knowledge not in world.knowledge:
+            raise GameServerError(f'<q:agent knowledge="{npc.knowledge}"> of {npc.name}: the world has no '
+                                  f'q:knowledge of that name', npc.line)
     players = [e for e in world.entities.values() if e.per_player]
     if len(players) != 1:
         raise GameServerError('a world has one entity with per-player="true": the one each player gets' +
                               (f' (it has {len(players)})' if players else ''), _line(server))
+    kinds = {e.kind for e in world.entities.values()}
+    for sp in world.spawns:
+        spec = world.entities.get(sp.entity)
+        if spec is None or spec.per_player:
+            raise GameServerError(f'<q:spawn entity="{sp.entity}">: ' + ('a player\'s entity comes with its player'
+                                  if spec else f'no q:entity of that name ({", ".join(world.entities)})'), sp.line)
+        if sp.area not in world.map.areas:
+            raise GameServerError(f'<q:spawn area="{sp.area}">: the map has no area of that name '
+                                  f'({", ".join(sorted(world.map.areas)) or "none"})', sp.line)
+        if sp.night_count is not None and world.day_ticks is None:
+            raise GameServerError('<q:spawn night-count=>: the world has no q:clock, so no night', sp.line)
+    if world.items:
+        for e in world.entities.values():
+            for drop in e.loot:
+                if drop.item is not None and drop.item not in world.items:
+                    raise GameServerError(f'<q:drop item="{drop.item}">: the world has no q:item of that name '
+                                          f'({", ".join(sorted(world.items))})', drop.line)
+    for e in world.entities.values():
+        if any(d.gold is not None for d in e.loot) and world.ledger and not world.currencies:
+            raise GameServerError('<q:drop gold=>: the world keeps a ledger with no q:currency', e.line)
+        for f in e.fields:
+            if f.name in world.currencies and not f.private:
+                raise GameServerError(f'<q:entity name="{e.name}"> {f.name}: a currency is private, its holder\'s',
+                                      f.line)
+    for death in world.deaths:
+        for kind in death.kinds:
+            if kind not in kinds:
+                raise GameServerError(f'<q:on-death kind="{kind}">: no entity of the world is of that kind '
+                                      f'({", ".join(sorted(kinds))})', death.line)
     for e in world.entities.values():
         if e.persist and not e.per_player:
             raise GameServerError(f'<q:entity name="{e.name}"> persist="true" is for a player\'s entity '

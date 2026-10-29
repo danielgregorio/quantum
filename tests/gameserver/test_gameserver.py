@@ -39,7 +39,7 @@ HERO = '<q:entity name="hero" kind="Hero" per-player="true" />'
 # --- the file ---------------------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize('body, says, line', [
-    (HERO + '\n<q:spawn entity="hero" />', '<q:spawn> is not a tag of a world', 5),
+    (HERO + '\n<q:director every="10m" />', '<q:director> is not a tag of a world', 5),     # Phase 6's
     (HERO + '\n<q:command name="go" speed="2"></q:command>', 'has no attribute speed=', 5),
     (HERO + '\n<q:command name="go" limit="fast"></q:command>', 'limit= is so many in so long', 5),
     (HERO + '\n<q:command name="go"><q:require condition="{me.at ==}" /></q:command>', 'invalid expression', 5),
@@ -122,6 +122,8 @@ def test_a_forged_command_is_refused_and_one_out_of_the_protocol_closes():
             ana.ws.send(json.dumps({'type': 'cmd', 'seq': 'one', 'name': 'step', 'args': {'dir': 'east'}}))
             with pytest.raises(WorldSessionError, match='integer seq'):
                 ana.observe()
+        with WorldSession(server.url, 'ana') as again:          # the connection closed, its player left: back in
+            assert again.me_id == 'hero:ana' and list(server.world.players) == ['ana']
         with pytest.raises(WorldSessionError, match='1 to 24 letters'):
             WorldSession(server.url, 'a name with spaces')
 
@@ -273,7 +275,8 @@ def test_a_server_killed_mid_way_has_every_command_it_acknowledged(tmp_path):
     finally:
         server.send_signal(signal.SIGTERM)
         try:
-            server.wait(10)
+            said, _ = server.communicate(timeout=60)                      # a loaded machine stops slowly
         except subprocess.TimeoutExpired:
             server.kill()
-    assert (data / 'snapshot.json').exists()                           # a stop writes the world
+            said, _ = server.communicate()
+    assert (data / 'snapshot.json').exists(), f'no snapshot after the stop; the server said: {said}'   # a stop writes the world

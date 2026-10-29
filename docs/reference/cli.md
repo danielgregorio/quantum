@@ -165,6 +165,8 @@ Run a world (a q:application type="gameserver").
 | `--step` | a test world: it ticks only when a client says "step" |  |  |
 | `--data` | where the world keeps its snapshot and log (.quantum/gameserver/&lt;name>) |  |  |
 | `--snapshot-every` |  | `300.0` |  |
+| `--stats` | say the numbers (the ticks' time, what went out) every so often |  |  |
+| `--no-minds` | the NPCs say the lines of their fallback, and no model is asked |  |  |
 
 <a id="cli-gameserver-check"></a>
 
@@ -175,6 +177,18 @@ Read a world against its schema, and say what is wrong.
 | Argument | Meaning | Default | Values |
 |---|---|---|---|
 | `file` |  |  |  |
+
+<a id="cli-gameserver-ticket"></a>
+
+### `quantum gameserver ticket`
+
+A ticket into a world of a site's accounts (accounts="site"), signed with QUANTUM_WORLD_SECRET from the environment.
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `--account` | the site's id of the account (its hero: hero:&lt;it>) |  |  |
+| `--name` | the name its hero shows (else the account) |  |  |
+| `--seconds` | how long it lasts (a minute) | `60.0` |  |
 
 <a id="cli-relay"></a>
 

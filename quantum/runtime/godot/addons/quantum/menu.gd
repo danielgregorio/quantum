@@ -11,7 +11,8 @@ extends CanvasLayer
 # wherever the pointer rests. Godot's own GUI focus and mouse handling are
 # off, so they cannot choose a second way.
 #
-# A field, once chosen, takes the keyboard until Enter or until it loses the
+# A field, once chosen, takes the keyboard until Enter, Escape, a click away
+# from it (which goes on to what is under the pointer) or until it loses the
 # focus; what is typed is the bound state. Typing is local: it is not input
 # the lockstep carries. A shared field (shared="true") is a draft until Enter
 # sends it: the text goes with this machine's input for a tick, and on that
@@ -206,6 +207,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 				row.add_child(label)
 			var line := LineEdit.new()
 			line.max_length = int(item.get("max_length", 64))
+			line.secret = bool(item.get("secret", false))   # a password: dots
 			line.custom_minimum_size = Vector2(size * 10, 0)
 			line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			line.focus_mode = Control.FOCUS_CLICK
@@ -214,6 +216,7 @@ func setup(spec: Dictionary, scene: Node) -> void:
 			line.text_changed.connect(_on_typed.bind(item))
 			line.text_submitted.connect(_on_submitted.bind(entry))
 			line.focus_exited.connect(_on_focus_lost.bind(entry))
+			line.editing_toggled.connect(_on_editing.bind(entry))
 			row.add_child(line)
 			list.add_child(row)
 			entry["control"] = row
@@ -294,6 +297,14 @@ func _on_submitted(text: String, entry: Dictionary) -> void:
 		line.release_focus()   # the keys play again; the menu waits for the text to come back
 	Q.share(str(spec["key"]), text, player)
 	Q.event("sent", {"field": Q.translate(spec.get("label", "")), "text": text})
+
+
+# Escape: the box stops editing but would keep the keyboard, and the keys would
+# play nothing; it lets it go, as a click away does.
+func _on_editing(on: bool, entry: Dictionary) -> void:
+	var line: LineEdit = entry["line"]
+	if not on and line.has_focus():
+		line.release_focus()
 
 
 func _on_focus_lost(entry: Dictionary) -> void:
@@ -386,6 +397,8 @@ func quantum_view() -> Dictionary:
 		else:
 			item["field"] = Q.translate(spec.get("label", ""))
 			item["value"] = str(_read(spec["bind"], spec.get("game", false)))
+			if spec.get("secret", false):
+				item["value"] = "*".repeat(item["value"].length())   # seen as the player sees it: dots
 			if _editing == i and _items[i]["line"].has_focus():
 				item["typing"] = true   # this machine's keys type into it
 			if _items[i].has("pending"):
@@ -449,7 +462,18 @@ func _physics_process(_delta: float) -> void:
 		player = Q.net_player() if Q.external_input else 1   # 0: one who watches, with no seat
 		if player == 0:
 			return
-	if _editing >= 0 or _waiting >= 0:
+	if _editing >= 0:
+		var at = Q.cursors.get(player)
+		if not (Q.tapped(_a("select")) and Q.held(_a("click")) and at != null and _item_at(at) != _editing):
+			return
+		# a click away from the box: what is typed stays, and the click goes on to what is under the pointer
+		if _items[_editing]["spec"].get("shared", false):
+			var line: LineEdit = _items[_editing]["line"]
+			if line.has_focus():
+				line.release_focus()   # sent as it is, as when the box loses the keyboard; the menu waits for it
+			return
+		_stop_editing()
+	if _waiting >= 0:
 		return
 	if not active():
 		_pointer_seen = null   # a pointer that moved while it was away does not choose when it comes back

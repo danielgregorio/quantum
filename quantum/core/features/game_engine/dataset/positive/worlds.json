@@ -1,0 +1,55 @@
+{
+  "dataset_type": "positive",
+  "feature": "game_engine",
+  "category": "worlds",
+  "description": "A world's clients (PLAN_GAME_SERVER.md): the game draws what a q:gameserver world says each player sees and asks it what the player does; the world's file is read as the game compiles",
+  "examples": [
+    {
+      "id": "game-worlds-001",
+      "intent": "A world's client: its view drawn, its commands sent, its events and refusals heard",
+      "input": {
+        "natural_language": "The den's game: the hero and the rats the world says the player sees, drawn with their health; the arrows step, a click on a rat attacks it, S shouts; a hit floats up as a number, a refusal is shown, and the HUD reads the hero's gold and health from the world",
+        "context": {
+          "target": "godot",
+          "file": "game-worlds-001.q"
+        }
+      },
+      "tags": [
+        "connect",
+        "mirror",
+        "send",
+        "on-event",
+        "on-refused",
+        "health-bar",
+        "me",
+        "connected",
+        "entries"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"den-client\" type=\"game\">\n  <!-- a world's client: the world (its commands, views, events and kinds) is the server's file, read as the game compiles -->\n  <qg:connect world=\"tests/gameserver/worlds/den/den.server.q\" />\n  <qg:input action=\"shout\" keys=\"S\" />\n  <qg:input action=\"bag\" keys=\"B\" />\n  <qg:tileset name=\"land\" src=\"tests/gameserver/worlds/den/den.png\" tile=\"16\" />\n  <qg:spritesheet name=\"folk\" src=\"tests/gameserver/worlds/den/folk.png\" tile=\"16\" />\n  <qg:spritesheet name=\"beasts\" src=\"tests/gameserver/worlds/den/rat.png\" tile=\"16\" />\n  <!-- each kind of the world's entities, drawn: me is the entity as the world sent it -->\n  <qg:prefab name=\"Hero\" sheet=\"folk\" frame=\"0\" hitbox=\"12x14\">\n    <qg:label value=\"{me.name}\" dy=\"-14\" size=\"8\" />\n    <qg:health-bar value=\"{me.hp}\" max=\"{me.max_hp}\" dy=\"-9\" />\n  </qg:prefab>\n  <qg:prefab name=\"Rat\" sheet=\"beasts\" frame=\"0\" hitbox=\"12x10\">\n    <qg:health-bar value=\"{me.hp}\" max=\"{me.max_hp}\" dy=\"-8\" color=\"#e04040\" />\n  </qg:prefab>\n  <q:set name=\"note\" value=\"\" />\n  <q:set name=\"hits\" value=\"0\" type=\"number\" />\n  <qg:scene name=\"den\" width=\"320\" height=\"180\" world=\"true\">\n    <qg:tilemap tileset=\"land\" src=\"tests/gameserver/worlds/den/den.tmx\" />\n    <qg:mirror view=\"around\" />\n    <qg:camera follow=\"me\" bounds=\"tilemap\" />\n    <qg:on-input action=\"right\"><qg:send command=\"step\" dir=\"east\" /></qg:on-input>\n    <qg:on-input action=\"left\"><qg:send command=\"step\" dir=\"west\" /></qg:on-input>\n    <qg:on-input action=\"shout\"><qg:send command=\"shout\" /></qg:on-input>\n    <qg:on-select>\n      <q:if condition=\"{other != null and other.kind == 'Rat'}\"><qg:send command=\"attack\" who=\"{other.id}\" /></q:if>\n    </qg:on-select>\n    <qg:cursor grid=\"16\" step=\"0\" />\n    <qg:on-event name=\"hit\">\n      <q:set name=\"hits\" value=\"{hits + 1}\" />\n      <qg:emit text=\"{str(value)}\" at=\"other\" color=\"#ff5555\" />\n    </qg:on-event>\n    <qg:on-refused><q:set name=\"note\" value=\"{reason}\" /></qg:on-refused>\n    <qg:on-input action=\"bag\"><q:set name=\"note\" value=\"{str(len(entries(me().bag))) + ' kinds of things in the bag'}\" /></qg:on-input>\n    <qg:hud position=\"top-left\" size=\"8\">\n      <qg:text value=\"{(me().name + ' ' + str(me().gold) + ' gold') if connected() else 'Coming in...'}\" />\n      <qg:bar value=\"{me().hp}\" max=\"{me().max_hp}\" width=\"60\" height=\"6\" />\n      <qg:text value=\"{note}\" color=\"#ff5555\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n"
+      }
+    },
+    {
+      "id": "game-worlds-002",
+      "intent": "A world of a site's accounts: sign in on the title, then into the world",
+      "input": {
+        "natural_language": "Outpost's door: an account and a password (in dots) on the title; Enter the world asks the site for a ticket, forgets the password, and goes to the mainland, where the world lets the account in; a refusal of the site is shown",
+        "context": {
+          "target": "godot",
+          "file": "game-worlds-002.q"
+        }
+      },
+      "tags": [
+        "connect",
+        "sign-in",
+        "field",
+        "secret",
+        "mirror",
+        "send"
+      ],
+      "expected_output": {
+        "quantum_code": "<q:application id=\"outpost-door\" type=\"game\">\n  <!-- a world of a site's accounts: the game signs in, and the ticket the site answers is the world's hello -->\n  <qg:connect world=\"projects/outpost/outpost.server.q\" local=\"ws://127.0.0.1:7700\" />\n  <qg:tileset name=\"land\" src=\"projects/outpost/assets/land.png\" tile=\"16\" />\n  <qg:spritesheet name=\"folk\" src=\"projects/outpost/assets/folk.png\" tile=\"16\" />\n  <qg:spritesheet name=\"beasts\" src=\"projects/outpost/assets/beasts.png\" tile=\"16\" />\n  <qg:prefab name=\"Hero\" sheet=\"folk\" frame=\"0\" hitbox=\"14x14\"><qg:label value=\"{me.name}\" dy=\"-14\" size=\"8\" /></qg:prefab>\n  <qg:prefab name=\"Trader\" sheet=\"folk\" frame=\"2\" hitbox=\"14x14\"><qg:label value=\"{me.title}\" dy=\"-14\" size=\"8\" /></qg:prefab>\n  <qg:prefab name=\"Captain\" sheet=\"folk\" frame=\"3\" hitbox=\"14x14\"><qg:label value=\"{me.title}\" dy=\"-14\" size=\"8\" /></qg:prefab>\n  <qg:prefab name=\"Rat\" sheet=\"beasts\" frame=\"0\" hitbox=\"12x10\" />\n  <qg:prefab name=\"Wolf\" sheet=\"beasts\" frame=\"1\" hitbox=\"14x12\" />\n  <qg:prefab name=\"Bear\" sheet=\"beasts\" frame=\"2\" hitbox=\"28x24\" scale=\"2\" />\n  <q:set name=\"account\" value=\"\" />\n  <q:set name=\"password\" value=\"\" />\n  <q:set name=\"note\" value=\"\" />\n  <qg:scene name=\"title\" width=\"480\" height=\"270\">\n    <qg:menu position=\"center\">\n      <qg:field label=\"Account\" bind=\"account\" />\n      <qg:field label=\"Password\" bind=\"password\" secret=\"true\" />\n      <qg:button label=\"Enter the world\">\n        <qg:sign-in to=\"https://outpost.example/sign-in\" data=\"{ {'account': account, 'password': password} }\">\n          <qg:on-done><q:set name=\"password\" value=\"\" /><qg:goto-scene name=\"mainland\" /></qg:on-done>\n          <qg:on-fail><q:set name=\"password\" value=\"\" /><q:set name=\"note\" value=\"{reason}\" /></qg:on-fail>\n        </qg:sign-in>\n      </qg:button>\n    </qg:menu>\n    <qg:hud position=\"bottom-center\"><qg:text value=\"{note}\" color=\"#ff5555\" /></qg:hud>\n  </qg:scene>\n  <qg:scene name=\"mainland\" width=\"480\" height=\"270\" world=\"true\">\n    <qg:tilemap tileset=\"land\" src=\"projects/outpost/maps/mainland.tmx\" />\n    <qg:mirror view=\"around\" />\n    <qg:camera follow=\"me\" bounds=\"tilemap\" />\n    <qg:on-input action=\"up\"><qg:send command=\"step\" dir=\"north\" /></qg:on-input>\n    <qg:on-input action=\"down\"><qg:send command=\"step\" dir=\"south\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      }
+    }
+  ]
+}

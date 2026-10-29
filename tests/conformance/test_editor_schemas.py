@@ -201,6 +201,7 @@ def game_elements(path):
 def test_every_game_the_repo_ships_is_clean_in_the_editor(path):
     # What the editor would underline in a game that compiles: an unknown tag or attribute, a missing
     # required one, a value it would refuse, a tag in a place the schema does not list
+    from quantum.runtime.godot.schema import TAGS
     attributes = importlib.import_module(generator().load_schema().__name__ + '.attributes')
     complaints = []
     for tag, attrs, parent in game_elements(path):
@@ -218,7 +219,8 @@ def test_every_game_the_repo_ships_is_clean_in_the_editor(path):
             if attr.startswith('gd:'):
                 continue
             if attr not in info.attributes:
-                complaints.append(f'<{tag} {attr}=>: unknown')
+                if TAGS[tag[3:]].extra is None:          # qg:send takes its command's arguments as attributes
+                    complaints.append(f'<{tag} {attr}=>: unknown')
             elif attributes.validate_attribute_value(tag, attr, value):
                 complaints.append(attributes.validate_attribute_value(tag, attr, value))
     assert complaints == []

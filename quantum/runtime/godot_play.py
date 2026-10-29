@@ -124,14 +124,23 @@ class PlaySession:
     def __init__(self, project_dir: Union[str, Path], binary: Optional[Path] = None,
                  persist_dir: Optional[Path] = None, timeout: float = 120, frames: bool = False,
                  live: bool = False, host: Optional[int] = None, join: Optional[str] = None,
-                 transport: Optional[str] = None, lang: Optional[str] = None, seat: Optional[int] = None):
+                 transport: Optional[str] = None, lang: Optional[str] = None, seat: Optional[int] = None,
+                 world: Optional[str] = None, name: Optional[str] = None, latency: Optional[int] = None,
+                 ticket: Optional[str] = None):
         """``lang``: the language of the game's texts (a ``qg:language``: ``"pt"``); the game's
         own texts by default, whatever this machine's language. ``live``: the game runs at its own speed, 60 ticks a second, and does not wait
         for requests (against a person, or a peer that does not wait). ``host`` (a port) or
         ``join`` (``"host:port"``) take a seat in a ``qg:multiplayer`` game, as the
         game's ``--q-host``/``--q-join`` do; a networked session is always live. ``seat``: the
         seat a joining session asks for (``--q-seat``), turned away if someone sits there;
-        else the lowest free one. The host sits in seat 1."""
+        else the lowest free one. The host sits in seat 1. ``world`` (``ws://host:port``) and
+        ``name``: a world's client (qg:connect) comes into that world as that player
+        (``--q-world``/``--q-name``); its observation has ``world``, what the player knows of it.
+        ``latency`` (ms): every message to and from the world held half that long each way, in the
+        game's ticks (``--q-latency``). ``ticket``: a site's account comes in with it, as if the game had
+        signed in (``--q-ticket``; a world with accounts="site").
+        A test world (``--step``) waits for its harness: ``quantum.runtime.godot_world.WorldTable``
+        plays one and the games of its players together."""
         self.project_dir = Path(project_dir)
         self.timeout = timeout
         self.live = live or host is not None or join is not None
@@ -146,6 +155,14 @@ class PlaySession:
             raise PlayError('seat= is the seat a joining session asks for (join=); the host sits in seat 1')
         if transport:
             self._net.append(f'--q-transport={transport}')
+        if world is not None:
+            self._net.append(f'--q-world={world}')
+        if name is not None:
+            self._net.append(f'--q-name={name}')
+        if latency is not None:
+            self._net.append(f'--q-latency={int(latency)}')
+        if ticket is not None:
+            self._net.append(f'--q-ticket={ticket}')
         self._net.append(f'--q-lang={lang or "en"}')   # an observation reads the same on every machine
         self._tmp = tempfile.TemporaryDirectory(prefix='quantum-play-')
         # what the game had saved when the session began: a restored game starts from it again
@@ -240,7 +257,8 @@ class PlaySession:
         ``reflex`` replaces the reflexes (``[]`` clears them); ``ticks=0`` only sets them.
         ``player``: the actions are named as player 1's (``left``) and pressed as player
         N's (``p3_left``) in a game on one machine; in a networked game, N is this session's seat.
-        ``text`` is typed into the text box being typed in (a ``qg:field`` chosen); ``\\n`` is Enter."""
+        ``text`` is typed into the text box being typed in (a ``qg:field`` chosen); ``\\n`` is Enter,
+        ``\\u001b`` Escape."""
         return self.request(self._actions('act', hold, tap, press, release, cursor, reflex, player, text,
                                           ticks=ticks))
 

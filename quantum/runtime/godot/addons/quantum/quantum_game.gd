@@ -269,7 +269,8 @@ func open_overlay(oname: String) -> void:
 	var overlays: Dictionary = spec.get("overlays", {})
 	if overlay != null or current_scene == null or not overlays.has(oname) or lockstep != null:
 		return
-	_freeze(current_scene, true)
+	if overlays[oname].get("overlay", {}).get("freeze", true):
+		_freeze(current_scene, true)
 	current_scene.set_meta("q_under", oname)   # the play protocol sees the overlay, not what is under it
 	overlay = SceneBuilder.build(spec, overlays[oname])
 	overlay.name = oname

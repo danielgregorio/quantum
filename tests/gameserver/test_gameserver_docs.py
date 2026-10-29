@@ -16,7 +16,7 @@ from quantum.runtime.gameserver import World, read_world
 
 REPO = Path(__file__).resolve().parents[2]
 PAGE = REPO / 'docs' / 'targets' / 'gameserver.md'
-MAPS = Path(__file__).resolve().parent / 'worlds' / 'yard'
+WORLDS = Path(__file__).resolve().parent / 'worlds'
 
 BLOCKS = re.findall(r'```xml\n(.*?)```', PAGE.read_text(encoding='utf-8'), re.S)
 
@@ -27,7 +27,7 @@ def test_the_page_shows_worlds():
 
 @pytest.mark.parametrize('block', BLOCKS, ids=[f'block-{i + 1}' for i in range(len(BLOCKS))])
 def test_every_block_of_the_page_is_a_world_that_runs(block, tmp_path):
-    for tmx in MAPS.glob('*.tmx'):
+    for tmx in WORLDS.glob('*/*.tmx'):
         shutil.copy(tmx, tmp_path / tmx.name)
     source = tmp_path / 'world.server.q'
     source.write_text(block, encoding='utf-8')

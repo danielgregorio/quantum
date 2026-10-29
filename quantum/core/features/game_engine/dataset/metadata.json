@@ -7,9 +7,9 @@
     "Claude"
   ],
   "statistics": {
-    "total_examples": 175,
-    "positive_examples": 93,
-    "negative_examples": 82,
+    "total_examples": 180,
+    "positive_examples": 95,
+    "negative_examples": 85,
     "categories": {
       "whole_games": 3,
       "controllers": 5,
@@ -22,14 +22,15 @@
       "items": 2,
       "persistence": 2,
       "multiplayer": 6,
-      "compile_errors": 82,
+      "compile_errors": 85,
       "logic": 6,
       "action": 6,
       "puzzle": 7,
       "shipping": 7,
       "seats_and_screens": 7,
       "later": 6,
-      "management": 4
+      "management": 4,
+      "worlds": 2
     }
   },
   "checked_by": "tests/dataset/test_dataset_features.py (compiles each example) and tests/dataset/test_game_engine_feature.py (every tag has an intention and an example)"

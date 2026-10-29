@@ -14,6 +14,7 @@ var caller: Object = null
 var with_me: bool = true          # the methods take `me` (a thing's), or nothing (a scene's label)
 var visible_method: String = ""
 var labels: Array = []            # [Label, method]
+var bars: Array = []              # [the fill, its width, method]: qg:health-bar
 var trail: Line2D = null
 var _owner: Node = null           # the thing, as setup is called (it is made before it joins the tree)
 
@@ -30,6 +31,23 @@ func setup(spec: Dictionary, caller_: Object, game: Dictionary, thing: Node = nu
 		if lb.get("if") != null and caller.has_method(str(lb["if"])) and not caller.call(str(lb["if"]), _owner):
 			continue
 		labels.append([make_label(lb), str(lb["method"])])
+	for hb in spec.get("bars", []):
+		var w := float(hb.get("width", 14))
+		var h := float(hb.get("height", 2))
+		var at := Vector2(float(hb.get("dx", 0.0)) - w / 2.0, float(hb.get("dy", -10.0)) - h / 2.0)
+		var back := ColorRect.new()
+		back.color = Color(0, 0, 0, 0.6)
+		back.position = at
+		back.size = Vector2(w, h)
+		back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(back)
+		var fill := ColorRect.new()
+		fill.color = Color(str(hb.get("color", "#40e040")))
+		fill.position = at
+		fill.size = Vector2(w, h)
+		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(fill)
+		bars.append([fill, w, str(hb["method"])])
 	if spec.get("particles") != null and game.get("particles", {}).has(spec["particles"]):
 		var fx: CPUParticles2D = load("res://addons/quantum/particles.gd").make(game["particles"][spec["particles"]])
 		fx.one_shot = false
@@ -89,6 +107,10 @@ func _update() -> void:
 		var label: Label = entry[0]
 		if caller.has_method(entry[1]):
 			label.text = str(caller.call(entry[1], me) if with_me else caller.call(entry[1]))
+	for entry in bars:
+		var top := float(caller.call(entry[2] + "_max", me)) if caller.has_method(entry[2] + "_max") else 0.0
+		var v := float(caller.call(entry[2], me)) if caller.has_method(entry[2]) else 0.0
+		(entry[0] as ColorRect).size.x = float(entry[1]) * clampf(v / top, 0.0, 1.0) if top > 0.0 else 0.0
 	if trail != null and me is Node2D:
 		trail.add_point((me as Node2D).global_position)
 		while trail.get_point_count() > TRAIL_POINTS:
@@ -98,12 +120,19 @@ func _update() -> void:
 # What the play protocol's screen shows of it: the labels' texts, and where (a
 # name over a player, what an enemy has left). Nothing while it is hidden.
 func quantum_view() -> Dictionary:
-	if labels.is_empty() or not is_visible_in_tree():
+	if (labels.is_empty() and bars.is_empty()) or not is_visible_in_tree():
 		return {}
 	var texts := []
 	for entry in labels:
 		if (entry[0] as Label).visible and (entry[0] as Label).text != "":
 			texts.append(Q.translate((entry[0] as Label).text))
-	if texts.is_empty():
+	var filled := []
+	for entry in bars:                # how full each bar is, 0 to 1
+		filled.append(snappedf((entry[0] as ColorRect).size.x / float(entry[1]), 0.01))
+	if texts.is_empty() and filled.is_empty():
 		return {}
-	return {"kind": "label", "items": texts, "x": snappedf(global_position.x, 0.1), "y": snappedf(global_position.y, 0.1)}
+	var out := {"kind": "label", "items": texts, "x": snappedf(global_position.x, 0.1),
+		"y": snappedf(global_position.y, 0.1)}
+	if not filled.is_empty():
+		out["bars"] = filled
+	return out

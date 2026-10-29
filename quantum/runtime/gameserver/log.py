@@ -98,10 +98,14 @@ def replay(world: World, entries: List[dict]) -> List[str]:
             world.step([])
         inputs = []
         for e in by_tick[tick]:
-            if e['k'] in ('join', 'leave'):
-                inputs.append((e['k'], e['a']))
+            if e['k'] == 'join':
+                inputs.append(('join', e['a'], e.get('n')))
+            elif e['k'] == 'leave':
+                inputs.append(('leave', e['a']))
             elif e['k'] == 'cmd':
                 inputs.append(('cmd', e['a'], e.get('s'), e.get('n'), e.get('x')))
+            elif e['k'] == 'npc':                  # an NPC's answer, as its mind gave it then: no model asked
+                inputs.append(('npc', e['a'], e.get('n'), e.get('x')))
         out = world.step(inputs)
         again = [x for x in out.entries if x['k'] == 'cmd']
         first = [e for e in by_tick[tick] if e['k'] == 'cmd']

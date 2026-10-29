@@ -1,5 +1,5 @@
-"""A world's statements run: q:set, q:if, q:loop, q:call and q:return, as the Core's, and the world's own q:require
-and q:move; and the functions a world's expressions call.
+"""A world's statements run: q:set, q:if, q:loop, q:call and q:return, as the Core's, and the world's own q:require,
+q:move, q:emit, q:spawn, q:kill, q:loot and q:travel; and the functions a world's expressions call.
 
 Every write to the world goes through World.write, so a command that is refused (or fails) is undone whole: the
 world keeps a journal of what each write replaced while a command runs, and plays it back.
@@ -15,7 +15,7 @@ from xml.etree import ElementTree as ET
 from quantum.core.expressions import ExpressionError
 from quantum.runtime.gameserver.errors import Refused, RuleError
 from quantum.runtime.gameserver.expressions import WorldEvaluator, literal, parts_of, text_of, unbraced
-from quantum.runtime.gameserver.model import Q_NS
+from quantum.runtime.gameserver.model import NOT_IN_A_VIEW, Q_NS, seconds_of
 
 # the eight ways a step goes, as the game says them
 DIRECTIONS: Dict[str, Tuple[int, int]] = {
@@ -46,6 +46,26 @@ FUNCTION_DOCS: Dict[str, str] = {
                     'a replay draws the same',
     'chance(p)': 'true with the probability p (0 to 1), from the same source',
     'pick(list)': 'one of a list, from the same source',
+    'nearest(x, kind, n)': 'the nearest entity of that kind within n tiles of x (32 if not given), not x itself; '
+                           'null if none',
+    'fighting()': 'the entities next to the one they target (their `target`): a fight, a blow each every so often',
+    'in_fight(x)': 'it is in a fight: next to its target, or the target of one next to it',
+    'sees(a, b)': 'no wall on the straight line between them',
+    'is_night()': "it is night (q:clock); false with no clock",
+    'daytime()': "how far into its day the world is, 0 to 1 (q:clock)",
+    'balance(x, currency)': "what x has of a currency (the world's first, if not given)",
+    'has(x, item, n)': 'x has n of the item in its bag (1, if not given)',
+    'item(name)': "what the item is: its q:item's attributes, as a record; null if there is no such item",
+    'price(item)': "the item's price= (0 if it has none)",
+    'heals(item)': "the item's heals= (0 if it has none)",
+    'slot(item)': "the item's slot= ('' if it has none)",
+    'bonus(item, name)': 'a number of the item: bonus(sword, \'attack\'); 0 if it has none',
+    'party_of(x)': 'the entities of the party of x (x alone, with no party)',
+    'party_near(x, n)': 'those of them within n tiles of x (10 if not given)',
+    'quest_goal(x)': "what x's quest asks: kill:Kind or bring:item ('' with none)",
+    'quest_done(x)': "x's quest is done: so many killed (its quest's done) or brought (held)",
+    'quest_level(name)': 'the level a quest asks',
+    'quest_title(name)': "a quest's title",
     'sqrt(x)': 'its square root',
     'now()': "refused: it is the machine's clock, and a world is replayed; its time is tick() and seconds()",
 }
@@ -82,6 +102,8 @@ class Interpreter:
         self.world = world
         self.depth = 0
         self.evaluator = WorldEvaluator(functions=self._functions(), function_resolver=self._resolve)
+        # a view's where=: the functions that read, and none of the q:functions (which could write)
+        self.reader = WorldEvaluator(functions={k: f for k, f in self._functions().items() if k not in NOT_IN_A_VIEW})
 
     # -- expressions -------------------------------------------------------------------------------------------
 
@@ -89,8 +111,13 @@ class Interpreter:
         return ChainMap(local, self.world.vars)
 
     def evaluate(self, raw: str, local: Dict[str, Any], line: Optional[int]) -> Any:
+        """An expression attribute, with or without its braces."""
+        return self.expression(unbraced(raw), local, line)
+
+    def expression(self, expression: str, local: Dict[str, Any], line: Optional[int]) -> Any:
+        """An expression out of its braces (a { in it is a record's)."""
         try:
-            return self.evaluator.evaluate(unbraced(raw), self.scope(local))
+            return self.evaluator.evaluate(expression, self.scope(local))
         except ExpressionError as e:
             raise RuleError(str(e), line)
 
@@ -99,7 +126,7 @@ class Interpreter:
         a number, true, false, null or the text."""
         parts = parts_of(raw)
         if len(parts) == 1 and parts[0][1] is not None and parts[0][0] == '':
-            return self.evaluate(parts[0][1], local, line)
+            return self.expression(parts[0][1], local, line)
         if all(e is None for _, e in parts):
             return literal(raw)
         return self.text(raw, local, line)
@@ -107,7 +134,7 @@ class Interpreter:
     def text(self, raw: str, local: Dict[str, Any], line: Optional[int]) -> str:
         out = []
         for lit, expression in parts_of(raw):
-            out.append(lit if expression is None else text_of(self.evaluate(expression, local, line)))
+            out.append(lit if expression is None else text_of(self.expression(expression, local, line)))
         return ''.join(out)
 
     # -- blocks ------------------------------------------------------------------------------------------------
@@ -148,8 +175,50 @@ class Interpreter:
             if not truthy(self.evaluate(el.get('condition'), local, line)):
                 raise Refused(self.text(el.get('else', 'Not allowed.'), local, line))
         elif name == 'move':
-            entity = self.evaluate(el.get('entity'), local, line)
-            self.world.move(self.world.entity_of(entity, line), self.place(el.get('to'), local, line), line)
+            entity = self.world.entity_of(self.evaluate(el.get('entity'), local, line), line)
+            self.world.stop_travel(entity, line)
+            self.world.move(entity, self.place(el.get('to'), local, line), line)
+        elif name == 'emit':
+            self.emit(el, local, line)
+        elif name == 'travel':
+            entity = self.world.entity_of(self.evaluate(el.get('entity'), local, line), line)
+            self.world.stop_travel(entity, line)
+            self.world.travel(entity, self.place(el.get('to'), local, line), line)
+        elif name == 'kill':
+            entity = self.world.entity_of(self.evaluate(el.get('entity'), local, line), line)
+            by = self.world._entity(self.evaluate(el.get('by'), local, line)) if el.get('by') else None
+            self.world.kill(entity, by, line)
+        elif name == 'loot':
+            if el.get('of') is None or el.get('to') is None:
+                raise RuleError('q:loot in a block takes of= and to=', line)
+            of = self.world.entity_of(self.evaluate(el.get('of'), local, line), line)
+            to = self.world.entity_of(self.evaluate(el.get('to'), local, line), line)
+            self.world.loot(of, to, line)
+        elif name in ('give', 'take'):
+            holder = self.world.entity_of(self.evaluate(el.get('to' if name == 'give' else 'from'), local, line), line)
+            item = self.evaluate(el.get('item'), local, line) if el.get('item') is not None else None
+            count = self.evaluate(el.get('count', '1'), local, line) if item is not None else None
+            amount = self.evaluate(el.get('amount'), local, line) if el.get('amount') is not None else None
+            (self.world.give if name == 'give' else self.world.take)(holder, item, count, amount,
+                                                                     el.get('currency'), line)
+        elif name == 'pay':
+            payer = self.world.entity_of(self.evaluate(el.get('from'), local, line), line)
+            to = self.world.entity_of(self.evaluate(el.get('to'), local, line), line)
+            self.world.pay(payer, to, self.evaluate(el.get('amount'), local, line), el.get('currency'), line)
+        elif name == 'say':
+            to = el.get('to', 'all')
+            target = 'all' if to.strip() == 'all' else self.evaluate(to, local, line)
+            self.world.say(el.get('channel', 'system'), target, self.text(el.get('text'), local, line), line)
+        elif name == 'ask':
+            npc = self.evaluate(el.get('npc'), local, line)
+            self.world.ask(local.get('me'), npc, self.evaluate(el.get('text'), local, line), line)
+        elif name == 'reward':
+            to = self.world.entity_of(self.evaluate(el.get('to'), local, line), line)
+            self.world.reward(to, self.evaluate(el.get('quest'), local, line), line)
+        elif name == 'spawn':
+            ticks = (max(1, round(seconds_of(el.get('for')) * self.world.definition.tick_rate))
+                     if el.get('for') else None)
+            self.world.spawn_now(el.get('entity'), el.get('area'), int(el.get('count', 1)), ticks, line)
         else:                                # the schema has let nothing else through
             raise RuleError(f'<q:{name}> does not run in a block', line)
 
@@ -181,7 +250,7 @@ class Interpreter:
         parts = parts_of(raw)
         expressions = [e for _, e in parts if e is not None]
         if expressions:
-            return [self.evaluate(e, local, line) for e in expressions]
+            return [self.expression(e, local, line) for e in expressions]
         out, depth, current = [], 0, []
         for c in raw:
             if c == ',' and depth == 0:
@@ -238,6 +307,9 @@ class Interpreter:
         key = parts[-1]
         if target is root and self.world.is_entity(root) and (key in READ_ONLY or key.startswith('_')):
             raise RuleError(f'q:set name="{name}": an entity\'s {key} is the world\'s', line)
+        if self.world.is_entity(root) and parts[1] in self.world.ledger_fields():
+            raise RuleError(f'q:set name="{name}": {parts[1]} is the ledger\'s: q:give, q:take and q:pay change it',
+                            line)
         self.world.write(target, key, value, root, line)
 
     def place(self, raw: str, local: Dict[str, Any], line: Optional[int]) -> Tuple[int, int]:
@@ -253,6 +325,39 @@ class Interpreter:
         if tile is None:
             raise RuleError(f'q:move to="{raw}": not a tile, an entity or an area of the map', line)
         return tile
+
+    def emit(self, el: ET.Element, local: Dict[str, Any], line: Optional[int]) -> None:
+        value = self.value(el.get('value'), local, line) if el.get('value') is not None else None
+        tile, of, to = None, None, None
+        if el.get('at') is not None:
+            tile, of = self.spot(el.get('at'), local, line)
+        if el.get('to') is not None:
+            target = self.evaluate(el.get('to'), local, line)
+            entity = self.world.entities.get(target) if isinstance(target, str) else target
+            if not self.world.is_entity(entity) or entity.get('_player') is None:
+                raise RuleError('q:emit to= is not a player\'s entity in the world', line)
+            to = entity['_player']
+        everyone = el.get('at') is None and el.get('to') is None
+        self.world.emit(el.get('event'), value, tile, of, to, everyone, line)
+
+    def spot(self, raw: str, local: Dict[str, Any], line: Optional[int]) -> Tuple[Optional[Tuple[int, int]],
+                                                                                    Optional[str]]:
+        """q:emit at=: the tile, and the entity's id if it is an entity's (an entity nowhere: no tile)."""
+        text = raw.strip()
+        areas = self.world.definition.map.areas
+        if text in areas:
+            return self.world.area_tile(text, line), None
+        value = self.evaluate(text, local, line)
+        if isinstance(value, str) and value in areas:
+            return self.world.area_tile(value, line), None
+        if isinstance(value, str) and value in self.world.entities:
+            value = self.world.entities[value]
+        if self.world.is_entity(value):
+            return self.world.tile_of(value), value['id']
+        tile = self.world.tile_of(value)
+        if tile is None:
+            raise RuleError(f'q:emit at="{raw}": not a tile, an entity or an area of the map', line)
+        return tile, None
 
     # -- the world's functions ---------------------------------------------------------------------------------
 
@@ -329,6 +434,17 @@ class Interpreter:
             'in_area': in_area, 'area': area, 'heroes': heroes, 'entities': entities, 'entity': entity,
             'tick': lambda: world.tick, 'seconds': lambda: world.tick / world.definition.tick_rate,
             'random': random, 'chance': chance, 'pick': pick, 'now': now, 'sqrt': math.sqrt,
+            'nearest': world.nearest, 'fighting': world.fighting, 'in_fight': world.in_fight, 'sees': world.line_of_sight,
+            'is_night': world.is_night, 'daytime': world.daytime,
+            'balance': world.balance, 'has': world.has, 'item': world.item_of,
+            'party_of': world.party_of, 'party_near': world.party_near, 'quest_goal': world.quest_goal,
+            'quest_done': world.quest_done,
+            'quest_level': lambda q: world.definition.quests[q].level if q in world.definition.quests else 0,
+            'quest_title': lambda q: world.definition.quests[q].title if q in world.definition.quests else '',
+            'price': lambda i: world.item_value(i, 'price', 0), 'heals': lambda i: world.item_value(i, 'heals', 0),
+            'slot': lambda i: world.item_value(i, 'slot', ''),
+            'bonus': lambda i, name: world.item_value(i, name, 0) if isinstance(world.item_value(i, name, 0),
+                                                                                 (int, float)) else 0,
         }
 
 

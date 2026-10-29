@@ -52,6 +52,13 @@ static func to_str(v) -> String:
 	return str(v)
 
 
+# A number for a bar: what an expression gave, or 0 for what is not one (a world's field not seen yet).
+static func number(v) -> float:
+	if v is int or v is float:
+		return float(v)
+	return 0.0
+
+
 # `len()` of a string, an array or a dictionary.
 static func len(v) -> int:
 	if v is String:
@@ -110,6 +117,18 @@ static func fit(v, width, align = "left") -> String:
 	if text.length() > w:
 		return text.substr(0, w)
 	return text.lpad(w) if str(align) == "right" else text.rpad(w)
+
+
+# entries(record): its keys and values as a list of {key, value}, by key: a hero's bag ({cheese: 2}) for a
+# menu's source=. Anything but a record is an empty list.
+static func entries(d) -> Array:
+	var out: Array = []
+	if d is Dictionary:
+		var keys: Array = d.keys()
+		keys.sort()
+		for k in keys:
+			out.append({"key": k, "value": d[k]})
+	return out
 
 
 # thousands(n), thousands(n, '.'): a whole number with its thousands apart
@@ -990,7 +1009,8 @@ static func save_text(ctx) -> String:
 var _answers: Array = []   # [caller's instance id, method, args, event kind, event data], heard at the next tick
 
 
-static func post(caller: Object, url, data, on_done: String, on_fail: String, args: Array, timeout: float) -> void:
+static func post(caller: Object, url, data, on_done: String, on_fail: String, args: Array, timeout: float,
+		sign_in := false) -> void:
 	var q := _q_node()
 	var address := str(url)
 	if not (address.begins_with("http://") or address.begins_with("https://")):
@@ -1005,7 +1025,7 @@ static func post(caller: Object, url, data, on_done: String, on_fail: String, ar
 	q.add_child(http)
 	# the sender by its id: it may be freed (a scene left) before the answer comes
 	http.request_completed.connect(Callable(q, "_posted").bind(http, caller.get_instance_id(), address, on_done,
-		on_fail, args, timeout))
+		on_fail, args, timeout, sign_in))
 	var err := http.request(address, PackedStringArray(["Content-Type: application/json", "Accept: application/json"]),
 		HTTPClient.METHOD_POST, body)
 	if err != OK:
@@ -1014,7 +1034,8 @@ static func post(caller: Object, url, data, on_done: String, on_fail: String, ar
 
 
 func _posted(result: int, code: int, _headers: PackedStringArray, bytes: PackedByteArray, http: Node,
-		caller: int, address: String, on_done: String, on_fail: String, args: Array, timeout: float) -> void:
+		caller: int, address: String, on_done: String, on_fail: String, args: Array, timeout: float,
+		sign_in: bool) -> void:
 	http.queue_free()
 	if result == HTTPRequest.RESULT_TIMEOUT:
 		_answer(caller, on_fail, args, address, "no answer in %d seconds" % int(round(timeout)))
@@ -1031,6 +1052,18 @@ func _posted(result: int, code: int, _headers: PackedStringArray, bytes: PackedB
 		elif text != "":
 			said = text.left(120)
 		_answer(caller, on_fail, args, address, "%d: %s" % [code, said] if said != "" else str(code))
+		return
+	if sign_in:
+		# qg:sign-in: the ticket is the game's, for the world's hello; not the state's (nor a save's)
+		if not (reply is Dictionary and reply.get("ticket") is String and str(reply["ticket"]) != ""):
+			_answer(caller, on_fail, args, address, "the site gave no ticket")
+			return
+		world_ticket = str(reply["ticket"])
+		reply = reply.duplicate()
+		reply.erase("ticket")
+		if world != null and world.status != "closed":
+			world.close("You signed in again.")   # the next scene of the world comes in with the new ticket
+		_answers.append([caller, on_done, args + [reply], "signed-in", {"to": address}])
 		return
 	_answers.append([caller, on_done, args + [reply], "posted", {"to": address, "status": code}])
 
@@ -1326,6 +1359,79 @@ static func _thing(node):
 	return node
 
 
+# --- a world: qg:connect, qg:mirror, qg:send (world.gd, mirror.gd) ---
+#
+# The connection is the game's, not a scene's: it opens as a scene of the world (world="true") is entered, and
+# stays open while the game shows a title, a menu or an overlay; the world goes on meanwhile.
+
+var world = null                 # world.gd, once a scene of the world was entered
+var world_url := ""              # --q-world=ws://...: where the world is (else qg:connect's local= or server=)
+var world_player := ""           # --q-name=ana: the name the player comes in with (else qg:connect name=)
+var world_ticket := ""           # qg:sign-in's (or --q-ticket=): a site's account comes in with it, once
+var world_latency := 0           # --q-latency=MS: every message to and from the world held half that, each way
+
+
+func world_open(spec: Dictionary, name_: String) -> void:
+	if world != null and world.status != "closed":
+		return
+	var url := world_url
+	if url == "":
+		url = str(spec.get("server", "")) if spec.get("server") != null and not OS.is_debug_build() \
+			else str(spec.get("local", "ws://127.0.0.1:7700"))
+	var who := world_player if world_player != "" else name_
+	if who == "":
+		who = "guest-%d" % (randi() % 100000)
+	world = load("res://addons/quantum/world.gd").new()
+	world.setup(spec, world_latency)
+	world.open(url, who, world_ticket)
+	world_ticket = ""                # a ticket comes in once: to come back, sign in again
+
+
+static func _world():
+	var q = (Engine.get_main_loop() as SceneTree).root.get_node_or_null("Q")
+	return q.world if q != null else null
+
+
+# me(): the player's own entity in the world, as the server sent it (its private fields too); {} until it is seen
+static func world_me() -> Dictionary:
+	var w = _world()
+	return w.me() if w != null else {}
+
+
+# entity(id): an entity the player sees, or null
+static func world_entity(id) -> Variant:
+	var w = _world()
+	return w.entity(str(id)) if w != null and id != null else null
+
+
+# connected(): the world let the player in, and the connection holds
+static func world_connected() -> bool:
+	var w = _world()
+	return w != null and w.status == "in"
+
+
+static func world_send(command: String, args: Dictionary) -> void:
+	var w = _world()
+	if w == null:
+		return
+	w.send(command, args)
+
+
+# `x.field` of a world's entity: a field of the entity (a dictionary, or a mirrored node's), else the node's own
+static func wf(v, f: String) -> Variant:
+	if v == null:
+		return null
+	if v is Dictionary:
+		return v.get(f)
+	if v is Object:
+		if (v as Object).has_meta("q_entity"):
+			var e: Dictionary = (v as Object).get_meta("q_entity")
+			if e.has(f):
+				return e[f]
+		return (v as Object).get(f)
+	return null
+
+
 # --- persistence: the q:sets with saved="true" (G calls these) ---
 
 # Where the file goes: --persist-dir=<dir> from the command line (the
@@ -1338,9 +1444,19 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--persist-dir="):
 			persist_dir = a.substr(14)
+		elif a.begins_with("--q-world="):
+			world_url = a.substr(10)
+		elif a.begins_with("--q-name="):
+			world_player = a.substr(9)
+		elif a.begins_with("--q-ticket="):
+			world_ticket = a.substr(11)
+		elif a.begins_with("--q-latency="):
+			world_latency = int(a.substr(12))
 
 
 func _physics_process(_delta: float) -> void:
+	if world != null:
+		world.poll()                 # the world's frames, heard before any scene of the game runs this tick
 	if not _answers.is_empty():
 		_hear_answers()
 	if slow_ticks > 0:
@@ -1366,7 +1482,7 @@ var samples: int = 0   # how many times the keys were taken (sample_local): a ta
 
 
 func _input(event: InputEvent) -> void:
-	if not event.is_pressed() or event.is_echo() or typing():
+	if not event.is_pressed() or event.is_echo() or (typing() and not event is InputEventMouseButton):
 		return
 	for a in InputMap.get_actions():
 		var name_ := String(a)
@@ -1374,13 +1490,23 @@ func _input(event: InputEvent) -> void:
 			_taps[name_] = true
 
 
+var _typed_last: bool = false   # a text box had the keyboard when the keys were last taken
+var _held_as_typed: Dictionary = {}     # what was held as the typing ended: it plays once let go
+
+
 # This machine's keys, for the tick: what is held, with its strength, and what
 # was tapped since the last tick. The lockstep sends it; alone, it is the input.
-# While a text box is being typed in (qg:field), the keys type: they play nothing.
+# While a text box is being typed in (qg:field), the keys type: they play
+# nothing, but a click still does (the menu ends the typing with it). As the
+# typing ends (Enter, Escape, a click away), what was held for it plays only
+# once let go: the Enter that sent the text does not choose the box again.
 func sample_local() -> Dictionary:
 	samples += 1
 	var next := {}
-	if typing():
+	var keys_type := typing()
+	var clicked := InputMap.has_action("click") and (Input.get_action_strength("click") > 0.0 or _taps.has("click"))
+	if keys_type and not clicked:
+		_typed_last = true
 		_taps.clear()
 		return next
 	for a in InputMap.get_actions():
@@ -1394,6 +1520,14 @@ func sample_local() -> Dictionary:
 		if not next.has(name_):
 			next[name_] = 1.0
 	_taps.clear()
+	if _typed_last and not keys_type:
+		_held_as_typed = next.duplicate()
+	_typed_last = keys_type
+	for name_ in _held_as_typed.keys():
+		if Input.get_action_strength(name_) > 0.0:
+			next.erase(name_)
+		else:
+			_held_as_typed.erase(name_)
 	return next
 
 
@@ -1404,13 +1538,16 @@ func typing() -> bool:
 
 
 # Typing, as the keyboard would, into the text box being typed in: "\n" is
-# Enter. The play protocol and the replay type with it ("type" in a tape).
+# Enter, "\u001b" Escape. The play protocol and the replay type with it ("type" in a tape).
 func type_text(text: String) -> void:
 	for ch in text:
 		var k := InputEventKey.new()
 		if ch == "\n":
 			k.keycode = KEY_ENTER
 			k.physical_keycode = KEY_ENTER
+		elif ch == "\u001b":
+			k.keycode = KEY_ESCAPE
+			k.physical_keycode = KEY_ESCAPE
 		else:
 			k.unicode = ch.unicode_at(0)
 			k.keycode = OS.find_keycode_from_string(ch.to_upper())   # a letter's key, as a keyboard sends

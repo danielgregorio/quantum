@@ -1441,6 +1441,61 @@
         "post",
         "multiplayer"
       ]
+    },
+    {
+      "id": "game-bad-083",
+      "intent": "A command the world has not",
+      "input": {
+        "natural_language": "Send the world a fly command when F is pressed",
+        "quantum_code": "<q:application id=\"den-client\" type=\"game\">\n  <!-- a world's client: the world (its commands, views, events and kinds) is the server's file, read as the game compiles -->\n  <qg:connect world=\"tests/gameserver/worlds/den/den.server.q\" />\n  <qg:input action=\"shout\" keys=\"S\" />\n  <qg:input action=\"bag\" keys=\"B\" />\n  <qg:tileset name=\"land\" src=\"tests/gameserver/worlds/den/den.png\" tile=\"16\" />\n  <qg:spritesheet name=\"folk\" src=\"tests/gameserver/worlds/den/folk.png\" tile=\"16\" />\n  <qg:spritesheet name=\"beasts\" src=\"tests/gameserver/worlds/den/rat.png\" tile=\"16\" />\n  <!-- each kind of the world's entities, drawn: me is the entity as the world sent it -->\n  <qg:prefab name=\"Hero\" sheet=\"folk\" frame=\"0\" hitbox=\"12x14\">\n    <qg:label value=\"{me.name}\" dy=\"-14\" size=\"8\" />\n    <qg:health-bar value=\"{me.hp}\" max=\"{me.max_hp}\" dy=\"-9\" />\n  </qg:prefab>\n  <qg:prefab name=\"Rat\" sheet=\"beasts\" frame=\"0\" hitbox=\"12x10\">\n    <qg:health-bar value=\"{me.hp}\" max=\"{me.max_hp}\" dy=\"-8\" color=\"#e04040\" />\n  </qg:prefab>\n  <q:set name=\"note\" value=\"\" />\n  <q:set name=\"hits\" value=\"0\" type=\"number\" />\n  <qg:scene name=\"den\" width=\"320\" height=\"180\" world=\"true\">\n    <qg:tilemap tileset=\"land\" src=\"tests/gameserver/worlds/den/den.tmx\" />\n    <qg:mirror view=\"around\" />\n    <qg:camera follow=\"me\" bounds=\"tilemap\" />\n    <qg:on-input action=\"right\"><qg:send command=\"step\" dir=\"east\" /></qg:on-input>\n    <qg:on-input action=\"left\"><qg:send command=\"step\" dir=\"west\" /></qg:on-input>\n    <qg:on-input action=\"shout\"><qg:send command=\"fly\" /></qg:on-input>\n    <qg:on-select>\n      <q:if condition=\"{other != null and other.kind == 'Rat'}\"><qg:send command=\"attack\" who=\"{other.id}\" /></q:if>\n    </qg:on-select>\n    <qg:cursor grid=\"16\" step=\"0\" />\n    <qg:on-event name=\"hit\">\n      <q:set name=\"hits\" value=\"{hits + 1}\" />\n      <qg:emit text=\"{str(value)}\" at=\"other\" color=\"#ff5555\" />\n    </qg:on-event>\n    <qg:on-refused><q:set name=\"note\" value=\"{reason}\" /></qg:on-refused>\n    <qg:on-input action=\"bag\"><q:set name=\"note\" value=\"{str(len(entries(me().bag))) + ' kinds of things in the bag'}\" /></qg:on-input>\n    <qg:hud position=\"top-left\" size=\"8\">\n      <qg:text value=\"{(me().name + ' ' + str(me().gold) + ' gold') if connected() else 'Coming in...'}\" />\n      <qg:bar value=\"{me().hp}\" max=\"{me().max_hp}\" width=\"60\" height=\"6\" />\n      <qg:text value=\"{note}\" color=\"#ff5555\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "the world 'den' has no such command"
+      },
+      "why_invalid": "The world's file says what it may be asked: a command it has not would be refused by the server as the game runs; the compiler reads the world and says so first.",
+      "correction": "Send one of the world's commands (step, go, attack, shout...), or add the q:command to the world.",
+      "tags": [
+        "connect",
+        "send",
+        "world"
+      ]
+    },
+    {
+      "id": "game-bad-084",
+      "intent": "A sign-in to a world of guests",
+      "input": {
+        "natural_language": "Sign in to the den before going into it",
+        "quantum_code": "<q:application id=\"den-client\" type=\"game\">\n  <!-- a world's client: the world (its commands, views, events and kinds) is the server's file, read as the game compiles -->\n  <qg:connect world=\"tests/gameserver/worlds/den/den.server.q\" />\n  <qg:input action=\"shout\" keys=\"S\" />\n  <qg:input action=\"bag\" keys=\"B\" />\n  <qg:tileset name=\"land\" src=\"tests/gameserver/worlds/den/den.png\" tile=\"16\" />\n  <qg:spritesheet name=\"folk\" src=\"tests/gameserver/worlds/den/folk.png\" tile=\"16\" />\n  <qg:spritesheet name=\"beasts\" src=\"tests/gameserver/worlds/den/rat.png\" tile=\"16\" />\n  <!-- each kind of the world's entities, drawn: me is the entity as the world sent it -->\n  <qg:prefab name=\"Hero\" sheet=\"folk\" frame=\"0\" hitbox=\"12x14\">\n    <qg:label value=\"{me.name}\" dy=\"-14\" size=\"8\" />\n    <qg:health-bar value=\"{me.hp}\" max=\"{me.max_hp}\" dy=\"-9\" />\n  </qg:prefab>\n  <qg:prefab name=\"Rat\" sheet=\"beasts\" frame=\"0\" hitbox=\"12x10\">\n    <qg:health-bar value=\"{me.hp}\" max=\"{me.max_hp}\" dy=\"-8\" color=\"#e04040\" />\n  </qg:prefab>\n  <q:set name=\"note\" value=\"\" />\n  <q:set name=\"hits\" value=\"0\" type=\"number\" />\n  <qg:scene name=\"den\" width=\"320\" height=\"180\" world=\"true\">\n    <qg:tilemap tileset=\"land\" src=\"tests/gameserver/worlds/den/den.tmx\" />\n    <qg:mirror view=\"around\" />\n    <qg:camera follow=\"me\" bounds=\"tilemap\" />\n    <qg:on-input action=\"right\"><qg:send command=\"step\" dir=\"east\" /></qg:on-input>\n    <qg:on-input action=\"left\"><qg:send command=\"step\" dir=\"west\" /></qg:on-input>\n    <qg:on-input action=\"shout\"><qg:sign-in to=\"https://site.example/sign-in\" data=\"{ {'account': note} }\" /></qg:on-input>\n    <qg:on-select>\n      <q:if condition=\"{other != null and other.kind == 'Rat'}\"><qg:send command=\"attack\" who=\"{other.id}\" /></q:if>\n    </qg:on-select>\n    <qg:cursor grid=\"16\" step=\"0\" />\n    <qg:on-event name=\"hit\">\n      <q:set name=\"hits\" value=\"{hits + 1}\" />\n      <qg:emit text=\"{str(value)}\" at=\"other\" color=\"#ff5555\" />\n    </qg:on-event>\n    <qg:on-refused><q:set name=\"note\" value=\"{reason}\" /></qg:on-refused>\n    <qg:on-input action=\"bag\"><q:set name=\"note\" value=\"{str(len(entries(me().bag))) + ' kinds of things in the bag'}\" /></qg:on-input>\n    <qg:hud position=\"top-left\" size=\"8\">\n      <qg:text value=\"{(me().name + ' ' + str(me().gold) + ' gold') if connected() else 'Coming in...'}\" />\n      <qg:bar value=\"{me().hp}\" max=\"{me().max_hp}\" width=\"60\" height=\"6\" />\n      <qg:text value=\"{note}\" color=\"#ff5555\" />\n    </qg:hud>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "lets in guests by a name"
+      },
+      "why_invalid": "The den lets anyone in with a name (accounts=\"guest\"): there is no site to sign in to.",
+      "correction": "Give the world accounts=\"site\" (and its secret), or come in by a name.",
+      "tags": [
+        "sign-in",
+        "accounts"
+      ]
+    },
+    {
+      "id": "game-bad-085",
+      "intent": "A world of a site's accounts with no sign-in",
+      "input": {
+        "natural_language": "Outpost's game with no title: straight into the world",
+        "quantum_code": "<q:application id=\"outpost-door\" type=\"game\">\n  <!-- a world of a site's accounts: the game signs in, and the ticket the site answers is the world's hello -->\n  <qg:connect world=\"projects/outpost/outpost.server.q\" local=\"ws://127.0.0.1:7700\" />\n  <qg:tileset name=\"land\" src=\"projects/outpost/assets/land.png\" tile=\"16\" />\n  <qg:spritesheet name=\"folk\" src=\"projects/outpost/assets/folk.png\" tile=\"16\" />\n  <qg:spritesheet name=\"beasts\" src=\"projects/outpost/assets/beasts.png\" tile=\"16\" />\n  <qg:prefab name=\"Hero\" sheet=\"folk\" frame=\"0\" hitbox=\"14x14\"><qg:label value=\"{me.name}\" dy=\"-14\" size=\"8\" /></qg:prefab>\n  <qg:prefab name=\"Trader\" sheet=\"folk\" frame=\"2\" hitbox=\"14x14\"><qg:label value=\"{me.title}\" dy=\"-14\" size=\"8\" /></qg:prefab>\n  <qg:prefab name=\"Captain\" sheet=\"folk\" frame=\"3\" hitbox=\"14x14\"><qg:label value=\"{me.title}\" dy=\"-14\" size=\"8\" /></qg:prefab>\n  <qg:prefab name=\"Rat\" sheet=\"beasts\" frame=\"0\" hitbox=\"12x10\" />\n  <qg:prefab name=\"Wolf\" sheet=\"beasts\" frame=\"1\" hitbox=\"14x12\" />\n  <qg:prefab name=\"Bear\" sheet=\"beasts\" frame=\"2\" hitbox=\"28x24\" scale=\"2\" />\n  <q:set name=\"account\" value=\"\" />\n  <q:set name=\"password\" value=\"\" />\n  <q:set name=\"note\" value=\"\" />\n  <qg:scene name=\"title\" width=\"480\" height=\"270\">\n    <qg:menu position=\"center\">\n      <qg:field label=\"Account\" bind=\"account\" />\n      <qg:field label=\"Password\" bind=\"password\" secret=\"true\" />\n      <qg:button label=\"Enter the world\"><qg:goto-scene name=\"mainland\" />\n      </qg:button>\n    </qg:menu>\n    <qg:hud position=\"bottom-center\"><qg:text value=\"{note}\" color=\"#ff5555\" /></qg:hud>\n  </qg:scene>\n  <qg:scene name=\"mainland\" width=\"480\" height=\"270\" world=\"true\">\n    <qg:tilemap tileset=\"land\" src=\"projects/outpost/maps/mainland.tmx\" />\n    <qg:mirror view=\"around\" />\n    <qg:camera follow=\"me\" bounds=\"tilemap\" />\n    <qg:on-input action=\"up\"><qg:send command=\"step\" dir=\"north\" /></qg:on-input>\n    <qg:on-input action=\"down\"><qg:send command=\"step\" dir=\"south\" /></qg:on-input>\n  </qg:scene>\n</q:application>\n"
+      },
+      "expected_error": {
+        "type": "GameCompileError",
+        "message": "has a <qg:sign-in> to the site"
+      },
+      "why_invalid": "Outpost's players are a site's accounts: the world lets in no one without a ticket, so a game that never signs in could never come in.",
+      "correction": "Sign in on the title (qg:sign-in to the site's address), then go to a scene of the world.",
+      "tags": [
+        "sign-in",
+        "accounts"
+      ]
     }
   ]
 }

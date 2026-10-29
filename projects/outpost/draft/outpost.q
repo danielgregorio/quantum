@@ -5,8 +5,9 @@
        player sees (qg:mirror), sends what the player asks (qg:send) and shows what happens (qg:on-event). The map
        is the same file the server reads, so only what moves goes over the network. -->
 
-  <!-- where the world is: the site's server, or the one `quantum gameserver run` started on this machine -->
-  <qg:connect world="outpost" server="wss://outpost.quantumframework.net" local="ws://localhost:7700" />
+  <!-- the world's file, which the compiler reads (its commands, views, events and kinds); and where it is: the
+       site's server, or the one `quantum gameserver run` started on this machine -->
+  <qg:connect world="outpost.server.q" server="wss://outpost.quantumframework.net" local="ws://localhost:7700" />
 
   <qg:input action="bag" keys="B, I" />
   <qg:input action="talk" keys="T" />
@@ -107,9 +108,9 @@
     </qg:on-select>
 
     <!-- what happens, seen: the server's events for what this player sees -->
-    <qg:on-event name="hit"><qg:emit text="{str(value)}" at="{at}" color="#ff5555" /><qg:play sound="hit" at="{at}" /></qg:on-event>
-    <qg:on-event name="heal"><qg:emit text="{'+' + str(value)}" at="{at}" color="#55ff55" /></qg:on-event>
-    <qg:on-event name="level"><qg:emit text="{'LEVEL ' + str(value)}" at="{at}" color="#ffaa00" size="12" /><qg:play sound="level" /></qg:on-event>
+    <qg:on-event name="hit"><qg:emit text="{str(value)}" at="other" color="#ff5555" /><qg:play sound="hit" at="other" /></qg:on-event>
+    <qg:on-event name="heal"><qg:emit text="{'+' + str(value)}" at="other" color="#55ff55" /></qg:on-event>
+    <qg:on-event name="level"><qg:emit text="{'LEVEL ' + str(value)}" at="other" color="#ffaa00" size="12" /><qg:play sound="level" /></qg:on-event>
     <qg:on-event name="fallen"><qg:shake frames="12" strength="3" /></qg:on-event>
     <qg:on-event name="npc-says"><q:set name="said" value="{who + ': ' + text}" /></qg:on-event>
     <qg:on-refused><q:set name="note" value="{reason}" /></qg:on-refused>   <!-- a command the server said no to -->

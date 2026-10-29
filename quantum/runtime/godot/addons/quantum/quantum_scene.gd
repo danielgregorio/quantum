@@ -36,6 +36,10 @@ func _ready() -> void:
 	if has_method("_q_enter"):
 		call("_q_enter")
 	q_entered = true
+	if q_spec.get("world", false):
+		# a scene of the world: the game comes into it (once: the connection is the game's)
+		var who := str(call(q_spec["world_name"])) if q_spec.has("world_name") else ""
+		Q.world_open(q_game.get("world", {}), who)
 
 
 # A thing of the scene died (health 0): the scene's qg:on-death of= its tag.
@@ -175,7 +179,50 @@ var q_cursors: Array = []
 var q_paths: Dictionary = {}
 
 
+# A scene of the world (world="true"): its qg:on-event handlers, {event: [method]}, its qg:on-refused ones,
+# [{command (null: any), handler}], and its qg:mirrors.
+var q_on_event: Dictionary = {}
+var q_on_refused: Array = []
+var q_mirrors: Array = []
+
+
+# What the world said since the last tick, heard: each event by the handlers of its name (other: the node of the
+# entity it is of, if a mirror draws it; at: where, in pixels and tiles), each refusal by those of its command.
+func _hear_world() -> void:
+	var w = Q.world
+	if w == null:
+		return
+	var events: Array = w.events
+	w.events = []
+	for e in events:
+		for handler in q_on_event.get(str(e.get("name", "")), []):
+			var other = null
+			if e.get("of") != null:
+				for m in q_mirrors:
+					other = m.node_of(e["of"])
+					if other != null:
+						break
+			var at = null
+			if e.get("at") is Dictionary and not q_mirrors.is_empty():
+				var p: Vector2 = q_mirrors[0].pixel_of(e["at"])
+				at = {"x": p.x, "y": p.y, "col": int(e["at"]["x"]), "row": int(e["at"]["y"])}
+			elif e.get("at") is Dictionary:
+				at = {"x": (float(e["at"]["x"]) + 0.5) * 16.0, "y": (float(e["at"]["y"]) + 0.5) * 16.0,
+					"col": int(e["at"]["x"]), "row": int(e["at"]["y"])}
+			call(handler, null, other, e.get("value"), at)
+	var refused: Array = w.refused
+	w.refused = []
+	for r in refused:
+		for h in q_on_refused:
+			if h.get("command") == null or str(h["command"]) == str(r.get("name", "")):
+				call(h["handler"], null, null, str(r.get("reason", "")), str(r.get("name", "")))
+
+
 func _physics_process(_delta: float) -> void:
+	if q_spec.get("world", false):
+		_hear_world()
+	if has_meta("q_under"):
+		return                       # under an overlay that lets the world go on: the overlay has the keys
 	_screen()
 	for s in q_sequences:
 		if Q.sequence(_steps(s), int(s["within"])) and has_method(s["handler"]):
