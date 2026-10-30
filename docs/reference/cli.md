@@ -168,6 +168,7 @@ Run a world (a q:application type="gameserver").
 | `--stats` | say the numbers (the ticks' time, what went out) every so often |  |  |
 | `--no-minds` | the NPCs say the lines of their fallback, and no model is asked |  |  |
 | `--engine` | what runs the world: python, or rust (native/world, PLAN_WORLD_ENGINE.md: the views and the network on every core); else QUANTUM_WORLD_ENGINE, else python |  | `python`, `rust` |
+| `--rules` | what runs its blocks: python (the interpreter), or machine (the Rust engine's, as bytecode: PLAN_WORLD_ENGINE.md, E2); else QUANTUM_WORLD_RULES, else python |  | `python`, `machine` |
 | `--digest-every` | write the world's digest into its log every so often, for `conform` to check a replay against (a digest copies the whole world: a pause of its own) |  |  |
 
 <a id="cli-gameserver-conform"></a>
@@ -180,9 +181,22 @@ Run a world's log again on an engine, against the record or another engine, and 
 |---|---|---|---|
 | `file` | the world's .q |  |  |
 | `--data` | its snapshot and log (.quantum/gameserver/&lt;name>) |  |  |
-| `--engine` | the engine to run it on (python, rust) | `python` |  |
+| `--engine` | the engine to run it on (python; rust: its frames; machine: its rules as bytecode) | `python` |  |
 | `--against` | a second engine: the two compared tick by tick, frames and all |  |  |
 | `--digest-every` | compare the two worlds' digests every so many ticks (0: only at the end) | `1` |  |
+
+<a id="cli-gameserver-bytecode"></a>
+
+### `quantum gameserver bytecode`
+
+Each expression of a world as the Rust engine's machine runs it, or each block with --blocks (PLAN_WORLD_ENGINE.md, E2).
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `file` | the world's .q |  |  |
+| `--expression` | this expression alone (its braces off) |  |  |
+| `--blocks` | each block instead: its q:commands, q:functions and rules, statement by statement |  |  |
+| `--summary` | only how many compiled |  |  |
 
 <a id="cli-gameserver-check"></a>
 

@@ -15,13 +15,24 @@ E1 is built. The tick is still Python's `World.step`. After each tick the engine
   on a socket. A hello and its ticket, and a test world's step, sync and peek, are the world's to decide: they
   go to Python (`quantum/runtime/gameserver/native.py`) in the order they came.
 
+E2 is built: **the rules as bytecode** (`src/vm.rs`). Python compiles each expression and each block of a world
+(`quantum/runtime/gameserver/bytecode.py`: a q:command's, a q:function's, a rule's) into instructions for a stack
+machine, and the machine runs them with the Core's meaning, to the value and to the error's last word: numeric
+texts, Python's `/`, `//` and `%`, `round` half away from zero, the stdlib, Python's TypeErrors and the Core's "did
+you mean" (difflib's, `src/vm.rs`). Loops, q:set, q:if, q:require, q:call and q:return run in the machine; a
+world's functions and what only the world does (a q:move, a q:emit, the ledger's) it asks of the world
+(`quantum/runtime/gameserver/machine.py`). Python's random, word for word, is `src/rng.rs`, for E3.
+
 The world's values are compared as Python compares them and written as Python's `json.dumps` writes them
 (`src/value.rs`).
 
 ```bash
 pip install ./native/world                        # build the module (Rust and maturin)
 quantum gameserver run world.server.q --engine rust
-QUANTUM_WORLD_ENGINE=rust pytest tests/gameserver  # the game server's tests, on the engine
+quantum gameserver run world.server.q --rules machine          # its rules as bytecode, on the machine
+quantum gameserver bytecode world.server.q --blocks            # each block as the machine runs it
+QUANTUM_WORLD_ENGINE=rust QUANTUM_WORLD_RULES=machine pytest tests/gameserver   # the game server's tests, on it
+python scripts/bytecode-fuzz.py --draws 1000000                # a million expressions, both ways
 
 cd native/world
 cargo test --no-default-features                  # the engine's own tests, without a Python

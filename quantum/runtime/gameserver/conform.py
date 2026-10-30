@@ -10,6 +10,7 @@ where the server wrote one (`quantum gameserver run --digest-every SECONDS`).
 
     quantum gameserver conform world.server.q --data .quantum/gameserver/world                 # against the record
     quantum gameserver conform world.server.q --data DIR --engine python --against rust        # two engines
+    quantum gameserver conform world.server.q --data DIR --engine python --against machine     # the rules, as bytecode
 """
 
 from __future__ import annotations
@@ -27,9 +28,11 @@ from quantum.runtime.gameserver.world import World
 class PythonEngine:
     """The reference engine: the world of world.py, the frames of frames.py, every player connected while in it."""
     name = 'python'
+    world_class = World
 
     def __init__(self, definition: WorldDef, snapshot: Optional[dict] = None):
-        self.world = World.from_snapshot(definition, snapshot) if snapshot else World(definition)
+        kind = self.world_class
+        self.world = kind.from_snapshot(definition, snapshot) if snapshot else kind(definition)
         self.frames = Frames(definition)
         self.seen: Dict[str, Seen] = {a: Seen(a) for a in self.world.players}
 
@@ -63,7 +66,15 @@ ENGINES: Dict[str, Callable[..., Any]] = {'python': PythonEngine}
 def _with_rust() -> None:
     from quantum.runtime.gameserver import native
     if native.available():
+        from quantum.runtime.gameserver.machine import MachineWorld
+
+        class MachineEngine(PythonEngine):
+            """The world's rules as bytecode on the engine's machine (machine.py), the rest Python's."""
+            name = 'machine'
+            world_class = MachineWorld
+
         ENGINES['rust'] = native.rust_engine()
+        ENGINES['machine'] = MachineEngine
 
 
 _with_rust()

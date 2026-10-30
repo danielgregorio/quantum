@@ -166,9 +166,15 @@ def protocol_section():
             '`quantum gameserver run --engine rust` (or `QUANTUM_WORLD_ENGINE=rust`) runs the world on the Rust '
             'engine, `native/world`, built with `pip install ./native/world`: the same world and the same protocol, '
             'with what each player sees worked out on every core, to the byte what the Python engine tells them, '
-            'and the sockets on threads of their own; the rules still run in Python (PLAN_WORLD_ENGINE.md, E1). '
-            'Where it is not built, the Python engine runs the world, and says so; `conform --against rust` holds '
-            'the two to the same frames.\n\n')
+            'and the sockets on threads of their own (PLAN_WORLD_ENGINE.md, E1). Where it is not built, the Python '
+            'engine runs the world, and says so; `conform --against rust` holds the two to the same frames.\n\n'
+            '`quantum gameserver run --rules machine` (or `QUANTUM_WORLD_RULES=machine`) runs the world\'s rules as '
+            'bytecode on the Rust engine\'s machine (PLAN_WORLD_ENGINE.md, E2): each block (a q:command\'s, a '
+            'q:function\'s, a rule\'s) and each expression is compiled once and run whole there, the world\'s '
+            'functions and what only the world does (a q:move, a q:emit, the ledger\'s) asked of the world. It '
+            'gives the same world as the interpreter, tick by tick, and the same errors, word for word; '
+            '`conform --engine python --against machine` holds the two together. `quantum gameserver bytecode '
+            'world.server.q` shows each expression as the machine runs it, and `--blocks` each block.\n\n')
 
 
 def example_section():

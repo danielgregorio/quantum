@@ -91,6 +91,8 @@ def _args_ok(value: Any, depth: int = 0) -> bool:
 
 
 class World(Life, Ledger, Together, Minds):
+    rules_class = Interpreter                      # what runs its blocks (machine.py's MachineWorld: the machine)
+
     def __init__(self, definition: WorldDef, seed: int = 0):
         self.definition = definition
         self.tick = 0
@@ -124,7 +126,7 @@ class World(Life, Ledger, Together, Minds):
         self.source = 'world'
         self.parties: Dict[str, dict] = {}         # a party: {members, invited}
         self.trades: Dict[str, dict] = {}          # two players' ids, sorted: {between, offers, accepted}
-        self.rules = Interpreter(self)
+        self.rules = self.rules_class(self)
         ledger = ({'bag'} | set(definition.currencies)) if definition.ledger else set()
         self._private = {name: {f.name for f in e.fields if f.private} | ledger    # what one holds is its own
                          for name, e in definition.entities.items()}

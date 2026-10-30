@@ -15,9 +15,13 @@ pub enum Value {
     Float(f64),
     Str(String),
     List(Vec<Value>),
+    /// A tuple: a list to JSON, but not equal to one (Python's `(1, 2) != [1, 2]`).
+    Tuple(Vec<Value>),
     Map(Map),
     /// A value only Python could write (a text with a lone surrogate): its JSON, as Python made it.
     Json(String),
+    /// An entity of the world, by its id: the machine reads its fields through its host (vm.rs).
+    Entity(String),
 }
 
 impl Value {
@@ -47,7 +51,10 @@ pub fn py_eq(a: &Value, b: &Value) -> bool {
         (Str(x), Str(y)) => x == y,
         (Json(x), Json(y)) => x == y,
         (Big(x), Big(y)) => x == y,
-        (List(x), List(y)) => x.len() == y.len() && x.iter().zip(y).all(|(p, q)| py_eq(p, q)),
+        (List(x), List(y)) | (Tuple(x), Tuple(y)) => {
+            x.len() == y.len() && x.iter().zip(y).all(|(p, q)| py_eq(p, q))
+        }
+        (Entity(x), Entity(y)) => x == y,
         (Map(x), Map(y)) => {
             x.len() == y.len() && x.iter().all(|(k, v)| y.get(k).is_some_and(|w| py_eq(v, w)))
         }
@@ -86,7 +93,8 @@ pub fn write_json(value: &Value, out: &mut String) {
         Value::Float(f) => write_float(*f, out),
         Value::Str(s) => write_str(s, out),
         Value::Json(text) => out.push_str(text),
-        Value::List(items) => {
+        Value::Entity(id) => write_str(id, out),
+        Value::List(items) | Value::Tuple(items) => {
             out.push('[');
             for (n, item) in items.iter().enumerate() {
                 if n > 0 {
