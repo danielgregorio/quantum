@@ -10,6 +10,19 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the world engine's E0 (`PLAN_WORLD_ENGINE.md`), the two
+  measures the Rust engine is held to. `quantum gameserver conform` runs a
+  world's log again and says the first tick where it differs: against what
+  the log recorded (each command's result, and the digests `quantum
+  gameserver run --digest-every` writes), or against a second engine
+  (`--against`), tick by tick, the world's digest, the acks and refusals and
+  the frames each player is told. What a player is told of a tick is now made
+  apart from the network (`frames.py`), so two engines are compared on it.
+  `scripts/gameserver-bots.py` gains beasts that wander and chase
+  (`--beasts`), a world of its own (`--world`, with a ticket for each bot in a
+  world of a site's accounts), a server elsewhere (`--url`), the server and
+  the bots on cores of their own, and `--sweep 100,200,500`, the table of one
+  run for each count; the server's numbers say its beasts and its memory.
 - Laboratory: the game server's Phase 5 (`PLAN_GAME_SERVER.md`), NPCs with
   minds. `q:npc` is a character of the world with a `q:agent`: its
   instruction, its `q:tool`s (commands with `by="npc"`, which only it runs, as
@@ -1045,6 +1058,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Fixed
 
+- Laboratory: a world's spawn of many beasts at once no longer stops the
+  world for seconds (200 beasts took 6.6 s on the first tick): an area's free
+  tiles are read from the index's cells, once, and not tile by tile. They are
+  the same tiles in the same order, so the same draw lands on the same tile
+  and a world's log replays as it did.
 - Laboratory: a text box of a game's menu (`qg:field`) no longer holds a
   player who uses the mouse. Once a box was clicked, the keys typed and the
   mouse played nothing until Enter: a click on Send or Back did nothing, and

@@ -689,7 +689,9 @@ A world of a site's accounts (`accounts="site"`) lets a player in with a ticket,
 
 An NPC (`q:npc`) answers off the tick: the server gives its mind the question and the world goes on; the answer comes back as an input of a tick, which the log keeps. `quantum gameserver run` asks the Core's LLM (`QUANTUM_LLM_BASE_URL`, `QUANTUM_NPC_MODEL`); `--no-minds`, or no model, and the NPCs say their fallback's lines. In a test, `serve_world(path, mind=function)` gives the NPCs a scripted mind: a function of the question (`instruction`, `knowledge`, `memory`, `player`, `text`, `tools`) that returns the answer: `say` (its words), `do` (the tools to run, each with its `tool` and `args`) and `remember` (its note of the player).
 
-`quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks' time (median, 99th percentile, worst) and what went out, to the world and to each player. `scripts/gameserver-bots.py` walks a hundred bots in a world made for it and reads them.
+`quantum gameserver run --stats 10` says the numbers every ten seconds: the ticks' time (median, 99th percentile, worst), what went out, to the world and to each player, the beasts and the memory. `scripts/gameserver-bots.py` walks bots in a world made for it (with `--beasts`, beasts that wander and chase) or in a world of its own (`--world`), the server on its own cores, and reads them; `--sweep 100,200,500` makes a table of one run for each count.
+
+`quantum gameserver conform` runs a world's log again and says the first tick where it differs: against what the log recorded (each command's result, and the digests `run --digest-every` wrote), or against a second engine (`--against`), tick by tick, the world's digest, the acks and refusals and the frames each player is told (PLAN_WORLD_ENGINE.md).
 
 ## Three worlds, whole
 

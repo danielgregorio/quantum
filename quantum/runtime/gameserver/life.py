@@ -83,8 +83,16 @@ class Life:
 
     def make_at(self, spec, area: str, line: Optional[int]) -> Optional[dict]:
         """An entity of spec at a free tile of the area, from the world's random; None if the area is full."""
+        from quantum.runtime.gameserver.world import CELL
         x0, y0, x1, y1 = self.definition.map.areas[area]
-        tiles = [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1) if self.free((x, y))]
+        # the area's free tiles, in the order of its rows: its walkable tiles less those an entity stands on (read
+        # from the index's cells over the area, once, and not tile by tile: a spawn of hundreds took seconds)
+        taken = set()
+        for cx in range(x0 // CELL, x1 // CELL + 1):
+            for cy in range(y0 // CELL, y1 // CELL + 1):
+                for eid in self.cells.get((cx, cy), ()):
+                    taken.add(self.tile_of(self.entities[eid]))
+        tiles = [t for t in self._walkable_in(area) if t not in taken]
         if not tiles:
             return None
         tile = tiles[self.rng.randrange(len(tiles))]
@@ -96,6 +104,14 @@ class Life:
         self.reindex([entity['id']])
         self.mint_start(entity)
         return entity
+
+    def _walkable_in(self, area: str) -> List[Tile]:
+        """The walkable tiles of an area, row by row (the map does not change: kept)."""
+        kept = self.__dict__.setdefault('_walkable_areas', {})
+        if area not in kept:
+            x0, y0, x1, y1 = self.definition.map.areas[area]
+            kept[area] = [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1) if self.walkable((x, y))]
+        return kept[area]
 
     def spawn_now(self, name: str, area: str, count: int, for_ticks: Optional[int], line: Optional[int]) -> None:
         """q:spawn in a block: count more now, gone after for_ticks if given."""

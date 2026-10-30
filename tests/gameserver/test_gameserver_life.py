@@ -278,3 +278,25 @@ def test_a_player_sees_the_rat_come_bite_and_go():
                              max_ticks=200)
             assert seen['until'] and seen['me']['bag'] == {'cheese': 1} and seen['me']['kills'] == 1
             assert any(e['name'] == 'hit' and e['of'] == rat['id'] for e in seen['events'])
+
+
+def test_a_spawn_picks_its_tile_as_it_always_did():
+    """A beast is made at a free tile of its area, drawn from the world's random among them in the order of the
+    area's rows: read from the index's cells (fast), the free tiles are the ones the world tile by tile would find,
+    so the same draw lands on the same tile and an old log makes the same world."""
+    world = den()
+    for k in range(12):                                   # heroes and rats about, some in the square
+        world.step([('join', f'p{k}')])
+    spec = world.definition.entities['rat']
+    for area in world.definition.map.areas:
+        x0, y0, x1, y1 = world.definition.map.areas[area]
+        for _ in range(6):
+            free = [(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1) if world.free((x, y))]
+            if not free:
+                assert world.make_at(spec, area, None) is None
+                break
+            state = world.rng.getstate()
+            expected = free[world.rng.randrange(len(free))]
+            world.rng.setstate(state)
+            made = world.make_at(spec, area, None)
+            assert (made['at']['x'], made['at']['y']) == expected

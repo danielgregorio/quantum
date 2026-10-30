@@ -48,10 +48,10 @@ from typing import Any, Dict, List, Optional, Set
 
 from quantum.runtime.gameserver import tickets
 from quantum.runtime.gameserver.errors import GameServerError
+from quantum.runtime.gameserver.frames import Frames
 from quantum.runtime.gameserver.log import WorldLog, replay
 from quantum.runtime.gameserver.npc import FALLBACK, answer_of
 from quantum.runtime.gameserver.model import WorldDef
-from quantum.runtime.gameserver.rules import chebyshev
 from quantum.runtime.gameserver.world import TickOut, World
 
 _NAME = re.compile(r'^[A-Za-z0-9_-]{1,24}$')
@@ -60,7 +60,6 @@ MESSAGES_A_SECOND = 60
 HEARTBEAT_SECONDS = 10
 
 
-_MISSING = object()
 UNLIMITED = ('step', 'sync', 'peek')        # a test world's harness says these as fast as it runs
 
 
@@ -75,25 +74,23 @@ class Connection:
     last_seq: int = 0                                        # the seq of the last command it sent
 
 
-def _copy(value: Any) -> Any:
-    """A world's value (numbers, texts, lists and records), copied: what was sent stays as it was sent."""
-    if isinstance(value, dict):
-        return {k: _copy(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_copy(v) for v in value]
-    return value
-
-
-def _changed(before: dict, now: dict) -> dict:
-    return {k: v for k, v in now.items() if before.get(k, _MISSING) != v}
+def _memory_mb() -> float:
+    """What the process holds at most, in MB (0 where the machine does not say)."""
+    try:
+        import resource
+    except ImportError:                      # not Unix
+        return 0.0
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return round(peak / (1024 * 1024 if sys.platform == 'darwin' else 1024), 1)   # bytes on a Mac, KB on Linux
 
 
 class WorldServer:
     def __init__(self, definition: WorldDef, *, host: str = '127.0.0.1', port: int = 7700, step: bool = False,
                  data_dir: Optional[Path] = None, snapshot_every: float = 300.0, quiet: bool = False,
                  stats: float = 0.0, secret: Optional[bytes] = None, mind: Optional[Any] = None,
-                 mind_seconds: float = 20.0):
+                 mind_seconds: float = 20.0, digest_every: float = 0.0):
         self.definition = definition
+        self.digest_ticks = max(1, round(digest_every * definition.tick_rate)) if digest_every else 0
         self.mind = mind                                    # the NPCs' (npc.py): a function of a question
         self.mind_seconds = mind_seconds                    # longer, and the NPC says a line of its fallback
         self._minds_pool = None
@@ -114,8 +111,7 @@ class WorldServer:
         self.controls: List[Connection] = []
         self.inbox: List[tuple] = []
         self.welcoming: Set[str] = set()                    # accounts that took their hero over: welcomed next tick
-        self._public: Dict[str, dict] = {}                  # each entity as the players have it (as of the last tick)
-        self._own: Dict[str, dict] = {}                     # a player's entity as its player has it
+        self.frames = Frames(definition)                    # what each player is told of each tick
         self.bytes_out = 0
         self.replayed: List[str] = []
         self.ready = threading.Event()
@@ -170,6 +166,8 @@ class WorldServer:
         self.log.append(out.entries)
         if self.world.tick % (HEARTBEAT_SECONDS * self.definition.tick_rate) == 0:
             self.log.append([{'t': self.world.tick, 'k': 'tick'}])
+        if self.digest_ticks and self.world.tick % self.digest_ticks == 0:
+            self.log.append([{'t': self.world.tick, 'k': 'digest', 'd': self.world.digest()}])
         self.log.flush()                       # on the disk before anyone is told it ran
         if self.world.tick - self._last_snapshot >= self.snapshot_ticks:
             self.log.write_snapshot(self.world)
@@ -220,162 +218,26 @@ class WorldServer:
             return values[min(len(values) - 1, int(q * len(values)))] if values else 0.0
         return {'tick': self.world.tick, 'players': len(self.world.players),
                 'entities': len(self.world.entities),
+                'beasts': sum(1 for e in self.world.entities.values() if e.get('_player') is None),
+                'memory_mb': _memory_mb(),
                 'tick_ms_p50': round(at(ticks, 0.5) * 1000, 2), 'tick_ms_p99': round(at(ticks, 0.99) * 1000, 2),
                 'tick_ms_max': round((ticks[-1] if ticks else 0) * 1000, 2),
                 'out_kb_s': round((self.bytes_out - out_before) / seconds / 1000, 2),
                 'player_kb_s_p50': round(at(rates, 0.5), 3), 'player_kb_s_max': round(rates[-1] if rates else 0, 3)}
 
-    def _changes(self) -> tuple:
-        """What changed of each entity this tick, once for every player: (to the others, to its own player). An
-        entity no player has yet has nothing to change."""
-        world = self.world
-        theirs, mine = {}, {}
-        for eid in world.dirty:
-            entity = world.entities.get(eid)
-            if entity is None:
-                continue
-            now = _copy(world.public(entity, None))
-            before = self._public.get(eid)
-            if before is not None:
-                changed = _changed(before, now)
-                if changed:
-                    theirs[eid] = {'id': eid, **changed}
-                self._public[eid] = now
-            owner = entity.get('_player')
-            if owner is not None:
-                now = _copy(world.public(entity, owner))
-                before = self._own.get(eid)
-                if before is not None:
-                    changed = _changed(before, now)
-                    if changed:
-                        mine[eid] = {'id': eid, **changed}
-                    self._own[eid] = now
-        return theirs, mine
-
-    def _entering(self, entity: dict, account: str) -> dict:
-        """An entity as it comes into a player's view: kept as they have it, for the changes of the ticks after."""
-        eid = entity['id']
-        if entity.get('_player') == account:
-            if eid not in self._own:
-                self._own[eid] = _copy(self.world.public(entity, account))
-            return self._own[eid]
-        if eid not in self._public:
-            self._public[eid] = _copy(self.world.public(entity, None))
-        return self._public[eid]
-
-    def _view(self, conn: Connection, me: dict, dirty_cells: Dict[tuple, List[str]], theirs: dict,
-              mine: dict) -> Dict[str, dict]:
-        """What of each view changed for this player: the ones that came in, the fields that changed, the ones that
-        left. The view is read again whole when the player's entity changed (it moved, say); else only for what
-        changed near it."""
-        world = self.world
-        me_changed = me['id'] in world.dirty
-        out = {}
-        for view in self.definition.views.values():
-            had = conn.views.get(view.name)
-            if (had is None or me_changed or
-                    (world.vars_changed and view.where is not None and (view.rest or view.radius is None))):
-                members = world.members(view, me)
-            else:
-                members = had - world.gone
-                if view.radius is not None:
-                    tile = world.tile_of(me)
-                    candidates = [eid for eid in had if eid in world.dirty]
-                    if tile is not None:
-                        for cell in world.cells_near(tile, view.radius):
-                            candidates.extend(dirty_cells.get(cell, ()))
-                else:
-                    candidates = world.dirty
-                for eid in candidates:
-                    entity = world.entities.get(eid)
-                    if entity is not None and world.sees(view, entity, me):
-                        members.add(eid)
-                    else:
-                        members.discard(eid)
-            had = had or set()
-            frame = {}
-            enter = sorted(members - had)
-            if enter:
-                frame['enter'] = [self._entering(world.entities[eid], conn.account) for eid in enter]
-            update = [(mine if eid == me['id'] else theirs).get(eid) for eid in sorted(members & had)
-                      if eid in world.dirty]
-            update = [u for u in update if u]
-            if update:
-                frame['update'] = update
-            leave = sorted(had - members)
-            if leave:
-                frame['leave'] = leave
-            if frame:
-                out[view.name] = frame
-            conn.views[view.name] = members
-        return out
-
-    def _events(self) -> Dict[str, List[dict]]:
-        """Each player's events of the tick: theirs (to=), everyone's, and those where they see (at=)."""
-        world = self.world
-        reach = self.definition.reach
-        accounts = [a for a, c in self.connections.items() if c.joined and a in world.players]
-        out: Dict[str, List[dict]] = {}
-        for event in world.events:
-            if event.accounts is not None:
-                to = [a for a in event.accounts if a in self.connections]
-            elif event.to is not None:
-                to = [event.to] if event.to in self.connections else []
-            elif event.everyone or (event.tile is not None and reach is None):
-                to = accounts
-            elif event.tile is None:
-                to = []
-            else:
-                to = []
-                for eid in world.near_ids(event.tile, reach):
-                    entity = world.entities[eid]
-                    owner = entity.get('_player')
-                    if (owner is not None and owner in self.connections and world.players.get(owner) == eid
-                            and chebyshev(world.tile_of(entity), event.tile) <= reach):
-                        to.append(owner)
-            for account in to:
-                out.setdefault(account, []).append(event.message)
-        return out
-
     async def _send(self, out: TickOut) -> None:
-        world = self.world
-        theirs, mine = self._changes()
-        dirty_cells: Dict[tuple, List[str]] = {}
-        for eid in world.dirty:
-            cell = world.cell_of.get(eid)
-            if cell is not None:
-                dirty_cells.setdefault(cell, []).append(eid)
-        events = self._events() if world.events else {}
+        """The tick's frames (frames.py) to each player: who found the world full is told and let go."""
         for account, conn in list(self.connections.items()):
             if account in out.full:
                 await self._close(conn, 'The world is full.')
-                continue
-            if account in out.joined or (account in self.welcoming and account in world.players):
-                conn.joined = True
-                conn.views = {}
-                await self._send_to(conn, {'type': 'welcome', 'you': world.players[account], 'tick': out.tick,
-                                           'rate': self.definition.tick_rate, 'world': self.definition.name,
-                                           'client': self.definition.client,
-                                           'map': self.definition.map.path.name,
-                                           'views': list(self.definition.views)})
-            if not conn.joined or account not in world.players:
-                continue
-            frame: Dict[str, Any] = {'type': 'tick', 'tick': out.tick}
-            if out.acks.get(account):
-                frame['ack'] = out.acks[account]
-            if out.refused.get(account):
-                frame['refused'] = out.refused[account]
-            views = self._view(conn, world.entities[world.players[account]], dirty_cells, theirs, mine)
-            if views:
-                frame['views'] = views
-            if events.get(account):
-                frame['events'] = events[account]
-            if len(frame) > 2 or self.step_mode:      # a test world says every tick: its harness waits for it
-                await self._send_to(conn, frame)
+        seen = {a: c for a, c in self.connections.items() if a not in out.full}
+        messages = self.frames.tick(self.world, out, seen, self.welcoming, every_tick=self.step_mode)
         self.welcoming.clear()
-        for eid in world.gone:
-            self._public.pop(eid, None)
-            self._own.pop(eid, None)
+        for account, said in messages.items():
+            conn = self.connections.get(account)
+            for message in said:
+                if conn is not None:
+                    await self._send_to(conn, message)
 
     async def _send_to(self, conn: Connection, message: dict) -> None:
         data = json.dumps(message, separators=(',', ':'))
@@ -606,6 +468,17 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
                      help='say the numbers (the ticks\' time, what went out) every so often')
     run.add_argument('--no-minds', action='store_true',
                      help='the NPCs say the lines of their fallback, and no model is asked')
+    run.add_argument('--digest-every', type=float, default=0.0, metavar='SECONDS',
+                     help='write the world\'s digest into its log every so often, for `conform` to check a replay '
+                          'against (a digest copies the whole world: a pause of its own)')
+    conform = sub.add_parser('conform', help='run a world\'s log again on an engine, against the record or another '
+                                             'engine, and say the first tick where they differ (PLAN_WORLD_ENGINE.md)')
+    conform.add_argument('file', help='the world\'s .q')
+    conform.add_argument('--data', help='its snapshot and log (.quantum/gameserver/<name>)')
+    conform.add_argument('--engine', default='python', help='the engine to run it on (python)')
+    conform.add_argument('--against', help='a second engine: the two compared tick by tick, frames and all')
+    conform.add_argument('--digest-every', type=int, default=1, metavar='TICKS',
+                         help='compare the two worlds\' digests every so many ticks (0: only at the end)')
     check = sub.add_parser('check', help='read a world against its schema, and say what is wrong')
     check.add_argument('file')
     ticket = sub.add_parser('ticket', help=f'a ticket into a world of a site\'s accounts (accounts="site"), '
@@ -627,9 +500,13 @@ def load(path: str) -> WorldDef:
 
 def main(args) -> int:
     command = getattr(args, 'gameserver_command', None)
-    if command not in ('run', 'check', 'ticket'):
-        print('quantum gameserver run FILE | quantum gameserver check FILE | quantum gameserver ticket --account A')
+    if command not in ('run', 'check', 'ticket', 'conform'):
+        print('quantum gameserver run FILE | quantum gameserver check FILE | quantum gameserver ticket --account A | '
+              'quantum gameserver conform FILE')
         return 2
+    if command == 'conform':
+        from quantum.runtime.gameserver.conform import main as conform_main
+        return conform_main(args)
     if command == 'ticket':
         secret = tickets.secret_from_env()
         if not secret:
@@ -654,7 +531,8 @@ def main(args) -> int:
         from quantum.runtime.gameserver.npc import LLMMind
         server = WorldServer(definition, host=args.host, port=args.port, step=args.step,
                              data_dir=Path(args.data) if args.data else None, snapshot_every=args.snapshot_every,
-                             stats=args.stats, mind=None if args.no_minds or not definition.npcs else LLMMind())
+                             stats=args.stats, mind=None if args.no_minds or not definition.npcs else LLMMind(),
+                             digest_every=args.digest_every)
     except GameServerError as e:
         print(f'[ERROR] {e}', file=sys.stderr)
         return 1
