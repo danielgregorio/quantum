@@ -7090,7 +7090,7 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   <!-- the version a player sees on the title and the dashboard: a function, not the state, so a save of an older
        version does not bring its number back. What each version changed: CHANGELOG.md beside this file (and
        CHANGELOG.pt.md, CHANGELOG.es.md), on the site at games/pandafoot/changelog/ -->
-  <q:function name="game_version"><q:return value="{'2.2'}" /></q:function>
+  <q:function name="game_version"><q:return value="{'2.3'}" /></q:function>
 
   <!-- that page, in the player's language -->
   <q:function name="changelog_url">
@@ -8618,12 +8618,13 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </q:function>
 
   <!-- a side of a match: its club, attack and defence with its style; the counter-tactics lift or sink both; the
-       home side is lifted by its ground (4%) and by its crowd, up to a quarter more with the ground full -->
+       home side is lifted by its ground (4%) and by its crowd, up to a tenth more with the ground full (2.3: a full
+       ground was worth a third more, more than a division's difference in the cup) -->
   <q:function name="side" params="club, other, home, fill">
     <q:set name="mine" value="{power(club)}" />
     <q:set name="m" value="{mods(club.style)}" />
     <q:set name="e" value="{edge(club.style, other.style)}" />
-    <q:set name="h" value="{1.08 + 0.25 * fill if home else 1.0}" />
+    <q:set name="h" value="{1.04 + 0.10 * fill if home else 1.0}" />
     <q:return value="{ {'attack': mine[0] * (1 + m[0]) * (1 + e) * h, 'defense': mine[1] * (1 + m[1]) * (1 + e) * h, 'shots': 0, 'on': 0, 'press': 0, 'subs': 0, 'done': []} }" />
   </q:function>
 
@@ -8713,8 +8714,9 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </q:function>
 
   <!-- a minute of a match: each side may make a chance, as many as the two styles make the match; a chance may be
-       a goal. Strength counts to the power of seven tenths: the better side wins more, not always (a side weaker
-       by 3 or more wins about one match in five). A booked player is more careful, but a second yellow is a red;
+       a goal. Strength counts whole (2.3: it counted to the power of seven tenths, and a side much stronger hardly
+       won more): the better side wins more, not always (a home side weaker by 4 or more wins about one match in
+       five, one stronger by 4 or more about three in four). A booked player is more careful, but a second yellow is a red;
        a knock takes a player off (a tired one gets hurt more), and the best of the bench for the place comes on
        if three have not come on yet -->
   <q:function name="play_minute" params="m, minute">
@@ -8725,8 +8727,8 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
       <q:set name="them" value="{m['a' if s == 'h' else 'h']}" />
       <q:set name="club" value="{clubs[m.home if s == 'h' else m.away]}" />
       <q:set name="luck" value="{m.luck[0 if s == 'h' else 1]}" />
-      <q:set name="att" value="{me_side.attack ** 0.7}" />
-      <q:set name="dfn" value="{them.defense ** 0.7}" />
+      <q:set name="att" value="{me_side.attack}" />
+      <q:set name="dfn" value="{them.defense}" />
       <q:set name="me_side.press" value="{me_side.press * 0.8}" />   <!-- the chances of the last minutes, the older ones fading -->
       <q:if condition="{chance(0.31 * att / (att + dfn) * luck * pace_of)}">
         <q:set name="me_side.shots" value="{me_side.shots + 1}" />
@@ -9220,22 +9222,24 @@ Each one is written in these tags and nothing else, and replayed in CI from inpu
   </q:function>
 
   <!-- the month's end (decision of 2.2): whose mean of the month (two matches at least) is 7 or more grows a point,
-       the club's training center lowering that bar (by 0.15 a level); 5 or less, he loses one. Who hardly played
-       trains with the eleven (the beta's ask: the reserves never got better): one weaker than the eleven's mean, not
-       injured, grows a point one month in ten, and one in twenty more a level of the training center (a third of the
-       months at level 5); never past the eleven. The arrow in the squad says it until the next month -->
+       the club's training center lowering that bar (by 0.15 a level), and so does his being weaker than the eleven
+       (2.3, the beta's ask: the starting squads of the 4th never grew): 0.1 lower a point under the eleven's mean,
+       never under 6; 5 or less, he loses one. Who hardly played trains with the eleven (the beta's ask: the reserves
+       never got better): one weaker than the eleven's mean, not injured, grows a point one month in five, and one in
+       twenty more a level of the training center (nearly half the months at level 5); never past the eleven. The
+       arrow in the squad says it until the next month -->
   <q:function name="month_growth" params="club">
     <q:set name="up" value="{[]}" />
     <q:set name="down" value="{[]}" />
     <q:set name="trained" value="{[]}" />
     <q:set name="bar" value="{7.0 - 0.15 * club.training}" />
     <q:set name="level" value="{xi_level(club)}" />
-    <q:set name="drill" value="{0.1 + 0.05 * club.training}" />
+    <q:set name="drill" value="{0.2 + 0.05 * club.training}" />
     <q:loop items="{club.players}" var="q">
       <q:set name="q.trend" value="{0}" />
       <q:if condition="{q.mn >= 2}">
         <q:set name="avg" value="{q.msum / q.mn}" />
-        <q:if condition="{avg >= bar and q.strength < 50}"><q:set name="q.strength" value="{q.strength + 1}" /><q:set name="q.trend" value="{1}" /><q:set name="q.grown" value="{q.grown + 1}" /><q:set name="up" value="{up + [q.name]}" /></q:if>
+        <q:if condition="{avg >= max(6.0, bar - 0.1 * max(0, level - q.strength)) and q.strength < 50}"><q:set name="q.strength" value="{q.strength + 1}" /><q:set name="q.trend" value="{1}" /><q:set name="q.grown" value="{q.grown + 1}" /><q:set name="up" value="{up + [q.name]}" /></q:if>
         <q:if condition="{avg <= 5.0 and q.strength > 5}"><q:set name="q.strength" value="{q.strength - 1}" /><q:set name="q.trend" value="{-1}" /><q:set name="q.grown" value="{q.grown - 1}" /><q:set name="down" value="{down + [q.name]}" /></q:if>
       </q:if>
       <q:if condition="{q.mn < 2 and q.injured == 0 and q.strength + 1 <= level and chance(drill)}"><q:set name="q.strength" value="{q.strength + 1}" /><q:set name="q.trend" value="{1}" /><q:set name="q.grown" value="{q.grown + 1}" /><q:set name="trained" value="{trained + [q.name]}" /></q:if>
