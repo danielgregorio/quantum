@@ -244,7 +244,7 @@ def test_the_report_panel_opens_over_any_screen(pandafoot, godot):
         (entry,) = kept['state']['game']['outbox']
         report = entry['report']
         assert {k: report[k] for k in ('game', 'version', 'kind', 'text', 'screen', 'option')} == {
-            'game': 'pandafoot', 'version': '2.2', 'kind': 'suggestion', 'text': 'A cup for the 4th division only',
+            'game': 'pandafoot', 'version': '2.3', 'kind': 'suggestion', 'text': 'A cup for the 4th division only',
             'screen': 'title', 'option': 'Report a bug or suggest'}
         assert report['context'].endswith('screen title; no game in progress')
         assert json.loads(report['save'])['scene'] == 'title'
@@ -404,7 +404,7 @@ def test_a_report_reaches_the_receiver_and_the_forge(godot, tmp_path, monkeypatc
         with sqlite3.connect(receiver / 'data' / 'reports.db') as db:
             db.row_factory = sqlite3.Row
             (row,) = [dict(r) for r in db.execute('SELECT * FROM reports')]
-        assert (row['game'], row['version'], row['kind'], row['screen']) == ('pandafoot', '2.2', 'bug', 'dashboard')
+        assert (row['game'], row['version'], row['kind'], row['screen']) == ('pandafoot', '2.3', 'bug', 'dashboard')
         assert row['text'] == 'The keeper scored from his own area' and row['issue'] == 41
         assert json.loads(row['save'])['game']['world'] == 7
         (put, _, _, body), (issue_method, issue_path, _, issue) = forge.received
@@ -1324,9 +1324,38 @@ def test_a_month_of_good_ratings_grows_a_player(pandafoot, godot, tmp_path):
         assert '▲' in rows[0] and '▼' in rows[1]
 
 
+def test_a_starter_below_the_eleven_grows_on_a_lower_mean(pandafoot, godot, tmp_path):
+    """2.3 (the beta's ask: the starting squads of the 4th never grew): the month's bar of 7 is 0.1 lower a point
+    under the eleven's mean, never under 6. A month of 6.5 grows a starter ten under the eleven, not one at its
+    level."""
+    def month_end(state):
+        state['matchday'] = 3                                       # this round ends the month
+        club = state['clubs'][MINE]
+        club['training'] = 0
+        xi = [p for p in club['players'] if p['xi'] and p['xi'] != 'GK']
+        level = round(sum(p['strength'] for p in club['players'] if p['xi']) / 11)
+        at, below = xi[0], xi[1]
+        at.update(strength=level, msum=130, mn=20, injured=0)       # 6.33 to 6.67 whatever this match
+        below.update(strength=level - 12, msum=130, mn=20, injured=0)
+        state['test'] = {'at': [at['name'], at['strength']], 'below': [below['name'], below['strength']]}
+    saved_then(pandafoot, godot, tmp_path, month_end)
+    marks = json.loads((tmp_path / 'quantum-save-1.json').read_text())['game']['test']
+    with PlaySession(pandafoot, binary=godot, persist_dir=tmp_path) as game:
+        continued(game)
+        after = play_round(game)['state']['game']
+        squad = {p['name']: p for p in after['clubs'][MINE]['players']}
+        below, at = squad[marks['below'][0]], squad[marks['at'][0]]
+        assert (below['strength'], below['trend']) == (marks['below'][1] + 1, 1)
+        assert (at['strength'], at['trend']) == (marks['at'][1], 0)
+        news = {n['text']: n['arg'] for n in after['news']}
+        assert below['name'] in news['Better this month (+1):']
+        assert not [line for line in game.log if 'SCRIPT ERROR' in line]
+
+
 def test_the_reserves_train_with_the_eleven(pandafoot, godot, tmp_path):
     """Who hardly played in the month trains with the eleven: at the month's end one weaker than the eleven's mean may
-    grow a point (35% at a training center of level 5), never past the eleven; the papers say who."""
+    grow a point (one month in five, 45% at a training center of level 5), never past the eleven; the papers say
+    who."""
     def month_end(state):
         state['matchday'] = 3                                       # this round ends the month
         reserves = []

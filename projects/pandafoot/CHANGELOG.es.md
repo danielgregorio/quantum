@@ -3,6 +3,25 @@
 La versión que juegas está en la pantalla de título y en la esquina del panel. Cada versión de abajo dice qué
 cambió para quien juega; cómo se hizo está en el [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
+## 2.3 — El equipo más fuerte gana, y la plantilla crece (2026-10-30)
+
+Lo que encontró un jugador del beta: un equipo de fuerza 27 en la 4ª división ganó la división y la copa el primer
+año, y los jugadores de la plantilla inicial nunca mejoraban.
+
+- **La fuerza cuenta más.** La fuerza de un equipo ahora vale entera en el partido (antes valía aplanada). Un local
+  4 puntos o más más fuerte gana cerca de tres partidos de cada cuatro, donde ganaba dos de cada tres; uno 4 puntos
+  o más más débil gana cerca de uno de cada cinco. Los goles y los empates casi no cambian.
+- **La localía cuenta menos.** El estadio lleno sube al local como mucho un décimo, donde lo subía un tercio: más
+  que la diferencia entre dos divisiones. En la copa, donde la división menor juega en casa, un club una división
+  por debajo pasa de ronda en cerca de dos cruces de cada cinco, donde pasaba en uno de cada dos. La copa vuelve a
+  ser, casi siempre, de la 1ª división; la sorpresa sigue siendo posible.
+- **La plantilla inicial crece.** Un titular más débil que el equipo necesita una media menor para subir a fin de
+  mes: 0,1 menos por cada punto por debajo de la media de los titulares, nunca menos de 6. En la 4ª, un titular muy
+  por debajo del equipo subía unos 2 puntos en seis temporadas; ahora sube unos 4 o 5.
+- **Los suplentes entrenan el doble**: suben un punto un mes de cada cinco, donde era uno de cada diez, y más con
+  el centro de entrenamiento (casi la mitad de los meses en el nivel 5).
+- Una partida guardada en la 2.2 sigue con estas reglas.
+
 ## 2.2 — El mercado, las notas y el club (2026-10-26)
 
 Lo que pidieron los jugadores del beta, por segunda vez:

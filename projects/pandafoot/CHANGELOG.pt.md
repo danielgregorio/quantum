@@ -3,6 +3,25 @@
 A versão que você joga está na tela de título e no canto do painel. Cada versão abaixo diz o que mudou para
 quem joga; como foi feito está no [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
+## 2.3 — O time mais forte vence, e o elenco cresce (2026-10-30)
+
+O que um jogador do beta encontrou: um time de força 27 na 4ª divisão ganhou a divisão e a taça no primeiro ano,
+e os jogadores do elenco inicial nunca melhoravam.
+
+- **A força conta mais.** A força de um time agora vale por inteiro na partida (antes valia achatada). Um mandante
+  4 pontos ou mais mais forte vence cerca de três jogos em quatro, onde vencia dois em três; um 4 pontos ou mais
+  mais fraco vence cerca de um em cinco. Os gols e os empates quase não mudam.
+- **O mando de campo conta menos.** O estádio cheio aumenta o mandante em no máximo um décimo, onde aumentava um
+  terço: mais que a diferença entre duas divisões. Na taça, em que a divisão menor joga em casa, um clube uma
+  divisão abaixo passa de fase em cerca de dois confrontos em cinco, onde passava em um de cada dois. A taça volta
+  a ser, quase sempre, da 1ª divisão; a zebra ainda é possível.
+- **O elenco inicial cresce.** Um titular mais fraco que o time precisa de média menor para subir no fim do mês:
+  0,1 a menos por ponto abaixo da média dos titulares, nunca menos que 6. Na 4ª, um titular bem abaixo do time subia
+  cerca de 2 pontos em seis temporadas; agora sobe uns 4 ou 5.
+- **Os reservas treinam o dobro**: sobem um ponto em um mês a cada cinco, onde era um a cada dez, e mais com o
+  centro de treinamento (quase metade dos meses no nível 5).
+- Um jogo salvo na 2.2 continua com essas regras.
+
 ## 2.2 — O mercado, as notas e o clube (2026-10-26)
 
 O que os jogadores do beta pediram na segunda leva:
