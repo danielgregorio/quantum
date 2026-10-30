@@ -1,0 +1,103 @@
+name: World engine
+
+# native/world is the game server's Rust engine (PLAN_WORLD_ENGINE.md), a
+# Cargo crate of its own, built by maturin into the module quantum_world. It
+# is held to the Python engine by the conformance harness, and the game
+# server's tests (and the Godot clients of a world) run on it here. Checked
+# when a change touches it or what it is held to.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'native/**'
+      - 'quantum/runtime/gameserver/**'
+      - 'quantum/runtime/godot_world.py'
+      - 'tests/gameserver/**'
+      - 'tests/godot/test_godot_world.py'
+      - 'tests/godot/test_godot_den.py'
+      - 'tests/godot/test_godot_outpost.py'
+      - 'tests/godot/test_godot_sign_in.py'
+      - 'scripts/gameserver-bots.py'
+      - '.github/workflows/world-engine.yml'
+  pull_request:
+    paths:
+      - 'native/**'
+      - 'quantum/runtime/gameserver/**'
+      - 'quantum/runtime/godot_world.py'
+      - 'tests/gameserver/**'
+      - 'tests/godot/test_godot_world.py'
+      - 'tests/godot/test_godot_den.py'
+      - 'tests/godot/test_godot_outpost.py'
+      - 'tests/godot/test_godot_sign_in.py'
+      - 'scripts/gameserver-bots.py'
+      - '.github/workflows/world-engine.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  engine:
+    name: fmt, clippy, the engine's tests, the game server on it
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            native/world/target/
+          key: ${{ runner.os }}-world-cargo-${{ hashFiles('native/world/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-world-cargo-
+
+      - name: Format
+        working-directory: native/world
+        run: cargo fmt -- --check
+
+      - name: Clippy
+        working-directory: native/world
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: The engine's own tests (no Python)
+        working-directory: native/world
+        run: cargo test --no-default-features
+
+      - name: Install quantum, and the engine (maturin builds it)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,websocket,play]"
+          pip install ./native/world
+          python -c "import quantum_world; print('quantum_world', quantum_world.__file__)"
+
+      - name: Godot (pinned in quantum/runtime/godot_bin.py)
+        id: godot-version
+        run: echo "version=$(python scripts/godot.py version)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/quantum/godot
+          key: godot-${{ runner.os }}-${{ steps.godot-version.outputs.version }}
+      - name: Install Godot
+        run: python scripts/godot.py install
+
+      - name: The game server, and the Godot clients of a world, on the Rust engine
+        # tests/gameserver/test_gameserver_native.py holds the two engines to
+        # the same frames, to the byte; the rest of the suite runs as it does
+        # on the Python engine, here on the Rust one.
+        env:
+          QUANTUM_WORLD_ENGINE: rust
+          QUANTUM_GODOT_REQUIRED: '1'
+        run: >-
+          pytest -n auto -p no:cacheprovider tests/gameserver tests/godot/test_godot_world.py
+          tests/godot/test_godot_den.py tests/godot/test_godot_outpost.py tests/godot/test_godot_sign_in.py

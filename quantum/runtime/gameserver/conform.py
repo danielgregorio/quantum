@@ -9,7 +9,7 @@ With one engine it runs the log against what the log itself recorded: each comma
 where the server wrote one (`quantum gameserver run --digest-every SECONDS`).
 
     quantum gameserver conform world.server.q --data .quantum/gameserver/world                 # against the record
-    quantum gameserver conform world.server.q --data DIR --engine python --against python      # two engines
+    quantum gameserver conform world.server.q --data DIR --engine python --against rust        # two engines
 """
 
 from __future__ import annotations
@@ -58,6 +58,15 @@ class PythonEngine:
 
 
 ENGINES: Dict[str, Callable[..., Any]] = {'python': PythonEngine}
+
+
+def _with_rust() -> None:
+    from quantum.runtime.gameserver import native
+    if native.available():
+        ENGINES['rust'] = native.rust_engine()
+
+
+_with_rust()
 
 
 @dataclass
@@ -184,7 +193,11 @@ def main(args) -> int:
     engines = [args.engine] + ([args.against] if args.against else [])
     unknown = [e for e in engines if e not in ENGINES]
     if unknown:
-        print(f'[ERROR] no engine {unknown[0]!r}: the engines are {", ".join(sorted(ENGINES))}')
+        from quantum.runtime.gameserver.native import BUILD
+        if unknown[0] == 'rust':
+            print(f'[ERROR] the Rust engine is not built here ({BUILD})')
+        else:
+            print(f'[ERROR] no engine {unknown[0]!r}: the engines are {", ".join(sorted(ENGINES))}')
         return 1
     snapshot, entries = load_data(directory)
     report = conform(definition, snapshot, entries, engines, digest_every=args.digest_every)

@@ -85,6 +85,8 @@ def _memory_mb() -> float:
 
 
 class WorldServer:
+    engine_name = 'python'
+
     def __init__(self, definition: WorldDef, *, host: str = '127.0.0.1', port: int = 7700, step: bool = False,
                  data_dir: Optional[Path] = None, snapshot_every: float = 300.0, quiet: bool = False,
                  stats: float = 0.0, secret: Optional[bytes] = None, mind: Optional[Any] = None,
@@ -124,6 +126,7 @@ class WorldServer:
         self.stats_ticks = max(1, round(stats * definition.tick_rate)) if stats else 0
         self._stats_mark: tuple = (time.monotonic(), 0, {})
         self._interval: List[float] = []                    # the ticks' time since the numbers were last said
+        self._parts: List[tuple] = []                       # and of their parts: the rules (step), the sending
 
     def say(self, text: str) -> None:
         if not self.quiet:
@@ -161,6 +164,7 @@ class WorldServer:
         began = time.perf_counter()
         inputs, self.inbox = self.inbox, []
         out = self.world.step(inputs)
+        stepped = time.perf_counter()
         for ask in out.asks:
             self._think(ask)
         self.log.append(out.entries)
@@ -172,13 +176,16 @@ class WorldServer:
         if self.world.tick - self._last_snapshot >= self.snapshot_ticks:
             self.log.write_snapshot(self.world)
             self._last_snapshot = self.world.tick
+        sending = time.perf_counter()
         await self._send(out)
         self.world.dirty.clear()
         self.world.gone.clear()
-        self.tick_seconds.append(time.perf_counter() - began)
+        done = time.perf_counter()
+        self.tick_seconds.append(done - began)
         del self.tick_seconds[:-600]
         if self.stats_ticks:
             self._interval.append(self.tick_seconds[-1])
+            self._parts.append((stepped - began, done - sending))
         if self.stats_ticks and self.world.tick % self.stats_ticks == 0:
             print(f'[gameserver] stats {json.dumps(self.stats())}', flush=True)
 
@@ -209,6 +216,9 @@ class WorldServer:
         since, out_before, sent_before = self._stats_mark
         seconds = max(1e-6, now - since)
         ticks = sorted(self._interval or self.tick_seconds)
+        steps = sorted(p[0] for p in self._parts)
+        sends = sorted(p[1] for p in self._parts)
+        self._parts = []
         rates = sorted((c.sent_bytes - sent_before.get(a, 0)) / seconds / 1000
                        for a, c in self.connections.items() if a in sent_before)
         self._stats_mark = (now, self.bytes_out, {a: c.sent_bytes for a, c in self.connections.items()})
@@ -216,12 +226,14 @@ class WorldServer:
 
         def at(values, q):
             return values[min(len(values) - 1, int(q * len(values)))] if values else 0.0
-        return {'tick': self.world.tick, 'players': len(self.world.players),
+        return {'engine': self.engine_name, 'tick': self.world.tick, 'players': len(self.world.players),
                 'entities': len(self.world.entities),
                 'beasts': sum(1 for e in self.world.entities.values() if e.get('_player') is None),
                 'memory_mb': _memory_mb(),
                 'tick_ms_p50': round(at(ticks, 0.5) * 1000, 2), 'tick_ms_p99': round(at(ticks, 0.99) * 1000, 2),
                 'tick_ms_max': round((ticks[-1] if ticks else 0) * 1000, 2),
+                'step_ms_p50': round(at(steps, 0.5) * 1000, 2), 'send_ms_p50': round(at(sends, 0.5) * 1000, 2),
+                'send_ms_p99': round(at(sends, 0.99) * 1000, 2),
                 'out_kb_s': round((self.bytes_out - out_before) / seconds / 1000, 2),
                 'player_kb_s_p50': round(at(rates, 0.5), 3), 'player_kb_s_max': round(rates[-1] if rates else 0, 3)}
 
@@ -453,6 +465,20 @@ class WorldServer:
         self.stop()
 
 
+def make_server(definition: WorldDef, engine: Optional[str] = None, **kwargs) -> WorldServer:
+    """A world's server on the engine asked for (`--engine`, else QUANTUM_WORLD_ENGINE, else python): Rust's, when
+    it is built here (native.py), else Python's, which says so."""
+    from quantum.runtime.gameserver import native
+
+    if native.engine_wanted(engine) == 'rust':
+        if native.available():
+            return native.native_server()(definition, **kwargs)
+        if not kwargs.get('quiet'):
+            print(f'[gameserver] the Rust engine is not built here ({native.BUILD}): the Python engine runs '
+                  f'{definition.name}', flush=True)
+    return WorldServer(definition, **kwargs)
+
+
 # -- the command line ------------------------------------------------------------------------------------------
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
@@ -468,6 +494,9 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
                      help='say the numbers (the ticks\' time, what went out) every so often')
     run.add_argument('--no-minds', action='store_true',
                      help='the NPCs say the lines of their fallback, and no model is asked')
+    run.add_argument('--engine', choices=('python', 'rust'),
+                     help='what runs the world: python, or rust (native/world, PLAN_WORLD_ENGINE.md: the views '
+                          'and the network on every core); else QUANTUM_WORLD_ENGINE, else python')
     run.add_argument('--digest-every', type=float, default=0.0, metavar='SECONDS',
                      help='write the world\'s digest into its log every so often, for `conform` to check a replay '
                           'against (a digest copies the whole world: a pause of its own)')
@@ -475,7 +504,7 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
                                              'engine, and say the first tick where they differ (PLAN_WORLD_ENGINE.md)')
     conform.add_argument('file', help='the world\'s .q')
     conform.add_argument('--data', help='its snapshot and log (.quantum/gameserver/<name>)')
-    conform.add_argument('--engine', default='python', help='the engine to run it on (python)')
+    conform.add_argument('--engine', default='python', help='the engine to run it on (python, rust)')
     conform.add_argument('--against', help='a second engine: the two compared tick by tick, frames and all')
     conform.add_argument('--digest-every', type=int, default=1, metavar='TICKS',
                          help='compare the two worlds\' digests every so many ticks (0: only at the end)')
@@ -529,11 +558,11 @@ def main(args) -> int:
         return 0
     try:
         from quantum.runtime.gameserver.npc import LLMMind
-        server = WorldServer(definition, host=args.host, port=args.port, step=args.step,
+        server = make_server(definition, args.engine, host=args.host, port=args.port, step=args.step,
                              data_dir=Path(args.data) if args.data else None, snapshot_every=args.snapshot_every,
                              stats=args.stats, mind=None if args.no_minds or not definition.npcs else LLMMind(),
                              digest_every=args.digest_every)
-    except GameServerError as e:
+    except (GameServerError, ValueError) as e:
         print(f'[ERROR] {e}', file=sys.stderr)
         return 1
     return serve_forever(server)

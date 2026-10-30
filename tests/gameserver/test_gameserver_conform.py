@@ -203,7 +203,7 @@ def test_a_world_from_its_snapshot_and_log_and_the_command_line(tmp_path):
     done = run()
     assert done.returncode == 1 and done.stdout.startswith('[DIFFERENT] python against the record')
     assert f'tick {first_ok}: result of' in done.stdout
-    assert run('--engine', 'rust').stdout.startswith("[ERROR] no engine 'rust'")
+    assert run('--engine', 'nope').stdout.startswith("[ERROR] no engine 'nope'")
     assert conform_module.load_data(tmp_path)[0]['tick'] == 60
 
 

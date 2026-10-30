@@ -6,6 +6,9 @@
 > "PyPy if the numbers ask for it" in that plan's Phase 7.
 > E0 done (2026-10-29): `quantum gameserver conform` and the load's gauge; the Python engine's numbers, with players
 > alone and with 1500 beasts, are in the record below. With the beasts, their brains are 85% of the tick.
+> E1 done (2026-10-30): `native/world`, the views and the network in Rust (`--engine rust`), to the byte the Python
+> engine's frames; at 500 bots the views and the sending went from 61 ms of the tick to 10.5, and the tick from 79 ms
+> to 29 (48 at the 99th percentile). With 1500 beasts the rules are the tick now: E2 and E3.
 
 ## Why
 
@@ -220,3 +223,55 @@ bytecode and E3's brains thinking in parallel. A cost found on the way, fixed in
 algorithm's and not the language's: a spawn of many beasts listed an area's free tiles tile by tile, for each beast
 (200 beasts took 6.6 s on the first tick); they are read from the index's cells now, the same tiles in the same
 order, so the same draw lands on the same tile.
+
+### E1 (2026-10-30)
+
+Built: `native/world`, a crate of its own that maturin builds into the module `quantum_world`
+(`pip install ./native/world`; PyO3, abi3, Python 3.12 and later). `quantum gameserver run --engine rust` (or
+`QUANTUM_WORLD_ENGINE=rust`) runs a world on it; the default stays `python` until E3, and where the module is not
+built the Python engine runs the world and says so.
+
+- **What each player is told** (`src/frames.rs`). The tick is still `World.step`. After it the engine is handed the
+  dirty entities as they are now, those gone, the acks, the refusals and the events. It keeps its own copy of what
+  players see (each entity as the others see it and as its own player does, and its JSON, written once a change)
+  and its own index of cells, and works out every player's frames on rayon's pool, a player per task. Values are
+  compared as Python compares them (1 == 1.0 == True) and written as `json.dumps` writes them (ensure_ascii, a
+  float as its repr), so the frames are frames.py's to the byte: `tests/gameserver/test_gameserver_native.py`
+  compares the texts, every player, every tick, on meadow, den and Outpost, and `quantum gameserver conform
+  --against rust` compares the frames, the acks and the digests. A view whose `where=` is more than the near()
+  (meadow's `loud`) has its members read by the interpreter, for those views only (frames.py's `view_members`,
+  which both engines use); the engine works out what changed in them.
+- **The network** (`src/net.rs`, tokio and tungstenite). Every message is read and checked on the engine's threads
+  (16 KB, sixty a second, a command's integer seq and its name); the pings are answered, and sent every twenty
+  seconds as websockets does; each player's frames are written from a queue of its own, so a slow player no longer
+  holds the tick (one sixteen megabytes behind is let go). A hello and its ticket, and a test world's step, sync
+  and peek, are the world's to decide: they go to Python (`native.py`) in the order they came, and a connection's
+  next message is read only once its hello is answered, as server.py's handler did.
+
+The whole of `tests/gameserver` and the Godot world tests (world, den, Outpost, sign-in) pass on it, 153 tests; CI
+runs them on it in `.github/workflows/world-engine.yml`, with `cargo fmt`, `clippy` and the engine's own tests.
+
+The gauge, the same machine as E0's (four cores: two for the server, two for the bots), a 96 by 96 field, a view of
+9 tiles; the server's numbers now say the rules' share of the tick (`World.step`) and the sending's (the frames, the
+JSON, the sockets):
+
+    python scripts/gameserver-bots.py --sweep 100,200,500 --seconds 60 --engine rust
+
+| Engine | Bots | Beasts | Tick, median | Tick, 99th percentile | Worst | The rules, median | Views and sending, median | Each player receives | Memory | Dropped |
+|---|---|---|---|---|---|---|---|---|---|---|
+| python | 500 | 0 | 78.69 ms | 150.1 ms | 170.76 ms | 13.56 ms | 60.62 ms | 3.43 KB/s | 76 MB | 0 |
+| rust | 100 | 0 | 7.04 ms | 11.62 ms | 19.61 ms | 3.96 ms | 1.68 ms | 1.22 KB/s | 56 MB | 0 |
+| rust | 200 | 0 | 11.42 ms | 35.35 ms | 82.89 ms | 7.07 ms | 3.17 ms | 1.8 KB/s | 71 MB | 0 |
+| rust | 500 | 0 | 28.97 ms | 47.93 ms | 54.71 ms | 16.65 ms | 10.5 ms | 3.37 KB/s | 117 MB | 0 |
+| rust | 500 | 1500 | 262.78 ms | 444.91 ms | 452.44 ms | 227.06 ms | 28.2 ms | 4.29 KB/s | 139 MB | 0 |
+
+At 500 bots the views and the sending take 10.5 ms of the tick where they took 60.6: under a fifth, as E1 asked.
+The tick is 29 ms where it was 79, within the plan's 50 ms at the 99th percentile for players alone. Of the
+engine's share, at 500 players in process, reading what changed out of Python (the bridge, which E3 removes) is
+1.0 ms and the frames 2.2 ms; the rest is the sockets' and the threads'. The rules took a little longer on the Rust
+engine's runs (16.7 ms against 13.6): the same two cores now also run the engine's threads.
+
+With 1500 beasts the tick is 263 ms where it was 372 (E0), and the rules are 227 ms of it: the beasts' brains, as
+E0 found. So the order stays: E2's bytecode for their `q:when`s, and E3's brains thinking in parallel. Memory is
+higher on the engine (117 MB against 76 at 500 bots): its copy of what players see and each connection's queue.
+
