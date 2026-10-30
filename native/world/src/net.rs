@@ -45,7 +45,7 @@ enum Out {
 
 /// As websockets' server does: a ping every twenty seconds, and a connection that answers nothing for twenty more
 /// is gone (its player leaves the world).
-const PING_EVERY: Duration = Duration::from_secs(20);
+pub const PING_EVERY: Duration = Duration::from_secs(20);
 
 #[derive(Clone, PartialEq)]
 enum Role {
@@ -75,6 +75,7 @@ struct Shared {
     step: bool,
     max_message: usize,
     rate: usize,
+    ping_every: Duration,
 }
 
 pub struct Network {
@@ -143,6 +144,7 @@ impl Network {
         max_message: usize,
         rate: usize,
         tick: i64,
+        ping_every: Duration,
     ) -> std::io::Result<Network> {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .thread_name("world-net")
@@ -159,6 +161,7 @@ impl Network {
             step,
             max_message,
             rate,
+            ping_every,
         });
         let listener = runtime.block_on(TcpListener::bind((host, port)))?;
         let port = listener.local_addr()?.port();
@@ -349,14 +352,15 @@ async fn serve(shared: Arc<Shared>, stream: TcpStream, _peer: SocketAddr) {
         shared.push(&mut conns, id, text);
     };
     let close = |reason: &str| shared.close(id, reason);
-    let mut pings = tokio::time::interval_at(tokio::time::Instant::now() + PING_EVERY, PING_EVERY);
+    let every = shared.ping_every;
+    let mut pings = tokio::time::interval_at(tokio::time::Instant::now() + every, every);
     let mut heard = Instant::now();
     loop {
         let message = tokio::select! {
             m = source.next() => m,
             _ = closing.changed() => break,
             _ = pings.tick() => {
-                if heard.elapsed() > 2 * PING_EVERY {
+                if heard.elapsed() > 2 * every {
                     break; // no answer to the last ping: the other side is gone
                 }
                 if let Some(conn) = shared.conns.lock().unwrap().get(&id) {

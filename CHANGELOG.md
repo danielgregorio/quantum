@@ -21,13 +21,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
     These are the frames the Python engine writes, to the byte.
   - It holds the sockets on threads of its own: it reads and checks every
     message (its size, its rate, a command's seq and name), answers the
-    pings and writes each player's frames. A slow player no longer holds the
-    tick.
+    pings (and sends one every twenty seconds, as websockets does) and
+    writes each player's frames. A slow player no longer holds the tick.
   - A hello and its ticket, and a test world's step, sync and peek, stay
     Python's.
 
-  At 500 bots, the views and the sending take 9 ms of the tick, where they
-  took 63 ms; the whole tick takes 26 ms, where it took 80 ms. `quantum
+  At 500 bots, the views and the sending take 10.5 ms of the tick, where
+  they took 61 ms; the whole tick takes 29 ms, where it took 79 ms. `quantum
   gameserver conform --against rust` holds the two engines to the same
   frames. The game server's tests and the Godot clients of a world run on it
   in CI (`.github/workflows/world-engine.yml`). Where it is not built, the

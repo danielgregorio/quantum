@@ -316,8 +316,9 @@ impl Engine {
     // -- the network ---------------------------------------------------------------------------------------------
 
     /// Listens on host:port (0: a free port, which it returns), on its own threads. step: a test world's (its
-    /// harness says "step", "sync" and "peek" as fast as it runs).
-    #[pyo3(signature = (host, port, step=false, max_message=16384, messages_a_second=60, tick=0))]
+    /// harness says "step", "sync" and "peek" as fast as it runs). ping_every: a connection is pinged so often,
+    /// and one that answers nothing for twice that is gone.
+    #[pyo3(signature = (host, port, step=false, max_message=16384, messages_a_second=60, tick=0, ping_every=20.0))]
     #[allow(clippy::too_many_arguments)]
     fn listen(
         &self,
@@ -328,9 +329,21 @@ impl Engine {
         max_message: usize,
         messages_a_second: usize,
         tick: i64,
+        ping_every: f64,
     ) -> PyResult<u16> {
+        let every = std::time::Duration::from_secs_f64(ping_every.max(0.05));
         let net = py
-            .detach(|| Network::listen(host, port, step, max_message, messages_a_second, tick))
+            .detach(|| {
+                Network::listen(
+                    host,
+                    port,
+                    step,
+                    max_message,
+                    messages_a_second,
+                    tick,
+                    every,
+                )
+            })
             .map_err(|e| pyo3::exceptions::PyOSError::new_err(e.to_string()))?;
         let port = net.port;
         *self.net.lock().unwrap() = Some(Arc::new(net));

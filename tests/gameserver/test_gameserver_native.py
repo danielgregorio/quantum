@@ -6,8 +6,11 @@ on it in CI with QUANTUM_WORLD_ENGINE=rust: .github/workflows/world-engine.yml);
 took; and where it is not built, a world asked to run on it runs on Python, and says so.
 """
 
+import base64
 import json
+import os
 import random
+import socket
 import time
 
 import pytest
@@ -90,6 +93,43 @@ def test_a_world_on_the_rust_engine_checks_what_a_player_sends():
         while server.world.players and time.monotonic() < deadline:             # each one that was closed has left
             time.sleep(0.05)
         assert not server.world.players
+
+
+def _silent_client(port: int) -> socket.socket:
+    """A WebSocket opened by hand, that says hello and then answers nothing, not even a ping (a machine gone)."""
+    sock = socket.create_connection(('127.0.0.1', port), timeout=5)
+    key = base64.b64encode(os.urandom(16)).decode()
+    sock.sendall(f'GET / HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n'
+                 f'Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n'.encode())
+    answer = b''
+    while b'\r\n\r\n' not in answer:
+        answer += sock.recv(1024)
+    assert b' 101 ' in answer.split(b'\r\n')[0]
+    payload = json.dumps({'type': 'hello', 'name': 'ana'}).encode()
+    mask = os.urandom(4)
+    sock.sendall(bytes([0x81, 0x80 | len(payload)]) + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(payload)))
+    return sock
+
+
+@needs_rust
+def test_a_connection_that_answers_no_ping_is_let_go():
+    """As websockets' server: pinged every so often (twenty seconds; here a fifth of one), and one that answers
+    nothing for twice that is closed, and its player leaves."""
+    engine = native.quantum_world.Engine([], {}, None, '"rate":10')
+    port = engine.listen('127.0.0.1', 0, ping_every=0.2)
+    sock = _silent_client(port)
+    try:
+        (hello,) = engine.wait(5)
+        assert hello[0] == 'hello' and hello[2] == {'type': 'hello', 'name': 'ana'}
+        engine.accept(hello[1], 'ana')
+        began = time.monotonic()
+        events = []
+        while not any(e[0] == 'closed' for e in events) and time.monotonic() - began < 5:
+            events += engine.wait(0.5)
+        assert ('closed', hello[1]) in events and 0.3 < time.monotonic() - began < 3
+    finally:
+        sock.close()
+        engine.shutdown()
 
 
 @needs_rust
