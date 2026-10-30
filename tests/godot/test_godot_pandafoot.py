@@ -409,7 +409,7 @@ def test_a_report_reaches_the_receiver_and_the_forge(godot, tmp_path, monkeypatc
         assert json.loads(row['save'])['game']['world'] == 7
         (put, _, _, body), (issue_method, issue_path, _, issue) = forge.received
         assert put == 'PUT' and json.loads(base64.b64decode(body['content']))['scene'] == 'dashboard'
-        assert issue['title'] == '[pandafoot 2.2] bug: The keeper scored from his own area'
+        assert issue['title'] == '[pandafoot 2.3] bug: The keeper scored from his own area'
         assert issue['labels'] == ['beta-report', 'pandafoot', 'bug']
         assert MINE_NAME in issue['body']
 
