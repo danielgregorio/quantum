@@ -40,6 +40,46 @@ def _changed(before: dict, now: dict) -> dict:
     return {k: v for k, v in now.items() if before.get(k, _MISSING) != v}
 
 
+def by_python(view) -> bool:
+    """A view whose where= is more than a near(it, me, n): its members are read by the interpreter (the Rust engine
+    asks Python for them, until E2's bytecode)."""
+    return view.where is not None and (view.rest or view.radius is None)
+
+
+def dirty_cells_of(world) -> Dict[tuple, List[str]]:
+    """The cells of the entities changed this tick: where a view near a player looks for what came or went."""
+    cells: Dict[tuple, List[str]] = {}
+    for eid in world.dirty:
+        cell = world.cell_of.get(eid)
+        if cell is not None:
+            cells.setdefault(cell, []).append(eid)
+    return cells
+
+
+def view_members(world, view, me: dict, had: Optional[Set[str]], dirty_cells: Dict[tuple, List[str]]) -> Set[str]:
+    """The ids a player sees in a view after the tick, from what they had: read again whole when there was nothing
+    yet, when their own entity changed, or when a variable did and the view reads more than the index; else only
+    what changed near them (or, for a view of the whole world, what changed)."""
+    if had is None or me['id'] in world.dirty or (world.vars_changed and by_python(view)):
+        return world.members(view, me)
+    members = had - world.gone
+    if view.radius is not None:
+        tile = world.tile_of(me)
+        candidates = [eid for eid in had if eid in world.dirty]
+        if tile is not None:
+            for cell in world.cells_near(tile, view.radius):
+                candidates.extend(dirty_cells.get(cell, ()))
+    else:
+        candidates = world.dirty
+    for eid in candidates:
+        entity = world.entities.get(eid)
+        if entity is not None and world.sees(view, entity, me):
+            members.add(eid)
+        else:
+            members.discard(eid)
+    return members
+
+
 class Frames:
     def __init__(self, definition: WorldDef):
         self.definition = definition
@@ -58,11 +98,7 @@ class Frames:
         `seen` is what each player was told, by account (a full world's newcomers left out); it is updated."""
         welcoming = set(welcoming)
         theirs, mine = self._changes(world)
-        dirty_cells: Dict[tuple, List[str]] = {}
-        for eid in world.dirty:
-            cell = world.cell_of.get(eid)
-            if cell is not None:
-                dirty_cells.setdefault(cell, []).append(eid)
+        dirty_cells = dirty_cells_of(world)
         events = self._events(world, seen) if world.events else {}
         messages: Dict[str, List[dict]] = {}
         for account, player in seen.items():
@@ -132,29 +168,10 @@ class Frames:
               mine: dict) -> Dict[str, dict]:
         """What of each view changed for this player: the ones that came in, the fields that changed, the ones that
         left."""
-        me_changed = me['id'] in world.dirty
         out = {}
         for view in self.definition.views.values():
             had = player.views.get(view.name)
-            if (had is None or me_changed or
-                    (world.vars_changed and view.where is not None and (view.rest or view.radius is None))):
-                members = world.members(view, me)
-            else:
-                members = had - world.gone
-                if view.radius is not None:
-                    tile = world.tile_of(me)
-                    candidates = [eid for eid in had if eid in world.dirty]
-                    if tile is not None:
-                        for cell in world.cells_near(tile, view.radius):
-                            candidates.extend(dirty_cells.get(cell, ()))
-                else:
-                    candidates = world.dirty
-                for eid in candidates:
-                    entity = world.entities.get(eid)
-                    if entity is not None and world.sees(view, entity, me):
-                        members.add(eid)
-                    else:
-                        members.discard(eid)
+            members = view_members(world, view, me, had, dirty_cells)
             had = had or set()
             frame = {}
             enter = sorted(members - had)

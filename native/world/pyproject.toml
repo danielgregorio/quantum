@@ -1,0 +1,13 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "quantum-world"
+version = "0.1.0"
+description = "The world's engine of Quantum's game server: what each player sees, and the network (PLAN_WORLD_ENGINE.md)"
+requires-python = ">=3.12"
+
+[tool.maturin]
+module-name = "quantum_world"
+features = ["python", "pyo3/extension-module"]

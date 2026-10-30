@@ -201,7 +201,7 @@ def measure(args, count: int) -> dict:
                 os.sched_setaffinity(0, server_cores)
         server = subprocess.Popen(
             [sys.executable, '-m', 'quantum.cli.runner', 'gameserver', 'run', str(world), '--port', str(port),
-             '--data', str(directory / 'data'), '--stats', '10', '--no-minds'],
+             '--data', str(directory / 'data'), '--stats', '10', '--no-minds', '--engine', args.engine],
             cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env,
             preexec_fn=pin if server_cores else None)
         if bot_cores:
@@ -243,6 +243,10 @@ def measure(args, count: int) -> dict:
         'tick_ms_p50': round(statistics.median(s['tick_ms_p50'] for s in full), 2),
         'tick_ms_p99': round(statistics.median(s['tick_ms_p99'] for s in full), 2),    # of an interval, typically
         'tick_ms_max': round(max(s['tick_ms_max'] for s in full), 2),                  # the worst tick of all
+        'engine': args.engine,
+        'step_ms_p50': round(statistics.median(s.get('step_ms_p50', 0) for s in full), 2),         # the rules
+        'send_ms_p50': round(statistics.median(s.get('send_ms_p50', 0) for s in full), 2),         # views, sending
+        'send_ms_p99': round(statistics.median(s.get('send_ms_p99', 0) for s in full), 2),
         'intervals_over_50ms': sum(1 for s in full if s['tick_ms_max'] > 50), 'intervals': len(full),
         'player_kb_s_p50': round(statistics.median(s['player_kb_s_p50'] for s in full), 2),
         'player_kb_s_max': round(max(s['player_kb_s_max'] for s in full), 2),
@@ -259,14 +263,17 @@ def _bots_side(got: dict) -> dict:
 
 def table(runs: List[dict]) -> str:
     """The runs as the table of PLAN_WORLD_ENGINE.md."""
-    rows = ['| Bots | Beasts | Tick, median | Tick, 99th percentile | Worst | Each player receives | Memory | Dropped |',
-            '|---|---|---|---|---|---|---|---|']
+    rows = ['| Engine | Bots | Beasts | Tick, median | Tick, 99th percentile | Worst | The rules, median | '
+            'Views and sending, median | Each player receives | Memory | Dropped |',
+            '|---|---|---|---|---|---|---|---|---|---|---|']
     for r in runs:
         if 'tick_ms_p50' not in r:
-            rows.append(f"| {r['bots']} | | (a server elsewhere: its own numbers) | | | | | {r['dropped']} |")
+            rows.append(f"| | {r['bots']} | | (a server elsewhere: its own numbers) | | | | | | | {r['dropped']} |")
             continue
-        rows.append(f"| {r['bots']} | {r['beasts']} | {r['tick_ms_p50']} ms | {r['tick_ms_p99']} ms | "
-                    f"{r['tick_ms_max']} ms | {r['player_kb_s_p50']} KB/s | {r['memory_mb']} MB | {r['dropped']} |")
+        rows.append(f"| {r.get('engine', 'python')} | {r['bots']} | {r['beasts']} | {r['tick_ms_p50']} ms | "
+                    f"{r['tick_ms_p99']} ms | {r['tick_ms_max']} ms | {r.get('step_ms_p50', 0)} ms | "
+                    f"{r.get('send_ms_p50', 0)} ms | {r['player_kb_s_p50']} KB/s | {r['memory_mb']} MB | "
+                    f"{r['dropped']} |")
     return '\n'.join(rows)
 
 
@@ -282,6 +289,8 @@ def main() -> int:
     parser.add_argument('--url', help='a server already running elsewhere: the bots alone, against it')
     parser.add_argument('--no-split', action='store_true',
                         help='the server and the bots on every core (else half each, on four cores or more)')
+    parser.add_argument('--engine', choices=('python', 'rust'), default='python',
+                        help='what runs the world (PLAN_WORLD_ENGINE.md): python, or rust (native/world)')
     parser.add_argument('--json', help='write the numbers here too')
     args = parser.parse_args()
 

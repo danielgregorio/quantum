@@ -693,6 +693,8 @@ An NPC (`q:npc`) answers off the tick: the server gives its mind the question an
 
 `quantum gameserver conform` runs a world's log again and says the first tick where it differs: against what the log recorded (each command's result, and the digests `run --digest-every` wrote), or against a second engine (`--against`), tick by tick, the world's digest, the acks and refusals and the frames each player is told (PLAN_WORLD_ENGINE.md).
 
+`quantum gameserver run --engine rust` (or `QUANTUM_WORLD_ENGINE=rust`) runs the world on the Rust engine, `native/world`, built with `pip install ./native/world`: the same world and the same protocol, with what each player sees worked out on every core, to the byte what the Python engine tells them, and the sockets on threads of their own; the rules still run in Python (PLAN_WORLD_ENGINE.md, E1). Where it is not built, the Python engine runs the world, and says so; `conform --against rust` holds the two to the same frames.
+
 ## Three worlds, whole
 
 `tests/gameserver/worlds/yard/yard.server.q`, the world of Phase 1's tests: a walled yard, a hero a player gets, a step at four steps a second, coins.

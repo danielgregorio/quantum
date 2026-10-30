@@ -37,15 +37,16 @@ class WorldSessionError(Exception):
 @contextlib.contextmanager
 def serve_world(world: Union[str, Path, Any], *, step: bool = True, data: Optional[Path] = None,
                 snapshot_every: float = 300.0, quiet: bool = True, secret: Optional[bytes] = None,
-                mind: Optional[Any] = None, mind_seconds: float = 20.0):
-    """A world served on this machine, in a thread, on a free port: the server, with `.url` and `.world`."""
-    from quantum.runtime.gameserver.server import WorldServer, load
+                mind: Optional[Any] = None, mind_seconds: float = 20.0, engine: Optional[str] = None):
+    """A world served on this machine, in a thread, on a free port: the server, with `.url` and `.world`. engine:
+    python or rust (else QUANTUM_WORLD_ENGINE, else python)."""
+    from quantum.runtime.gameserver.server import load, make_server
     import asyncio
     import tempfile
 
     definition = load(str(world)) if isinstance(world, (str, Path)) else world
     with tempfile.TemporaryDirectory() as scratch:
-        server = WorldServer(definition, port=0, step=step, data_dir=Path(data) if data else Path(scratch),
+        server = make_server(definition, engine, port=0, step=step, data_dir=Path(data) if data else Path(scratch),
                              snapshot_every=snapshot_every, quiet=quiet, secret=secret, mind=mind,
                              mind_seconds=mind_seconds)
         failure: List[BaseException] = []

@@ -10,6 +10,30 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the world engine's E1 (`PLAN_WORLD_ENGINE.md`), the game
+  server's first part in Rust. `native/world` is a crate that maturin builds
+  into the module `quantum_world` (`pip install ./native/world`).
+  `quantum gameserver run --engine rust` (or `QUANTUM_WORLD_ENGINE=rust`)
+  runs a world on it:
+  - The tick is still Python's `World.step`.
+  - After it, the engine works out what each player is told, a player per
+    task on every core: the views, the fields that changed, the events.
+    These are the frames the Python engine writes, to the byte.
+  - It holds the sockets on threads of its own: it reads and checks every
+    message (its size, its rate, a command's seq and name), answers the
+    pings and writes each player's frames. A slow player no longer holds the
+    tick.
+  - A hello and its ticket, and a test world's step, sync and peek, stay
+    Python's.
+
+  At 500 bots, the views and the sending take 9 ms of the tick, where they
+  took 63 ms; the whole tick takes 26 ms, where it took 80 ms. `quantum
+  gameserver conform --against rust` holds the two engines to the same
+  frames. The game server's tests and the Godot clients of a world run on it
+  in CI (`.github/workflows/world-engine.yml`). Where it is not built, the
+  Python engine runs the world and says so. The server's numbers now say
+  the rules' share of the tick and the sending's, and on the Rust engine the
+  bridge's.
 - Laboratory: the world engine's E0 (`PLAN_WORLD_ENGINE.md`), the two
   measures the Rust engine is held to. `quantum gameserver conform` runs a
   world's log again and says the first tick where it differs: against what

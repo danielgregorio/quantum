@@ -6,6 +6,8 @@
 > "PyPy if the numbers ask for it" in that plan's Phase 7.
 > E0 done (2026-10-29): `quantum gameserver conform` and the load's gauge; the Python engine's numbers, with players
 > alone and with 1500 beasts, are in the record below. With the beasts, their brains are 85% of the tick.
+> E1 done (2026-10-30): `native/world`, the views and the network in Rust (`--engine rust`), to the byte the Python
+> engine's frames; at 500 bots the views and the sending went from 63 ms of the tick to 9.
 
 ## Why
 

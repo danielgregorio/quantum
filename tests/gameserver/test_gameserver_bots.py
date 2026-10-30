@@ -46,14 +46,16 @@ def test_a_sweep_makes_the_plans_table():
     script = bots()
     runs = [{'bots': 100, 'beasts': 0, 'tick_ms_p50': 9.4, 'tick_ms_p99': 17.6, 'tick_ms_max': 216.0,
              'player_kb_s_p50': 1.16, 'memory_mb': 40, 'dropped': 0},
-            {'bots': 500, 'beasts': 1500, 'tick_ms_p50': 91.2, 'tick_ms_p99': 176.8, 'tick_ms_max': 242.1,
-             'player_kb_s_p50': 3.14, 'memory_mb': 120, 'dropped': 0},
+            {'engine': 'rust', 'bots': 500, 'beasts': 1500, 'tick_ms_p50': 91.2, 'tick_ms_p99': 176.8,
+             'tick_ms_max': 242.1, 'step_ms_p50': 80.5, 'send_ms_p50': 4.1, 'player_kb_s_p50': 3.14,
+             'memory_mb': 120, 'dropped': 0},
             {'bots': 50, 'url': 'ws://elsewhere:7700', 'dropped': 1}]
     lines = script.table(runs).splitlines()
-    assert lines[0].startswith('| Bots | Beasts | Tick, median | Tick, 99th percentile | Worst |')
-    assert lines[2] == '| 100 | 0 | 9.4 ms | 17.6 ms | 216.0 ms | 1.16 KB/s | 40 MB | 0 |'
-    assert lines[3] == '| 500 | 1500 | 91.2 ms | 176.8 ms | 242.1 ms | 3.14 KB/s | 120 MB | 0 |'
-    assert lines[4].startswith('| 50 | | (a server elsewhere')
+    assert lines[0].startswith('| Engine | Bots | Beasts | Tick, median | Tick, 99th percentile | Worst | The rules')
+    assert lines[2] == '| python | 100 | 0 | 9.4 ms | 17.6 ms | 216.0 ms | 0 ms | 0 ms | 1.16 KB/s | 40 MB | 0 |'
+    assert lines[3] == ('| rust | 500 | 1500 | 91.2 ms | 176.8 ms | 242.1 ms | 80.5 ms | 4.1 ms | 3.14 KB/s | 120 MB '
+                        '| 0 |')
+    assert lines[4].startswith('| | 50 | | (a server elsewhere')
 
 
 def test_the_server_and_the_bots_have_cores_of_their_own(monkeypatch):
