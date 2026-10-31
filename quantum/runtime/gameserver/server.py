@@ -469,9 +469,13 @@ class WorldServer:
                 await self._tick()
 
     def stop(self) -> None:
-        """From any thread: the world writes its snapshot and the server ends."""
+        """From any thread: the world writes its snapshot and the server ends (one that has ended already, crashed
+        or stopped, is left as it is)."""
         if self._loop and self._stop:
-            self._loop.call_soon_threadsafe(self._stop.set)
+            try:
+                self._loop.call_soon_threadsafe(self._stop.set)
+            except RuntimeError:               # its loop has closed: there is nothing left to stop
+                pass
 
     def crash(self) -> None:
         """For a test: the server ends as if killed, with no snapshot: what is on the disk is the log."""
