@@ -167,7 +167,7 @@ Run a world (a q:application type="gameserver").
 | `--snapshot-every` |  | `300.0` |  |
 | `--stats` | say the numbers (the ticks' time, what went out) every so often |  |  |
 | `--no-minds` | the NPCs say the lines of their fallback, and no model is asked |  |  |
-| `--engine` | what runs the world: python; rust (native/world, PLAN_WORLD_ENGINE.md: the views and the network on every core); or native (the world itself too: its state, its tick and its rules, E3); else QUANTUM_WORLD_ENGINE, else python |  | `python`, `rust`, `native` |
+| `--engine` | what runs the world: python; rust (native/world, PLAN_WORLD_ENGINE.md: the views and the network on every core); or native (the world itself too: its state, its tick and its rules, E3); else QUANTUM_WORLD_ENGINE, else native where the engine is built here (pip install ./native/world), else python |  | `python`, `rust`, `native` |
 | `--rules` | what runs its blocks: python (the interpreter), or machine (the Rust engine's, as bytecode: PLAN_WORLD_ENGINE.md, E2); else QUANTUM_WORLD_RULES, else python |  | `python`, `machine` |
 | `--digest-every` | write the world's digest into its log every so often, for `conform` to check a replay against (a digest copies the whole world: a pause of its own) |  |  |
 

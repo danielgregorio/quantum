@@ -10,6 +10,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the world engine's E3d, third part (`PLAN_WORLD_ENGINE.md`),
+  which ends E3. Where the Rust engine is built (`pip install
+  ./native/world`), `quantum gameserver run` serves a world on it by
+  default (`--engine native`); `--engine python` runs the Python world as
+  before, and where the engine is not built nothing changes. A world's
+  snapshot and log go on from one engine to the other: a world served on
+  Python, stopped or killed, comes back on the engine where it was.
 - Laboratory: the world engine's E3d, second part (`PLAN_WORLD_ENGINE.md`).
   The engine's tick runs off Python's lock, on a thread of its own in
   `--engine native`'s server, and `nearest(x, kind)` reads an index of that

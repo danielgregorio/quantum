@@ -13,7 +13,8 @@ bytecode will read it in the engine); the engine works out what changed in it.
 
 E3d: with `--engine native` the world itself is the engine's too (native_world.py's NativeWorld): its state, its
 tick and its rules, and the frames are read from it where it is, with no bridge out of Python. A world that needs
-what the engine does not run is told so and runs as `--engine rust` does, on world.py.
+what the engine does not run is told so and runs as `--engine rust` does, on world.py. Where the engine is built,
+`native` is the default; `--engine python` (or QUANTUM_WORLD_ENGINE=python) runs world.py alone, as before.
 
 Built by maturin (`pip install ./native/world`). Without it, `available()` is false, and a world asked to run on
 it runs on the Python engine, and says so.
@@ -47,8 +48,9 @@ def available() -> bool:
 
 
 def engine_wanted(engine: Optional[str] = None) -> str:
-    """The engine asked for (`--engine`, else QUANTUM_WORLD_ENGINE, else python)."""
-    wanted = engine or os.environ.get(ENGINE_ENV) or 'python'
+    """The engine asked for (`--engine`, else QUANTUM_WORLD_ENGINE), else the default: the engine's own world
+    (`native`, E3d) where the engine is built here, else python."""
+    wanted = engine or os.environ.get(ENGINE_ENV) or ('native' if available() else 'python')
     if wanted not in ENGINES:
         raise ValueError(f'there is no engine {wanted!r}: the engines are {", ".join(ENGINES)}')
     return wanted

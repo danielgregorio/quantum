@@ -179,7 +179,8 @@ def protocol_section():
             'the engine too (PLAN_WORLD_ENGINE.md, E3): its state, its tick, its rules as bytecode, its ledger, '
             'its parties and trades and its NPCs\' questions, to the byte of world.py\'s digest, and what each '
             'player sees is read from it where it is. A world that needs what the engine does not run is told '
-            'which, and its state stays world.py\'s; `conform --against native` holds the two together.\n\n')
+            'which, and its state stays world.py\'s; `conform --against native` holds the two together. Where the '
+            'engine is built, `native` is the default; `--engine python` runs world.py alone.\n\n')
 
 
 def example_section():

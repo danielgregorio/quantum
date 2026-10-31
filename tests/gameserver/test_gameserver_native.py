@@ -159,3 +159,22 @@ def test_where_it_is_not_built_a_world_runs_on_python_and_says_so(monkeypatch, c
         make_server(definition_of('meadow'), quiet=True, data_dir=tmp_path)
     monkeypatch.setenv(native.ENGINE_ENV, 'python')
     assert type(make_server(definition_of('meadow'), quiet=True, data_dir=tmp_path)) is WorldServer
+    monkeypatch.delenv(native.ENGINE_ENV)                # the default, where it is not built: python, quietly
+    monkeypatch.delenv(native.RULES_ENV, raising=False)
+    capsys.readouterr()
+    assert make_server(definition_of('meadow'), quiet=False, data_dir=tmp_path).engine_name == 'python'
+    assert 'not built' not in capsys.readouterr().out
+
+
+@needs_rust
+def test_where_it_is_built_the_engine_runs_the_world_by_default(monkeypatch, tmp_path):
+    """E3d: the default is the engine's own world; a world that needs what it does not run is world.py's, on the
+    engine's network; --engine python is world.py alone."""
+    from quantum.runtime.gameserver import native_world
+    monkeypatch.delenv(native.ENGINE_ENV, raising=False)
+    server = make_server(definition_of('meadow'), quiet=True, data_dir=tmp_path)
+    assert server.engine_name == 'native' and server.world_class is native_world.NativeWorld
+    monkeypatch.setattr(native_world, 'NATIVE_EFFECTS', native_world.NATIVE_EFFECTS - {'move'})
+    server = make_server(definition_of('meadow'), quiet=True, data_dir=tmp_path)
+    assert server.engine_name == 'rust' and server.world_class is not native_world.NativeWorld
+    assert type(make_server(definition_of('meadow'), 'python', quiet=True, data_dir=tmp_path)) is WorldServer

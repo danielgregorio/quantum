@@ -30,7 +30,7 @@ q:on-death, q:loot, q:travel, the clock), to the byte of `life.py`'s; E3c its pl
 books, the quests, the chat, parties, trades, and a q:ask handed off the tick to the minds, `src/world/`). `quantum/runtime/gameserver/native_world.py`
 hands it the definition and keeps Python's view of it in step. A world that needs more stays Python's, told why.
 `quantum gameserver run --engine native` serves such a world, its frames read from the engine's world itself
-(`Engine.tick_world`, E3d).
+(`Engine.tick_world`, E3d); where the engine is built, that is the default, and `--engine python` runs world.py alone.
 
 The world's values are compared as Python compares them and written as Python's `json.dumps` writes them
 (`src/value.rs`).
