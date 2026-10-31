@@ -73,8 +73,16 @@ def _with_rust() -> None:
             name = 'machine'
             world_class = MachineWorld
 
+        from quantum.runtime.gameserver.native_world import NativeWorld
+
+        class NativeEngine(PythonEngine):
+            """The world's state and tick on the engine (native_world.py, E3), the frames frames.py's."""
+            name = 'native'
+            world_class = NativeWorld
+
         ENGINES['rust'] = native.rust_engine()
         ENGINES['machine'] = MachineEngine
+        ENGINES['native'] = NativeEngine
 
 
 _with_rust()

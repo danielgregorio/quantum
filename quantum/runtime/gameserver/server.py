@@ -518,7 +518,8 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     conform.add_argument('file', help='the world\'s .q')
     conform.add_argument('--data', help='its snapshot and log (.quantum/gameserver/<name>)')
     conform.add_argument('--engine', default='python',
-                         help='the engine to run it on (python; rust: its frames; machine: its rules as bytecode)')
+                         help='the engine to run it on (python; rust: its frames; machine: its rules as bytecode; '
+                              'native: its state and tick)')
     conform.add_argument('--against', help='a second engine: the two compared tick by tick, frames and all')
     conform.add_argument('--digest-every', type=int, default=1, metavar='TICKS',
                          help='compare the two worlds\' digests every so many ticks (0: only at the end)')

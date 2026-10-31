@@ -10,6 +10,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the world engine's E3a (`PLAN_WORLD_ENGINE.md`), the first part
+  of a world's state in Rust. `native/world/src/world.rs` holds a world's
+  entities, variables and players, its joins and leaves, its commands (whole
+  or not at all), q:every, q:on-join and q:on-leave, q:move, q:emit, q:say,
+  the world's functions that read it, its index, its snapshot and its digest,
+  to the byte of the Python world's. `quantum gameserver conform --against
+  native` compares the two tick by tick; the meadow and the yard agree on
+  every tick, frames and errors included. A world that needs more (spawns,
+  brains, the ledger, parties, trades, quests, NPCs) is told so by name and
+  stays Python's until E3b and E3c.
 - Laboratory: the world engine's E2 (`PLAN_WORLD_ENGINE.md`), a world's
   rules as bytecode. `quantum gameserver run --rules machine` (or
   `QUANTUM_WORLD_RULES=machine`) runs a world's blocks and expressions on

@@ -333,6 +333,15 @@ def compile_block(block, definition, host: frozenset, users: frozenset, source: 
     return code
 
 
+def compile_value(raw: str, definition, host: frozenset, users: frozenset, line: int = 0, source: str = '') -> Code:
+    """A value= as written (rules.py's value: one {...} its value; no braces, a literal; else a text), its line first
+    (a field's, a variable's: what its error says)."""
+    code = Code(source or 'value')
+    code.emit('LINE', line)
+    _BlockCompiler(code, host, users, definition).value(raw)
+    return code
+
+
 class _BlockCompiler(_Compiler):
     def __init__(self, code: Code, host: frozenset, users: frozenset, definition):
         super().__init__(code, host, users)

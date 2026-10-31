@@ -150,6 +150,19 @@ Done when: the conformance harness passes, Python against Rust, on every test wo
 Outpost plays from start to end on the Rust engine (`tests/gameserver/test_outpost.py`); an old world's data
 continues on it.
 
+It goes in four parts, each held to world.py tick by tick before the next, and each its own pull request; a world
+that needs what the engine does not hold yet is told so by name and stays Python's:
+
+- **E3a, the core**: the entities, the variables and the players; a join and a leave; the commands (their
+  arguments, their rate, whole or not at all); q:every, q:on-join, q:on-leave; q:move, q:emit, q:say; the index of
+  cells; the world's functions that read it; the snapshot and the digest. The yard and the meadow run on it.
+- **E3b, life**: q:spawn, the brains, q:kill and q:on-death, q:loot, q:travel, the clock, the regions that sleep. The
+  den runs on it.
+- **E3c, together**: the ledger and its books, the chat, parties, trades, quests, and a q:ask handed to the minds.
+  Outpost runs on it, start to end.
+- **E3d, the engine alone**: the frames read from the engine's world itself (no bridge), the tick off Python's lock,
+  the brains thinking in parallel, an old world's data going on; then the engine is the default.
+
 ### E4 — Five hundred (M)
 
 The numbers of `PLAN_GAME_SERVER.md` for a day of bots: 500 players, 1500 beasts, the tick within 50 ms at the 99th
@@ -332,3 +345,27 @@ never the cost there. A profile of that tick says where it is: the world's own f
 `nearest()` and the tile and occupancy checks under it (1.9 million `tile_of` calls in 30 ticks, 45 % of the time),
 Python's, over Python's state. So E3 is next as planned: the world's state, its index and those functions in Rust,
 where the machine's calls to them cost no crossing.
+
+### E3a (2026-10-31)
+
+Built: the world's core in the engine (`native/world/src/world.rs`). Python reads the .q and compiles it, as in E2;
+`quantum/runtime/gameserver/native_world.py`'s `export` hands the engine the definition with every block, field and
+variable as bytecode, and `NativeWorld` is a World whose step is the engine's. The entities are records in the order
+Python's dict keeps them; a write is journaled with where it went (an entity's field, a record inside one, a world's
+variable), and a refused command is undone from the journal; an entity that leaves within a tick is still readable
+to the block that held it, as Python's dict is. The digest is world.py's, to the byte: the snapshot written as
+`json.dumps(sort_keys=True)` writes it, its random's state Python's (`src/rng.rs`), hashed with SHA-256. The world's
+functions that read it (`near`, `nearest`, `entities`, `random`, `sees`...) are native, with their failures and
+their TypeErrors as rules.py says them, and the Core's "did you mean" names what Python's `dir()` names (the same on
+3.12 and 3.13).
+
+After each tick `NativeWorld` takes what changed into its own dicts (the entities written or gone, the players, the
+variables, the events, the errors), so frames.py and the views read it as they read world.py's. That bridge is the
+cost E3d removes, when the frames are read from the engine's world itself.
+
+Held to world.py: a world made fresh has the same snapshot; sessions of the meadow and the yard give the same digest
+on every tick, the same acks, refusals and frames, and the same errors kept, word for word; the world of cases (40
+commands) gives the same outcome command by command, Python's own TypeError and ValueError included; a world brought
+back from its snapshot goes on the same (`tests/gameserver/test_gameserver_native_world.py`, and `quantum gameserver
+conform --against native`). The den and Outpost are told what they need (q:spawn, the brains, the ledger, parties,
+trades, quests, NPCs) and stay Python's: E3b and E3c.
