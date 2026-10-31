@@ -11,6 +11,10 @@ player's frames, on threads of its own; what is the world's to decide (a hello a
 A view whose where= is more than near(it, me, n) is read by the interpreter, here, for those views only (E2's
 bytecode will read it in the engine); the engine works out what changed in it.
 
+E3d: with `--engine native` the world itself is the engine's too (native_world.py's NativeWorld): its state, its
+tick and its rules, and the frames are read from it where it is, with no bridge out of Python. A world that needs
+what the engine does not run is told so and runs as `--engine rust` does, on world.py.
+
 Built by maturin (`pip install ./native/world`). Without it, `available()` is false, and a world asked to run on
 it runs on the Python engine, and says so.
 """
@@ -32,7 +36,7 @@ except ImportError:  # not built here: the Python engine runs the world
     quantum_world = None
 
 ENGINE_ENV = 'QUANTUM_WORLD_ENGINE'
-ENGINES = ('python', 'rust')
+ENGINES = ('python', 'rust', 'native')
 RULES_ENV = 'QUANTUM_WORLD_RULES'
 RULES = ('python', 'machine')
 BUILD = 'pip install ./native/world'
@@ -81,10 +85,18 @@ class NativeFrames:
                              separators=(',', ':'))
         private = {kind: sorted(fields) for kind, fields in world._private.items()}
         self.engine = quantum_world.Engine(views, private, definition.reach, welcome[1:-1])
-        self.engine.reset(world.entities.values())
+        self.reset(world)
         self._seated: Set[str] = set()
         self._joined: Set[str] = set()
         self._had: Dict[str, Dict[str, Set[str]]] = {}      # what each seat has of the views Python reads
+
+    def reset(self, world) -> None:
+        """The world's entities, all of them: read from the engine's world where it is one (E3d)."""
+        native = getattr(world, 'native', None)
+        if native is not None:
+            self.engine.reset_world(native)
+        else:
+            self.engine.reset(world.entities.values())
 
     def seat(self, account: str, conn: Optional[int] = None) -> None:
         """A player to tell from now on, told nothing yet (a new connection's)."""
@@ -129,18 +141,24 @@ class NativeFrames:
                     else:
                         each.append(None)
                 given[account] = each
+        native = getattr(world, 'native', None)
+        if native is not None:                          # the engine's world: what the tick changed, read there
+            return self.engine.tick_world(native, welcoming, given, every_tick, send)
         dirty = [(eid, world.entities.get(eid)) for eid in world.dirty]
         events = [(e.message, e.tile, e.to, e.everyone, e.accounts) for e in world.events]
         return self.engine.tick(out.tick, dirty, list(world.gone), world.players, list(out.joined), welcoming,
                                 out.acks, out.refused, events, given, every_tick, send)
 
 
-def rust_engine():
-    """The conformance harness's Rust engine (conform.py): the world of world.py, the frames of the engine."""
+def rust_engine(state=None):
+    """The conformance harness's Rust engine (conform.py): the world of world.py, the frames of the engine; with
+    state (native_world.py's NativeWorld), the engine's own world too, its frames read from it (`native`)."""
     from quantum.runtime.gameserver.conform import PythonEngine
 
     class RustEngine(PythonEngine):
-        name = 'rust'
+        name = 'rust' if state is None else 'native'
+        if state is not None:
+            world_class = state
 
         def __init__(self, definition, snapshot=None):
             super().__init__(definition, snapshot)
@@ -179,8 +197,9 @@ class NativeConnection:
     last_seq: Any = 0
 
 
-def native_server():
-    """server.py's WorldServer with the engine's network and frames: the same protocol, the same world."""
+def native_server(state: bool = False):
+    """server.py's WorldServer with the engine's network and frames: the same protocol, the same world. With state
+    (`--engine native`), the world itself is the engine's (native_world.py), when it holds all the world needs."""
     from quantum.runtime.gameserver.server import MAX_MESSAGE, MESSAGES_A_SECOND, WorldServer
 
     class NativeServer(WorldServer):
@@ -188,6 +207,14 @@ def native_server():
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
+            if state:
+                from quantum.runtime.gameserver.native_world import NativeWorld, native_ok
+                reasons = native_ok(self.definition)
+                if reasons is None:
+                    self.world_class, self.engine_name = NativeWorld, 'native'
+                else:
+                    self.say(f'{self.definition.name} needs what the engine does not run ({"; ".join(reasons)}): '
+                             f'world.py runs its state, the engine its views and network')
             self.conns: Dict[int, NativeConnection] = {}
             self.native: Optional[NativeFrames] = None
             self._engine_parts: List[tuple] = []           # each tick's bridge, frames and sending, in the engine
@@ -204,7 +231,8 @@ def native_server():
             pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='world-net')
             reader = asyncio.create_task(self._read(pool))
             try:
-                self.say(f'{self.definition.name} on {self.url} (the Rust engine)' +
+                self.say(f'{self.definition.name} on {self.url} (the Rust engine' +
+                         (', the world itself on it' if self.engine_name == 'native' else '') + ')' +
                          (' (a test world: it ticks on "step")' if self.step_mode else
                           f' at {self.definition.tick_rate} ticks a second')
                          + (', its rules as bytecode on the machine' if self.rules_name == 'machine' else ''))

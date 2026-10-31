@@ -174,7 +174,12 @@ def protocol_section():
             'functions and what only the world does (a q:move, a q:emit, the ledger\'s) asked of the world. It '
             'gives the same world as the interpreter, tick by tick, and the same errors, word for word; '
             '`conform --engine python --against machine` holds the two together. `quantum gameserver bytecode '
-            'world.server.q` shows each expression as the machine runs it, and `--blocks` each block.\n\n')
+            'world.server.q` shows each expression as the machine runs it, and `--blocks` each block.\n\n'
+            '`quantum gameserver run --engine native` (or `QUANTUM_WORLD_ENGINE=native`) runs the world itself on '
+            'the engine too (PLAN_WORLD_ENGINE.md, E3): its state, its tick, its rules as bytecode, its ledger, '
+            'its parties and trades and its NPCs\' questions, to the byte of world.py\'s digest, and what each '
+            'player sees is read from it where it is. A world that needs what the engine does not run is told '
+            'which, and its state stays world.py\'s; `conform --against native` holds the two together.\n\n')
 
 
 def example_section():

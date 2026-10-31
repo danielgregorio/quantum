@@ -480,9 +480,10 @@ def make_server(definition: WorldDef, engine: Optional[str] = None, **kwargs) ->
     it is built here (native.py), else Python's, which says so."""
     from quantum.runtime.gameserver import native
 
-    if native.engine_wanted(engine) == 'rust':
+    wanted = native.engine_wanted(engine)
+    if wanted in ('rust', 'native'):
         if native.available():
-            return native.native_server()(definition, **kwargs)
+            return native.native_server(state=wanted == 'native')(definition, **kwargs)
         if not kwargs.get('quiet'):
             print(f'[gameserver] the Rust engine is not built here ({native.BUILD}): the Python engine runs '
                   f'{definition.name}', flush=True)
@@ -504,9 +505,10 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
                      help='say the numbers (the ticks\' time, what went out) every so often')
     run.add_argument('--no-minds', action='store_true',
                      help='the NPCs say the lines of their fallback, and no model is asked')
-    run.add_argument('--engine', choices=('python', 'rust'),
-                     help='what runs the world: python, or rust (native/world, PLAN_WORLD_ENGINE.md: the views '
-                          'and the network on every core); else QUANTUM_WORLD_ENGINE, else python')
+    run.add_argument('--engine', choices=('python', 'rust', 'native'),
+                     help='what runs the world: python; rust (native/world, PLAN_WORLD_ENGINE.md: the views and '
+                          'the network on every core); or native (the world itself too: its state, its tick and '
+                          'its rules, E3); else QUANTUM_WORLD_ENGINE, else python')
     run.add_argument('--rules', choices=('python', 'machine'),
                      help='what runs its blocks: python (the interpreter), or machine (the Rust engine\'s, as '
                           'bytecode: PLAN_WORLD_ENGINE.md, E2); else QUANTUM_WORLD_RULES, else python')

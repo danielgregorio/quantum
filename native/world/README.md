@@ -29,6 +29,8 @@ digest) to the byte of `quantum/runtime/gameserver/world.py`'s; E3b its life (sp
 q:on-death, q:loot, q:travel, the clock), to the byte of `life.py`'s; E3c its players together (the ledger and its
 books, the quests, the chat, parties, trades, and a q:ask handed off the tick to the minds, `src/world/`). `quantum/runtime/gameserver/native_world.py`
 hands it the definition and keeps Python's view of it in step. A world that needs more stays Python's, told why.
+`quantum gameserver run --engine native` serves such a world, its frames read from the engine's world itself
+(`Engine.tick_world`, E3d).
 
 The world's values are compared as Python compares them and written as Python's `json.dumps` writes them
 (`src/value.rs`).
@@ -37,6 +39,7 @@ The world's values are compared as Python compares them and written as Python's 
 pip install ./native/world                        # build the module (Rust and maturin)
 quantum gameserver run world.server.q --engine rust
 quantum gameserver run world.server.q --rules machine          # its rules as bytecode, on the machine
+quantum gameserver run world.server.q --engine native          # the world itself on the engine (E3)
 quantum gameserver bytecode world.server.q --blocks            # each block as the machine runs it
 QUANTUM_WORLD_ENGINE=rust QUANTUM_WORLD_RULES=machine pytest tests/gameserver   # the game server's tests, on it
 python scripts/bytecode-fuzz.py --draws 1000000                # a million expressions, both ways

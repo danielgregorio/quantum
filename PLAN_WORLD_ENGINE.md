@@ -427,3 +427,28 @@ Neither is in a test world; a world's words that met one would show it on the ti
 `NativeWorld` keeps its dicts the same dicts across ticks (a test or a view that holds one reads it changed, as with
 world.py's), and gives a test's hand what world.py's dicts gave it: `hand()` to set an entity's numbers, and `give()`
 by the ledger from outside a rule.
+
+### E3d, first part (2026-10-31): the frames from the engine's world
+
+E3d goes in parts too. The first: `quantum gameserver run --engine native` (or `QUANTUM_WORLD_ENGINE=native`) runs
+a world whose state, tick and rules are the engine's (`native_world.py`'s NativeWorld), on the engine's network,
+and the frames are read from the engine's world where it is (`Engine.tick_world`): what the tick changed, the
+players, the events, the tick's acks, refusals and joins, with no bridge out of Python's dicts. A world that needs
+what the engine does not run is told which, and its state stays world.py's, as `--engine rust` runs it.
+`conform --against native` compares the frames too, the engine's from its own world against frames.py's.
+
+Held to world.py: the game server's tests pass on it (265), and the Godot clients of a world, the den, Outpost and
+the sign-in play against it (the engine's CI job runs them so); one test's hand that moved a hero by Python's dict
+now moves it on either world.
+
+The gauge (500 bots, 1500 beasts, two cores for the server, 40 seconds):
+
+| engine | tick p50 | tick p99 | the step p50 | commands run |
+|---|---|---|---|---|
+| rust (world.py's state) | 258 ms | 1877 ms | 226 ms | 18 483 |
+| native (the engine's)  | 103 ms | 184 ms  | 76 ms  | 44 002 |
+
+The step is still the mirror's as well as the engine's: after each tick NativeWorld takes what changed into
+Python's dicts, for what Python still reads (the views Python works out, the minds' questions, peek). The next
+parts: that mirror read only where Python asks, the tick off Python's lock, the brains in parallel, an old world's
+data going on on the engine; then the engine is the default.

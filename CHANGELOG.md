@@ -10,6 +10,13 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the world engine's E3d, first part (`PLAN_WORLD_ENGINE.md`).
+  `quantum gameserver run --engine native` (or `QUANTUM_WORLD_ENGINE=native`)
+  runs a world whose state, tick and rules are the Rust engine's, on its
+  network, the frames read from the engine's world itself. At 500 bots and
+  1500 beasts the server's tick takes 103 ms where it took 258 with
+  `--engine rust`. A world that needs what the engine does not run is told
+  which and runs as `--engine rust` does.
 - Laboratory: the world engine's E3c (`PLAN_WORLD_ENGINE.md`), players
   together in Rust. The engine now holds the ledger and its books (q:give,
   q:take, q:pay, q:loot, `balance`, `has`, `price`...), the quests and

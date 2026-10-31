@@ -115,6 +115,42 @@ fn entity_in(id: String, d: &Bound<'_, PyDict>) -> PyResult<EntityIn> {
     })
 }
 
+/// An entity as frames.rs reads it, from the engine's own world: its kind, its player, its fields but the world's.
+fn entity_of_map(id: &str, m: &Map) -> EntityIn {
+    let text = |k: &str| match m.get(k) {
+        Some(Value::Str(s)) => Some(s.clone()),
+        _ => None,
+    };
+    EntityIn {
+        id: id.to_string(),
+        typ: text("_type").unwrap_or_default(),
+        owner: text("_player"),
+        fields: m
+            .iter()
+            .filter(|(k, _)| !k.starts_with('_'))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect(),
+    }
+}
+
+/// The members Python worked out of its views (by_python): {account: a list per view, None for the others}.
+fn given_in(given: &Bound<'_, PyDict>) -> PyResult<HashMap<String, Vec<Option<HashSet<String>>>>> {
+    let mut out = HashMap::new();
+    for (account, views) in given.iter() {
+        let mut each = Vec::new();
+        for members in views.try_iter()? {
+            let members = members?;
+            each.push(if members.is_none() {
+                None
+            } else {
+                Some(accounts_in(&members)?)
+            });
+        }
+        out.insert(account.extract()?, each);
+    }
+    Ok(out)
+}
+
 fn tile_in(obj: &Bound<'_, PyAny>) -> PyResult<Option<Tile>> {
     if obj.is_none() {
         return Ok(None);
@@ -289,38 +325,78 @@ impl Engine {
                 accounts,
             });
         }
-        for (account, views) in given.iter() {
-            let mut each = Vec::new();
-            for members in views.try_iter()? {
-                let members = members?;
-                each.push(if members.is_none() {
-                    None
-                } else {
-                    Some(accounts_in(&members)?)
-                });
-            }
-            t.given.insert(account.extract()?, each);
-        }
-        let read = began.elapsed().as_secs_f64();
-        let mut guard = self.frames.lock().unwrap();
-        let frames: &mut Frames = &mut guard;
-        let messages = py.detach(|| frames.tick(&t));
-        drop(guard);
-        let made = began.elapsed().as_secs_f64();
-        if send {
-            if let Ok(net) = self.network() {
-                let sent = py.detach(|| net.send_frames(messages, tick));
-                *self.timings.lock().unwrap() =
-                    (read, made - read, began.elapsed().as_secs_f64() - made);
-                return Ok(sent.into_pyobject(py)?.into_any().unbind());
-            }
-        }
-        *self.timings.lock().unwrap() = (read, made - read, 0.0);
-        let out = PyDict::new(py);
-        for (account, said) in messages {
-            out.set_item(account, said)?;
-        }
-        Ok(out.into_any().unbind())
+        t.given = given_in(given)?;
+        self.finish(py, &t, send, began)
+    }
+
+    /// One tick's frames read from the engine's own world (native_world.py's NativeWorld, E3d): what it changed,
+    /// its players, its events, and its tick's acks, refusals and joins, with no bridge out of Python. given: the
+    /// members Python worked out of its views (by_python), as for tick.
+    #[pyo3(signature = (world, welcoming, given, every_tick=false, send=false))]
+    fn tick_world<'py>(
+        &self,
+        py: Python<'py>,
+        world: PyRef<'py, PyWorld>,
+        welcoming: &Bound<'py, PyAny>,
+        given: &Bound<'py, PyDict>,
+        every_tick: bool,
+        send: bool,
+    ) -> PyResult<Py<PyAny>> {
+        let began = std::time::Instant::now();
+        let w = &world.inner;
+        let mut dirty: Vec<&String> = w.dirty.iter().collect();
+        dirty.sort();
+        let t = TickIn {
+            tick: w.tick,
+            dirty: dirty
+                .into_iter()
+                .map(|id| {
+                    let entity = match w.entities.get(id) {
+                        Some(Value::Map(m)) => Some(entity_of_map(id, m)),
+                        _ => None,
+                    };
+                    (id.clone(), entity)
+                })
+                .collect(),
+            gone: w.gone.iter().cloned().collect(),
+            players: w
+                .players
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+            joined: world.joined.clone(),
+            welcoming: accounts_in(welcoming)?,
+            acks: world.acks.clone(),
+            refused: world.refused.clone(),
+            events: w
+                .events
+                .iter()
+                .map(|e| EventIn {
+                    message: Value::Map(e.message.clone()),
+                    tile: e.tile,
+                    to: e.to.clone(),
+                    everyone: e.everyone,
+                    accounts: e.accounts.clone(),
+                })
+                .collect(),
+            given: given_in(given)?,
+            every_tick,
+        };
+        self.finish(py, &t, send, began)
+    }
+
+    /// The engine's own world's entities, all of them: at the start, or once it is back from its log.
+    fn reset_world(&self, world: PyRef<'_, PyWorld>) {
+        let all = world
+            .inner
+            .entities
+            .iter()
+            .filter_map(|(id, e)| match e {
+                Value::Map(m) => Some(entity_of_map(id, m)),
+                _ => None,
+            })
+            .collect();
+        self.frames.lock().unwrap().reset(all);
     }
 
     /// The last tick's time, in seconds: (reading what changed out of Python, the frames, the sending).
@@ -941,6 +1017,40 @@ impl Machine {
     }
 }
 
+impl Engine {
+    /// A tick's frames worked out, off Python's lock, and written to the seats' connections when it listens and
+    /// `send` is true (the bytes sent), else returned ({account: its messages}).
+    fn finish(
+        &self,
+        py: Python<'_>,
+        t: &TickIn,
+        send: bool,
+        began: std::time::Instant,
+    ) -> PyResult<Py<PyAny>> {
+        let tick = t.tick;
+        let read = began.elapsed().as_secs_f64();
+        let mut guard = self.frames.lock().unwrap();
+        let frames: &mut Frames = &mut guard;
+        let messages = py.detach(|| frames.tick(t));
+        drop(guard);
+        let made = began.elapsed().as_secs_f64();
+        if send {
+            if let Ok(net) = self.network() {
+                let sent = py.detach(|| net.send_frames(messages, tick));
+                *self.timings.lock().unwrap() =
+                    (read, made - read, began.elapsed().as_secs_f64() - made);
+                return Ok(sent.into_pyobject(py)?.into_any().unbind());
+            }
+        }
+        *self.timings.lock().unwrap() = (read, made - read, 0.0);
+        let out = PyDict::new(py);
+        for (account, said) in messages {
+            out.set_item(account, said)?;
+        }
+        Ok(out.into_any().unbind())
+    }
+}
+
 // -- the world (world.rs, E3) ----------------------------------------------------------------------------------------
 
 /// A value of the world's, as Python holds it (it holds no entity by reference: what the world keeps is plain).
@@ -999,6 +1109,21 @@ fn world_def(
 #[pyclass(module = "quantum_world", name = "World")]
 pub struct PyWorld {
     inner: world::World,
+    /// The last tick's acks, refusals and joins, for the frames (Engine.tick_world).
+    acks: HashMap<String, Value>,
+    refused: HashMap<String, Value>,
+    joined: HashSet<String>,
+}
+
+impl PyWorld {
+    fn of(inner: world::World) -> Self {
+        PyWorld {
+            inner,
+            acks: HashMap::new(),
+            refused: HashMap::new(),
+            joined: HashSet::new(),
+        }
+    }
 }
 
 #[pymethods]
@@ -1013,7 +1138,7 @@ impl PyWorld {
     ) -> PyResult<Self> {
         let def = world_def(definition, codes)?;
         let inner = world::World::new(def, seed).map_err(|e| world_raised(py, e))?;
-        Ok(PyWorld { inner })
+        Ok(PyWorld::of(inner))
     }
 
     /// A world from its snapshot (world.py's from_snapshot).
@@ -1026,7 +1151,7 @@ impl PyWorld {
         let def = world_def(definition, codes)?;
         let inner =
             world::World::from_snapshot(def, &to_value(snap)?).map_err(PyValueError::new_err)?;
-        Ok(PyWorld { inner })
+        Ok(PyWorld::of(inner))
     }
 
     /// One tick (world.py's step): {tick, entries, acks, refused, joined, left, full, asks}.
@@ -1040,6 +1165,17 @@ impl PyWorld {
             .map(|i| to_value(&i?))
             .collect::<PyResult<Vec<_>>>()?;
         let out = self.inner.step(&inputs).map_err(|e| world_raised(py, e))?;
+        self.acks = out
+            .acks
+            .iter()
+            .map(|(k, v)| (k.clone(), Value::List(v.clone())))
+            .collect();
+        self.refused = out
+            .refused
+            .iter()
+            .map(|(k, v)| (k.clone(), Value::List(v.clone())))
+            .collect();
+        self.joined = out.joined.keys().cloned().collect();
         let lists =
             |m: indexmap::IndexMap<String, Vec<Value>, rustc_hash::FxBuildHasher>| -> Value {
                 Value::Map(m.into_iter().map(|(k, v)| (k, Value::List(v))).collect())
