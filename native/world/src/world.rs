@@ -6,8 +6,10 @@
 //!
 //! E3a holds the world's core: its entities, variables and players, a player's join and leave, the commands (their
 //! arguments, their rate, whole or not at all), the rules due (q:every, q:on-join, q:on-leave), q:move, q:emit and
-//! q:say, the functions that read the world, the snapshot and the digest. What a world uses beyond it (spawns,
-//! brains, the ledger, parties...) native_world.py finds first, and that world stays Python's.
+//! q:say, the functions that read the world, the snapshot and the digest. E3b its life (life.py's): spawns, brains,
+//! q:kill and q:on-death, q:loot, q:travel, the clock. E3c its players together: the ledger and its books
+//! (world/ledger.rs), the chat, parties and trades (world/together.rs), and a q:ask handed off the tick to the minds
+//! (world/minds.rs). What a world uses beyond it native_world.py finds first, and that world stays Python's.
 
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::sync::atomic::AtomicUsize;
@@ -20,6 +22,10 @@ use sha2::{Digest, Sha256};
 use crate::rng::Rng;
 use crate::value::{py_eq, write_float, write_str, Map, Value};
 use crate::vm::{self, Code, ErrorKind, Function, Functions, Host, Locals, VmError};
+
+mod ledger;
+mod minds;
+mod together;
 
 pub const MAX_ARGS: usize = 2048;
 pub const MAX_ERRORS: usize = 100;
@@ -157,8 +163,37 @@ pub struct DeathDef {
 pub struct CommandDef {
     pub params: Vec<String>,
     pub limit: Option<(i64, i64)>,
-    pub body: Arc<Code>,
+    /// None for a command the world's chat, party or trade brings (its builtin).
+    pub body: Option<Arc<Code>>,
+    pub builtin: Option<String>,
     pub by_npc: bool,
+}
+
+/// A q:quest (model.py's QuestDef): its goal is (kill or bring, the kind or the item, how many).
+pub struct QuestDef {
+    pub title: String,
+    pub goal: (String, String, i64),
+    pub level: i64,
+    pub reward: Vec<(String, i64)>,
+}
+
+/// A q:npc's mind (model.py's NpcDef).
+pub struct NpcDef {
+    pub name: String,
+    pub instruction: String,
+    pub tools: IndexMap<String, String>,
+    pub model: String,
+    pub knowledge: Option<String>,
+    pub memory: bool,
+    pub budget: i64,
+    pub max_tools: i64,
+    pub lines: Vec<String>,
+}
+
+/// A q:chat: its channels (a reach in tiles; None, the whole world) and the words its filter stars.
+pub struct ChatDef {
+    pub channels: IndexMap<String, Option<i64>>,
+    pub words: Vec<String>,
 }
 
 pub struct WorldDef {
@@ -178,6 +213,29 @@ pub struct WorldDef {
     pub day_ticks: Option<i64>,
     pub night: f64,
     pub functions: Arc<Functions>,
+    /// E3c: the ledger (a currency: what a hero starts with; an item: what it is), the chat, a party's size, the
+    /// quests, the NPCs and what they know, how far a player sees, and each kind's private fields.
+    pub currencies: IndexMap<String, i64>,
+    pub items: IndexMap<String, Map>,
+    pub chat: Option<ChatDef>,
+    pub party_size: Option<i64>,
+    pub quests: IndexMap<String, QuestDef>,
+    pub npcs: IndexMap<String, NpcDef>,
+    pub knowledge: IndexMap<String, String>,
+    pub reach: Option<i64>,
+    pub private: IndexMap<String, HashSet<String>>,
+}
+
+impl WorldDef {
+    /// model.py's ledger: the world keeps one when it has a currency or an item.
+    pub fn ledger(&self) -> bool {
+        !self.currencies.is_empty() || !self.items.is_empty()
+    }
+
+    /// The fields the ledger alone writes: the bag, and each currency.
+    pub fn ledger_field(&self, name: &str) -> bool {
+        self.ledger() && (name == "bag" || self.currencies.contains_key(name))
+    }
 }
 
 fn key<'a>(m: &'a Map, k: &str) -> Result<&'a Value, String> {
@@ -346,7 +404,11 @@ impl WorldDef {
                         .map(str_of)
                         .collect::<Result<_, _>>()?,
                     limit,
-                    body: code(key(c, "body")?)?,
+                    body: match key(c, "body")? {
+                        Value::Int(n) if *n < 0 => None,
+                        b => Some(code(b)?),
+                    },
+                    builtin: opt_str(key(c, "builtin")?)?,
                     by_npc: matches!(key(c, "by")?, Value::Str(s) if s == "npc"),
                 },
             );
@@ -432,6 +494,99 @@ impl WorldDef {
                 v => int_of(v)? as f64,
             },
             functions: Arc::new(functions),
+            currencies: map_of(key(d, "currencies")?)?
+                .iter()
+                .map(|(k, v)| Ok((k.clone(), int_of(v)?)))
+                .collect::<Result<_, String>>()?,
+            items: map_of(key(d, "items")?)?
+                .iter()
+                .map(|(k, v)| Ok((k.clone(), map_of(v)?.clone())))
+                .collect::<Result<_, String>>()?,
+            chat: match key(d, "chat")? {
+                Value::Null => None,
+                c => {
+                    let c = map_of(c)?;
+                    Some(ChatDef {
+                        channels: map_of(key(c, "channels")?)?
+                            .iter()
+                            .map(|(k, v)| Ok((k.clone(), opt_int(v)?)))
+                            .collect::<Result<_, String>>()?,
+                        words: list_of(key(c, "words")?)?
+                            .iter()
+                            .map(str_of)
+                            .collect::<Result<_, _>>()?,
+                    })
+                }
+            },
+            party_size: opt_int(key(d, "party_size")?)?,
+            quests: map_of(key(d, "quests")?)?
+                .iter()
+                .map(|(k, q)| {
+                    let q = map_of(q)?;
+                    let goal = list_of(key(q, "goal")?)?;
+                    Ok((
+                        k.clone(),
+                        QuestDef {
+                            title: str_of(key(q, "title")?)?,
+                            goal: (str_of(&goal[0])?, str_of(&goal[1])?, int_of(&goal[2])?),
+                            level: int_of(key(q, "level")?)?,
+                            reward: list_of(key(q, "reward")?)?
+                                .iter()
+                                .map(|r| {
+                                    let r = list_of(r)?;
+                                    Ok((str_of(&r[0])?, int_of(&r[1])?))
+                                })
+                                .collect::<Result<_, String>>()?,
+                        },
+                    ))
+                })
+                .collect::<Result<_, String>>()?,
+            npcs: map_of(key(d, "npcs")?)?
+                .iter()
+                .map(|(k, n)| {
+                    let n = map_of(n)?;
+                    Ok((
+                        k.clone(),
+                        NpcDef {
+                            name: k.clone(),
+                            instruction: str_of(key(n, "instruction")?)?,
+                            tools: list_of(key(n, "tools")?)?
+                                .iter()
+                                .map(|t| {
+                                    let t = list_of(t)?;
+                                    Ok((str_of(&t[0])?, str_of(&t[1])?))
+                                })
+                                .collect::<Result<_, String>>()?,
+                            model: str_of(key(n, "model")?)?,
+                            knowledge: opt_str(key(n, "knowledge")?)?,
+                            memory: matches!(key(n, "memory")?, Value::Bool(true)),
+                            budget: int_of(key(n, "budget")?)?,
+                            max_tools: int_of(key(n, "max_tools")?)?,
+                            lines: list_of(key(n, "lines")?)?
+                                .iter()
+                                .map(str_of)
+                                .collect::<Result<_, _>>()?,
+                        },
+                    ))
+                })
+                .collect::<Result<_, String>>()?,
+            knowledge: map_of(key(d, "knowledge")?)?
+                .iter()
+                .map(|(k, v)| Ok((k.clone(), str_of(v)?)))
+                .collect::<Result<_, String>>()?,
+            reach: opt_int(key(d, "reach")?)?,
+            private: map_of(key(d, "private")?)?
+                .iter()
+                .map(|(k, v)| {
+                    Ok((
+                        k.clone(),
+                        list_of(v)?
+                            .iter()
+                            .map(str_of)
+                            .collect::<Result<_, String>>()?,
+                    ))
+                })
+                .collect::<Result<_, String>>()?,
         })
     }
 }
@@ -468,6 +623,10 @@ enum Root {
     Vars,
     /// What a q:spawn keeps (its living, and when the next are due), by its number.
     Spawned(String),
+    /// The ledger's books, the parties, the trades.
+    Books,
+    Parties,
+    Trades,
 }
 
 #[derive(Clone, Debug)]
@@ -541,6 +700,10 @@ pub struct World {
     pub expiring: HashSet<String>,
     dying: HashSet<String>,
     walkable_areas: HashMap<String, Vec<Tile>>,
+    /// Where the world is as the ledger books (world.py's source), and the tick's q:asks for the minds (npc.py).
+    pub source: String,
+    pub asks: Vec<Value>,
+    asks_mark: usize,
 }
 
 // -- a world's values, as world.py keeps them ----------------------------------------------------------------------
@@ -724,6 +887,9 @@ impl World {
                 Some(Value::Map(m)) => m,
                 _ => return None,
             },
+            Root::Books => &mut self.books,
+            Root::Parties => &mut self.parties,
+            Root::Trades => &mut self.trades,
         };
         for part in path {
             target = match target.get_mut(part) {
@@ -777,6 +943,7 @@ impl World {
     fn begin(&mut self) {
         self.journal = Some(Vec::new());
         self.events_mark = self.events.len();
+        self.asks_mark = self.asks.len();
     }
 
     fn commit(&mut self) {
@@ -799,10 +966,11 @@ impl World {
             match undo.root {
                 Root::Entities => touched.push(undo.key),
                 Root::Entity(id) => touched.push(id),
-                Root::Vars | Root::Spawned(_) => {}
+                _ => {}
             }
         }
         self.events.truncate(self.events_mark);
+        self.asks.truncate(self.asks_mark);
         let entities = &self.entities;
         self.gone.retain(|g| !entities.contains_key(g));
         self.reindex(touched.iter());
@@ -827,7 +995,12 @@ impl World {
 
     /// world.py's put: a key of a container of the world set (or, with None, taken out), journaled.
     fn put(&mut self, root: Root, key: &str, value: Option<Value>) {
-        let Some(target) = self.container_mut(&root, &[]) else {
+        self.put_at(root, Vec::new(), key, value)
+    }
+
+    /// put, into a record inside the root (an entity's bag, a book of an asset).
+    fn put_at(&mut self, root: Root, path: Vec<String>, key: &str, value: Option<Value>) {
+        let Some(target) = self.container_mut(&root, &path) else {
             return;
         };
         let old = match value {
@@ -837,7 +1010,7 @@ impl World {
         if let Some(journal) = self.journal.as_mut() {
             journal.push(Undo {
                 root,
-                path: Vec::new(),
+                path,
                 key: key.to_string(),
                 old,
             });
@@ -1165,6 +1338,25 @@ impl World {
                 let ticks = a[3].as_whole();
                 self.spawn_now(&a[0], &a[1], count, ticks, line)
             }
+            "give" | "take" => {
+                // holder, item, count, amount, currency
+                let holder = self.entity_of(&a[0], line)?;
+                if name == "give" {
+                    self.give(&holder, &a[1], &a[2], &a[3], &a[4], line)
+                } else {
+                    self.take(&holder, &a[1], &a[2], &a[3], &a[4], line)
+                }
+            }
+            "pay" => {
+                let payer = self.entity_of(&a[0], line)?;
+                let to = self.entity_of(&a[1], line)?;
+                self.pay(&payer, &to, &a[2], &a[3], line)
+            }
+            "ask" => self.ask(&a[1], &a[0], &a[2], line),
+            "reward" => {
+                let to = self.entity_of(&a[0], line)?;
+                self.reward(&to, &a[1], line)
+            }
             other => Err(rule_at(
                 format!("<q:{other}> does not run on the engine yet"),
                 line,
@@ -1278,9 +1470,10 @@ impl World {
         entity.insert("at".into(), tile_value(tile));
         entity.insert("_home".into(), tile_list(tile));
         let id = vm::py_str(&entity["id"]);
-        self.put(Root::Entities, &id, Some(Value::Map(entity)));
+        self.put(Root::Entities, &id, Some(Value::Map(entity.clone())));
         self.dirty.insert(id.clone());
         self.reindex_one(&id);
+        self.mint_start(&entity);
         Ok(Some(id))
     }
 
@@ -1347,6 +1540,10 @@ impl World {
             Some(Value::Map(m)) => m.clone(),
             _ => return,
         };
+        let kind = entity
+            .get("kind")
+            .map_or_else(|| "None".to_string(), vm::py_str);
+        self.spend_all(&entity, &format!("gone: {kind}"));
         self.dead.insert(id.to_string(), entity.clone());
         self.put(Root::Entities, id, None);
         self.gone.insert(id.to_string());
@@ -1414,6 +1611,9 @@ impl World {
 
     /// q:loot (a world with no ledger): the drops of an entity, rolled: an item to the bag, gold to the gold.
     fn loot(&mut self, of: &str, to: &str, line: u32) -> Result<(), VmError> {
+        if self.def.ledger() {
+            return self.loot_booked(of, to, line);
+        }
         let kind = match self.field_of(of, "_type") {
             Some(Value::Str(t)) => t.clone(),
             _ => String::new(),
@@ -1492,6 +1692,7 @@ impl World {
     // -- a tick of the world's own life -------------------------------------------------------------------------
 
     fn live(&mut self) -> Result<(), Raised> {
+        self.source = "q:spawn".into();
         self.spawns().map_err(Raised::of)?;
         let mut expiring: Vec<String> = self.expiring.iter().cloned().collect();
         expiring.sort();
@@ -1621,6 +1822,7 @@ impl World {
             .into_iter()
             .collect();
         awake.sort();
+        self.source = "q:brain".into();
         let def = self.def.clone();
         for id in awake {
             if !self.entities.contains_key(&id) {
@@ -1846,15 +2048,62 @@ fn world_signature(name: &str) -> Option<(&'static str, &'static [&'static str],
         "sees" => ("Life.line_of_sight", &["a", "b"], 2),
         "is_night" => ("Life.is_night", &[], 0),
         "daytime" => ("Life.daytime", &[], 0),
+        "balance" => ("Ledger.balance", &["x", "currency"], 1),
+        "has" => ("Ledger.has", &["x", "item", "n"], 2),
+        "item" => ("Ledger.item_of", &["name"], 1),
+        "party_of" => ("Together.party_of", &["x"], 1),
+        "party_near" => ("Together.party_near", &["x", "n"], 1),
+        "quest_goal" => ("Together.quest_goal", &["x"], 1),
+        "quest_done" => ("Together.quest_done", &["x"], 1),
+        "quest_level" | "quest_title" => ("Interpreter._functions.<locals>.<lambda>", &["q"], 1),
+        "price" | "heals" | "slot" => ("Interpreter._functions.<locals>.<lambda>", &["i"], 1),
+        "bonus" => (
+            "Interpreter._functions.<locals>.<lambda>",
+            &["i", "name"],
+            2,
+        ),
         _ => return None,
     })
 }
 
 /// The names the engine runs itself (native_world.py checks a world calls no other).
-pub const WORLD_FUNCTIONS: [&str; 22] = [
-    "tile", "walkable", "ahead", "distance", "near", "in_area", "area", "heroes", "entities",
-    "entity", "tick", "seconds", "random", "chance", "pick", "now", "sqrt", "nearest", "fighting",
-    "in_fight", "sees", "is_night",
+pub const WORLD_FUNCTIONS: [&str; 36] = [
+    "tile",
+    "walkable",
+    "ahead",
+    "distance",
+    "near",
+    "in_area",
+    "area",
+    "heroes",
+    "entities",
+    "entity",
+    "tick",
+    "seconds",
+    "random",
+    "chance",
+    "pick",
+    "now",
+    "sqrt",
+    "nearest",
+    "fighting",
+    "in_fight",
+    "sees",
+    "is_night",
+    "daytime",
+    "balance",
+    "has",
+    "item",
+    "party_of",
+    "party_near",
+    "quest_goal",
+    "quest_done",
+    "quest_level",
+    "quest_title",
+    "price",
+    "heals",
+    "slot",
+    "bonus",
 ];
 
 fn tile_value(t: Tile) -> Value {
@@ -2166,7 +2415,25 @@ impl World {
             }
             "is_night" => Ok(Value::Bool(self.is_night())),
             "daytime" => Ok(Value::Float(self.daytime())),
-            _ => unreachable!(),
+            "party_of" => Ok(Value::List(
+                self.party_of(&arg(0))
+                    .into_iter()
+                    .map(Value::Entity)
+                    .collect(),
+            )),
+            "party_near" => {
+                let n = a.get(1).cloned();
+                Ok(Value::List(
+                    self.party_near(&arg(0), n.as_ref())?
+                        .into_iter()
+                        .map(Value::Entity)
+                        .collect(),
+                ))
+            }
+            other => match self.ledger_call(other, &a) {
+                Some(r) => r,
+                None => unreachable!(),
+            },
         }
     }
 
@@ -2355,6 +2622,12 @@ impl Host for World {
                 {
                     return Err(bad(&format!("an entity's {key} is the world's")));
                 }
+                if entity && parts.len() > 1 && self.def.ledger_field(&parts[1]) {
+                    return Err(bad(&format!(
+                        "{} is the ledger's: q:give, q:take and q:pay change it",
+                        parts[1]
+                    )));
+                }
                 self.write(
                     Root::Entity(id),
                     parts[1..parts.len() - 1].to_vec(),
@@ -2538,6 +2811,9 @@ impl World {
             expiring: HashSet::default(),
             dying: HashSet::default(),
             walkable_areas: HashMap::default(),
+            source: "world".into(),
+            asks: Vec::new(),
+            asks_mark: 0,
         };
         for (name, code) in def.variables.iter() {
             let value = world
@@ -2607,11 +2883,26 @@ impl World {
             entity.insert("state".into(), initial);
             entity.insert("_since".into(), Value::Int(self.tick));
         }
+        if def.party_size.is_some_and(|s| s != 0) && spec.per_player {
+            entity
+                .entry("party".into())
+                .or_insert(Value::Str(String::new()));
+        }
+        if def.ledger() && spec.per_player {
+            // a hero holds: a bag, and each currency
+            entity
+                .entry("bag".into())
+                .or_insert(Value::Map(Map::default()));
+            for (currency, start) in def.currencies.iter() {
+                entity.entry(currency.clone()).or_insert(Value::Int(*start));
+            }
+        }
         Ok(entity)
     }
 
     /// A rule's run, as a transaction: what fails is undone and kept in the errors.
     fn run_rule(&mut self, code: &Arc<Code>, locals: Locals, place: &str) -> Result<bool, Raised> {
+        self.source = place.to_string();
         self.begin();
         match self.evaluate(code, locals) {
             Ok(_) => {
@@ -2654,9 +2945,13 @@ impl World {
         };
         let hero = match hero {
             Some(h) => h,
-            None => self
-                .make(&def.hero, Some(account), name)
-                .map_err(Raised::of)?,
+            None => {
+                let hero = self
+                    .make(&def.hero, Some(account), name)
+                    .map_err(Raised::of)?;
+                self.mint_start(&hero);
+                hero
+            }
         };
         let id = vm::py_str(&hero["id"]);
         self.entities.insert(id.clone(), Value::Map(hero));
@@ -2683,12 +2978,15 @@ impl World {
             locals.insert("me".into(), Value::Entity(id.clone()));
             self.run_rule(code, locals, "q:on-leave")?;
         }
+        self.part(&id).map_err(Raised::of)?;
         let hero = self.entities.shift_remove(&id);
         self.players.shift_remove(account);
         if let Some(Value::Map(hero)) = hero {
             self.dead.insert(id.clone(), hero.clone());
             if def.entities[&def.hero].persist {
                 self.stored.insert(account.to_string(), Value::Map(hero));
+            } else {
+                self.spend_all(&hero, "left the world");
             }
         }
         self.gone.insert(id.clone());
@@ -2780,15 +3078,23 @@ impl World {
             recent.push(self.tick);
             self.rates.insert(key, recent);
         }
+        self.source = format!("q:command {name_text}");
         self.begin();
-        let mut locals = Locals::default();
-        locals.insert("me".into(), Value::Entity(eid));
-        if let Value::Map(m) = args {
-            for (k, v) in m {
-                locals.insert(k.clone(), v.clone());
+        let ran = match (&command.builtin, &command.body) {
+            (Some(builtin), _) => self.builtin(builtin, &eid, args),
+            (None, Some(body)) => {
+                let mut locals = Locals::default();
+                locals.insert("me".into(), Value::Entity(eid));
+                if let Value::Map(m) = args {
+                    for (k, v) in m {
+                        locals.insert(k.clone(), v.clone());
+                    }
+                }
+                self.evaluate(body, locals).map(|_| ())
             }
-        }
-        match self.evaluate(&command.body, locals) {
+            (None, None) => Err(rule_at(format!("the command {name_text} has no body"), 0)),
+        };
+        match ran {
             Ok(_) => {
                 self.commit();
                 out.acks
@@ -2824,6 +3130,7 @@ impl World {
         self.events.clear();
         self.vars_changed = false;
         self.dead.clear();
+        self.asks.clear();
         for item in inputs {
             let item = match item {
                 Value::List(x) | Value::Tuple(x) => x,
@@ -2870,6 +3177,20 @@ impl World {
                         ("r", Value::Str(if ok { "ok".into() } else { result })),
                     ]));
                 }
+                "npc" => {
+                    // an NPC's answer, come back from its mind (npc.py)
+                    let npc = item.get(2).cloned().unwrap_or(Value::Null);
+                    let answer = item.get(3).cloned().unwrap_or(Value::Null);
+                    let (npc, answer) = (&npc, &answer);
+                    self.answer(&account, npc, answer)?;
+                    out.entries.push(entry(vec![
+                        ("t", Value::Int(self.tick)),
+                        ("k", Value::Str("npc".into())),
+                        ("a", Value::Str(account.clone())),
+                        ("n", npc.clone()),
+                        ("x", answer.clone()),
+                    ]));
+                }
                 _ => {}
             }
         }
@@ -2883,6 +3204,36 @@ impl World {
         let changed: Vec<String> = self.dirty.union(&self.gone).cloned().collect();
         self.reindex(changed.iter());
         Ok(out)
+    }
+
+    // -- a hand from outside the tick (a test's, a tool's) -----------------------------------------------------------
+
+    /// Fields of an entity set as they are given, outside any rule: what a test's hand does to world.py's dicts.
+    pub fn hand_write(&mut self, id: &str, fields: &Map) -> Result<(), String> {
+        let Some(Value::Map(entity)) = self.entities.get_mut(id) else {
+            return Err(format!("no entity {id}"));
+        };
+        for (k, v) in fields {
+            entity.insert(k.clone(), v.clone());
+        }
+        self.dirty.insert(id.to_string());
+        self.reindex_one(id);
+        Ok(())
+    }
+
+    /// world.py's give, called from outside a rule: booked where the world is said to be.
+    pub fn hand_give(
+        &mut self,
+        id: &str,
+        item: &Value,
+        count: &Value,
+        amount: &Value,
+        currency: &Value,
+        source: &str,
+    ) -> Result<(), Raised> {
+        self.source = source.to_string();
+        self.give(id, item, count, amount, currency, 0)
+            .map_err(Raised::of)
     }
 
     // -- kept, and brought back ------------------------------------------------------------------------------------

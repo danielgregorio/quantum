@@ -1029,7 +1029,7 @@ impl PyWorld {
         Ok(PyWorld { inner })
     }
 
-    /// One tick (world.py's step): {tick, entries, acks, refused, joined, left, full}.
+    /// One tick (world.py's step): {tick, entries, acks, refused, joined, left, full, asks}.
     fn step<'py>(
         &mut self,
         py: Python<'py>,
@@ -1056,6 +1056,10 @@ impl PyWorld {
         d.set_item("joined", joined)?;
         d.set_item("left", out.left)?;
         d.set_item("full", out.full)?;
+        d.set_item(
+            "asks",
+            plain_out(py, &Value::List(self.inner.asks.clone()))?,
+        )?;
         Ok(d.into_any())
     }
 
@@ -1138,6 +1142,60 @@ impl PyWorld {
     #[getter]
     fn tick(&self) -> i64 {
         self.inner.tick
+    }
+
+    /// A test's hand: fields of an entity set as given (world.py's dicts, written by hand).
+    fn hand_write(&mut self, id: &str, fields: &Bound<'_, PyAny>) -> PyResult<()> {
+        let Value::Map(fields) = to_value(fields)? else {
+            return Err(PyValueError::new_err("fields is a dict"));
+        };
+        self.inner
+            .hand_write(id, &fields)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// world.py's give, from outside a rule (a test's hand), booked at source.
+    #[allow(clippy::too_many_arguments)]
+    fn hand_give(
+        &mut self,
+        py: Python<'_>,
+        id: &str,
+        item: &Bound<'_, PyAny>,
+        count: &Bound<'_, PyAny>,
+        amount: &Bound<'_, PyAny>,
+        currency: &Bound<'_, PyAny>,
+        source: &str,
+    ) -> PyResult<()> {
+        self.inner
+            .hand_give(
+                id,
+                &to_value(item)?,
+                &to_value(count)?,
+                &to_value(amount)?,
+                &to_value(currency)?,
+                source,
+            )
+            .map_err(|e| world_raised(py, e))
+    }
+
+    /// What the world keeps beside its entities, for the mirror: (books, parties, trades), and its stored heroes
+    /// when asked for them (they change only as players come and go).
+    fn kept<'py>(&self, py: Python<'py>, stored: bool) -> PyResult<Bound<'py, PyTuple>> {
+        let w = &self.inner;
+        let stored = if stored {
+            plain_out(py, &Value::Map(w.stored.clone()))?
+        } else {
+            py.None().into_bound(py)
+        };
+        PyTuple::new(
+            py,
+            [
+                plain_out(py, &Value::Map(w.books.clone()))?,
+                plain_out(py, &Value::Map(w.parties.clone()))?,
+                plain_out(py, &Value::Map(w.trades.clone()))?,
+                stored,
+            ],
+        )
     }
 }
 

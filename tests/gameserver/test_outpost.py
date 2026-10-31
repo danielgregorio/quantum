@@ -5,6 +5,9 @@ temple to Captain Rhea at the gate, takes the sewers' quest, goes down and kills
 coming back from the temple when she falls), turns it in, buys a sword from Old Marta and wears it; then she hunts
 wolves in the forest until she is of the level for the pelts, takes them, brings five furs and is paid. The world's
 books hold all the while, and Marta's gold is what was paid her less what she paid.
+
+Each is played twice: on world.py, and on the Rust engine's world (native_world.py, PLAN_WORLD_ENGINE.md's E3c),
+which plays it by the same commands to the same end.
 """
 
 from pathlib import Path
@@ -13,6 +16,7 @@ import pytest
 
 from quantum.core.parser import QuantumParser
 from quantum.runtime.gameserver import World, read_world
+from quantum.runtime.gameserver.native_world import NativeWorld, quantum_world
 from quantum.runtime.gameserver.npc import answer_of
 
 OUTPOST = Path(__file__).resolve().parents[2] / 'projects' / 'outpost' / 'outpost.server.q'
@@ -103,9 +107,20 @@ class Player:
         return False
 
 
-@pytest.fixture
-def world():
-    return World(read_world(QuantumParser(use_cache=False).parse_file(str(OUTPOST)), str(OUTPOST)))
+@pytest.fixture(params=['python', 'native'])
+def world(request):
+    if request.param == 'native' and quantum_world is None:
+        pytest.skip('the Rust engine is not built here (pip install ./native/world)')
+    cls = World if request.param == 'python' else NativeWorld
+    return cls(read_world(QuantumParser(use_cache=False).parse_file(str(OUTPOST)), str(OUTPOST)))
+
+
+def hand(world, entity, fields):
+    """The test's hand on an entity's numbers: world.py's dict, or the engine's world."""
+    if isinstance(world, NativeWorld):
+        world.hand(entity, fields)
+    else:
+        entity.update(fields)
 
 
 def test_ana_plays_the_sewers_and_the_pelts(world):
@@ -150,7 +165,7 @@ def test_a_party_of_four_brings_down_the_old_bear(world):
     party = [Player(world, f'{n}@site', n.title()) for n in ('ana', 'bo', 'cy', 'di')]
     ana = party[0]
     for p in party:
-        p.me.update({'level': 8, 'max_hp': 170, 'hp': 170, 'attack': 15, 'defense': 9, 'xp': 2450})
+        hand(world, p.me, {'level': 8, 'max_hp': 170, 'hp': 170, 'attack': 15, 'defense': 9, 'xp': 2450})
     for p in party[1:]:
         assert ana.do('party-invite', who=p.account) == 'ok' and p.do('party-accept', who=ana.account) == 'ok'
     assert ana.go_near('Captain') and ana.do('take-quest', name='old-bear') == 'ok'

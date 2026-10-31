@@ -26,7 +26,8 @@ world's functions and what only the world does (a q:move, a q:emit, the ledger's
 E3 is under way: **the world's state** (`src/world.rs`). E3a holds a world's core (its entities, variables and
 players, joins and leaves, commands, q:every, q:on-join, q:on-leave, q:move, q:emit, q:say, its index, snapshot and
 digest) to the byte of `quantum/runtime/gameserver/world.py`'s; E3b its life (spawns, brains, q:kill and
-q:on-death, q:loot, q:travel, the clock), to the byte of `life.py`'s. `quantum/runtime/gameserver/native_world.py`
+q:on-death, q:loot, q:travel, the clock), to the byte of `life.py`'s; E3c its players together (the ledger and its
+books, the quests, the chat, parties, trades, and a q:ask handed off the tick to the minds, `src/world/`). `quantum/runtime/gameserver/native_world.py`
 hands it the definition and keeps Python's view of it in step. A world that needs more stays Python's, told why.
 
 The world's values are compared as Python compares them and written as Python's `json.dumps` writes them
