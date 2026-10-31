@@ -33,6 +33,8 @@ except ImportError:  # not built here: the Python engine runs the world
 
 ENGINE_ENV = 'QUANTUM_WORLD_ENGINE'
 ENGINES = ('python', 'rust')
+RULES_ENV = 'QUANTUM_WORLD_RULES'
+RULES = ('python', 'machine')
 BUILD = 'pip install ./native/world'
 
 
@@ -46,6 +48,23 @@ def engine_wanted(engine: Optional[str] = None) -> str:
     if wanted not in ENGINES:
         raise ValueError(f'there is no engine {wanted!r}: the engines are {", ".join(ENGINES)}')
     return wanted
+
+
+def world_class(rules: Optional[str] = None, quiet: bool = False):
+    """The World a server runs (`--rules`, else QUANTUM_WORLD_RULES, else python): its rules on the interpreter
+    (rules.py), or as bytecode on the engine's machine (machine.py, E2) when the engine is built here."""
+    from quantum.runtime.gameserver.world import World
+    wanted = rules or os.environ.get(RULES_ENV) or 'python'
+    if wanted not in RULES:
+        raise ValueError(f'there are no rules {wanted!r}: the rules run on {" or ".join(RULES)}')
+    if wanted == 'machine':
+        if available():
+            from quantum.runtime.gameserver.machine import MachineWorld
+            return MachineWorld
+        if not quiet:
+            print(f'[gameserver] the Rust engine is not built here ({BUILD}): the interpreter runs the rules',
+                  flush=True)
+    return World
 
 
 class NativeFrames:
@@ -187,7 +206,8 @@ def native_server():
             try:
                 self.say(f'{self.definition.name} on {self.url} (the Rust engine)' +
                          (' (a test world: it ticks on "step")' if self.step_mode else
-                          f' at {self.definition.tick_rate} ticks a second'))
+                          f' at {self.definition.tick_rate} ticks a second')
+                         + (', its rules as bytecode on the machine' if self.rules_name == 'machine' else ''))
                 self.ready.set()
                 if self.step_mode:
                     await self._stop.wait()

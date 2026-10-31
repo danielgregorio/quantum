@@ -90,8 +90,10 @@ class WorldServer:
     def __init__(self, definition: WorldDef, *, host: str = '127.0.0.1', port: int = 7700, step: bool = False,
                  data_dir: Optional[Path] = None, snapshot_every: float = 300.0, quiet: bool = False,
                  stats: float = 0.0, secret: Optional[bytes] = None, mind: Optional[Any] = None,
-                 mind_seconds: float = 20.0, digest_every: float = 0.0):
+                 mind_seconds: float = 20.0, digest_every: float = 0.0, rules: Optional[str] = None):
+        from quantum.runtime.gameserver.native import world_class
         self.definition = definition
+        self.world_class = world_class(rules, quiet)          # what runs its blocks: the interpreter, or the machine
         self.digest_ticks = max(1, round(digest_every * definition.tick_rate)) if digest_every else 0
         self.mind = mind                                    # the NPCs' (npc.py): a function of a question
         self.mind_seconds = mind_seconds                    # longer, and the NPC says a line of its fallback
@@ -136,12 +138,18 @@ class WorldServer:
     def url(self) -> str:
         return f'ws://{self.host}:{self.port}'
 
+    @property
+    def rules_name(self) -> str:
+        """What runs the world's blocks: python (the interpreter) or machine (bytecode, on the engine's machine)."""
+        return 'python' if self.world_class is World else 'machine'
+
     # -- the world, from its log -----------------------------------------------------------------------------
 
     def _restore(self) -> None:
         self.log = WorldLog(self.data_dir)
         snap, entries = self.log.load()
-        self.world = World.from_snapshot(self.definition, snap) if snap else World(self.definition)
+        kind = self.world_class
+        self.world = kind.from_snapshot(self.definition, snap) if snap else kind(self.definition)
         start = self.world.tick
         self.replayed = replay(self.world, entries)
         for line in self.replayed:
@@ -226,7 +234,8 @@ class WorldServer:
 
         def at(values, q):
             return values[min(len(values) - 1, int(q * len(values)))] if values else 0.0
-        return {'engine': self.engine_name, 'tick': self.world.tick, 'players': len(self.world.players),
+        return {'engine': self.engine_name, 'rules': self.rules_name, 'tick': self.world.tick,
+                'players': len(self.world.players),
                 'entities': len(self.world.entities),
                 'beasts': sum(1 for e in self.world.entities.values() if e.get('_player') is None),
                 'memory_mb': _memory_mb(),
@@ -420,7 +429,8 @@ class WorldServer:
                 self.port = server.sockets[0].getsockname()[1]
                 self.say(f'{self.definition.name} on {self.url}' + (' (a test world: it ticks on "step")'
                                                                       if self.step_mode else
-                                                                      f' at {self.definition.tick_rate} ticks a second'))
+                                                                      f' at {self.definition.tick_rate} ticks a second')
+                         + (', its rules as bytecode on the machine' if self.rules_name == 'machine' else ''))
                 self.ready.set()
                 if self.step_mode:
                     await self._stop.wait()
@@ -497,6 +507,9 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     run.add_argument('--engine', choices=('python', 'rust'),
                      help='what runs the world: python, or rust (native/world, PLAN_WORLD_ENGINE.md: the views '
                           'and the network on every core); else QUANTUM_WORLD_ENGINE, else python')
+    run.add_argument('--rules', choices=('python', 'machine'),
+                     help='what runs its blocks: python (the interpreter), or machine (the Rust engine\'s, as '
+                          'bytecode: PLAN_WORLD_ENGINE.md, E2); else QUANTUM_WORLD_RULES, else python')
     run.add_argument('--digest-every', type=float, default=0.0, metavar='SECONDS',
                      help='write the world\'s digest into its log every so often, for `conform` to check a replay '
                           'against (a digest copies the whole world: a pause of its own)')
@@ -504,10 +517,18 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
                                              'engine, and say the first tick where they differ (PLAN_WORLD_ENGINE.md)')
     conform.add_argument('file', help='the world\'s .q')
     conform.add_argument('--data', help='its snapshot and log (.quantum/gameserver/<name>)')
-    conform.add_argument('--engine', default='python', help='the engine to run it on (python, rust)')
+    conform.add_argument('--engine', default='python',
+                         help='the engine to run it on (python; rust: its frames; machine: its rules as bytecode)')
     conform.add_argument('--against', help='a second engine: the two compared tick by tick, frames and all')
     conform.add_argument('--digest-every', type=int, default=1, metavar='TICKS',
                          help='compare the two worlds\' digests every so many ticks (0: only at the end)')
+    code = sub.add_parser('bytecode', help='each expression of a world as the Rust engine\'s machine runs it, or '
+                                           'each block with --blocks (PLAN_WORLD_ENGINE.md, E2)')
+    code.add_argument('file', help='the world\'s .q')
+    code.add_argument('--expression', help='this expression alone (its braces off)')
+    code.add_argument('--blocks', action='store_true',
+                      help='each block instead: its q:commands, q:functions and rules, statement by statement')
+    code.add_argument('--summary', action='store_true', help='only how many compiled')
     check = sub.add_parser('check', help='read a world against its schema, and say what is wrong')
     check.add_argument('file')
     ticket = sub.add_parser('ticket', help=f'a ticket into a world of a site\'s accounts (accounts="site"), '
@@ -529,10 +550,13 @@ def load(path: str) -> WorldDef:
 
 def main(args) -> int:
     command = getattr(args, 'gameserver_command', None)
-    if command not in ('run', 'check', 'ticket', 'conform'):
+    if command not in ('run', 'check', 'ticket', 'conform', 'bytecode'):
         print('quantum gameserver run FILE | quantum gameserver check FILE | quantum gameserver ticket --account A | '
-              'quantum gameserver conform FILE')
+              'quantum gameserver conform FILE | quantum gameserver bytecode FILE')
         return 2
+    if command == 'bytecode':
+        from quantum.runtime.gameserver.bytecode import main as bytecode_main
+        return bytecode_main(args)
     if command == 'conform':
         from quantum.runtime.gameserver.conform import main as conform_main
         return conform_main(args)
@@ -561,7 +585,7 @@ def main(args) -> int:
         server = make_server(definition, args.engine, host=args.host, port=args.port, step=args.step,
                              data_dir=Path(args.data) if args.data else None, snapshot_every=args.snapshot_every,
                              stats=args.stats, mind=None if args.no_minds or not definition.npcs else LLMMind(),
-                             digest_every=args.digest_every)
+                             digest_every=args.digest_every, rules=args.rules)
     except (GameServerError, ValueError) as e:
         print(f'[ERROR] {e}', file=sys.stderr)
         return 1

@@ -297,6 +297,11 @@ class Interpreter:
                 local[name] = value
             return
         root = local[parts[0]] if parts[0] in local else self.world.vars.get(parts[0])
+        self.assign_into(name, root, value, line)
+
+    def assign_into(self, name: str, root: Any, value: Any, line: Optional[int]) -> None:
+        """q:set of a.b.c into its root: the block's own a, or the world's variable a."""
+        parts = name.split('.')
         if not isinstance(root, dict):
             raise RuleError(f'q:set name="{name}": {parts[0]} is not an entity or a record', line)
         target = root
