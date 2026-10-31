@@ -2249,7 +2249,7 @@ impl Machine<'_> {
                 }
                 Op::Dict => {
                     let flat = pop_n!(a as usize * 2);
-                    let mut map = Map::with_capacity(a as usize);
+                    let mut map = Map::with_capacity_and_hasher(a as usize, Default::default());
                     let mut it = flat.into_iter();
                     while let (Some(k), Some(v)) = (it.next(), it.next()) {
                         match k {
@@ -2420,7 +2420,7 @@ impl Machine<'_> {
 
 /// An expression run alone: no q:functions of the machine's (the host has them all).
 pub fn run(code: &Code, locals: &Locals, host: &mut dyn Host) -> Result<Value, VmError> {
-    let functions = Functions::new();
+    let functions = Functions::default();
     let depth = AtomicUsize::new(0);
     Machine {
         functions: &functions,
@@ -2527,7 +2527,7 @@ fn whole_float_text(f: f64) -> String {
 fn materialize(host: &mut dyn Host, v: &Value) -> Result<Value, VmError> {
     Ok(match v {
         Value::Entity(id) => {
-            let mut fields = Map::new();
+            let mut fields = Map::default();
             for key in host.keys(id)? {
                 let value = host.field(id, &key)?.unwrap_or(Value::Null);
                 fields.insert(key, materialize(host, &value)?);
@@ -2545,7 +2545,7 @@ fn materialize(host: &mut dyn Host, v: &Value) -> Result<Value, VmError> {
                 .collect::<Result<_, _>>()?,
         ),
         Value::Map(m) => {
-            let mut out = Map::with_capacity(m.len());
+            let mut out = Map::with_capacity_and_hasher(m.len(), Default::default());
             for (k, i) in m {
                 out.insert(k.clone(), materialize(host, i)?);
             }
@@ -2605,7 +2605,7 @@ mod tests {
             vec![],
             &["n", "down"],
         );
-        let mut functions = Functions::new();
+        let mut functions = Functions::default();
         for (name, body, params) in [("add", add, vec!["a", "b"]), ("down", down, vec!["n"])] {
             let function = Function {
                 name: name.into(),
@@ -2642,7 +2642,7 @@ mod tests {
             functions: &functions,
             depth: &depth,
         };
-        let mut locals = Locals::new();
+        let mut locals = Locals::default();
         let total = machine.run(&block, &mut locals, &mut NoWorld).unwrap();
         assert!(py_eq(&total, &Value::Int(10)));
         assert!(py_eq(&locals["k"], &Value::Int(4)));
@@ -2658,7 +2658,7 @@ mod tests {
             &["down"],
         );
         let e = machine
-            .run(&deep, &mut Locals::new(), &mut NoWorld)
+            .run(&deep, &mut Locals::default(), &mut NoWorld)
             .unwrap_err();
         assert_eq!((e.kind, e.line), (ErrorKind::Rule, Some(0)));
         assert_eq!(e.text(), "down(): calls nested 64 deep");
@@ -2670,7 +2670,7 @@ mod tests {
             &["add"],
         );
         let e = machine
-            .run(&short, &mut Locals::new(), &mut NoWorld)
+            .run(&short, &mut Locals::default(), &mut NoWorld)
             .unwrap_err();
         assert_eq!(e.kind, ErrorKind::Expression);
         assert_eq!(

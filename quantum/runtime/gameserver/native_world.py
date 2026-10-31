@@ -2,10 +2,11 @@
 to the byte of world.py's digest, and the machine (vm.rs) runs its blocks with the world as its host.
 
 Python still reads the .q (model.py) and compiles it (bytecode.py); `export` hands the engine the definition with
-every block, field and variable as bytecode. E3a holds the world's core: its entities, variables and players, joins
-and leaves, the commands, q:every, q:on-join and q:on-leave, q:move, q:emit and q:say, and the functions that read the
-world. A world that needs more (spawns, brains, the ledger, parties, trades, quests, NPCs: E3b and E3c) is found
-here first, by name, and stays world.py's.
+every block, field and variable as bytecode, a brain's conditions too. E3a holds the world's core: its entities,
+variables and players, joins and leaves, the commands, q:every, q:on-join and q:on-leave, q:move, q:emit and q:say,
+and the functions that read the world. E3b its life (life.py's): spawns, brains, q:kill and q:on-death, q:loot,
+q:travel, q:spawn in a block, the clock. A world that needs more (the ledger, the chat, parties, trades, quests,
+NPCs: E3c) is found here first, by name, and stays world.py's.
 
 `NativeWorld` is a World whose step is the engine's: after each tick it takes what changed (the entities written or
 gone, the players, the variables, the events, the errors) into its own dicts, so frames.py, the views and the server
@@ -19,8 +20,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from quantum.runtime.gameserver.bytecode import (CompileError, OP, compile_block, compile_value,
-                                                 world_function_names)
+from quantum.runtime.gameserver.bytecode import (CompileError, OP, compile_block, compile_condition,
+                                                 compile_value, world_function_names)
 from quantum.runtime.gameserver.world import Event, TickOut, World
 
 try:
@@ -32,7 +33,7 @@ except ImportError:  # not built here
 NATIVE_FUNCTIONS = frozenset({'tile', 'walkable', 'ahead', 'distance', 'near', 'in_area', 'area', 'heroes',
                               'entities', 'entity', 'tick', 'seconds', 'random', 'chance', 'pick', 'now', 'sqrt',
                               'nearest', 'fighting', 'in_fight', 'sees', 'is_night', 'daytime'})
-NATIVE_EFFECTS = frozenset({'move', 'emit', 'say'})
+NATIVE_EFFECTS = frozenset({'move', 'emit', 'say', 'travel', 'kill', 'loot', 'spawn'})
 
 
 class NotNative(Exception):
@@ -59,14 +60,10 @@ def export(definition, interpreter) -> Tuple[Dict[str, Any], List[tuple]]:
     when the world needs more than the engine holds."""
     d = definition
     reasons: List[str] = []
-    for what, present in (('q:spawn', d.spawns), ('q:on-death', d.deaths), ('the ledger', d.ledger),
-                          ('q:quest', d.quests), ('q:npc', d.npcs), ('q:chat', d.chat), ('q:party', d.party_size),
-                          ('q:trade', d.trade)):
+    for what, present in (('the ledger', d.ledger), ('q:quest', d.quests), ('q:npc', d.npcs), ('q:chat', d.chat),
+                          ('q:party', d.party_size), ('q:trade', d.trade)):
         if present:
-            reasons.append(f'{what} (E3b, E3c)')
-    for name, e in d.entities.items():
-        if e.states or e.loot:
-            reasons.append(f'the brain or the loot of {name} (E3b)')
+            reasons.append(f'{what} (E3c)')
     for name, c in d.commands.items():
         if c.builtin:
             reasons.append(f'the command {name}, the world\'s own (E3c)')
@@ -96,6 +93,24 @@ def export(definition, interpreter) -> Tuple[Dict[str, Any], List[tuple]]:
             reasons.append(f'{where}: {e}')
             return -1
 
+    def condition(text: Optional[str], line: Optional[int], where: str) -> Optional[int]:
+        if text is None:
+            return None
+        try:
+            return add(compile_condition(text, d, own, users, line or 0, where))
+        except CompileError as e:
+            reasons.append(f'{where}: {e}')
+            return -1
+
+    def brain(name: str, e) -> Dict[str, Any]:
+        return {sname: {'do': st.do, 'within': st.within, 'for_ticks': st.for_ticks, 'then': st.then,
+                        'target': condition(st.target, st.line, f'{name}.{sname} target='),
+                        'away_from': condition(st.away_from, st.line, f'{name}.{sname} away-from='),
+                        'whens': [[condition(c, line, f'{name}.{sname} q:when'), become]
+                                  for c, become, line in st.whens],
+                        'line': st.line or 0}
+                for sname, st in e.states.items()}
+
     m = d.map
     out = {
         'name': d.name, 'tick_rate': d.tick_rate, 'players': d.players,
@@ -104,7 +119,10 @@ def export(definition, interpreter) -> Tuple[Dict[str, Any], List[tuple]]:
         'entities': {name: {'kind': e.kind, 'per_player': e.per_player, 'persist': e.persist,
                             'step_ticks': e.step_ticks,
                             'fields': [{'name': f.name, 'value': value(f.value, f.line, f'{name}.{f.name}'),
-                                        'private': f.private} for f in e.fields]}
+                                        'private': f.private} for f in e.fields],
+                            'states': brain(name, e), 'initial': e.initial,
+                            'loot': [{'item': dr.item, 'gold': list(dr.gold) if dr.gold else None,
+                                      'count': list(dr.count), 'chance': dr.chance} for dr in e.loot]}
                      for name, e in d.entities.items()},
         'hero': d.hero.name,
         'commands': {name: {'params': list(c.params), 'limit': list(c.limit) if c.limit else None,
@@ -116,10 +134,14 @@ def export(definition, interpreter) -> Tuple[Dict[str, Any], List[tuple]]:
         'on_join': [block(b, 'q:on-join') for b in d.on_join],
         'on_leave': [block(b, 'q:on-leave') for b in d.on_leave],
         'variables': [[name, value(raw, line, name)] for name, raw, line in d.variables],
-        'spawns': len(d.spawns), 'day_ticks': d.day_ticks, 'night': d.night,
+        'spawns': [{'entity': sp.entity, 'area': sp.area, 'count': sp.count, 'night_count': sp.night_count,
+                    'respawn_ticks': sp.respawn_ticks} for sp in d.spawns],
+        'deaths': [{'kinds': list(de.kinds), 'as': de.as_name, 'by': de.by_name,
+                    'body': block(de.body, 'q:on-death')} for de in d.deaths],
+        'day_ticks': d.day_ticks, 'night': d.night,
     }
-    reasons += [f'the function {name}() (E3b, E3c)' for name in sorted(calls - NATIVE_FUNCTIONS)]
-    reasons += [f'<q:{name}> (E3b, E3c)' for name in sorted(effects - NATIVE_EFFECTS)]
+    reasons += [f'the function {name}() (E3c)' for name in sorted(calls - NATIVE_FUNCTIONS)]
+    reasons += [f'<q:{name}> (E3c)' for name in sorted(effects - NATIVE_EFFECTS)]
     if reasons:
         raise NotNative(reasons)
     return out, codes

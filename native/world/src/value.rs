@@ -3,7 +3,8 @@
 
 use indexmap::IndexMap;
 
-pub type Map = IndexMap<String, Value>;
+/// A record, in the order Python's dict keeps it (hashed with FxHash: the order is the map's, not the hash's).
+pub type Map = IndexMap<String, Value, rustc_hash::FxBuildHasher>;
 
 #[derive(Clone, Debug)]
 pub enum Value {

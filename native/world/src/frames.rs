@@ -598,10 +598,10 @@ mod tests {
     use super::*;
 
     fn hero(id: &str, account: &str, x: i64, y: i64, purse: i64) -> EntityIn {
-        let mut fields = Map::new();
+        let mut fields = Map::default();
         fields.insert("id".into(), Value::Str(id.into()));
         fields.insert("kind".into(), Value::Str("Hero".into()));
-        let mut at = Map::new();
+        let mut at = Map::default();
         at.insert("x".into(), Value::Int(x));
         at.insert("y".into(), Value::Int(y));
         fields.insert("at".into(), Value::Map(at));
