@@ -1164,7 +1164,11 @@ impl PyWorld {
             .try_iter()?
             .map(|i| to_value(&i?))
             .collect::<PyResult<Vec<_>>>()?;
-        let out = self.inner.step(&inputs).map_err(|e| world_raised(py, e))?;
+        // the tick off Python's lock (E3d): Python's other threads (the server's network, its minds) go on meanwhile
+        let inner = &mut self.inner;
+        let out = py
+            .detach(|| inner.step(&inputs))
+            .map_err(|e| world_raised(py, e))?;
         self.acks = out
             .acks
             .iter()

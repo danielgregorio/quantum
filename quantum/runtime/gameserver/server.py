@@ -171,7 +171,7 @@ class WorldServer:
     async def _tick(self) -> None:
         began = time.perf_counter()
         inputs, self.inbox = self.inbox, []
-        out = self.world.step(inputs)
+        out = await self._step(inputs)
         stepped = time.perf_counter()
         for ask in out.asks:
             self._think(ask)
@@ -196,6 +196,10 @@ class WorldServer:
             self._parts.append((stepped - began, done - sending))
         if self.stats_ticks and self.world.tick % self.stats_ticks == 0:
             print(f'[gameserver] stats {json.dumps(self.stats())}', flush=True)
+
+    async def _step(self, inputs: List[tuple]):
+        """The world's step (the engine's server runs its world's off this thread, native.py)."""
+        return self.world.step(inputs)
 
     def _think(self, ask: dict) -> None:
         """An NPC asked: its mind answers off the tick, and the answer is an input of a tick to come."""

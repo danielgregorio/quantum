@@ -452,3 +452,29 @@ The step is still the mirror's as well as the engine's: after each tick NativeWo
 Python's dicts, for what Python still reads (the views Python works out, the minds' questions, peek). The next
 parts: that mirror read only where Python asks, the tick off Python's lock, the brains in parallel, an old world's
 data going on on the engine; then the engine is the default.
+
+### E3d, second part (2026-10-31): the tick off Python's lock
+
+The engine's step measured on its own (the gauge's field, in process): 37 ms of a tick, the mirror into Python's
+dicts 2. So the mirror is not where the time goes, and stays as it is; the engine's tick is. Under callgrind three
+quarters of it was `nearest()`, each beast's brain looking for a hero: every entity of the cells near, its kind read
+from its record to be thrown away. The index of cells now has a twin by kind (kind is the world's: a q:set cannot
+change it), and nearest(x, kind) reads the cells of that kind alone, the same members as before, the least (far, id)
+of them as before: 37 ms became 20.
+
+And the tick is off Python's lock: `PyWorld.step` lets go of it while the engine ticks, and the engine's server
+(`--engine native`) runs that step on a thread of its own, its loop meanwhile reading the network, whose messages
+wait in the inbox for the next tick; what changed is taken into Python's dicts between two turns of the loop.
+
+Held to world.py as before (the native world's tests, Outpost on both, the game server's tests and the Godot clients
+on `--engine native`), and the gauge's field at 500 heroes and 1500 beasts for 100 ticks, digest every 10, the same.
+
+The gauge (500 bots, 1500 beasts, two cores for the server, 40 seconds), on `--engine native`:
+
+| | tick p50 | tick p99 | the step p50 | commands run |
+|---|---|---|---|---|
+| E3d's first part | 103 ms | 184 ms | 76 ms | 44 002 |
+| its second       | 69 ms  | 145 ms | 43 ms | 51 287 |
+
+E4's 50 ms at the 99th percentile is still ahead: the brains in parallel, the sending (22 ms), an old world's data
+going on, then the engine as the default.

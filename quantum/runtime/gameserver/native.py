@@ -218,6 +218,7 @@ def native_server(state: bool = False):
             self.conns: Dict[int, NativeConnection] = {}
             self.native: Optional[NativeFrames] = None
             self._engine_parts: List[tuple] = []           # each tick's bridge, frames and sending, in the engine
+            self._tick_pool: Optional[ThreadPoolExecutor] = None
 
         async def run(self) -> None:
             self._loop = asyncio.get_running_loop()
@@ -229,6 +230,8 @@ def native_server(state: bool = False):
             self.port = engine.listen(self.host, self.port, self.step_mode, MAX_MESSAGE, MESSAGES_A_SECOND,
                                       self.world.tick)
             pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='world-net')
+            if self.engine_name == 'native':             # the engine's world ticks on a thread of its own
+                self._tick_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix='world-tick')
             reader = asyncio.create_task(self._read(pool))
             try:
                 self.say(f'{self.definition.name} on {self.url} (the Rust engine' +
@@ -245,6 +248,8 @@ def native_server(state: bool = False):
                 reader.cancel()
                 engine.shutdown()
                 pool.shutdown(wait=False)
+                if self._tick_pool is not None:
+                    self._tick_pool.shutdown(wait=True)
                 if self._minds_pool is not None:
                     self._minds_pool.shutdown(wait=False, cancel_futures=True)
                 if self._crashed:
@@ -253,6 +258,16 @@ def native_server(state: bool = False):
                 else:
                     self.log.write_snapshot(self.world)
                     self.log.close()
+
+        async def _step(self, inputs: List[tuple]):
+            """The engine's world steps off Python's lock, on its own thread (E3d): meanwhile this loop goes on
+            reading the network, whose messages wait in the inbox for the next tick; what changed is taken into
+            Python's dicts here, between two of the loop's turns."""
+            native = getattr(self.world, 'native', None)
+            if native is None or self._tick_pool is None:
+                return self.world.step(inputs)
+            raw = await asyncio.get_running_loop().run_in_executor(self._tick_pool, native.step, inputs)
+            return self.world.finish(raw)
 
         async def _read(self, pool) -> None:
             loop = asyncio.get_running_loop()

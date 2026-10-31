@@ -215,7 +215,11 @@ class NativeWorld(World):
         self.reindex(self.dirty | self.gone)
 
     def step(self, inputs: List[tuple]) -> TickOut:
-        raw = self.native.step(inputs)
+        return self.finish(self.native.step(inputs))
+
+    def finish(self, raw: dict) -> TickOut:
+        """The engine's tick (its step, which runs off Python's lock: a server runs it on a thread of its own),
+        taken into these dicts."""
         out = TickOut(raw['tick'], entries=raw['entries'], acks=raw['acks'], refused=raw['refused'],
                       joined=raw['joined'], left=raw['left'], full=raw['full'], asks=raw['asks'])
         self.asks = out.asks
