@@ -396,3 +396,34 @@ The tick, at the gauge's field (96 tiles, 500 heroes stepping, 1500 beasts), in 
 lookups and the search for a free tile; E3d takes the bridge away and thinks the brains in parallel.
 
 The den and Outpost are still told what they need (the ledger, the chat, parties, trades, quests, NPCs): E3c.
+
+### E3c (2026-10-31)
+
+Built: players together, in the engine. The ledger (`native/world/src/world/ledger.rs`, ledger.py's): q:give, q:take,
+q:pay and q:loot make, move and spend gold and things, each booked by asset and by where it happened (the command, the
+rule, a kind's loot, a hero's start, one gone from the world), and a q:set of a bag or a currency refused, as ledger.py
+refuses it. The quests' goals and rewards, and what the expressions read of both (`balance`, `has`, `item`, `price`,
+`quest_done`...). The chat, parties and trades (`world/together.rs`, together.py's): the world's own commands, run as
+any command is; the chat's channels and their reach, its filter's words starred; a party made, joined, left and
+undone; a trade moved on the ledger once, when both accept the same offers. The NPCs' minds (`world/minds.rs`,
+npc.py's): a q:ask goes out with the tick as the question the mind is given, and its answer comes back as an input
+of a later tick, its tools run as the player, its note kept, a fallback line from the world's random when there is
+no answer or no budget left.
+
+Held to world.py: sessions of the den and of Outpost (players who send every command, the chat's, the party's and the
+trade's too) give the same digest on every tick, the same acks, refusals and frames, and the same errors kept; Old
+Marta asked through a session by players who come and go, and a scripted mind that answers one to four ticks later
+(a sale in the bounds or out of them, a tool she has not, more than she may use, a note too long, an answer that is
+none), the same on every tick, each question as it goes out to the mind the same; and Outpost played from start to
+end, the sewers, the pelts and the Old Bear for a party of four, on the engine (`tests/gameserver/test_outpost.py`
+plays each of its tests on both). Held longer by hand: the den and Outpost for 900 ticks, twelve players, three
+seeds each, the same.
+
+Two things are Python's own and the engine says them nearly: what str.isprintable() keeps of an NPC's words (a
+code point Unicode has not assigned is kept by the engine, dropped by Python; Python 3.12 and 3.13 do not agree on
+which those are either), and the \w of the chat filter's word boundaries (a combining mark beside a filtered word).
+Neither is in a test world; a world's words that met one would show it on the tick, by the digest.
+
+`NativeWorld` keeps its dicts the same dicts across ticks (a test or a view that holds one reads it changed, as with
+world.py's), and gives a test's hand what world.py's dicts gave it: `hand()` to set an entity's numbers, and `give()`
+by the ledger from outside a rule.

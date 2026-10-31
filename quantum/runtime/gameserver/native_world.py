@@ -5,8 +5,10 @@ Python still reads the .q (model.py) and compiles it (bytecode.py); `export` han
 every block, field and variable as bytecode, a brain's conditions too. E3a holds the world's core: its entities,
 variables and players, joins and leaves, the commands, q:every, q:on-join and q:on-leave, q:move, q:emit and q:say,
 and the functions that read the world. E3b its life (life.py's): spawns, brains, q:kill and q:on-death, q:loot,
-q:travel, q:spawn in a block, the clock. A world that needs more (the ledger, the chat, parties, trades, quests,
-NPCs: E3c) is found here first, by name, and stays world.py's.
+q:travel, q:spawn in a block, the clock. E3c its players together: the ledger and its books (ledger.py), the chat,
+parties, trades and quests (together.py), and a q:ask handed off the tick to the minds, its answer an input of a later
+one (npc.py). A world that needs what the engine does not run (a function or a statement of its own) is found here
+first, by name, and stays world.py's.
 
 `NativeWorld` is a World whose step is the engine's: after each tick it takes what changed (the entities written or
 gone, the players, the variables, the events, the errors) into its own dicts, so frames.py, the views and the server
@@ -32,8 +34,13 @@ except ImportError:  # not built here
 # what the engine's host runs itself (world.rs's WORLD_FUNCTIONS) and the statements it does (its effect)
 NATIVE_FUNCTIONS = frozenset({'tile', 'walkable', 'ahead', 'distance', 'near', 'in_area', 'area', 'heroes',
                               'entities', 'entity', 'tick', 'seconds', 'random', 'chance', 'pick', 'now', 'sqrt',
-                              'nearest', 'fighting', 'in_fight', 'sees', 'is_night', 'daytime'})
-NATIVE_EFFECTS = frozenset({'move', 'emit', 'say', 'travel', 'kill', 'loot', 'spawn'})
+                              'nearest', 'fighting', 'in_fight', 'sees', 'is_night', 'daytime', 'balance', 'has',
+                              'item', 'party_of', 'party_near', 'quest_goal', 'quest_done', 'quest_level',
+                              'quest_title', 'price', 'heals', 'slot', 'bonus'})
+NATIVE_EFFECTS = frozenset({'move', 'emit', 'say', 'travel', 'kill', 'loot', 'spawn', 'give', 'take', 'pay', 'ask',
+                            'reward'})
+BUILTINS = frozenset({'chat', 'whisper', 'party-invite', 'party-accept', 'party-leave', 'trade-offer', 'trade-accept',
+                      'trade-cancel'})
 
 
 class NotNative(Exception):
@@ -60,13 +67,9 @@ def export(definition, interpreter) -> Tuple[Dict[str, Any], List[tuple]]:
     when the world needs more than the engine holds."""
     d = definition
     reasons: List[str] = []
-    for what, present in (('the ledger', d.ledger), ('q:quest', d.quests), ('q:npc', d.npcs), ('q:chat', d.chat),
-                          ('q:party', d.party_size), ('q:trade', d.trade)):
-        if present:
-            reasons.append(f'{what} (E3c)')
     for name, c in d.commands.items():
-        if c.builtin:
-            reasons.append(f'the command {name}, the world\'s own (E3c)')
+        if c.builtin and c.builtin not in BUILTINS:
+            reasons.append(f'the command {name}, the world\'s own')
     own = world_function_names(interpreter)
     users = frozenset(d.functions)
     codes: List[tuple] = []
@@ -126,7 +129,8 @@ def export(definition, interpreter) -> Tuple[Dict[str, Any], List[tuple]]:
                      for name, e in d.entities.items()},
         'hero': d.hero.name,
         'commands': {name: {'params': list(c.params), 'limit': list(c.limit) if c.limit else None,
-                            'body': block(c.body, f'q:command {name}') if c.body is not None else -1, 'by': c.by}
+                            'body': block(c.body, f'q:command {name}') if c.body is not None else -1, 'by': c.by,
+                            'builtin': c.builtin}
                      for name, c in d.commands.items()},
         'functions': {name: {'params': list(f.params), 'body': block(f.body, f'q:function {name}'),
                              'line': f.line or 0} for name, f in d.functions.items()},
@@ -139,9 +143,19 @@ def export(definition, interpreter) -> Tuple[Dict[str, Any], List[tuple]]:
         'deaths': [{'kinds': list(de.kinds), 'as': de.as_name, 'by': de.by_name,
                     'body': block(de.body, 'q:on-death')} for de in d.deaths],
         'day_ticks': d.day_ticks, 'night': d.night,
+        'currencies': dict(d.currencies), 'items': {name: dict(props) for name, props in d.items.items()},
+        'chat': {'channels': dict(d.chat.channels), 'words': list(d.chat.words)} if d.chat else None,
+        'party_size': d.party_size,
+        'quests': {name: {'title': q.title, 'goal': list(q.goal), 'level': q.level,
+                          'reward': [list(r) for r in q.reward]} for name, q in d.quests.items()},
+        'npcs': {name: {'instruction': n.instruction, 'tools': [[t, desc] for t, desc in n.tools.items()],
+                        'model': n.model, 'knowledge': n.knowledge, 'memory': n.memory, 'budget': n.budget,
+                        'max_tools': n.max_tools, 'lines': list(n.lines)} for name, n in d.npcs.items()},
+        'knowledge': dict(d.knowledge), 'reach': d.reach,
+        'private': {kind: sorted(fields) for kind, fields in interpreter.world._private.items()},
     }
-    reasons += [f'the function {name}() (E3c)' for name in sorted(calls - NATIVE_FUNCTIONS)]
-    reasons += [f'<q:{name}> (E3c)' for name in sorted(effects - NATIVE_EFFECTS)]
+    reasons += [f'the function {name}()' for name in sorted(calls - NATIVE_FUNCTIONS)]
+    reasons += [f'<q:{name}>' for name in sorted(effects - NATIVE_EFFECTS)]
     if reasons:
         raise NotNative(reasons)
     return out, codes
@@ -171,16 +185,25 @@ class NativeWorld(World):
         self._errors_made = 0
         self._take(sorted(self.native.snapshot()['entities']))
 
-    def _take(self, ids=None) -> None:
-        """What the engine's tick changed (or these entities), into these dicts."""
+    def _take(self, ids=None, stored: bool = True) -> None:
+        """What the engine's tick changed (or these entities), into these dicts; the stored heroes too when players
+        came or went."""
         dirty, gone, players, vars_, vars_changed, events, errors, made = self.native.changes(self._errors_made)
+        self.books, self.parties, self.trades, kept = self.native.kept(stored)
+        if kept is not None:
+            self.stored = kept
         if ids is None:
             ids = sorted(set(dirty) | set(gone))
         for eid, entity in self.native.pull(list(ids)).items():
             if entity is None:
                 self.entities.pop(eid, None)
-            else:
+                continue
+            held = self.entities.get(eid)
+            if held is None:
                 self.entities[eid] = entity
+            else:                                   # the same dict, as world.py's: what holds it reads it changed
+                held.clear()
+                held.update(entity)
         self.dirty, self.gone = set(dirty), set(gone)
         self.players, self.vars, self.vars_changed = players, vars_, vars_changed
         self.events = [Event(message, tuple(tile) if tile else None, to, everyone, accounts)
@@ -194,9 +217,22 @@ class NativeWorld(World):
     def step(self, inputs: List[tuple]) -> TickOut:
         raw = self.native.step(inputs)
         out = TickOut(raw['tick'], entries=raw['entries'], acks=raw['acks'], refused=raw['refused'],
-                      joined=raw['joined'], left=raw['left'], full=raw['full'])
-        self._take()
+                      joined=raw['joined'], left=raw['left'], full=raw['full'], asks=raw['asks'])
+        self.asks = out.asks
+        self._take(stored=bool(out.joined or out.left))
         return out
+
+    # -- a hand from outside the tick (a test's): written on the engine's world, then read back --------------------
+
+    def hand(self, entity: dict, fields: Dict[str, Any]) -> None:
+        """An entity's fields set by hand, as a test sets world.py's dict."""
+        self.native.hand_write(entity['id'], fields)
+        self._take([entity['id']], stored=False)
+
+    def give(self, to: dict, item: Any, count: Any, amount: Any, currency: Optional[str], line: Optional[int]) -> None:
+        """ledger.py's give, called by hand (a rule's runs on the engine): booked where the world is said to be."""
+        self.native.hand_give(to['id'], item, count, amount, currency, self.source)
+        self._take([to['id']], stored=False)
 
     def snapshot(self) -> dict:
         return self.native.snapshot()

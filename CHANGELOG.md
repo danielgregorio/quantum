@@ -10,6 +10,14 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the world engine's E3c (`PLAN_WORLD_ENGINE.md`), players
+  together in Rust. The engine now holds the ledger and its books (q:give,
+  q:take, q:pay, q:loot, `balance`, `has`, `price`...), the quests and
+  q:reward, the chat (its channels, their reach, its filter), parties and
+  trades, and the NPCs' minds: a q:ask goes out with the tick and its answer
+  comes back as an input, its tools run as the player. The den and Outpost
+  agree with the Python world on every tick, and Outpost plays from start
+  to end on the engine (`tests/gameserver/test_outpost.py` runs on both).
 - Laboratory: the world engine's E3b (`PLAN_WORLD_ENGINE.md`), a world's
   life in Rust. The engine now holds q:spawn (and the respawn, more at
   night), the brains (their states and q:when, wander, chase and flee,
