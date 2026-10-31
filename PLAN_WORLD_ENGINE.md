@@ -478,3 +478,22 @@ The gauge (500 bots, 1500 beasts, two cores for the server, 40 seconds), on `--e
 
 E4's 50 ms at the 99th percentile is still ahead: the brains in parallel, the sending (22 ms), an old world's data
 going on, then the engine as the default.
+
+### E3d, third part (2026-10-31): an old world's data goes on, and the engine is the default
+
+An old world's data goes on on the engine: the den served on world.py and played (players who walk, buy cheese, eat
+it and leave), then stopped (its snapshot written) or killed (its log alone), is served again from its data on
+world.py and on the engine; both are back at the same tick with the same digest, the ledger's books whole (a hero's
+start, what was bought and eaten, what those who left took with them), and they stay the same on every tick after
+(`tests/gameserver/test_gameserver_native_world.py`). The snapshot and the log are the same files either way: a
+world can go from one engine to the other and back.
+
+And where the engine is built (`pip install ./native/world`), it is the default: `quantum gameserver run` serves
+the world on `--engine native`. A world that needs what the engine does not run is told which and its state stays
+world.py's, on the engine's network (`--engine rust`); where the engine is not built, world.py runs it, quietly, as
+before. `--engine python` (or `QUANTUM_WORLD_ENGINE=python`) runs world.py alone.
+
+With that E3's "done when" holds: the conformance harness passes, Python against Rust, on every test world (the
+yard, the meadow, the lair, the den, Outpost, the world of cases, the gauge's field); Outpost plays from start to end
+on the Rust engine (`tests/gameserver/test_outpost.py` runs on both); an old world's data continues on it. What is
+left of the plan's E3d list, the brains thinking in parallel and the sending, is speed, and goes with E4's numbers.

@@ -480,8 +480,9 @@ class WorldServer:
 
 
 def make_server(definition: WorldDef, engine: Optional[str] = None, **kwargs) -> WorldServer:
-    """A world's server on the engine asked for (`--engine`, else QUANTUM_WORLD_ENGINE, else python): Rust's, when
-    it is built here (native.py), else Python's, which says so."""
+    """A world's server on the engine asked for (`--engine`, else QUANTUM_WORLD_ENGINE), else on the default: the
+    Rust engine's own world where it is built here (native.py), else Python's. An engine asked for and not built
+    here is Python's, which says so."""
     from quantum.runtime.gameserver import native
 
     wanted = native.engine_wanted(engine)
@@ -512,7 +513,8 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     run.add_argument('--engine', choices=('python', 'rust', 'native'),
                      help='what runs the world: python; rust (native/world, PLAN_WORLD_ENGINE.md: the views and '
                           'the network on every core); or native (the world itself too: its state, its tick and '
-                          'its rules, E3); else QUANTUM_WORLD_ENGINE, else python')
+                          'its rules, E3); else QUANTUM_WORLD_ENGINE, else native where the engine is built here '
+                          '(pip install ./native/world), else python')
     run.add_argument('--rules', choices=('python', 'machine'),
                      help='what runs its blocks: python (the interpreter), or machine (the Rust engine\'s, as '
                           'bytecode: PLAN_WORLD_ENGINE.md, E2); else QUANTUM_WORLD_RULES, else python')

@@ -10,8 +10,9 @@ has not, more than she may use, a note to keep, an answer that is none), the sam
 out to the mind the same; the gauge's field, beasts that wander and chase a crowd of heroes, the same on every tick;
 the world of cases (test_gameserver_blocks.py), a command each for what is hardest for each statement, the same
 outcome command by command, Python's own TypeError and ValueError included; and a world brought back from its snapshot
-goes on as world.py's does. Outpost played from start to end on the engine is test_outpost.py's. A world that needs
-what the engine does not run is told so, by name, and stays world.py's.
+goes on as world.py's does, and an old world's data (the den served on world.py, stopped or killed) goes on on the
+engine. Outpost played from start to end on the engine is test_outpost.py's. A world that needs what the engine does
+not run is told so, by name, and stays world.py's.
 """
 
 import importlib.util
@@ -29,7 +30,8 @@ from quantum.runtime.gameserver.conform import ENGINES, conform
 from quantum.runtime.gameserver import native_world
 from quantum.runtime.gameserver.native_world import NativeWorld, NotNative, native_ok, quantum_world
 from quantum.runtime.gameserver.npc import answer_of
-from quantum.runtime.gameserver.server import load
+from quantum.runtime.gameserver.server import load, make_server
+from quantum.runtime.gameserver.session import WorldSession, serve_world
 
 pytestmark = pytest.mark.skipif(quantum_world is None, reason='the Rust engine is not built here (pip install ./native/world)')
 REPO = Path(__file__).resolve().parents[2]
@@ -191,3 +193,43 @@ def test_the_minds_answers_come_back_the_same(tmp_path, seed):
             due.setdefault(tick + rng.randint(1, 4), []).append(('npc', ask['account'], ask['npc'], mind(ask)))
     assert asked > 20 and sold > 0 and native.errors == python.errors
     assert python.balanced() == {} and native.balanced() == {}
+
+
+@pytest.mark.parametrize('crash', [False, True])
+def test_an_old_worlds_data_goes_on_on_the_engine(tmp_path, crash):
+    """The den served on world.py and played (players who walk, buy, eat and leave), then stopped (its snapshot
+    written) or killed (its log alone); its data served again on world.py and on the engine: back at the same tick,
+    the same world to the digest, and the same world on every tick of what comes after."""
+    import shutil
+    den = WORLDS['den']
+    data = tmp_path / 'data'
+    with serve_world(den, data=data, engine='python') as server:
+        with WorldSession(server.url, 'ana') as ana, WorldSession(server.url, 'bo') as bo:
+            for n in range(40):
+                way = ['north', 'east', 'south', 'west'][n % 4]
+                ana.act(send=[('step', {'dir': way})], ticks=1)
+                bo.act(send=[('buy', {'item': 'cheese'})] if n % 7 == 0 else
+                       [('eat', {'item': 'cheese'})] if n % 7 == 3 else [('step', {'dir': way})], ticks=1)
+        ana_left = server.world.tick
+        if crash:
+            server.crash()
+    assert ana_left > 40
+    definition = load(str(den))
+    worlds = []
+    for engine in ('python', 'native'):
+        copy = tmp_path / engine
+        shutil.copytree(data, copy)
+        served = make_server(definition, engine, quiet=True, data_dir=copy)
+        served._restore()
+        worlds.append(served.world)
+    python, native = worlds
+    assert isinstance(native, NativeWorld) and not isinstance(python, NativeWorld)
+    assert native.tick == python.tick >= ana_left and native.digest() == python.digest()
+    rng = random.Random(5)
+    for tick in range(120):
+        inputs = [('join', 'ana')] if tick == 0 else [('join', 'cy')] if tick == 30 else []
+        for account in ('ana', 'cy'):
+            if account in python.players and rng.random() < 0.6:
+                inputs.append(('cmd', account, tick, 'step', {'dir': rng.choice(['north', 'south', 'east', 'west'])}))
+        assert native.step(inputs).acks == python.step(inputs).acks
+        assert native.digest() == python.digest(), f'tick {tick + 1}'

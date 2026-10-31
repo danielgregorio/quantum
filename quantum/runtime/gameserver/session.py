@@ -39,7 +39,7 @@ def serve_world(world: Union[str, Path, Any], *, step: bool = True, data: Option
                 snapshot_every: float = 300.0, quiet: bool = True, secret: Optional[bytes] = None,
                 mind: Optional[Any] = None, mind_seconds: float = 20.0, engine: Optional[str] = None):
     """A world served on this machine, in a thread, on a free port: the server, with `.url` and `.world`. engine:
-    python or rust (else QUANTUM_WORLD_ENGINE, else python)."""
+    python, rust or native (else QUANTUM_WORLD_ENGINE, else native where the engine is built, else python)."""
     from quantum.runtime.gameserver.server import load, make_server
     import asyncio
     import tempfile
