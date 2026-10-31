@@ -3,7 +3,9 @@
 
 pub mod frames;
 pub mod net;
+pub mod rng;
 pub mod value;
+pub mod vm;
 
 #[cfg(feature = "python")]
 mod python;

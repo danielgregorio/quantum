@@ -91,13 +91,22 @@ jobs:
       - name: Install Godot
         run: python scripts/godot.py install
 
-      - name: The game server, and the Godot clients of a world, on the Rust engine
+      - name: The game server, and the Godot clients of a world, on the Rust engine, its rules on the machine
         # tests/gameserver/test_gameserver_native.py holds the two engines to
-        # the same frames, to the byte; the rest of the suite runs as it does
-        # on the Python engine, here on the Rust one.
+        # the same frames, to the byte; test_gameserver_bytecode.py and
+        # test_gameserver_blocks.py hold the machine to the interpreter (E2).
+        # The rest of the suite runs as it does on the Python engine, here on
+        # the Rust one, its blocks as bytecode.
         env:
           QUANTUM_WORLD_ENGINE: rust
+          QUANTUM_WORLD_RULES: machine
           QUANTUM_GODOT_REQUIRED: '1'
         run: >-
           pytest -n auto -p no:cacheprovider tests/gameserver tests/godot/test_godot_world.py
           tests/godot/test_godot_den.py tests/godot/test_godot_outpost.py tests/godot/test_godot_sign_in.py
+
+      - name: The game server on the Rust engine, its rules on the interpreter
+        env:
+          QUANTUM_WORLD_ENGINE: rust
+          QUANTUM_WORLD_RULES: python
+        run: pytest -n auto -p no:cacheprovider tests/gameserver

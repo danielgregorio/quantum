@@ -10,6 +10,29 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the world engine's E2 (`PLAN_WORLD_ENGINE.md`), a world's
+  rules as bytecode. `quantum gameserver run --rules machine` (or
+  `QUANTUM_WORLD_RULES=machine`) runs a world's blocks and expressions on
+  the Rust engine's machine:
+  - Python compiles each expression and each block (a q:command's, a
+    q:function's, a q:every's, an on-join's, an on-death's) into
+    instructions for a stack machine, once (`bytecode.py`).
+  - The machine (`native/world/src/vm.rs`) runs them with the Core's
+    meaning: q:set, q:if, q:loop, q:call, q:return and q:require in it,
+    the q:functions too; a world's functions and what only the world does
+    (q:move, q:emit, the ledger's) asked of the world.
+  - It gives the same world as the interpreter, tick by tick, and the
+    same errors, word for word, "did you mean" included. A million
+    generated expressions agree to the value and the error; sessions of
+    meadow, den and Outpost agree on every tick; the game server's tests
+    pass with the rules on it, in CI.
+  - `quantum gameserver bytecode world.server.q --blocks` shows each block
+    as the machine runs it; `conform --against machine` compares the two.
+
+  The worlds' ticks take 15 to 24 % less. At 500 bots and 1500 beasts the
+  rules take 201 ms where they took 209: there the cost is the world's own
+  functions in Python (`nearest()`), which E3 moves. Where the engine is
+  not built, the interpreter runs the rules and says so.
 - Laboratory: the world engine's E1 (`PLAN_WORLD_ENGINE.md`), the game
   server's first part in Rust. `native/world` is a crate that maturin builds
   into the module `quantum_world` (`pip install ./native/world`).

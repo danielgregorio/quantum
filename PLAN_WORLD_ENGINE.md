@@ -275,3 +275,60 @@ With 1500 beasts the tick is 263 ms where it was 372 (E0), and the rules are 227
 E0 found. So the order stays: E2's bytecode for their `q:when`s, and E3's brains thinking in parallel. Memory is
 higher on the engine (117 MB against 76 at 500 bots): its copy of what players see and each connection's queue.
 
+
+### E2 (2026-10-30)
+
+Built: the rules as bytecode. `quantum gameserver run --rules machine` (or `QUANTUM_WORLD_RULES=machine`) runs a
+world's blocks and expressions on the engine's machine; the default stays the interpreter until E3, and where the
+module is not built the interpreter runs them and says so. It is orthogonal to `--engine`: CI runs the game
+server's tests on the Rust engine with the rules on each.
+
+- **The compiler** (`quantum/runtime/gameserver/bytecode.py`). Python reads an expression as the Core reads it (the
+  same parse, the same checks) and writes it for a stack machine: 37 instructions, each an opcode and two numbers.
+  A block (a q:command's, a q:function's, a q:every's, an on-join's, an on-death's) is compiled whole, statement by
+  statement, each with its line: q:set of a name, of a world's variable and of a path; q:if with its elseifs;
+  q:loop over items or a range; q:call; q:return; q:require; and the world's statements (q:move, q:emit, q:give,
+  q:kill and the rest), whose attributes the machine evaluates in the interpreter's order before it hands them to
+  the world. What the machine does not hold (a set, the stdlib's dates and passwords, a q:spawn whose count does
+  not read) is refused by name, and that block, and what calls it, stays the interpreter's. `quantum gameserver
+  bytecode world.server.q` shows each expression as the machine runs it, `--blocks` each block.
+- **The machine** (`native/world/src/vm.rs`). The Core's meaning, to the value and to the error's last word: numeric
+  texts in arithmetic and comparison, `/` a float, `//` and `%` floored as Python's, `round` half away from zero
+  over the number's text, `and`/`or` giving an operand, chained comparisons, the stdlib's arguments bound as Python
+  binds them (its TypeErrors word for word), the Core's "did you mean" (difflib's matcher, in Rust), the TypeError
+  Python raises past the Core (`-[1]`), the comparison a failed sort names (CPython's run and binary insertion, as
+  3.12 and 3.13 each do them). Python's numbers past 64 bits and complex results are refused by name. The
+  q:functions run on the machine, with the interpreter's depth (64) and its wording of a call that fails inside
+  an expression (`f() failed: line 9: ...`). Python's random is `src/rng.rs`, word for word, for E3.
+- **The world as its host** (`quantum/runtime/gameserver/machine.py`, `src/python.rs`). The state is still Python's:
+  an entity reaches the machine as its id and its fields are read from its dict; a run holds each entity it met as
+  the dict it was, so one a q:loop killed is still what it was to the rest of the loop, as it is to Python. The
+  world's variables, its functions (`near`, `nearest`, `random`...) and what only it does are asked of it. A block
+  run from inside an effect (a q:kill's on-death) runs on the same machine.
+
+Held to the interpreter three ways. Every expression and every block of the test worlds and of Outpost compiles (174
+expressions, 54 blocks; every q:function on the machine). A million expressions drawn from the grammar agree
+to the value and to the error's text and type, on Python 3.12 and on 3.13 (`python scripts/bytecode-fuzz.py`: 0
+differences on each, in about five minutes; four results past 64 bits and 726 complex numbers counted apart, not
+compared). And the worlds run tick by tick:
+`tests/gameserver/test_gameserver_blocks.py` plays sessions of meadow, den and Outpost on both and compares the
+digest every tick, the frames and the errors the worlds keep, word for word, and sends a world of cases (40
+commands) what is hardest for each statement. The whole of `tests/gameserver` (202 tests) passes with the rules on
+the machine, on 3.12 and 3.13; CI runs it, with the Godot world tests, so.
+
+That found one thing the expressions alone had not: an entity a loop held by id was gone once struck dead (den's
+blow a second), so the rat never died. A run now holds each entity as its dict.
+
+What stays apart, said here so it is not found later: a record or a list a block holds is its own copy, where
+Python's is the same object as the world variable it was read from (`<q:set name="r" value="{book}" />` then
+`<q:set name="r.page" ...>` changes `book` in Python, not on the machine). No world here does it (every q:set of a
+path is on an entity); E3, whose state is Rust's, decides what a record held is. And when two attributes of one
+statement both fail, the machine, having evaluated them first, may name the other.
+
+The numbers. On the sessions of the three worlds (30 players, 600 ticks) `World.step` takes 15 to 24 % less with the
+rules on the machine (den 953 ms to 726, meadow 476 to 405, Outpost 845 to 693). At the gauge's heaviest, 500 bots
+and 1500 beasts on the Rust engine, the rules' share of the tick is 201 ms where it was 209: the expressions were
+never the cost there. A profile of that tick says where it is: the world's own functions the brains call,
+`nearest()` and the tile and occupancy checks under it (1.9 million `tile_of` calls in 30 ticks, 45 % of the time),
+Python's, over Python's state. So E3 is next as planned: the world's state, its index and those functions in Rust,
+where the machine's calls to them cost no crossing.
