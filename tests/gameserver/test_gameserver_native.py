@@ -52,6 +52,7 @@ def test_the_rust_engine_tells_each_player_what_python_tells_them_to_the_byte(na
 
 @needs_rust
 def test_a_world_on_the_rust_engine_checks_what_a_player_sends():
+    from websockets.exceptions import ConnectionClosed
     from websockets.sync.client import connect
 
     def said(ws, message) -> dict:
@@ -76,8 +77,11 @@ def test_a_world_on_the_rust_engine_checks_what_a_player_sends():
             assert seen['until']
             assert server.stats()['engine'] == 'rust'
         with WorldSession(server.url, 'bo') as bo:
-            for n in range(70):                                                  # more than sixty in a second
-                bo.ws.send(json.dumps({'type': 'ping', 't': n}))
+            try:
+                for n in range(70):                                              # more than sixty in a second
+                    bo.ws.send(json.dumps({'type': 'ping', 't': n}))
+            except ConnectionClosed:                     # closed past sixty, mid-burst: what it said is read below
+                pass
             reason = None
             deadline = time.monotonic() + 5
             while reason is None and time.monotonic() < deadline:
