@@ -461,6 +461,11 @@ pub fn truthy(v: &Value) -> bool {
     }
 }
 
+/// Python's type(v).__name__.
+pub fn type_name_of(v: &Value) -> &'static str {
+    type_name(v)
+}
+
 fn type_name(v: &Value) -> &'static str {
     match v {
         Value::Null => "NoneType",
@@ -1466,7 +1471,7 @@ fn signature(name: &str) -> Option<(&'static str, &'static [&'static str], usize
 
 /// Python's binding of a call's arguments to a function's parameters, with its TypeErrors word for word: the
 /// arguments in order (those not given and with a default left off the end).
-fn bind(
+pub fn bind(
     (py, params, required): (&str, &[&str], usize),
     args: Vec<Value>,
     kwargs: Vec<(String, Value)>,

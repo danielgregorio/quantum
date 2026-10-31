@@ -23,6 +23,11 @@ you mean" (difflib's, `src/vm.rs`). Loops, q:set, q:if, q:require, q:call and q:
 world's functions and what only the world does (a q:move, a q:emit, the ledger's) it asks of the world
 (`quantum/runtime/gameserver/machine.py`). Python's random, word for word, is `src/rng.rs`, for E3.
 
+E3 is under way: **the world's state** (`src/world.rs`). E3a holds a world's core (its entities, variables and
+players, joins and leaves, commands, q:every, q:on-join, q:on-leave, q:move, q:emit, q:say, its index, snapshot and
+digest) to the byte of `quantum/runtime/gameserver/world.py`'s; `quantum/runtime/gameserver/native_world.py`
+hands it the definition and keeps Python's view of it in step. A world that needs more stays Python's, told why.
+
 The world's values are compared as Python compares them and written as Python's `json.dumps` writes them
 (`src/value.rs`).
 

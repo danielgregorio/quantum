@@ -16,6 +16,7 @@ use crate::value::{Map, Value};
 use crate::vm::{
     self, Code, ErrorKind, Function, Functions, Host, Locals, Op, Raise, VmError, OPCODES,
 };
+use crate::world;
 
 create_exception!(
     quantum_world,
@@ -798,6 +799,31 @@ impl Host for PyHost<'_> {
     }
 }
 
+/// A code from bytecode.py's Code (ops, consts, names), its jumps and references checked.
+fn code_of(
+    ops: Vec<(i64, u32, u32)>,
+    consts: &Bound<'_, PyAny>,
+    names: Vec<String>,
+) -> PyResult<Code> {
+    let mut instructions = Vec::with_capacity(ops.len());
+    for (op, a, b) in ops {
+        let op = Op::from_number(op)
+            .ok_or_else(|| PyValueError::new_err(format!("there is no instruction {op}")))?;
+        instructions.push((op, a, b));
+    }
+    let consts = consts
+        .try_iter()?
+        .map(|c| to_value(&c?))
+        .collect::<PyResult<Vec<_>>>()?;
+    let code = Code {
+        ops: instructions,
+        consts,
+        names,
+    };
+    code.check().map_err(PyValueError::new_err)?;
+    Ok(code)
+}
+
 /// A world's expressions and blocks as bytecode, loaded once and run many times (vm.rs), with its q:functions.
 #[pyclass(module = "quantum_world", frozen)]
 pub struct Machine {
@@ -863,22 +889,7 @@ impl Machine {
         consts: &Bound<'_, PyAny>,
         names: Vec<String>,
     ) -> PyResult<usize> {
-        let mut instructions = Vec::with_capacity(ops.len());
-        for (op, a, b) in ops {
-            let op = Op::from_number(op)
-                .ok_or_else(|| PyValueError::new_err(format!("there is no instruction {op}")))?;
-            instructions.push((op, a, b));
-        }
-        let consts = consts
-            .try_iter()?
-            .map(|c| to_value(&c?))
-            .collect::<PyResult<Vec<_>>>()?;
-        let code = Code {
-            ops: instructions,
-            consts,
-            names,
-        };
-        code.check().map_err(PyValueError::new_err)?;
+        let code = code_of(ops, consts, names)?;
         let mut codes = self.codes.lock().unwrap();
         codes.push(Arc::new(code));
         Ok(codes.len() - 1)
@@ -927,6 +938,200 @@ impl Machine {
 
     fn set_depth(&self, depth: usize) {
         self.depth.store(depth, Relaxed);
+    }
+}
+
+// -- the world (world.rs, E3) ----------------------------------------------------------------------------------------
+
+/// A value of the world's, as Python holds it (it holds no entity by reference: what the world keeps is plain).
+fn plain_out<'py>(py: Python<'py>, v: &Value) -> PyResult<Bound<'py, PyAny>> {
+    let none = PyDict::new(py);
+    from_value(py, v, &Entities::new(&none))
+}
+
+/// What the world raises, as world.py raises it.
+fn world_raised(py: Python<'_>, e: world::Raised) -> PyErr {
+    let class = |name: &str| {
+        py.import("quantum.runtime.gameserver.errors")
+            .and_then(|m| m.getattr(name))
+    };
+    let made = match e {
+        world::Raised::Rule(message, line) => {
+            let line = if line > 0 { Some(line) } else { None };
+            class("RuleError").and_then(|c| c.call1((message, line)))
+        }
+        world::Raised::Refused(reason) => class("Refused").and_then(|c| c.call1((reason,))),
+        world::Raised::Python(e) => {
+            return match e.kind {
+                ErrorKind::Python(Raise::Type) => PyTypeError::new_err(e.message),
+                ErrorKind::Python(Raise::Overflow) => PyOverflowError::new_err(e.message),
+                _ => PyValueError::new_err(e.message),
+            }
+        }
+    };
+    match made {
+        Ok(err) => PyErr::from_value(err),
+        Err(e) => e,
+    }
+}
+
+/// A code as bytecode.py's Code hands it: (ops, consts, names).
+type CodeParts<'py> = (Vec<(i64, u32, u32)>, Bound<'py, PyAny>, Vec<String>);
+
+fn world_def(
+    definition: &Bound<'_, PyAny>,
+    codes: &Bound<'_, PyAny>,
+) -> PyResult<Arc<world::WorldDef>> {
+    let mut loaded = Vec::new();
+    for c in codes.try_iter()? {
+        let c = c?;
+        let (ops, consts, names): CodeParts<'_> = c.extract()?;
+        loaded.push(Arc::new(code_of(ops, &consts, names)?));
+    }
+    let value = to_value(definition)?;
+    world::WorldDef::from_value(&value, &loaded)
+        .map(Arc::new)
+        .map_err(PyValueError::new_err)
+}
+
+/// A world whose state and tick are the engine's (world.rs): quantum/runtime/gameserver/native_world.py's
+/// NativeWorld keeps what frames.py reads of it in step.
+#[pyclass(module = "quantum_world", name = "World")]
+pub struct PyWorld {
+    inner: world::World,
+}
+
+#[pymethods]
+impl PyWorld {
+    /// definition and codes: native_world.py's export; seed: the world's random's.
+    #[new]
+    fn new(
+        py: Python<'_>,
+        definition: &Bound<'_, PyAny>,
+        codes: &Bound<'_, PyAny>,
+        seed: u64,
+    ) -> PyResult<Self> {
+        let def = world_def(definition, codes)?;
+        let inner = world::World::new(def, seed).map_err(|e| world_raised(py, e))?;
+        Ok(PyWorld { inner })
+    }
+
+    /// A world from its snapshot (world.py's from_snapshot).
+    #[staticmethod]
+    fn from_snapshot(
+        definition: &Bound<'_, PyAny>,
+        codes: &Bound<'_, PyAny>,
+        snap: &Bound<'_, PyAny>,
+    ) -> PyResult<Self> {
+        let def = world_def(definition, codes)?;
+        let inner =
+            world::World::from_snapshot(def, &to_value(snap)?).map_err(PyValueError::new_err)?;
+        Ok(PyWorld { inner })
+    }
+
+    /// One tick (world.py's step): {tick, entries, acks, refused, joined, left, full}.
+    fn step<'py>(
+        &mut self,
+        py: Python<'py>,
+        inputs: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let inputs = inputs
+            .try_iter()?
+            .map(|i| to_value(&i?))
+            .collect::<PyResult<Vec<_>>>()?;
+        let out = self.inner.step(&inputs).map_err(|e| world_raised(py, e))?;
+        let lists = |m: indexmap::IndexMap<String, Vec<Value>>| -> Value {
+            Value::Map(m.into_iter().map(|(k, v)| (k, Value::List(v))).collect())
+        };
+        let d = PyDict::new(py);
+        d.set_item("tick", out.tick)?;
+        d.set_item("entries", plain_out(py, &Value::List(out.entries))?)?;
+        d.set_item("acks", plain_out(py, &lists(out.acks))?)?;
+        d.set_item("refused", plain_out(py, &lists(out.refused))?)?;
+        let joined = PyDict::new(py);
+        for (k, v) in out.joined {
+            joined.set_item(k, v)?;
+        }
+        d.set_item("joined", joined)?;
+        d.set_item("left", out.left)?;
+        d.set_item("full", out.full)?;
+        Ok(d.into_any())
+    }
+
+    fn snapshot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        plain_out(py, &self.inner.snapshot())
+    }
+
+    fn digest(&self) -> String {
+        self.inner.digest()
+    }
+
+    /// These entities as they are now ({id: its dict, or None when it is not in the world}).
+    fn pull<'py>(&self, py: Python<'py>, ids: Vec<String>) -> PyResult<Bound<'py, PyDict>> {
+        let d = PyDict::new(py);
+        for id in ids {
+            match self.inner.entities.get(&id) {
+                Some(e) => d.set_item(&id, plain_out(py, e)?)?,
+                None => d.set_item(&id, py.None())?,
+            }
+        }
+        Ok(d)
+    }
+
+    /// The tick's changes, for the mirror: dirty, gone, players, vars, vars_changed, events, and the errors made since
+    /// errors_seen of them were (with how many have been made).
+    fn changes<'py>(&self, py: Python<'py>, errors_seen: usize) -> PyResult<Bound<'py, PyTuple>> {
+        let w = &self.inner;
+        let players = PyDict::new(py);
+        for (k, v) in &w.players {
+            players.set_item(k, v)?;
+        }
+        let events = PyList::empty(py);
+        for e in &w.events {
+            events.append((
+                plain_out(py, &Value::Map(e.message.clone()))?,
+                e.tile,
+                e.to.clone(),
+                e.everyone,
+                e.accounts.clone(),
+            ))?;
+        }
+        let new = w
+            .errors_made
+            .saturating_sub(errors_seen)
+            .min(w.errors.len());
+        let errors = plain_out(
+            py,
+            &Value::List(
+                w.errors[w.errors.len() - new..]
+                    .iter()
+                    .cloned()
+                    .map(Value::Map)
+                    .collect(),
+            ),
+        )?;
+        let mut dirty: Vec<&String> = w.dirty.iter().collect();
+        dirty.sort();
+        let mut gone: Vec<&String> = w.gone.iter().collect();
+        gone.sort();
+        PyTuple::new(
+            py,
+            [
+                dirty.into_pyobject(py)?.into_any(),
+                gone.into_pyobject(py)?.into_any(),
+                players.into_any(),
+                plain_out(py, &Value::Map(w.vars.clone()))?,
+                PyBool::new(py, w.vars_changed).to_owned().into_any(),
+                events.into_any(),
+                errors,
+                w.errors_made.into_pyobject(py)?.into_any(),
+            ],
+        )
+    }
+
+    #[getter]
+    fn tick(&self) -> i64 {
+        self.inner.tick
     }
 }
 
@@ -986,6 +1191,7 @@ fn quantum_world(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Engine>()?;
     m.add_class::<Machine>()?;
     m.add_class::<PyRng>()?;
+    m.add_class::<PyWorld>()?;
     m.add("MachineError", m.py().get_type::<MachineError>())?;
     m.add("OPCODES", OPCODES.to_vec())?;
     Ok(())

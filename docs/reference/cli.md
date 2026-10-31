@@ -181,7 +181,7 @@ Run a world's log again on an engine, against the record or another engine, and 
 |---|---|---|---|
 | `file` | the world's .q |  |  |
 | `--data` | its snapshot and log (.quantum/gameserver/&lt;name>) |  |  |
-| `--engine` | the engine to run it on (python; rust: its frames; machine: its rules as bytecode) | `python` |  |
+| `--engine` | the engine to run it on (python; rust: its frames; machine: its rules as bytecode; native: its state and tick) | `python` |  |
 | `--against` | a second engine: the two compared tick by tick, frames and all |  |  |
 | `--digest-every` | compare the two worlds' digests every so many ticks (0: only at the end) | `1` |  |
 
