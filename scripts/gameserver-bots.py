@@ -289,8 +289,9 @@ def main() -> int:
     parser.add_argument('--url', help='a server already running elsewhere: the bots alone, against it')
     parser.add_argument('--no-split', action='store_true',
                         help='the server and the bots on every core (else half each, on four cores or more)')
-    parser.add_argument('--engine', choices=('python', 'rust'), default='python',
-                        help='what runs the world (PLAN_WORLD_ENGINE.md): python, or rust (native/world)')
+    parser.add_argument('--engine', choices=('python', 'rust', 'native'), default='python',
+                        help='what runs the world (PLAN_WORLD_ENGINE.md): python; rust (native/world: the views and '
+                             'the network); or native (the world itself too, E3)')
     parser.add_argument('--json', help='write the numbers here too')
     args = parser.parse_args()
 

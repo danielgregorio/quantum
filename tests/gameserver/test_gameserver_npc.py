@@ -58,6 +58,15 @@ def den_with(tmp_path, more=MARTA, persist=True):
     return path
 
 
+def put(world, entity, at):
+    """The test's hand puts an entity at a tile: world.py's dict, or the engine's world (native_world.py)."""
+    if hasattr(world, 'hand'):
+        world.hand(entity, {'at': at})
+    else:
+        entity['at'] = at
+        world.reindex([entity['id']])
+
+
 def world_of(path):
     return World(read_world(QuantumParser(use_cache=False).parse_file(str(path)), str(path)))
 
@@ -202,9 +211,7 @@ def test_the_server_asks_the_mind_off_the_tick(tmp_path):
     with serve_world(den_with(tmp_path), mind=slow) as server:
         with WorldSession(server.url, 'ana') as ana:
             marta = next(e for e in server.world.entities.values() if e['kind'] == 'Trader')
-            hero = server.world.entities['hero:ana']
-            hero['at'] = {'x': marta['at']['x'] - 1, 'y': marta['at']['y']}
-            server.world.reindex([hero['id']])
+            put(server.world, server.world.entities['hero:ana'], {'x': marta['at']['x'] - 1, 'y': marta['at']['y']})
             first = ana.act(send=[('talk', {'text': 'sword for 8'})], ticks=1)
             names = [e['name'] for e in first['events']]
             assert 'npc-thinking' in names and 'npc-says' not in names           # thinking; no answer yet
@@ -224,9 +231,7 @@ def test_the_server_asks_the_mind_off_the_tick(tmp_path):
     with serve_world(den_with(tmp_path / 'slow'), mind=stuck, mind_seconds=0.2) as server:
         with WorldSession(server.url, 'ana') as ana:
             marta = next(e for e in server.world.entities.values() if e['kind'] == 'Trader')
-            hero = server.world.entities['hero:ana']
-            hero['at'] = {'x': marta['at']['x'] - 1, 'y': marta['at']['y']}
-            server.world.reindex([hero['id']])
+            put(server.world, server.world.entities['hero:ana'], {'x': marta['at']['x'] - 1, 'y': marta['at']['y']})
             ana.act(send=[('talk', {'text': 'sword for 8'})], ticks=1)
             said = None
             for _ in range(300):
