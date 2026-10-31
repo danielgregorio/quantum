@@ -385,6 +385,45 @@ of a division and the strongest of the one below still meet (one or two clubs, a
 down of each season.
 
 
+## What a beta player found in 2.2 (2026-10-30): 2.3
+
+A player of the beta, in the 4th with a team of 27, won the division and the cup in the first year, and saw that the
+starting players never grew ([danielgregorio/pandafoot#3](https://github.com/danielgregorio/pandafoot/issues/3)). He
+asked for the divisions' strengths as ranges (1 to 13 in the 4th, up to 31 to 43 in the 1st). Measured on six real
+seasons of 2.2 (2,204 league matches, 106 cup ties), he was right on both counts, for three causes in the code:
+strength counted to the power of 0.7, which flattened it; a full ground was worth a third more to the home side,
+more than a division's difference, and in the cup the lower division always plays at home; and a starter grew only on
+a month's mean of 7, when the ratings sit around 6 for the strong and the weak alike.
+
+The owner's choice, of two measured answers: the engine and the growth (B), not the engine alone (A), and not the
+ranges, which would change the scale of the whole world (worth, wages, the market's levels, the stars, the saves).
+In 2.3:
+
+- a side's chance and finishing go by its strength whole (`att = attack`, `dfn = defense`);
+- the home side is lifted by `1.04 + 0.10 * fill` (it was `1.08 + 0.25 * fill`);
+- a starter's month grows him on a mean of `max(6, bar - 0.1 * (the eleven's mean - his strength))`, the bar still
+  `7 - 0.15 * training`;
+- a reserve grows in training `0.2 + 0.05 * training` of the months (it was `0.1 + ...`).
+
+Six real seasons each, with a manager from the 4th, on copies outside the repository:
+
+| | 2.2 | The engine alone (A) | 2.3 (B) |
+|---|---|---|---|
+| League, home wins / draws / loses | 49 / 24 / 27 | 48 / 23 / 29 | 48 / 22 / 30 |
+| Goals a match | 3.17 | 3.12 | 3.07 |
+| A home side 4 or more weaker wins | 24% | 23% | 18% |
+| A home side 4 or more stronger wins | 67% | 68% | 73% |
+| Cup, one division below at home, goes through | ~50% | ~30% | ~41% |
+| Cup, two divisions below at home, goes through | ~45% | ~25% | ~30% |
+| The cup's winners, by division | 3 1 1 2 1 2 | 1 1 3 1 1 1 | 1 1 1 1 1 1 |
+| The 4th, a starting player well under the eleven, in six seasons | +2.0 | +1.7 | +4.7 |
+| The 4th, a starting player at the eleven's level, in six seasons | +0.6 | +0.3 | +1.4 |
+| The 1st's elevens, start → sixth season | 41.9 → 43.0 | 41.9 → 43.0 | 41.9 → 44.6 |
+
+The cup's numbers are of about a hundred ties a version. What it does not settle: in the 4th, a player already at
+the eleven's level grows about a quarter of a point a season; the training center (F5) is the manager's way to more.
+A save of 2.2 goes on with the new rules (nothing in it changes shape).
+
 ## Phase 3 — The live round online
 
 The design's default room: two to eight managers on their own machines (the lockstep, its seats,

@@ -3,6 +3,25 @@
 The version you play is on the title screen and in the dashboard's corner. Each version below says what
 changed for whoever plays it; how it was built is in [PLAN_PANDAFOOT.md](https://github.com/danielgregorio/quantum/blob/main/PLAN_PANDAFOOT.md).
 
+## 2.3 — The stronger side wins, and the squad grows (2026-10-30)
+
+What a beta player found: a team of 27 in the 4th won its division and the cup in the first year, and the starting
+players never got better.
+
+- **Strength counts more.** A side's strength now counts whole in a match (it counted squeezed). A home side four
+  points stronger or more wins about three matches in four, where it won two in three; one four points weaker or
+  more wins about one in five. Goals and draws hardly change.
+- **Home counts less.** A full ground lifts the home side by a tenth at most, where it lifted it by a third: more
+  than the difference between two divisions. In the cup, where the lower division plays at home, a club one
+  division below goes through about two ties in five, where it went through one in two. The cup is mostly the 1st
+  division's again; an upset is still possible.
+- **The starting squad grows.** A starter weaker than the eleven needs a lower mean to grow at the month's end:
+  0.1 lower for each point under the eleven's mean, never under 6. In the 4th, a starter well under the eleven grew
+  about 2 points in six seasons; he now grows about 4 or 5.
+- **The reserves train twice as much**: a point one month in five, where it was one in ten, and more with the
+  training center (nearly half the months at level 5).
+- A game saved in 2.2 goes on with these rules.
+
 ## 2.2 — The market, the ratings and the club (2026-10-26)
 
 What the beta's players asked for, the second time:
