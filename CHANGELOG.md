@@ -10,6 +10,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the world engine's E3d, second part (`PLAN_WORLD_ENGINE.md`).
+  The engine's tick runs off Python's lock, on a thread of its own in
+  `--engine native`'s server, and `nearest(x, kind)` reads an index of that
+  kind alone. At 500 bots and 1500 beasts the server's tick takes 69 ms
+  (p99 145) where it took 103 (p99 184).
 - Laboratory: the world engine's E3d, first part (`PLAN_WORLD_ENGINE.md`).
   `quantum gameserver run --engine native` (or `QUANTUM_WORLD_ENGINE=native`)
   runs a world whose state, tick and rules are the Rust engine's, on its

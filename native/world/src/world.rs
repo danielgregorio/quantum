@@ -687,6 +687,9 @@ pub struct World {
     pub vars_changed: bool,
     cells: HashMap<Tile, HashSet<String>>,
     cell_of: HashMap<String, Tile>,
+    /// The same index by kind (a text kind's; kind is the world's: a q:set cannot change it), for nearest(x, kind).
+    kinds: HashMap<String, HashMap<Tile, HashSet<String>>>,
+    kind_of: HashMap<String, String>,
     events_mark: usize,
     /// Entities that left the world in this tick, as they were: a block that held one reads it still.
     dead: HashMap<String, Map>,
@@ -826,10 +829,18 @@ impl World {
 
     pub fn reindex<'a>(&mut self, ids: impl IntoIterator<Item = &'a String>) {
         for eid in ids {
-            let tile = self.entities.get(eid).and_then(|e| self.tile_of(e));
+            let entity = self.entities.get(eid);
+            let tile = entity.and_then(|e| self.tile_of(e));
             let cell = tile.map(|t| (t.0.div_euclid(CELL), t.1.div_euclid(CELL)));
+            let kind = match entity {
+                Some(Value::Map(m)) => match m.get("kind") {
+                    Some(Value::Str(k)) => Some(k.clone()),
+                    _ => None,
+                },
+                _ => None,
+            };
             let old = self.cell_of.get(eid).copied();
-            if old == cell {
+            if old == cell && self.kind_of.get(eid) == kind.as_ref() {
                 continue;
             }
             if let Some(old) = old {
@@ -840,10 +851,29 @@ impl World {
                     }
                 }
                 self.cell_of.remove(eid);
+                if let Some(k) = self.kind_of.remove(eid) {
+                    if let Some(cells) = self.kinds.get_mut(&k) {
+                        if let Some(members) = cells.get_mut(&old) {
+                            members.remove(eid);
+                            if members.is_empty() {
+                                cells.remove(&old);
+                            }
+                        }
+                    }
+                }
             }
             if let Some(cell) = cell {
                 self.cells.entry(cell).or_default().insert(eid.clone());
                 self.cell_of.insert(eid.clone(), cell);
+                if let Some(k) = kind {
+                    self.kinds
+                        .entry(k.clone())
+                        .or_default()
+                        .entry(cell)
+                        .or_default()
+                        .insert(eid.clone());
+                    self.kind_of.insert(eid.clone(), k);
+                }
             }
         }
     }
@@ -2152,10 +2182,16 @@ impl World {
                 return Err(failed("nearest", why));
             }
         };
-        // life.py walks the ids sorted and keeps the first of the nearest: the least (far, id), found in one pass
+        // life.py walks the ids sorted and keeps the first of the nearest: the least (far, id), found in one pass;
+        // a kind that is a text is read from the index of that kind (the same members, those of the kind alone)
         let mut best: Option<(i64, &String)> = None;
+        let empty = HashMap::default();
+        let (index, by_kind) = match kind {
+            Value::Str(k) => (self.kinds.get(k).unwrap_or(&empty), true),
+            _ => (&self.cells, false),
+        };
         for cell in World::cells_near(tile, n) {
-            let Some(members) = self.cells.get(&cell) else {
+            let Some(members) = index.get(&cell) else {
                 continue;
             };
             for eid in members {
@@ -2163,7 +2199,7 @@ impl World {
                     continue;
                 }
                 // other.get('kind') != kind: one with no kind is None's
-                if !py_eq(self.field_of(eid, "kind").unwrap_or(&Value::Null), kind) {
+                if !by_kind && !py_eq(self.field_of(eid, "kind").unwrap_or(&Value::Null), kind) {
                     continue;
                 }
                 let Some(there) = self.entity_tile(eid) else {
@@ -2797,6 +2833,8 @@ impl World {
             vars_changed: false,
             cells: HashMap::default(),
             cell_of: HashMap::default(),
+            kinds: HashMap::default(),
+            kind_of: HashMap::default(),
             events_mark: 0,
             dead: HashMap::default(),
             depth: Arc::new(AtomicUsize::new(0)),
