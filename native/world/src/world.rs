@@ -9,11 +9,12 @@
 //! q:say, the functions that read the world, the snapshot and the digest. What a world uses beyond it (spawns,
 //! brains, the ledger, parties...) native_world.py finds first, and that world stays Python's.
 
-use std::collections::{HashMap, HashSet};
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
-use indexmap::IndexMap;
+/// An ordered map with a fast hash (the order is Python's dict's).
+type IndexMap<K, V> = indexmap::IndexMap<K, V, rustc_hash::FxBuildHasher>;
 use sha2::{Digest, Sha256};
 
 use crate::rng::Rng;
@@ -28,6 +29,22 @@ pub const MAX_LINE: usize = 200;
 pub const CELL: i64 = 16;
 /// Tiles from a hero within which a brain runs, and how far nearest() looks by default (life.py's AWAKE).
 pub const AWAKE: i64 = 32;
+/// How far a chase, and a q:travel, look for their way (life.py's).
+pub const CHASE_SEARCH: i64 = 12;
+pub const TRAVEL_SEARCH: i64 = 40;
+/// A wanderer at rest steps with this chance a tick.
+pub const WANDER_CHANCE: f64 = 0.3;
+/// The eight ways, in the order a way is looked for (straight ones first).
+const STEPS: [Tile; 8] = [
+    (0, -1),
+    (1, 0),
+    (0, 1),
+    (-1, 0),
+    (1, -1),
+    (1, 1),
+    (-1, 1),
+    (-1, -1),
+];
 
 pub type Tile = (i64, i64);
 
@@ -89,6 +106,27 @@ pub struct FieldDef {
     pub private: bool,
 }
 
+/// A state of a brain (model.py's StateDef): what it does, and when it becomes another.
+pub struct StateDef {
+    pub name: String,
+    pub act: String,
+    pub within: i64,
+    pub target: Option<Arc<Code>>,
+    pub away_from: Option<Arc<Code>>,
+    pub for_ticks: Option<i64>,
+    pub then: Option<String>,
+    pub whens: Vec<(Arc<Code>, String)>,
+    pub line: u32,
+}
+
+/// What an entity may leave (q:loot's q:drop).
+pub struct DropDef {
+    pub item: Option<String>,
+    pub gold: Option<(i64, i64)>,
+    pub count: (i64, i64),
+    pub chance: f64,
+}
+
 pub struct EntityDef {
     pub name: String,
     pub kind: String,
@@ -96,6 +134,24 @@ pub struct EntityDef {
     pub persist: bool,
     pub step_ticks: i64,
     pub fields: Vec<FieldDef>,
+    pub states: IndexMap<String, StateDef>,
+    pub initial: Option<String>,
+    pub loot: Vec<DropDef>,
+}
+
+pub struct SpawnDef {
+    pub entity: String,
+    pub area: String,
+    pub count: i64,
+    pub night_count: Option<i64>,
+    pub respawn_ticks: i64,
+}
+
+pub struct DeathDef {
+    pub kinds: Vec<String>,
+    pub as_name: String,
+    pub by_name: String,
+    pub body: Arc<Code>,
 }
 
 pub struct CommandDef {
@@ -117,7 +173,8 @@ pub struct WorldDef {
     pub on_join: Vec<Arc<Code>>,
     pub on_leave: Vec<Arc<Code>>,
     pub variables: Vec<(String, Arc<Code>)>,
-    pub spawns: usize,
+    pub spawns: Vec<SpawnDef>,
+    pub deaths: Vec<DeathDef>,
     pub day_ticks: Option<i64>,
     pub night: f64,
     pub functions: Arc<Functions>,
@@ -146,6 +203,25 @@ fn list_of(v: &Value) -> Result<&Vec<Value>, String> {
     }
 }
 
+fn opt_int(v: &Value) -> Result<Option<i64>, String> {
+    match v {
+        Value::Null => Ok(None),
+        v => int_of(v).map(Some),
+    }
+}
+
+fn opt_str(v: &Value) -> Result<Option<String>, String> {
+    match v {
+        Value::Null => Ok(None),
+        v => str_of(v).map(Some),
+    }
+}
+
+fn pair_of(v: &Value) -> Result<(i64, i64), String> {
+    let p = list_of(v)?;
+    Ok((int_of(&p[0])?, int_of(&p[1])?))
+}
+
 fn map_of(v: &Value) -> Result<&Map, String> {
     match v {
         Value::Map(m) => Ok(m),
@@ -162,12 +238,12 @@ impl WorldDef {
             codes.get(n).cloned().ok_or_else(|| format!("no code {n}"))
         };
         let m = map_of(key(d, "map")?)?;
-        let mut walls = HashSet::new();
+        let mut walls = HashSet::default();
         for w in list_of(key(m, "walls")?)? {
             let w = list_of(w)?;
             walls.insert((int_of(&w[0])?, int_of(&w[1])?));
         }
-        let mut areas = IndexMap::new();
+        let mut areas = IndexMap::default();
         for (name, b) in map_of(key(m, "areas")?)? {
             let b = list_of(b)?;
             areas.insert(
@@ -180,7 +256,7 @@ impl WorldDef {
                 ),
             );
         }
-        let mut entities = IndexMap::new();
+        let mut entities = IndexMap::default();
         for (name, e) in map_of(key(d, "entities")?)? {
             let e = map_of(e)?;
             let mut fields = Vec::new();
@@ -192,6 +268,51 @@ impl WorldDef {
                     private: matches!(key(f, "private")?, Value::Bool(true)),
                 });
             }
+            let opt_code = |v: &Value| -> Result<Option<Arc<Code>>, String> {
+                match v {
+                    Value::Null => Ok(None),
+                    v => code(v).map(Some),
+                }
+            };
+            let mut states = IndexMap::default();
+            for (sname, st) in map_of(key(e, "states")?)? {
+                let st = map_of(st)?;
+                let mut whens = Vec::new();
+                for w in list_of(key(st, "whens")?)? {
+                    let w = list_of(w)?;
+                    whens.push((code(&w[0])?, str_of(&w[1])?));
+                }
+                states.insert(
+                    sname.clone(),
+                    StateDef {
+                        name: sname.clone(),
+                        act: str_of(key(st, "do")?)?,
+                        within: int_of(key(st, "within")?)?,
+                        target: opt_code(key(st, "target")?)?,
+                        away_from: opt_code(key(st, "away_from")?)?,
+                        for_ticks: opt_int(key(st, "for_ticks")?)?,
+                        then: opt_str(key(st, "then")?)?,
+                        whens,
+                        line: int_of(key(st, "line")?)? as u32,
+                    },
+                );
+            }
+            let mut loot = Vec::new();
+            for dr in list_of(key(e, "loot")?)? {
+                let dr = map_of(dr)?;
+                loot.push(DropDef {
+                    item: opt_str(key(dr, "item")?)?,
+                    gold: match key(dr, "gold")? {
+                        Value::Null => None,
+                        g => Some(pair_of(g)?),
+                    },
+                    count: pair_of(key(dr, "count")?)?,
+                    chance: match key(dr, "chance")? {
+                        Value::Float(f) => *f,
+                        v => int_of(v)? as f64,
+                    },
+                });
+            }
             entities.insert(
                 name.clone(),
                 EntityDef {
@@ -201,10 +322,13 @@ impl WorldDef {
                     persist: matches!(key(e, "persist")?, Value::Bool(true)),
                     step_ticks: int_of(key(e, "step_ticks")?)?,
                     fields,
+                    states,
+                    initial: opt_str(key(e, "initial")?)?,
+                    loot,
                 },
             );
         }
-        let mut commands = IndexMap::new();
+        let mut commands = IndexMap::default();
         for (name, c) in map_of(key(d, "commands")?)? {
             let c = map_of(c)?;
             let limit = match key(c, "limit")? {
@@ -240,7 +364,31 @@ impl WorldDef {
             let r = list_of(r)?;
             variables.push((str_of(&r[0])?, code(&r[1])?));
         }
-        let mut functions = Functions::new();
+        let mut spawns = Vec::new();
+        for sp in list_of(key(d, "spawns")?)? {
+            let sp = map_of(sp)?;
+            spawns.push(SpawnDef {
+                entity: str_of(key(sp, "entity")?)?,
+                area: str_of(key(sp, "area")?)?,
+                count: int_of(key(sp, "count")?)?,
+                night_count: opt_int(key(sp, "night_count")?)?,
+                respawn_ticks: int_of(key(sp, "respawn_ticks")?)?,
+            });
+        }
+        let mut deaths = Vec::new();
+        for de in list_of(key(d, "deaths")?)? {
+            let de = map_of(de)?;
+            deaths.push(DeathDef {
+                kinds: list_of(key(de, "kinds")?)?
+                    .iter()
+                    .map(str_of)
+                    .collect::<Result<_, _>>()?,
+                as_name: str_of(key(de, "as")?)?,
+                by_name: str_of(key(de, "by")?)?,
+                body: code(key(de, "body")?)?,
+            });
+        }
+        let mut functions = Functions::default();
         for (name, f) in map_of(key(d, "functions")?)? {
             let f = map_of(f)?;
             functions.insert(
@@ -273,7 +421,8 @@ impl WorldDef {
             on_join: codes_of("on_join")?,
             on_leave: codes_of("on_leave")?,
             variables,
-            spawns: int_of(key(d, "spawns")?)? as usize,
+            spawns,
+            deaths,
             day_ticks: match key(d, "day_ticks")? {
                 Value::Null => None,
                 v => Some(int_of(v)?),
@@ -314,10 +463,11 @@ pub struct TickOut {
 /// one), or an entity of the world itself (made or gone).
 #[derive(Clone, Debug)]
 enum Root {
-    #[allow(dead_code)] // the entities made and gone in a transaction: E3b's spawns and q:kill
     Entities,
     Entity(String),
     Vars,
+    /// What a q:spawn keeps (its living, and when the next are due), by its number.
+    Spawned(String),
 }
 
 #[derive(Clone, Debug)]
@@ -386,6 +536,11 @@ pub struct World {
     pub books: Map,
     pub parties: Map,
     pub trades: Map,
+    /// Those on their way (q:travel), those made for a while (q:spawn for=), those whose on-death is running.
+    pub travelers: HashSet<String>,
+    pub expiring: HashSet<String>,
+    dying: HashSet<String>,
+    walkable_areas: HashMap<String, Vec<Tile>>,
 }
 
 // -- a world's values, as world.py keeps them ----------------------------------------------------------------------
@@ -420,7 +575,7 @@ impl World {
                     .collect::<Result<_, _>>()?,
             ),
             Value::Map(m) => {
-                let mut out = Map::with_capacity(m.len());
+                let mut out = Map::with_capacity_and_hasher(m.len(), Default::default());
                 for (k, i) in m {
                     out.insert(k.clone(), self.plain(i, depth + 1)?);
                 }
@@ -471,6 +626,11 @@ impl World {
             }
             _ => None,
         }
+    }
+
+    /// The tile of an entity of the world (or one gone this tick), by its id.
+    pub fn entity_tile(&self, id: &str) -> Option<Tile> {
+        self.entity_map(id).and_then(tile_of_map)
     }
 
     pub fn walkable(&self, t: Tile) -> bool {
@@ -560,6 +720,10 @@ impl World {
                 Some(Value::Map(m)) => m,
                 _ => self.dead.get_mut(id)?,
             },
+            Root::Spawned(i) => match self.spawned.get_mut(i) {
+                Some(Value::Map(m)) => m,
+                _ => return None,
+            },
         };
         for part in path {
             target = match target.get_mut(part) {
@@ -635,17 +799,53 @@ impl World {
             match undo.root {
                 Root::Entities => touched.push(undo.key),
                 Root::Entity(id) => touched.push(id),
-                Root::Vars => {}
+                Root::Vars | Root::Spawned(_) => {}
             }
         }
         self.events.truncate(self.events_mark);
         let entities = &self.entities;
         self.gone.retain(|g| !entities.contains_key(g));
         self.reindex(touched.iter());
+        // an entity undone where it was, made or gone again: on its way, or ending, as it now says
+        for id in touched {
+            let travels = self.entities.contains_key(&id)
+                && self.field_of(&id, "_path").is_some_and(vm::truthy);
+            let ends = self.entities.contains_key(&id)
+                && self.field_of(&id, "_expires").is_some_and(vm::truthy);
+            if travels {
+                self.travelers.insert(id.clone());
+            } else {
+                self.travelers.remove(&id);
+            }
+            if ends {
+                self.expiring.insert(id);
+            } else {
+                self.expiring.remove(&id);
+            }
+        }
+    }
+
+    /// world.py's put: a key of a container of the world set (or, with None, taken out), journaled.
+    fn put(&mut self, root: Root, key: &str, value: Option<Value>) {
+        let Some(target) = self.container_mut(&root, &[]) else {
+            return;
+        };
+        let old = match value {
+            Some(v) => target.insert(key.to_string(), v),
+            None => target.shift_remove(key),
+        };
+        if let Some(journal) = self.journal.as_mut() {
+            journal.push(Undo {
+                root,
+                path: Vec::new(),
+                key: key.to_string(),
+                old,
+            });
+        }
     }
 
     fn error(&mut self, place: &str, message: &str, line: u32) {
-        let mut e = Map::new();
+        let mut e = Map::default();
         e.insert("tick".into(), Value::Int(self.tick));
         e.insert("where".into(), Value::Str(place.into()));
         e.insert(
@@ -703,7 +903,7 @@ impl World {
                 self.write_field(id, "facing", facing, line)?;
             }
         }
-        let mut at = Map::new();
+        let mut at = Map::default();
         at.insert("x".into(), Value::Int(to.0));
         at.insert("y".into(), Value::Int(to.1));
         self.write_field(id, "at", Value::Map(at), line)?;
@@ -715,6 +915,7 @@ impl World {
         if self.field_of(id, "_path").is_some_and(vm::truthy) {
             self.write_field(id, "_path", Value::List(vec![]), line)?;
         }
+        self.travelers.remove(id);
         Ok(())
     }
 
@@ -735,14 +936,14 @@ impl World {
                 line,
             ));
         }
-        let mut message = Map::new();
+        let mut message = Map::default();
         message.insert("name".into(), name);
         message.insert(
             "value".into(),
             self.plain(value, 0).map_err(|m| rule_at(m, line))?,
         );
         if let Some(t) = tile {
-            let mut at = Map::new();
+            let mut at = Map::default();
             at.insert("x".into(), Value::Int(t.0));
             at.insert("y".into(), Value::Int(t.1));
             message.insert("at".into(), Value::Map(at));
@@ -762,7 +963,7 @@ impl World {
 
     /// together.py's tell: an event to these players alone.
     fn tell(&mut self, name: &str, value: Value, accounts: Vec<String>) -> Result<(), VmError> {
-        let mut message = Map::new();
+        let mut message = Map::default();
         message.insert("name".into(), Value::Str(name.into()));
         message.insert(
             "value".into(),
@@ -824,7 +1025,7 @@ impl World {
             }
         };
         let text: String = vm::py_str(text).chars().take(MAX_LINE).collect();
-        let mut value = Map::new();
+        let mut value = Map::default();
         value.insert("channel".into(), channel);
         value.insert("who".into(), Value::Str("world".into()));
         value.insert("text".into(), Value::Str(text));
@@ -939,11 +1140,675 @@ impl World {
                 self.emit(a[0].clone(), &value, tile, of, player, everyone, line)
             }
             "say" => self.say(a[0].clone(), &a[1], &a[2], line),
+            "travel" => {
+                let id = self.entity_of(&a[0], line)?;
+                self.stop_travel(&id, line)?;
+                let to = self.place(&a[1], &a[2], &a[3], "q:move to", line)?;
+                self.travel(&id, to, line)
+            }
+            "kill" => {
+                let id = self.entity_of(&a[0], line)?;
+                let by = if vm::truthy(&a[1]) {
+                    self.entity_from(&a[2]).map_or(Value::Null, Value::Entity)
+                } else {
+                    Value::Null
+                };
+                self.kill(&id, by)
+            }
+            "loot" => {
+                let of = self.entity_of(&a[0], line)?;
+                let to = self.entity_of(&a[1], line)?;
+                self.loot(&of, &to, line)
+            }
+            "spawn" => {
+                let count = a[2].as_whole().unwrap_or(1);
+                let ticks = a[3].as_whole();
+                self.spawn_now(&a[0], &a[1], count, ticks, line)
+            }
             other => Err(rule_at(
                 format!("<q:{other}> does not run on the engine yet"),
                 line,
             )),
         }
+    }
+}
+
+// -- what a world does by itself (life.py) ------------------------------------------------------------------------
+
+fn far(a: Tile, b: Tile) -> i64 {
+    chebyshev(a, b)
+}
+
+fn tile_list(t: Tile) -> Value {
+    Value::List(vec![Value::Int(t.0), Value::Int(t.1)])
+}
+
+impl World {
+    fn occupied(&self, tile: Tile, but: Option<&str>) -> bool {
+        // near_ids(tile, 0): the one cell the tile is in
+        let cell = (tile.0.div_euclid(CELL), tile.1.div_euclid(CELL));
+        self.cells.get(&cell).is_some_and(|members| {
+            members
+                .iter()
+                .any(|eid| Some(eid.as_str()) != but && self.entity_tile(eid) == Some(tile))
+        })
+    }
+
+    fn free(&self, tile: Tile, but: Option<&str>) -> bool {
+        self.walkable(tile) && !self.occupied(tile, but)
+    }
+
+    /// life.py's way: the shortest way from start to a tile where arrived holds, within limit tiles of start, around
+    /// walls (and around entities, unless through): its tiles after start; [] if start is one; None if none.
+    fn way(
+        &self,
+        start: Tile,
+        arrived: &dyn Fn(Tile) -> bool,
+        limit: i64,
+        but: Option<&str>,
+        through: bool,
+    ) -> Option<Vec<Tile>> {
+        if arrived(start) {
+            return Some(Vec::new());
+        }
+        let mut came: HashMap<Tile, Option<Tile>> = HashMap::default();
+        came.insert(start, None);
+        let mut queue = std::collections::VecDeque::from([start]);
+        while let Some(here) = queue.pop_front() {
+            for (dx, dy) in STEPS {
+                let there = (here.0 + dx, here.1 + dy);
+                if came.contains_key(&there) || far(there, start) > limit || !self.walkable(there) {
+                    continue;
+                }
+                if !through && self.occupied(there, but) && !arrived(there) {
+                    continue;
+                }
+                came.insert(there, Some(here));
+                if arrived(there) {
+                    let mut out = vec![there];
+                    while came[out.last().unwrap()] != Some(start) {
+                        let back = came[out.last().unwrap()].unwrap();
+                        out.push(back);
+                    }
+                    out.reverse();
+                    return Some(out);
+                }
+                queue.push_back(there);
+            }
+        }
+        None
+    }
+
+    fn walkable_in(&mut self, area: &str) -> Vec<Tile> {
+        if let Some(kept) = self.walkable_areas.get(area) {
+            return kept.clone();
+        }
+        let (x0, y0, x1, y1) = self.def.map.areas[area];
+        let tiles: Vec<Tile> = (y0..=y1)
+            .flat_map(|y| (x0..=x1).map(move |x| (x, y)))
+            .filter(|t| self.walkable(*t))
+            .collect();
+        self.walkable_areas.insert(area.to_string(), tiles.clone());
+        tiles
+    }
+
+    /// life.py's make_at: an entity of the spec at a free tile of the area, from the world's random; None if full.
+    fn make_at(&mut self, spec: &str, area: &str) -> Result<Option<String>, VmError> {
+        let (x0, y0, x1, y1) = self.def.map.areas[area];
+        let mut taken = HashSet::default();
+        for cx in x0.div_euclid(CELL)..=x1.div_euclid(CELL) {
+            for cy in y0.div_euclid(CELL)..=y1.div_euclid(CELL) {
+                if let Some(members) = self.cells.get(&(cx, cy)) {
+                    for eid in members {
+                        taken.insert(self.entity_tile(eid));
+                    }
+                }
+            }
+        }
+        let tiles: Vec<Tile> = self
+            .walkable_in(area)
+            .into_iter()
+            .filter(|t| !taken.contains(&Some(*t)))
+            .collect();
+        if tiles.is_empty() {
+            return Ok(None);
+        }
+        let tile = tiles[self.rng.randrange(tiles.len() as i64).unwrap_or(0) as usize];
+        let mut entity = self.make(spec, None, None)?;
+        entity.insert("at".into(), tile_value(tile));
+        entity.insert("_home".into(), tile_list(tile));
+        let id = vm::py_str(&entity["id"]);
+        self.put(Root::Entities, &id, Some(Value::Map(entity)));
+        self.dirty.insert(id.clone());
+        self.reindex_one(&id);
+        Ok(Some(id))
+    }
+
+    fn set_own(&mut self, id: &str, key: &str, value: Value) {
+        if let Some(Value::Map(m)) = self.entities.get_mut(id) {
+            m.insert(key.to_string(), value);
+        }
+    }
+
+    /// q:spawn in a block: count more now, gone after for_ticks if given.
+    fn spawn_now(
+        &mut self,
+        name: &Value,
+        area: &Value,
+        count: i64,
+        for_ticks: Option<i64>,
+        line: u32,
+    ) -> Result<(), VmError> {
+        let spec = match name {
+            Value::Str(n) => self
+                .def
+                .entities
+                .get(n)
+                .filter(|e| !e.per_player)
+                .map(|e| e.name.clone()),
+            _ => None,
+        };
+        let Some(spec) = spec else {
+            return Err(rule_at(
+                format!(
+                    "q:spawn entity=\"{}\": not an entity of the world it may make",
+                    vm::py_str(name)
+                ),
+                line,
+            ));
+        };
+        let area = match area {
+            Value::Str(a) if self.def.map.areas.contains_key(a) => a.clone(),
+            other => {
+                return Err(rule_at(
+                    format!(
+                        "q:spawn area=\"{}\": the map has no such area",
+                        vm::py_str(other)
+                    ),
+                    line,
+                ))
+            }
+        };
+        for _ in 0..count.max(0) {
+            let Some(id) = self.make_at(&spec, &area)? else {
+                break;
+            };
+            if let Some(ticks) = for_ticks.filter(|t| *t != 0) {
+                self.set_own(&id, "_expires", Value::Int(self.tick + ticks));
+                self.expiring.insert(id);
+            }
+        }
+        Ok(())
+    }
+
+    /// An entity out of the world (its spawn makes another respawn= later).
+    fn remove(&mut self, id: &str) {
+        let entity = match self.entities.get(id) {
+            Some(Value::Map(m)) => m.clone(),
+            _ => return,
+        };
+        self.dead.insert(id.to_string(), entity.clone());
+        self.put(Root::Entities, id, None);
+        self.gone.insert(id.to_string());
+        self.dirty.remove(id);
+        self.travelers.remove(id);
+        self.expiring.remove(id);
+        if let Some(Value::Str(index)) = entity.get("_spawn") {
+            let respawn = index
+                .parse::<usize>()
+                .ok()
+                .and_then(|i| self.def.spawns.get(i))
+                .map(|s| s.respawn_ticks)
+                .unwrap_or(0);
+            if let Some(Value::Map(kept)) = self.spawned.get(index) {
+                let alive: Vec<Value> = match kept.get("alive") {
+                    Some(Value::List(a)) => {
+                        a.iter().filter(|a| vm::py_str(a) != id).cloned().collect()
+                    }
+                    _ => vec![],
+                };
+                let mut due = match kept.get("due") {
+                    Some(Value::List(d)) => d.clone(),
+                    _ => vec![],
+                };
+                due.push(Value::Int(self.tick + respawn));
+                let root = Root::Spawned(index.clone());
+                self.put(root.clone(), "alive", Some(Value::List(alive)));
+                self.put(root, "due", Some(Value::List(due)));
+            }
+        }
+        self.reindex_one(id);
+    }
+
+    /// q:kill: the on-death of its kind, then it goes (a player's stays: its on-death brings it back).
+    fn kill(&mut self, id: &str, by: Value) -> Result<(), VmError> {
+        if !self.entities.contains_key(id) || self.dying.contains(id) {
+            return Ok(());
+        }
+        self.dying.insert(id.to_string());
+        let def = self.def.clone();
+        for death in def.deaths.iter() {
+            let kind = self.field_of(id, "kind").cloned().unwrap_or(Value::Null);
+            if !death
+                .kinds
+                .iter()
+                .any(|k| py_eq(&Value::Str(k.clone()), &kind))
+            {
+                continue;
+            }
+            let mut locals = Locals::default();
+            locals.insert(death.as_name.clone(), Value::Entity(id.to_string()));
+            locals.insert(death.by_name.clone(), by.clone());
+            if let Err(e) = self.evaluate(&death.body, locals) {
+                self.dying.remove(id);
+                return Err(e);
+            }
+        }
+        self.dying.remove(id);
+        let player = self.field_of(id, "_player").cloned().unwrap_or(Value::Null);
+        if matches!(player, Value::Null) && self.entities.contains_key(id) {
+            self.remove(id);
+        }
+        Ok(())
+    }
+
+    /// q:loot (a world with no ledger): the drops of an entity, rolled: an item to the bag, gold to the gold.
+    fn loot(&mut self, of: &str, to: &str, line: u32) -> Result<(), VmError> {
+        let kind = match self.field_of(of, "_type") {
+            Some(Value::Str(t)) => t.clone(),
+            _ => String::new(),
+        };
+        let def = self.def.clone();
+        let Some(spec) = def.entities.get(&kind) else {
+            return Ok(());
+        };
+        let to_id = self
+            .field_of(to, "id")
+            .map(vm::py_str)
+            .unwrap_or_else(|| "None".into());
+        for drop in spec.loot.iter() {
+            if self.rng.random() >= drop.chance {
+                continue;
+            }
+            if let Some(item) = &drop.item {
+                let current = match self.field_of(to, "bag") {
+                    Some(Value::Map(bag)) => bag.get(item).cloned().unwrap_or(Value::Int(0)),
+                    _ => {
+                        return Err(rule_at(
+                            format!(
+                                "q:loot: {to_id} has no bag to put {item} in (a field that is a record: \
+                                 <q:field name=\"bag\" value=\"{{ {{}} }}\" />)"
+                            ),
+                            line,
+                        ))
+                    }
+                };
+                let n = self.rng.randint(drop.count.0, drop.count.1).unwrap_or(0);
+                let sum = python_add(current, n)?;
+                self.write(
+                    Root::Entity(to.to_string()),
+                    vec!["bag".into()],
+                    item,
+                    &sum,
+                    line,
+                )?;
+            } else {
+                let gold = match self.field_of(to, "gold") {
+                    Some(g @ (Value::Int(_) | Value::Float(_))) => g.clone(),
+                    _ => {
+                        return Err(rule_at(
+                            format!(
+                                "q:loot: {to_id} has no gold to add to (a field that is a number)"
+                            ),
+                            line,
+                        ))
+                    }
+                };
+                let (lo, hi) = drop.gold.unwrap_or((0, 0));
+                let n = self.rng.randint(lo, hi).unwrap_or(0);
+                self.write_field(to, "gold", python_add(gold, n)?, line)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// q:travel: the way there, kept on the entity, walked a step a tick.
+    fn travel(&mut self, id: &str, to: Tile, line: u32) -> Result<(), VmError> {
+        let Some(here) = self.entity_tile(id) else {
+            return Err(rule_at("q:travel: the entity is nowhere", line));
+        };
+        let through = !matches!(self.field_of(id, "_player"), None | Some(Value::Null));
+        let path = self
+            .way(here, &|t| t == to, TRAVEL_SEARCH, Some(id), through)
+            .ok_or_else(|| refused("No way there."))?;
+        let value = Value::List(path.iter().map(|t| tile_list(*t)).collect());
+        self.write_field(id, "_path", value, line)?;
+        if !path.is_empty() {
+            self.travelers.insert(id.to_string());
+        }
+        Ok(())
+    }
+
+    // -- a tick of the world's own life -------------------------------------------------------------------------
+
+    fn live(&mut self) -> Result<(), Raised> {
+        self.spawns().map_err(Raised::of)?;
+        let mut expiring: Vec<String> = self.expiring.iter().cloned().collect();
+        expiring.sort();
+        for id in expiring {
+            let due = match self.field_of(&id, "_expires") {
+                Some(v) => v.as_whole().unwrap_or(0),
+                None => 0,
+            };
+            if self.entities.contains_key(&id) && due <= self.tick {
+                self.remove(&id);
+            }
+        }
+        let mut travelers: Vec<String> = self.travelers.iter().cloned().collect();
+        travelers.sort();
+        for id in travelers {
+            self.go(&id);
+        }
+        self.think()
+    }
+
+    fn spawns(&mut self) -> Result<(), VmError> {
+        let night = self.is_night();
+        let def = self.def.clone();
+        for (i, sp) in def.spawns.iter().enumerate() {
+            let key = i.to_string();
+            let (alive0, due0) = match self.spawned.get(&key) {
+                Some(Value::Map(kept)) => (
+                    match kept.get("alive") {
+                        Some(Value::List(a)) => a.clone(),
+                        _ => vec![],
+                    },
+                    match kept.get("due") {
+                        Some(Value::List(d)) => {
+                            d.iter().filter_map(|t| t.as_whole()).collect::<Vec<i64>>()
+                        }
+                        _ => vec![],
+                    },
+                ),
+                _ => (vec![], vec![]),
+            };
+            let wanted = match (night, sp.night_count) {
+                (true, Some(n)) => n,
+                _ => sp.count,
+            };
+            let missing = wanted - alive0.len() as i64 - due0.len() as i64;
+            let mut due = due0.clone();
+            due.extend(std::iter::repeat_n(self.tick, missing.max(0) as usize));
+            let mut later: Vec<i64> = due.iter().copied().filter(|t| *t > self.tick).collect();
+            let mut alive = alive0;
+            let tick = self.tick;
+            let now = due.iter().filter(|t| **t <= tick).count();
+            for _ in 0..now {
+                if alive.len() as i64 >= wanted {
+                    continue;
+                }
+                match self.make_at(&sp.entity, &sp.area)? {
+                    None => later.push(self.tick + 1),
+                    Some(id) => {
+                        self.set_own(&id, "_spawn", Value::Str(key.clone()));
+                        alive.push(Value::Str(id));
+                    }
+                }
+            }
+            later.sort();
+            let kept = entry(vec![
+                ("alive", Value::List(alive)),
+                (
+                    "due",
+                    Value::List(later.into_iter().map(Value::Int).collect()),
+                ),
+            ]);
+            self.spawned.insert(key, kept);
+        }
+        Ok(())
+    }
+
+    fn go(&mut self, id: &str) {
+        let path = match self.entities.get(id).and_then(|e| e.get("_path")) {
+            Some(Value::List(p)) if !p.is_empty() => p.clone(),
+            _ => {
+                self.travelers.remove(id);
+                return;
+            }
+        };
+        let until = self
+            .field_of(id, "_until")
+            .and_then(|u| u.as_whole())
+            .unwrap_or(0);
+        if until > self.tick {
+            return;
+        }
+        self.begin();
+        let next = self.tile_of(&path[0]);
+        let stepped = match next {
+            Some(t) => self
+                .move_to(id, t, 0)
+                .and_then(|_| self.write_field(id, "_path", Value::List(path[1..].to_vec()), 0)),
+            None => Err(rule_at("not a tile", 0)),
+        };
+        if stepped.is_err() {
+            self.rollback();
+            let _ = self.write_field(id, "_path", Value::List(vec![]), 0); // blocked: the way ends here
+            self.travelers.remove(id);
+            return;
+        }
+        self.commit();
+        if !self.field_of(id, "_path").is_some_and(vm::truthy) {
+            self.travelers.remove(id);
+        }
+    }
+
+    fn think(&mut self) -> Result<(), Raised> {
+        let mut heroes: Vec<String> = self.players.values().cloned().collect();
+        heroes.sort();
+        let mut cells = HashSet::default();
+        for hid in heroes {
+            if let Some(tile) = self.entity_tile(&hid) {
+                cells.extend(World::cells_near(tile, AWAKE));
+            }
+        }
+        let mut awake: Vec<String> = cells
+            .iter()
+            .filter_map(|c| self.cells.get(c))
+            .flatten()
+            .cloned()
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect();
+        awake.sort();
+        let def = self.def.clone();
+        for id in awake {
+            if !self.entities.contains_key(&id) {
+                continue;
+            }
+            let kind = match self.field_of(&id, "_type") {
+                Some(Value::Str(t)) => t.clone(),
+                _ => continue,
+            };
+            let Some(spec) = def.entities.get(&kind) else {
+                continue;
+            };
+            if spec.states.is_empty() {
+                continue;
+            }
+            self.begin();
+            match self.brain(&id, spec) {
+                Ok(()) => self.commit(),
+                Err(e) => match Raised::of(e) {
+                    Raised::Rule(message, line) => {
+                        self.rollback();
+                        self.error(&format!("q:brain of {id}"), &message, line);
+                    }
+                    Raised::Refused(reason) => {
+                        self.rollback();
+                        self.error(
+                            &format!("q:brain of {id}"),
+                            &format!("refused: {reason}"),
+                            0,
+                        );
+                    }
+                    python => return Err(python),
+                },
+            }
+        }
+        Ok(())
+    }
+
+    fn become_state(&mut self, id: &str, state: &str) -> Result<(), VmError> {
+        self.write_field(id, "state", Value::Str(state.into()), 0)?;
+        self.write_field(id, "_since", Value::Int(self.tick), 0)
+    }
+
+    /// life.py's _entity: an entity of the world, by its id or itself.
+    fn entity_from(&self, v: &Value) -> Option<String> {
+        match v {
+            Value::Str(s) if self.entities.contains_key(s) => Some(s.clone()),
+            Value::Entity(id) if self.entities.contains_key(id) => Some(id.clone()),
+            _ => None,
+        }
+    }
+
+    fn brain(&mut self, id: &str, spec: &EntityDef) -> Result<(), VmError> {
+        let current = self.field_of(id, "state").cloned();
+        let mut state = match &current {
+            Some(Value::Str(s)) if spec.states.contains_key(s) => &spec.states[s],
+            _ => &spec.states[spec.initial.as_deref().unwrap_or("")],
+        };
+        let mut local = Locals::default();
+        local.insert("it".into(), Value::Entity(id.to_string()));
+        for (condition, next) in state.whens.iter() {
+            if vm::truthy(&self.evaluate(condition, local.clone())?) {
+                if *next != state.name {
+                    self.become_state(id, next)?;
+                    state = &spec.states[next];
+                }
+                break;
+            }
+        }
+        if let Some(ticks) = state.for_ticks {
+            let since = self
+                .field_of(id, "_since")
+                .and_then(|s| s.as_whole())
+                .unwrap_or(0);
+            if self.tick - since >= ticks {
+                let then = state.then.clone().unwrap_or_default();
+                self.become_state(id, &then)?;
+                state = &spec.states[&then];
+            }
+        }
+        if let Some(target) = &state.target {
+            let found = self.evaluate(target, local.clone())?;
+            let found = self.entity_from(&found).unwrap_or_default();
+            let had = self
+                .field_of(id, "target")
+                .cloned()
+                .unwrap_or(Value::Str(String::new()));
+            if !py_eq(&Value::Str(found.clone()), &had) {
+                self.write_field(id, "target", Value::Str(found), state.line)?;
+            }
+        }
+        let Some(here) = self.entity_tile(id) else {
+            return Ok(());
+        };
+        let until = self
+            .field_of(id, "_until")
+            .and_then(|u| u.as_whole())
+            .unwrap_or(0);
+        if until > self.tick || state.act == "stand" {
+            return Ok(());
+        }
+        match state.act.as_str() {
+            "wander" => {
+                if self.rng.random() >= WANDER_CHANCE {
+                    return Ok(());
+                }
+                let home = match self.field_of(id, "_home") {
+                    Some(h) if vm::truthy(h) => self.tile_of(h).unwrap_or(here),
+                    _ => here,
+                };
+                let ways: Vec<Tile> = STEPS
+                    .iter()
+                    .map(|(dx, dy)| (here.0 + dx, here.1 + dy))
+                    .filter(|t| self.free(*t, Some(id)) && far(*t, home) <= state.within)
+                    .collect();
+                if !ways.is_empty() {
+                    let pick = ways[self.rng.randrange(ways.len() as i64).unwrap_or(0) as usize];
+                    self.move_to(id, pick, state.line)?;
+                }
+            }
+            "chase" => {
+                let prey = match self.field_of(id, "target") {
+                    Some(Value::Str(t)) if self.entities.contains_key(t) => Some(t.clone()),
+                    _ => None,
+                };
+                let Some(there) = prey.and_then(|p| self.entity_tile(&p)) else {
+                    return Ok(());
+                };
+                if far(here, there) <= 1 {
+                    return Ok(());
+                }
+                let path = self.way(
+                    here,
+                    &|t| far(t, there) <= 1 && t != there,
+                    CHASE_SEARCH,
+                    Some(id),
+                    false,
+                );
+                if let Some(first) = path.and_then(|p| p.first().copied()) {
+                    self.move_to(id, first, state.line)?;
+                }
+            }
+            "flee" => {
+                let Some(code) = &state.away_from else {
+                    return Ok(());
+                };
+                let threat = self.evaluate(code, local)?;
+                let Some(there) = self.entity_from(&threat).and_then(|t| self.entity_tile(&t))
+                else {
+                    return Ok(());
+                };
+                let ways: Vec<(usize, Tile)> = STEPS
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (dx, dy))| (i, (here.0 + dx, here.1 + dy)))
+                    .filter(|(_, t)| self.free(*t, Some(id)) && far(*t, there) > far(here, there))
+                    .collect();
+                // max by (how far, then the first of the ways)
+                if let Some((_, best)) = ways
+                    .iter()
+                    .max_by_key(|(i, t)| (far(*t, there), -(*i as i64)))
+                    .copied()
+                {
+                    self.move_to(id, best, state.line)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+}
+
+/// Python's `n + k` of a number a world keeps and a whole number; anything else is Python's TypeError.
+fn python_add(n: Value, k: i64) -> Result<Value, VmError> {
+    match n {
+        Value::Int(i) => i
+            .checked_add(k)
+            .map(Value::Int)
+            .ok_or_else(|| VmError::new(ErrorKind::Expression, "a whole number past 64 bits")),
+        Value::Bool(b) => Ok(Value::Int(b as i64 + k)),
+        Value::Float(f) => Ok(Value::Float(f + k as f64)),
+        other => Err(VmError::new(
+            ErrorKind::Python(vm::Raise::Type),
+            format!(
+                "unsupported operand type(s) for +: '{}' and 'int'",
+                vm::type_name_of(&other)
+            ),
+        )),
     }
 }
 
@@ -993,7 +1858,7 @@ pub const WORLD_FUNCTIONS: [&str; 22] = [
 ];
 
 fn tile_value(t: Tile) -> Value {
-    let mut m = Map::new();
+    let mut m = Map::default();
     m.insert("x".into(), Value::Int(t.0));
     m.insert("y".into(), Value::Int(t.1));
     Value::Map(m)
@@ -1038,25 +1903,30 @@ impl World {
                 return Err(failed("nearest", why));
             }
         };
-        let mut ids = self.near_ids(tile, n);
-        ids.sort();
-        let mut best: Option<(i64, String)> = None;
-        for eid in ids {
-            if Some(&eid) == me.as_ref() {
-                continue;
-            }
-            let other_kind = self.field_of(&eid, "kind").cloned().unwrap_or(Value::Null);
-            if !py_eq(&other_kind, kind) {
-                continue;
-            }
-            let Some(there) = self.tile_of(&Value::Entity(eid.clone())) else {
+        // life.py walks the ids sorted and keeps the first of the nearest: the least (far, id), found in one pass
+        let mut best: Option<(i64, &String)> = None;
+        for cell in World::cells_near(tile, n) {
+            let Some(members) = self.cells.get(&cell) else {
                 continue;
             };
-            let far = chebyshev(tile, there);
-            if far <= n && best.as_ref().is_none_or(|(b, _)| far < *b) {
-                best = Some((far, eid));
+            for eid in members {
+                if Some(eid) == me.as_ref() {
+                    continue;
+                }
+                // other.get('kind') != kind: one with no kind is None's
+                if !py_eq(self.field_of(eid, "kind").unwrap_or(&Value::Null), kind) {
+                    continue;
+                }
+                let Some(there) = self.entity_tile(eid) else {
+                    continue;
+                };
+                let far = chebyshev(tile, there);
+                if far <= n && best.is_none_or(|(b, id)| (far, eid) < (b, id)) {
+                    best = Some((far, eid));
+                }
             }
         }
+        let best = best.map(|(f, id)| (f, id.clone()));
         Ok(best.map_or(Value::Null, |(_, id)| Value::Entity(id)))
     }
 
@@ -1077,10 +1947,7 @@ impl World {
                 Some(Value::Bool(false)) => continue,
                 _ => {}
             }
-            let (a, b) = (
-                self.tile_of(&Value::Entity(eid.clone())),
-                self.tile_of(&Value::Entity(prey)),
-            );
+            let (a, b) = (self.entity_tile(&eid), self.entity_tile(&prey));
             if let (Some(a), Some(b)) = (a, b) {
                 if chebyshev(a, b) <= 1 {
                     out.push(eid);
@@ -1628,8 +2495,8 @@ fn entry(pairs: Vec<(&str, Value)>) -> Value {
 impl World {
     /// A new world: its variables evaluated in order, its spawns' books empty, its random seeded.
     pub fn new(def: Arc<WorldDef>, seed: u64) -> Result<World, Raised> {
-        let mut spawned = Map::new();
-        for i in 0..def.spawns {
+        let mut spawned = Map::default();
+        for i in 0..def.spawns.len() {
             spawned.insert(
                 i.to_string(),
                 entry(vec![
@@ -1641,35 +2508,41 @@ impl World {
         let mut world = World {
             def: def.clone(),
             tick: 0,
-            vars: Map::new(),
-            entities: Map::new(),
-            stored: Map::new(),
-            players: IndexMap::new(),
+            vars: Map::default(),
+            entities: Map::default(),
+            stored: Map::default(),
+            players: IndexMap::default(),
             rng: Rng::seeded(seed),
-            rates: IndexMap::new(),
-            counters: IndexMap::new(),
+            rates: IndexMap::default(),
+            counters: IndexMap::default(),
             errors: Vec::new(),
             errors_made: 0,
             journal: None,
-            dirty: HashSet::new(),
-            gone: HashSet::new(),
+            dirty: HashSet::default(),
+            gone: HashSet::default(),
             events: Vec::new(),
             vars_changed: false,
-            cells: HashMap::new(),
-            cell_of: HashMap::new(),
+            cells: HashMap::default(),
+            cell_of: HashMap::default(),
             events_mark: 0,
-            dead: HashMap::new(),
+            dead: HashMap::default(),
             depth: Arc::new(AtomicUsize::new(0)),
             spawned,
             books: Map::from_iter([
-                ("made".to_string(), Value::Map(Map::new())),
-                ("spent".to_string(), Value::Map(Map::new())),
+                ("made".to_string(), Value::Map(Map::default())),
+                ("spent".to_string(), Value::Map(Map::default())),
             ]),
-            parties: Map::new(),
-            trades: Map::new(),
+            parties: Map::default(),
+            trades: Map::default(),
+            travelers: HashSet::default(),
+            expiring: HashSet::default(),
+            dying: HashSet::default(),
+            walkable_areas: HashMap::default(),
         };
         for (name, code) in def.variables.iter() {
-            let value = world.evaluate(code, Locals::new()).map_err(Raised::of)?;
+            let value = world
+                .evaluate(code, Locals::default())
+                .map_err(Raised::of)?;
             let value = world.plain(&value, 0).map_err(|m| Raised::Rule(m, 0))?;
             world.vars.insert(name.clone(), value);
         }
@@ -1703,7 +2576,7 @@ impl World {
             self.counters.insert(spec.name.clone(), n);
             format!("{}-{n}", spec.name)
         };
-        let mut entity = Map::new();
+        let mut entity = Map::default();
         entity.insert("id".into(), Value::Str(eid));
         entity.insert("kind".into(), Value::Str(spec.kind.clone()));
         entity.insert("at".into(), Value::Null);
@@ -1719,7 +2592,7 @@ impl World {
             Some(n) if !n.is_empty() => Value::Str(n.into()),
             _ => account_value.clone(),
         };
-        let mut scope = Locals::new();
+        let mut scope = Locals::default();
         scope.insert(
             "account".into(),
             entry(vec![("name", shown), ("id", account_value)]),
@@ -1728,6 +2601,11 @@ impl World {
             let value = self.evaluate(&f.value, scope.clone())?;
             let value = self.plain(&value, 0).map_err(|m| rule_at(m, 0))?;
             entity.insert(f.name.clone(), value);
+        }
+        if !spec.states.is_empty() {
+            let initial = spec.initial.clone().map_or(Value::Null, Value::Str);
+            entity.insert("state".into(), initial);
+            entity.insert("_since".into(), Value::Int(self.tick));
         }
         Ok(entity)
     }
@@ -1788,7 +2666,7 @@ impl World {
         self.reindex_one(&id);
         out.joined.insert(account.to_string(), id.clone());
         for code in def.on_join.iter() {
-            let mut locals = Locals::new();
+            let mut locals = Locals::default();
             locals.insert("me".into(), Value::Entity(id.clone()));
             self.run_rule(code, locals, "q:on-join")?;
         }
@@ -1801,7 +2679,7 @@ impl World {
         };
         let def = self.def.clone();
         for code in def.on_leave.iter() {
-            let mut locals = Locals::new();
+            let mut locals = Locals::default();
             locals.insert("me".into(), Value::Entity(id.clone()));
             self.run_rule(code, locals, "q:on-leave")?;
         }
@@ -1903,7 +2781,7 @@ impl World {
             self.rates.insert(key, recent);
         }
         self.begin();
-        let mut locals = Locals::new();
+        let mut locals = Locals::default();
         locals.insert("me".into(), Value::Entity(eid));
         if let Value::Map(m) = args {
             for (k, v) in m {
@@ -1995,10 +2873,11 @@ impl World {
                 _ => {}
             }
         }
+        self.live()?;
         let def = self.def.clone();
         for (ticks, code) in def.every.iter() {
             if *ticks != 0 && self.tick.rem_euclid(*ticks) == 0 {
-                self.run_rule(code, Locals::new(), "q:every")?;
+                self.run_rule(code, Locals::default(), "q:every")?;
             }
         }
         let changed: Vec<String> = self.dirty.union(&self.gone).cloned().collect();
@@ -2104,6 +2983,14 @@ impl World {
             }
         }
         let ids: Vec<String> = world.entities.keys().cloned().collect();
+        for id in &ids {
+            if world.field_of(id, "_expires").is_some() {
+                world.expiring.insert(id.clone());
+            }
+            if world.field_of(id, "_path").is_some_and(vm::truthy) {
+                world.travelers.insert(id.clone());
+            }
+        }
         world.reindex(ids.iter());
         Ok(world)
     }

@@ -10,6 +10,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Laboratory: the world engine's E3b (`PLAN_WORLD_ENGINE.md`), a world's
+  life in Rust. The engine now holds q:spawn (and the respawn, more at
+  night), the brains (their states and q:when, wander, chase and flee,
+  thinking only near a hero), q:kill and q:on-death, q:loot and a kind's
+  drops, q:travel and its way, q:spawn in a block, and the clock, each
+  undone with a refused command. The lair (the den's life without its
+  ledger) and the gauge's field of beasts agree with the Python world on
+  every tick. At 500 heroes and 1500 beasts a tick takes 44 ms on the engine
+  where world.py takes 159. The ledger, the chat, parties, trades, quests
+  and NPCs stay Python's until E3c.
 - Laboratory: the world engine's E3a (`PLAN_WORLD_ENGINE.md`), the first part
   of a world's state in Rust. `native/world/src/world.rs` holds a world's
   entities, variables and players, its joins and leaves, its commands (whole

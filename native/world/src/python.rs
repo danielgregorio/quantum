@@ -38,7 +38,7 @@ fn to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value> {
         });
     }
     if let Ok(d) = obj.cast::<PyDict>() {
-        let mut map = Map::with_capacity(d.len());
+        let mut map = Map::with_capacity_and_hasher(d.len(), Default::default());
         for (k, v) in d.iter() {
             let key: String = k
                 .extract()
@@ -96,7 +96,7 @@ fn entity_in(id: String, d: &Bound<'_, PyDict>) -> PyResult<EntityIn> {
         Some(o) if !o.is_none() => Some(o.extract()?),
         _ => None,
     };
-    let mut fields = Map::with_capacity(d.len());
+    let mut fields = Map::with_capacity_and_hasher(d.len(), Default::default());
     for (k, v) in d.iter() {
         let k = k
             .cast_into::<PyString>()
@@ -501,7 +501,7 @@ fn to_world_value(obj: &Bound<'_, PyAny>, entities: &Entities<'_>) -> PyResult<V
         if let Some(id) = entities.identify(d)? {
             return Ok(Value::Entity(id));
         }
-        let mut map = Map::with_capacity(d.len());
+        let mut map = Map::with_capacity_and_hasher(d.len(), Default::default());
         for (k, v) in d.iter() {
             let key: String = k
                 .extract()
@@ -854,7 +854,7 @@ impl Machine {
         let code = self.code(code)?;
         let functions = self.functions.lock().unwrap().clone();
         let entities = Entities::new(entities);
-        let mut locals = Map::new();
+        let mut locals = Map::default();
         for item in local.call_method0("items")?.try_iter()? {
             let (k, v): (String, Bound<'py, PyAny>) = item?.extract()?;
             locals.insert(k, to_world_value(&v, &entities)?);
@@ -877,7 +877,7 @@ impl Machine {
     fn new() -> Self {
         Machine {
             codes: Mutex::new(Vec::new()),
-            functions: Mutex::new(Arc::new(Functions::new())),
+            functions: Mutex::new(Arc::new(Functions::default())),
             depth: AtomicUsize::new(0),
         }
     }
@@ -1040,9 +1040,10 @@ impl PyWorld {
             .map(|i| to_value(&i?))
             .collect::<PyResult<Vec<_>>>()?;
         let out = self.inner.step(&inputs).map_err(|e| world_raised(py, e))?;
-        let lists = |m: indexmap::IndexMap<String, Vec<Value>>| -> Value {
-            Value::Map(m.into_iter().map(|(k, v)| (k, Value::List(v))).collect())
-        };
+        let lists =
+            |m: indexmap::IndexMap<String, Vec<Value>, rustc_hash::FxBuildHasher>| -> Value {
+                Value::Map(m.into_iter().map(|(k, v)| (k, Value::List(v))).collect())
+            };
         let d = PyDict::new(py);
         d.set_item("tick", out.tick)?;
         d.set_item("entries", plain_out(py, &Value::List(out.entries))?)?;
@@ -1066,13 +1067,18 @@ impl PyWorld {
         self.inner.digest()
     }
 
-    /// These entities as they are now ({id: its dict, or None when it is not in the world}).
+    /// These entities as they are now, in the world's order ({id: its dict}; None for one not in the world, last).
     fn pull<'py>(&self, py: Python<'py>, ids: Vec<String>) -> PyResult<Bound<'py, PyDict>> {
+        let wanted: HashSet<String> = ids.into_iter().collect();
         let d = PyDict::new(py);
-        for id in ids {
-            match self.inner.entities.get(&id) {
-                Some(e) => d.set_item(&id, plain_out(py, e)?)?,
-                None => d.set_item(&id, py.None())?,
+        for (id, e) in &self.inner.entities {
+            if wanted.contains(id) {
+                d.set_item(id, plain_out(py, e)?)?;
+            }
+        }
+        for id in wanted {
+            if !self.inner.entities.contains_key(&id) {
+                d.set_item(&id, py.None())?;
             }
         }
         Ok(d)

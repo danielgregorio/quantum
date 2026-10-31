@@ -157,7 +157,7 @@ that needs what the engine does not hold yet is told so by name and stays Python
   arguments, their rate, whole or not at all); q:every, q:on-join, q:on-leave; q:move, q:emit, q:say; the index of
   cells; the world's functions that read it; the snapshot and the digest. The yard and the meadow run on it.
 - **E3b, life**: q:spawn, the brains, q:kill and q:on-death, q:loot, q:travel, the clock, the regions that sleep. The
-  den runs on it.
+  den's life runs on it (the lair, the den without its ledger); the den itself, with E3c.
 - **E3c, together**: the ledger and its books, the chat, parties, trades, quests, and a q:ask handed to the minds.
   Outpost runs on it, start to end.
 - **E3d, the engine alone**: the frames read from the engine's world itself (no bridge), the tick off Python's lock,
@@ -369,3 +369,30 @@ commands) gives the same outcome command by command, Python's own TypeError and 
 back from its snapshot goes on the same (`tests/gameserver/test_gameserver_native_world.py`, and `quantum gameserver
 conform --against native`). The den and Outpost are told what they need (q:spawn, the brains, the ledger, parties,
 trades, quests, NPCs) and stay Python's: E3b and E3c.
+
+### E3b (2026-10-31)
+
+Built: a world's life in the engine (`native/world/src/world.rs`, its `Life`). q:spawn, at night too, and the respawn of
+what died; an entity made at a free tile of its area as life.py finds it; the brains, their states and q:when, wander,
+chase and flee, their target and away-from as bytecode, thinking only within reach of a hero (the regions that sleep),
+in the order life.py keeps; q:kill, its q:on-death run before it goes (a player's stays), the dead still readable to the
+block that killed them; q:loot and the drops of a kind (an item, gold, a chance); q:travel, its way found as life.py's
+search finds it, a tile a step; q:spawn in a block, for a while; the clock, day and night. Each is undone with the rest
+of a refused command: a spawn, a travel, a death.
+
+The lair (`tests/gameserver/worlds/lair`) is the den's life without its ledger: rats that roam, bite and flee, are
+killed, drop their loot and come back, at night more of them; heroes that travel, call rats and smite them. Held to
+world.py: sessions of the lair on two seeds give the same digest on every tick, the same acks and frames, and the
+same errors kept; the gauge's field (40 heroes, 150 beasts that wander and chase, ten who leave halfway), the same
+on every tick (`tests/gameserver/test_gameserver_native_world.py`). Held longer by hand: three seeds of the lair for
+900 ticks, and the field at 500 heroes and 1500 beasts for 100 ticks, the same.
+
+The world's maps hash with FxHash (`rustc-hash`) in place of SipHash: an entity's fields, the index, the counters.
+Their keys are the world's own names and ids, and accounts no more than its players= lets in; the engine's step took
+half the time it did with SipHash.
+
+The tick, at the gauge's field (96 tiles, 500 heroes stepping, 1500 beasts), in process, the frames aside: world.py
+159 ms (p99 265), the engine 44 ms (p99 80), the bridge back to Python's dicts included. The rest is IndexMap's
+lookups and the search for a free tile; E3d takes the bridge away and thinks the brains in parallel.
+
+The den and Outpost are still told what they need (the ledger, the chat, parties, trades, quests, NPCs): E3c.

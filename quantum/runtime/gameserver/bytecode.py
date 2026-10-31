@@ -342,6 +342,14 @@ def compile_value(raw: str, definition, host: frozenset, users: frozenset, line:
     return code
 
 
+def compile_condition(text: str, definition, host: frozenset, users: frozenset, line: int = 0, source: str = '') -> Code:
+    """An expression out of its braces (a brain's q:when, its target=), its line first (what its error says)."""
+    code = Code(source or text)
+    code.emit('LINE', line)
+    _BlockCompiler(code, host, users, definition).expression(text)
+    return code
+
+
 class _BlockCompiler(_Compiler):
     def __init__(self, code: Code, host: frozenset, users: frozenset, definition):
         super().__init__(code, host, users)
