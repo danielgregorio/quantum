@@ -420,6 +420,16 @@ class HTMLRenderer:
         if ui._has_tabs and not getattr(self, '_ui_tabs_done', False):
             self._ui_tabs_done = True
             drawn += TAB_JS
+        # UI-21: a toast goes, a carousel's slides and a stepper's steps move — their scripts once, then what
+        # starts each of them
+        from quantum.runtime import ui_html_templates as templates
+        for flag, script in (('_has_toast', templates.TOAST_JS), ('_has_carousel', templates.CAROUSEL_JS),
+                             ('_has_stepper', templates.STEPPER_JS)):
+            if getattr(ui, flag) and not getattr(self, f'_ui{flag}_done', False):
+                setattr(self, f'_ui{flag}_done', True)
+                drawn += script
+        if ui._component_inits:
+            drawn += ui._generate_component_init_script()
         # UI-19: whether motion is on, and the record of the motions the page ran — once
         if not getattr(self, '_ui_motion_done', False):
             self._ui_motion_done = True

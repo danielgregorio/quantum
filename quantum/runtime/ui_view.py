@@ -258,7 +258,8 @@ class UIViewBuilder:
             props = {k: v for k, v in self._layout_props(node).items()
                      if k not in ('total', 'page_size', 'current', 'bind', 'show_total', 'show_jump')}
             return {'type': 'pagination', 'as': 'hbox', 'props': props, 'children': children}
-        if isinstance(node, ui.UIMenuNode):
+        if isinstance(node, (ui.UIMenuNode, ui.UIDropdownNode)):
+            # a menu is a row of its options; a dropdown, a button that opens them (UI-21)
             options = []
             for option in node.children or []:
                 if not isinstance(option, ui.UIOptionNode):
@@ -274,7 +275,36 @@ class UIViewBuilder:
                 else:
                     view['as'] = 'text'
                 options.append(view)
+            if isinstance(node, ui.UIDropdownNode):
+                return {'type': 'dropdown', 'props': self._layout_props(node), 'children': options}
             return {'type': 'menu', 'as': 'hbox', 'props': self._layout_props(node), 'children': options}
+        if isinstance(node, ui.UIModalNode):
+            from quantum.runtime.ui_more import modal_open
+            view = self._ui_without_context(node, None)
+            view['props']['open'] = modal_open(self.r, node)
+            return view
+        if isinstance(node, ui.UIToastNode):
+            from quantum.runtime.ui_more import page_only_attrs, truthy
+            page_only_attrs(node, 'ui:toast', ('on_close',))
+            if node.show and not truthy(self.r._apply_databinding(node.show)):
+                return {'type': 'text', 'props': {'text': ''}, 'children': []}   # not shown: nothing
+            props = self._layout_props(node)
+            props.pop('show', None)
+            return {'type': 'toast', 'props': props, 'children': []}
+        if isinstance(node, (ui.UICarouselNode, ui.UIStepperNode)):
+            from quantum.runtime.ui_more import page_only_attrs
+            page_only_attrs(node, 'ui:carousel' if isinstance(node, ui.UICarouselNode) else 'ui:stepper',
+                            ('on_change', 'on_complete', 'bind'))
+            view = self._ui_without_context(node, None)
+            view.pop('event', None)
+            for child in view['children']:
+                if child['type'] == 'slide':
+                    child['as'] = 'vbox'
+            return view
+        if isinstance(node, ui.UIToastContainerNode):
+            view = self._ui_without_context(node, None)
+            view['as'] = 'vbox'
+            return view
         if isinstance(node, ui.UIDatePickerNode):
             field = date_field(node)
             view = self._ui(field)

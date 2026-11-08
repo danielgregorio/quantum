@@ -131,6 +131,29 @@ class Browser:
     def waits_for(self, text):
         self.p.wait_for_function("t => document.body.innerText.includes(t)", arg=text, timeout=WAIT * 1000)
 
+    # UI-21: what a tag with a state of its own does as the user does it
+
+    def close(self, title):
+        modal = self.p.locator(".q-modal-open", has=self.p.locator(".q-modal-title", has_text=title))
+        modal.locator(".q-modal-close").click()
+
+    def fold(self, title):
+        self.p.locator("summary", has_text=title).click()
+
+    def tip(self, label, text):
+        self.p.get_by_text(label, exact=True).hover()
+        self.p.wait_for_function("t => document.body.innerText.includes(t)", arg=text, timeout=WAIT * 1000)
+
+    def next(self, kind):
+        self.p.locator(".q-carousel-next" if kind == "carousel" else ".q-stepper-next").first.click()
+
+    def gone(self, text):
+        self.p.wait_for_function("t => !document.body.innerText.includes(t)", arg=text, timeout=WAIT * 1000)
+
+    def pick(self, label, option):
+        self.p.locator("summary", has_text=label).click()
+        self._go(self.p.get_by_role("button", name=option, exact=True))
+
 
 # -- console ------------------------------------------------------------------
 

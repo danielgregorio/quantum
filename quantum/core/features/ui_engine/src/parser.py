@@ -837,7 +837,9 @@ class UIParser:
         node = UIModalNode()
         node.title = element.get('title')
         node.modal_id = element.get('modal-id') or element.get('id')
-        node.open = self._parse_bool(element.get('open'))
+        raw_open = element.get('open')
+        # UI-21: open="{expression}" is the page's to decide as it renders
+        node.open = raw_open if raw_open and '{' in raw_open else self._parse_bool(raw_open)
         node.closable = self._parse_bool(element.get('closable'), True)
         node.size = element.get('size')
         self._apply_layout_attrs(node, element)

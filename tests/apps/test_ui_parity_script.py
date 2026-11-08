@@ -91,6 +91,41 @@ MORE = [
     ("sees", ["Showcase header"]),
 ]
 
+# UI-21: the tags with a state of their own (tests/apps/showcase/components/state.q)
+STATE = [
+    ("visit", "/state?welcome=1"),
+    ("sees", ["All changes kept", "Welcome", "Read this first"]),
+    # a modal that is open shows over the page until it is closed
+    ("close", "Welcome"),
+    ("does_not_see", ["Read this first"]),
+    # an accordion: its first fold open, the others closed until opened
+    ("sees", ["First fold", "Inside the first", "Second fold"]),
+    ("does_not_see", ["Inside the second"]),
+    ("fold", "Second fold"),
+    ("sees", ["Inside the second"]),
+    # a tooltip says its tip when its element is pointed at, or has the focus
+    ("sees", ["Hover me"]),
+    ("does_not_see", ["A tip for the badge"]),
+    ("tip", "Hover me", "A tip for the badge"),
+    # a carousel shows one slide, the next on its arrow
+    ("sees", ["Slide one"]),
+    ("does_not_see", ["Slide two"]),
+    ("next", "carousel"),
+    ("sees", ["Slide two"]),
+    # a stepper shows one step's content, the next on Next
+    ("sees", ["Account", "Profile", "Step one body"]),
+    ("does_not_see", ["Step two body"]),
+    ("next", "stepper"),
+    ("sees", ["Step two body"]),
+    # a toast goes after its duration
+    ("gone", "All changes kept"),
+    # a dropdown opens on its button, and its option posts the action
+    ("sees", ["Actions"]),
+    ("does_not_see", ["Move"]),
+    ("pick", "Actions", "Move"),
+    ("sees", ["Picked: move"]),
+]
+
 
 @pytest.fixture
 def url(tmp_path, monkeypatch):
@@ -125,6 +160,7 @@ def test_the_script_in_the_browser(url):
             page.goto(url)
             run_script(Browser(page, url), SCRIPT)
             run_script(Browser(page, url), MORE)
+            run_script(Browser(page, url), STATE)
             assert errors == []
         finally:
             chromium.close()
