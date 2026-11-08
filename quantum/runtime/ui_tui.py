@@ -13,6 +13,9 @@ on its stdin, each answered with what the screen shows — as the games' agents 
         button = tui.item('button', 'Save')
         seen = tui.click(button['x'], button['y'])    # a click of the mouse; answered when the page settled
         seen = tui.type('Carla')                      # typed into the field with the focus
+
+The TUI exported for the browser (`quantum package <app> --target web`, UI-22) answers the same requests through
+``window.quantumTui``; a ``TuiInBrowser`` plays it in a Playwright page, with a TuiSession's requests.
 """
 
 from __future__ import annotations
@@ -23,6 +26,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Callable, List, Optional
 
@@ -67,20 +71,34 @@ def godot_command(url: str, page: str = '/', cols: int = 120, rows: int = 40, pl
 class TuiSession:
     """One TUI, headless, played request by request (the play protocol)."""
 
-    def __init__(self, url: str, page: str = '/', cols: int = 120, rows: int = 40,
-                 binary: Optional[Path] = None, timeout: float = 60, window: bool = False):
-        """`window`: drawn in a real window (a display is needed: xvfb-run), so `shot` can save its picture."""
+    def __init__(self, url: str = '', page: str = '/', cols: int = 120, rows: int = 40,
+                 binary: Optional[Path] = None, timeout: float = 60, window: bool = False,
+                 program: Optional[Path] = None, env: Optional[dict] = None):
+        """`window`: drawn in a real window (a display is needed: xvfb-run), so `shot` can save its picture.
+        `program`: a package's program (`quantum package`, UI-22) instead, which starts its own server; `url` is
+        then where that server is, once the first page is shown."""
         self.url = url.rstrip('/')
         self.timeout = timeout
         self.log: List[str] = []
-        self._project = project_copy()
-        self._proc = subprocess.Popen(
-            godot_command(self.url, page, cols, rows, play=True, binary=binary, project=self._project,
-                          window=window),
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        if program is not None:
+            self._project = None
+            command = [str(program), '--headless', '--', '--play', f'--cols={cols}', f'--rows={rows}',
+                       *([f'--page={page}'] if page != '/' else [])]
+        else:
+            self._project = project_copy()
+            command = godot_command(self.url, page, cols, rows, play=True, binary=binary, project=self._project,
+                                    window=window)
+        self.started = time.monotonic()
+        # Godot writes UTF-8 (the screen's box characters), whatever the system's own encoding is (Windows's)
+        self._proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace',
+                                      bufsize=1, env=env)
         self.last = self.request({'op': 'observe'})
         if not self.last.get('pages'):
             self.last = self.request({'op': 'wait', 'text': '', 'timeout': timeout})
+        # how long the first page took to show, the server's start included for a package's program
+        self.first_page = time.monotonic() - self.started
+        self.url = self.url or str(self.last.get('url', '')).rstrip('/')
 
     def __enter__(self) -> 'TuiSession':
         return self
@@ -180,7 +198,67 @@ class TuiSession:
                 self._proc.wait(10)
             except subprocess.TimeoutExpired:
                 self._proc.kill()
-        shutil.rmtree(self._project, ignore_errors=True)
+        if self._project is not None:
+            shutil.rmtree(self._project, ignore_errors=True)
+
+
+class TuiInBrowser(TuiSession):
+    """The TUI exported for the browser (`quantum package <app> --target web`, UI-22) in a Playwright page, on the
+    application's server that serves it, played through ``window.quantumTui``: the same requests and answers as a
+    TuiSession, so a driver of one drives the other::
+
+        page = chromium.new_page()
+        with TuiInBrowser(page, 'http://127.0.0.1:8000') as tui:     # /static/tui/index.html, its first page
+            tui.click(*xy)
+
+    A file is chosen in the browser's own picker (Playwright's file chooser); a shot is the page's screenshot.
+    The page stays the caller's."""
+
+    def __init__(self, page, url: str, path: str = '/', tui: str = '/static/tui/index.html', timeout: float = 90):
+        from urllib.parse import quote
+        self.page = page
+        self.url = url.rstrip('/')
+        self.timeout = timeout
+        self.log: List[str] = []
+        self.errors: List[str] = []           # what the page threw, and the errors on its console
+        self._project = None
+        page.on('console', lambda m: (self.errors if m.type == 'error' else self.log).append(m.text))
+        page.on('pageerror', lambda e: self.errors.append(str(e)))
+        self.started = time.monotonic()
+        page.goto(self.url + tui + ('' if path == '/' else '?page=' + quote(path, safe='/')))
+        try:
+            page.wait_for_function('() => !!window.quantumTui', timeout=timeout * 1000)
+        except Exception as exc:
+            raise TuiError(f'the TUI did not start in the browser in {timeout:.0f}s: '
+                           + ' | '.join((self.errors + self.log)[-8:])) from exc
+        self.last = self.request({'op': 'observe'})
+        if not self.last.get('pages'):
+            self.last = self.request({'op': 'wait', 'text': '', 'timeout': timeout})
+        self.first_page = time.monotonic() - self.started
+        self.url = str(self.last.get('url', '')).rstrip('/') or self.url
+
+    def request(self, req: dict) -> dict:
+        answer = json.loads(self.page.evaluate('(r) => window.quantumTui.request(r)', json.dumps(req)))
+        if 'error' in answer:
+            raise TuiError(answer['error'])
+        if 'screen' in answer:
+            self.last = answer
+        return answer
+
+    def attach(self, bind: str, file: str) -> dict:
+        """The field's picker opened, and `file` chosen in it, as a person does; answered once the TUI has it."""
+        with self.page.expect_file_chooser(timeout=self.timeout * 1000) as chooser:
+            self.request({'op': 'attach', 'bind': bind})
+        chooser.value.set_files(str(file))
+        return self.wait(Path(file).name, timeout=self.timeout)
+
+    def shot(self, file: str) -> str:
+        self.request({'op': 'wait', 'text': ''})          # the page has settled
+        self.page.screenshot(path=str(file))
+        return str(file)
+
+    def close(self) -> None:
+        pass
 
 
 def launch(url: str, page: str = '/') -> int:

@@ -647,6 +647,52 @@ answers with what the screen shows: the parity script and the Kanban's script ru
 (`quantum/runtime/ui_tui.py`, `TuiSession`), and its layout is checked against reference frames of
 cells (`tests/tui/frames/`).
 
+### A file to hand someone
+
+`quantum package <app> --on tui --target linux|windows|macos` makes one file of the application
+that runs where Quantum is not installed: the TUI as its program, and beside it the application's
+server with a Python of its own. Any target is made on any system; the first time, Python's build
+for that system, the libraries and Godot's export templates are fetched into your cache.
+
+```bash
+quantum package projects/kanban --target windows     # projects/kanban/dist/kanban-windows.zip
+```
+
+The person unpacks it and runs `kanban` (`kanban.exe`, or `Kanban.app` on a Mac with Apple
+silicon). The TUI starts the server, shows the first page, and the server ends when the window
+closes. What the application writes — its SQLite databases, uploads, logs — goes to a folder of
+theirs (`~/.local/share/quantum/kanban` on Linux, `%LOCALAPPDATA%\Quantum\kanban` on Windows,
+`~/Library/Application Support/Quantum/kanban` on a Mac), not into the package. Your databases
+stay with you: the package leaves them out and its migrations make them when it starts, unless
+`--with-data` carries them (copied to the person's folder the first time). The Kanban's is about
+60 MB and shows its first page in under two seconds; CI makes it for the three systems, runs
+the Kanban's whole script in the Linux one, and starts the Windows and macOS ones on those
+systems.
+
+With `--on desktop` the program is a window of its own instead, the pages as the browser shows
+them (`quantum desktop`, on the system's web view): `Kanban.exe` on Windows, `Kanban.app` on a Mac.
+Linux has no desktop package — its window would need Qt WebEngine, about 550 MB — and its package
+is the TUI.
+
+### In the browser
+
+`--target web` puts the TUI in a browser tab instead: it is exported into the application's static
+folder, and the application's own server serves it with its pages.
+
+```bash
+quantum package projects/kanban --target web     # projects/kanban/static/tui/
+quantum run projects/kanban --on web             # http://127.0.0.1:8090/static/tui/index.html
+```
+
+`/static/tui/index.html` opens the first page, and `?page=/board/1` another. The TUI asks the
+same server for the pages through the browser's own requests, so the browser keeps the session's
+cookies and follows the redirects — a person signs in once, as in the web version — and a file
+field opens the browser's file picker. It is the same TUI: the same cells, the same keys and mouse,
+as many columns and rows as the window has room for. Nothing is carried but the TUI (about 44 MB,
+most of it Godot's WebAssembly); `--out` puts it elsewhere. CI runs the parity scripts and the
+Kanban's whole script in it, in Chromium.
+
+
 ## On the Hive's screen
 
 On a Quantum OS machine the console is the Hive's screen: a pixel-art scene

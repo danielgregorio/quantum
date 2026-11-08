@@ -51,6 +51,13 @@ sys.path.insert(0, str(REPO))
 
 from quantum.runtime.godot.schema import STATEMENTS, TAGS  # noqa: E402
 from quantum.runtime.godot_bin import GODOT_VERSION, GodotNotFound, ensure_godot, script_errors  # noqa: E402
+from quantum.runtime.godot_export import install_templates as _install, templates_dir  # noqa: E402,F401
+
+
+def install_templates(source: str = '') -> int:
+    # the templates where Godot looks (quantum/runtime/godot_export.py, which `quantum package` uses too)
+    _install(source)
+    return 0
 
 PRESETS = {
     'Web': ('Web', 'index.html', '''variant/extensions_support=false
@@ -106,47 +113,9 @@ DEFAULT_PRESETS = ['Web', 'Linux', 'Windows']
 
 
 
-def templates_dir() -> Path:
-    """Where Godot looks for its export templates, on this system."""
-    if sys.platform == 'win32':
-        base = Path(os.environ.get('APPDATA', Path.home() / 'AppData' / 'Roaming')) / 'Godot'
-    elif sys.platform == 'darwin':
-        base = Path.home() / 'Library' / 'Application Support' / 'Godot'
-    else:
-        base = Path.home() / '.local' / 'share' / 'godot'
-    return base / 'export_templates' / f'{GODOT_VERSION}.stable'
-
-
 def games() -> dict:
     return {p.parent.name: p for p in sorted(REPO.glob('projects/*/*.q'))
             if p.stem == p.parent.name and not p.with_name(f'{p.stem}.server.q').is_file()}
-
-
-def install_templates(source: str = '') -> int:
-    target = templates_dir()
-    if target.is_dir() and any(target.iterdir()):
-        print(f'templates already in {target}')
-        return 0
-    if source:
-        archive = Path(source)
-    else:
-        archive = Path.home() / '.cache' / 'quantum' / f'godot-{GODOT_VERSION}-export-templates.tpz'
-        if not archive.is_file():
-            # GitHub's release first, then Godot's own download service; a 5xx is tried again (godot_bin)
-            from quantum.runtime.godot_bin import fetch_release, templates_urls
-            archive.parent.mkdir(parents=True, exist_ok=True)
-            print('the export templates, about 1.2 GB...')
-            fetch_release(templates_urls(), archive, progress=print, check=lambda path: zipfile.ZipFile(path).close())
-    target.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive) as z:
-        for info in z.infolist():   # the archive holds templates/<file>; Godot wants <version>.stable/<file>
-            if info.is_dir():
-                continue
-            name = info.filename.split('/', 1)[1] if '/' in info.filename else info.filename
-            with z.open(info) as src, open(target / name, 'wb') as dst:
-                shutil.copyfileobj(src, dst)
-    print(f'installed {len(list(target.iterdir()))} templates in {target}')
-    return 0
 
 
 def preset_file(name: str, preset: str, target: Path) -> str:

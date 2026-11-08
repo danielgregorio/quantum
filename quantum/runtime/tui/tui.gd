@@ -14,8 +14,18 @@ extends Control
 #
 # With --play it is driven from its stdin, a JSON request a line, each answered on stdout with "QTP " and
 # what the screen shows (the play protocol, as the games' agents use it; quantum/runtime/ui_tui.py).
+#
+# Exported by `quantum package` (UI-22), it is the package's program: with no --url, it starts the server
+# folder beside it (server/package.json says how) with the package's own Python, waits for the line that says
+# where the server is, and holds the server's input open; when the TUI goes, so does the server.
+#
+# Exported for the browser (`quantum package <app> --on tui --target web`, UI-22), it runs in a page the
+# application's server serves (/static/tui/index.html?page=/first): its requests go through the browser's fetch
+# on that origin, so the browser keeps the cookies and follows the redirects, a file field opens the browser's
+# own picker, and window.quantumTui.request(json) answers the play protocol (web.gd).
 
 const Layout = preload("res://layout.gd")
+const Web = preload("res://web.gd")
 const VIEW := "application/vnd.quantum.view+json"
 
 var base_url := "http://127.0.0.1:8000"
@@ -58,6 +68,7 @@ var image_sizes := {}
 var images_asked := {}
 var streams := {}
 var streams_read := {}
+var stream_bytes := {}           # in a browser: what a stream has said so far, by its url
 var dialog: FileDialog = null
 var dialog_key := ""
 var colors := {}
@@ -76,17 +87,30 @@ var ended := false
 var shot := ""                   # --shot=file.png: the window's picture once the page has settled, then quit
 var shot_frames := 0
 
+# UI-22: the package's server, started by the TUI: {pid, stdio, stderr} while it runs
+const SERVER_READY := "QUANTUM-SERVER "
+const SERVER_ERROR := "QUANTUM-ERROR "
+var server := {}
+var server_reader: Thread = null
+var server_title := ""
+var server_starting := false
+
+# UI-22: in a browser, what the browser does for the TUI (web.gd); null elsewhere
+var web = null
+
 
 # -- starting -----------------------------------------------------------------
 
 func _ready() -> void:
 	var tokens := {}
+	var url_given := false
 	for arg in OS.get_cmdline_user_args():
 		var k := arg.get_slice("=", 0)
 		var v := arg.substr(k.length() + 1)
 		match k:
 			"--url":
 				base_url = v.rstrip("/")
+				url_given = true
 			"--page":
 				path = v if v.begins_with("/") else "/" + v
 			"--play":
@@ -105,10 +129,24 @@ func _ready() -> void:
 				motion_on = v != "off"
 			"--shot":
 				shot = v
+	if OS.has_feature("web"):
+		# in a browser, on a page of the application's server: the server is the page's origin
+		web = Web.new(self)
+		base_url = web.origin()
+		path = web.first_page()
+	var package := "" if url_given or web != null else _package_dir()
+	if package != "":
+		var conf = JSON.parse_string(FileAccess.get_file_as_string(package.path_join("package.json")))
+		if conf is Dictionary and conf.get("tokens") is Dictionary and tokens.is_empty():
+			tokens = conf["tokens"]
 	base_tokens = tokens
 	_theme(tokens)
 	var file := FontFile.new()
-	if file.load_dynamic_font("res://DejaVuSansMono.ttf") == OK:
+	if OS.has_feature("template"):
+		# exported (a package, UI-22): the font is an imported resource in the pack
+		var loaded = load("res://DejaVuSansMono.ttf")
+		font = loaded if loaded is Font else ThemeDB.fallback_font
+	elif file.load_dynamic_font("res://DejaVuSansMono.ttf") == OK:
 		font = file
 	else:
 		font = ThemeDB.fallback_font
@@ -121,8 +159,11 @@ func _ready() -> void:
 		var h := font.get_height(font_size)
 		if w > 0 and h > 0:
 			cell = Vector2(ceil(w), ceil(h))
-		get_window().size = Vector2i(int(cell.x * cols), int(cell.y * (rows + 2)))
-		get_window().min_size = Vector2i(int(cell.x * 40), int(cell.y * 12))
+		if web == null:
+			get_window().size = Vector2i(int(cell.x * cols), int(cell.y * (rows + 2)))
+			get_window().min_size = Vector2i(int(cell.x * 40), int(cell.y * 12))
+		else:
+			_on_resized.call_deferred()          # the browser's window is the size: as many cells as fit
 		if not play:
 			resized.connect(_on_resized)
 	if play:
@@ -132,7 +173,106 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_ALL
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	grab_focus()
+	if package != "":
+		_start_server(package)
+	else:
+		load_page(path)
+
+
+# -- the package's server (UI-22) ---------------------------------------------
+
+func _package_dir() -> String:
+	# an exported TUI with the package's server folder beside it (in a Mac's .app, in its Resources)
+	if not OS.has_feature("template"):
+		return ""
+	var here := OS.get_executable_path().get_base_dir()
+	for dir in [here.path_join("server"), here.path_join("../Resources/server")]:
+		if FileAccess.file_exists(dir.path_join("package.json")):
+			return dir.simplify_path()
+	return ""
+
+
+func _start_server(dir: String) -> void:
+	var conf = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("package.json")))
+	if not (conf is Dictionary):
+		_server_failed("server/package.json cannot be read")
+		return
+	server_title = str(conf.get("title", ""))
+	if path == "/" and str(conf.get("page", "")) != "":
+		path = str(conf["page"])
+	var args := PackedStringArray()
+	for a in conf.get("args", []):
+		args.append(str(a).replace("{server}", dir))
+	busy += 1                                   # the play protocol waits for the first page, as a person does
+	server_starting = true
+	get_window().title = "Starting %s — Quantum" % server_title
+	server = OS.execute_with_pipe(dir.path_join(str(conf.get("python", ""))), args)
+	if server.is_empty():
+		_server_failed("the package's Python did not start (%s)" % dir.path_join(str(conf.get("python", ""))))
+		return
+	server_reader = Thread.new()
+	server_reader.start(_read_server)
+
+
+func _read_server() -> void:
+	# on its own thread: the server's first line says where it is, or what went wrong
+	var pipe: FileAccess = server["stdio"]
+	while true:
+		var line := pipe.get_line()
+		if line.begins_with(SERVER_READY):
+			call_deferred("_server_ready", line.substr(SERVER_READY.length()).strip_edges())
+			return
+		if line.begins_with(SERVER_ERROR):
+			call_deferred("_server_failed", line.substr(SERVER_ERROR.length()).strip_edges())
+			return
+		if line == "" and pipe.get_error() != OK:
+			call_deferred("_server_failed", "the server stopped before it started")
+			return
+
+
+func _server_started() -> void:
+	if server_starting:
+		server_starting = false
+		busy -= 1
+
+
+func _server_ready(url: String) -> void:
+	_server_started()
+	base_url = url.rstrip("/")
 	load_page(path)
+
+
+func _server_failed(reason: String) -> void:
+	_server_started()
+	page = {"title": server_title, "flash": "%s could not start: %s" % [server_title, reason],
+			"flashType": "error", "flashShown": false, "view": []}
+	get_window().title = "%s — Quantum" % server_title
+	relayout()
+	pages_loaded += 1
+	queue_redraw()
+
+
+func _stop_server() -> void:
+	# its input ends and it shuts down; one that does not within a second is stopped
+	if server.is_empty():
+		return
+	var pid := int(server["pid"])
+	(server["stdio"] as FileAccess).close()
+	for i in 50:
+		if not OS.is_process_running(pid):
+			break
+		OS.delay_msec(20)
+	if OS.is_process_running(pid):
+		OS.kill(pid)
+	if server_reader != null:
+		server_reader.wait_to_finish()
+		server_reader = null
+	server = {}
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE:
+		_stop_server()
 
 
 func _theme(tokens: Dictionary) -> void:
@@ -212,6 +352,10 @@ func _keep_cookies(headers: PackedStringArray) -> void:
 func http(method: int, target: String, body: PackedByteArray, content_type: String = "",
 		accept: String = VIEW) -> Dictionary:
 	# One request to the application's server: {code, headers, body}; code 0 when it could not be asked.
+	if web != null:
+		# in a browser: its fetch, with its cookies, its redirects followed ({url}: where they ended)
+		return await web.request("POST" if method == HTTPClient.METHOD_POST else "GET", base_url + target, body,
+								 content_type, accept, base_url + path)
 	var o := _origin()
 	var client := HTTPClient.new()
 	var error := client.connect_to_host(o["host"], o["port"], TLSOptions.client() if o["tls"] else null)
@@ -283,8 +427,9 @@ func _multipart(data: Dictionary, files: Dictionary) -> Array:
 		body.append_array(("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n"
 						   % [boundary, k, str(data[k])]).to_utf8_buffer())
 	for k in files:
-		var file_path: String = files[k]
-		var bytes := FileAccess.get_file_as_bytes(file_path)
+		# a file of this machine by its path, or in a browser the one its picker read, {name, bytes}
+		var file_path: String = files[k]["name"] if files[k] is Dictionary else files[k]
+		var bytes: PackedByteArray = files[k]["bytes"] if files[k] is Dictionary else FileAccess.get_file_as_bytes(file_path)
 		body.append_array(("--%s\r\nContent-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\nContent-Type: %s\r\n\r\n"
 						   % [boundary, k, file_path.get_file(), _mime(file_path)]).to_utf8_buffer())
 		body.append_array(bytes)
@@ -331,7 +476,7 @@ func fetch(method: String, target: String, data: Dictionary = {}, files: Diction
 				content_type = ""
 			continue
 		break
-	path = target
+	path = _target(str(answer["url"])) if str(answer.get("url", "")) != "" else target
 	var code := int(answer["code"])
 	if header(answer["headers"], "Content-Type").begins_with(VIEW):
 		var parsed = JSON.parse_string(answer["body"].get_string_from_utf8())
@@ -428,6 +573,11 @@ func _load_image(src: String) -> void:
 
 func _read_stream(url: String) -> void:
 	# IA-7: the answer as it is written, read from /_stream/<token> as the browser reads it
+	if web != null:
+		busy += 1                                # until its head, as below
+		stream_bytes[url] = PackedByteArray()
+		web.stream(url)
+		return
 	var o := _origin()
 	var client := HTTPClient.new()
 	if client.connect_to_host(o["host"], o["port"], TLSOptions.client() if o["tls"] else null) != OK:
@@ -457,15 +607,37 @@ func _read_stream(url: String) -> void:
 			await get_tree().process_frame
 			continue
 		text.append_array(chunk)
-		# a NUL byte and "ERROR:" (llm_stream.ERROR_MARK): what follows is why the answer stopped
-		var mark := text.find(0)
-		if mark >= 0:
-			streams[url] = text.slice(0, mark).get_string_from_utf8() + "\n" + \
-				text.slice(mark + 7).get_string_from_utf8()
-		else:
-			streams[url] = text.get_string_from_utf8()
-		relayout()
+		_stream_shows(url, text)
 	client.close()
+
+
+func _stream_shows(url: String, text: PackedByteArray) -> void:
+	# a NUL byte and "ERROR:" (llm_stream.ERROR_MARK): what follows is why the answer stopped
+	var mark := text.find(0)
+	if mark >= 0:
+		streams[url] = text.slice(0, mark).get_string_from_utf8() + "\n" + \
+			text.slice(mark + 7).get_string_from_utf8()
+	else:
+		streams[url] = text.get_string_from_utf8()
+	relayout()
+
+
+func _web_stream(url: String, kind: String, data: Variant) -> void:
+	# in a browser (web.gd): the stream's head, then each part as it comes
+	match kind:
+		"head":
+			busy -= 1
+			queue_redraw()
+			if int(data) != 200:
+				streams[url] = "This answer is no longer available."
+				relayout()
+		"chunk":
+			var text: PackedByteArray = stream_bytes.get(url, PackedByteArray())
+			text.append_array(data)
+			stream_bytes[url] = text
+			_stream_shows(url, text)
+		"end":
+			stream_bytes.erase(url)
 
 
 # -- laying out ---------------------------------------------------------------
@@ -620,9 +792,10 @@ func submit(form: int) -> void:
 			"calendar":
 				data[bind] = _value(it)              # UI-21: the day picked, YYYY-MM-DD (empty: none)
 			"file":
-				var chosen := str(state.get(it["key"], {}).get("file", ""))
+				var kept: Dictionary = state.get(it["key"], {})
+				var chosen := str(kept.get("file", ""))
 				if chosen != "":
-					files[bind] = chosen
+					files[bind] = {"name": chosen, "bytes": kept["bytes"]} if kept.has("bytes") else chosen
 	load_page(path.get_slice("#", 0), "POST", data, files)
 
 
@@ -793,7 +966,10 @@ func _open_tab(it: Dictionary) -> void:
 
 
 func _choose_file(it: Dictionary) -> void:
-	# UI-14: the TUI's own dialog, on this machine's files
+	# UI-14: the TUI's own dialog, on this machine's files; in a browser, the browser's own picker
+	if web != null:
+		web.pick(str(it.get("accept", "")), str(it["key"]))
+		return
 	if dialog == null:
 		dialog = FileDialog.new()
 		dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
@@ -819,6 +995,15 @@ func _file_chosen(file_path: String) -> void:
 	var kept: Dictionary = state.get(dialog_key, {})
 	kept["file"] = file_path
 	state[dialog_key] = kept
+	relayout()
+
+
+func _web_picked(key: String, file_name: String, bytes: PackedByteArray) -> void:
+	# in a browser: the file its picker read, kept with the field until the form is sent
+	var kept: Dictionary = state.get(key, {})
+	kept["file"] = file_name
+	kept["bytes"] = bytes
+	state[key] = kept
 	relayout()
 
 
@@ -872,7 +1057,8 @@ func _key(event: InputEventKey) -> void:
 	if code == KEY_ESCAPE and _escape():
 		return
 	if event.ctrl_pressed and code == KEY_Q:
-		get_tree().quit()
+		if web == null:                          # in a browser, its tab is closed by the browser
+			get_tree().quit()
 		return
 	if code == KEY_F5:
 		load_page(path)
@@ -1111,7 +1297,7 @@ func _process(_delta: float) -> void:
 		moving = true
 	if moving:
 		queue_redraw()
-	if play:
+	if play or web != null:
 		_serve_play()
 	elif shot != "":
 		shot_frames = shot_frames + 1 if _settled() and running.is_empty() else 0
@@ -1364,7 +1550,7 @@ func status_line() -> String:
 			return "Enter picks the day · ←→↑↓ move · Tab moves"
 	if not _top_modal().is_empty() and bool(_top_modal().get("closable", false)):
 		return "Esc closes · Tab moves · click acts"
-	return "Tab moves · click acts · wheel scrolls · F5 reloads · Ctrl+Q quits"
+	return "Tab moves · click acts · wheel scrolls · F5 reloads" + ("" if web != null else " · Ctrl+Q quits")
 
 
 # -- the play protocol --------------------------------------------------------
@@ -1379,8 +1565,18 @@ func _read_stdin() -> void:
 			return
 
 
+func _web_inbox(line: String) -> void:
+	# in a browser: a request of window.quantumTui (web.gd); an empty one is not the end of the input
+	inbox_lock.lock()
+	inbox.append(line if line != "" else "{}")
+	inbox_lock.unlock()
+
+
 func _answer(d: Dictionary) -> void:
-	print("QTP " + JSON.stringify(d))
+	if web != null:
+		web.answer(JSON.stringify(d))
+	else:
+		print("QTP " + JSON.stringify(d))
 
 
 func _settled() -> bool:
@@ -1417,6 +1613,8 @@ func _serve_play() -> void:
 				pending = {}
 				if DisplayServer.get_name() == "headless":
 					_answer({"error": "a shot needs a display: run the TUI with one (xvfb-run)"})
+				elif web != null:
+					_answer({"error": "in a browser, a shot is the page's screenshot (TuiInBrowser.shot)"})
 				else:
 					get_viewport().get_texture().get_image().save_png(file)
 					_answer({"shot": file})
@@ -1515,11 +1713,13 @@ func _serve(req: Dictionary) -> void:
 				event.pressed = true
 				_handle(event)
 		"attach":
-			# the file dialog of the field `bind` opened, and that file chosen in it
+			# the file dialog of the field `bind` opened, and that file chosen in it; in a browser, its picker
+			# opened, and what drives the browser chooses the file there
 			for it in lay.items:
 				if it["kind"] == "file" and it["bind"] == str(req.get("bind", "")):
 					_choose_file(it)
-					dialog.file_selected.emit(str(req.get("path", "")))
+					if web == null:
+						dialog.file_selected.emit(str(req.get("path", "")))
 		"resize":
 			cols = max(20, int(req.get("cols", cols)))
 			rows = max(4, int(req.get("rows", rows)))
@@ -1574,7 +1774,8 @@ func observation() -> Dictionary:
 		images.append({"alt": image["alt"], "src": image["src"], "loaded": textures.has(image["src"]),
 					   "w": image["w"], "h": image["h"]})
 	return {
-		"title": str(page.get("title", "")), "path": path, "pages": pages_loaded, "cols": cols, "rows": rows,
+		"title": str(page.get("title", "")), "path": path, "url": base_url, "pages": pages_loaded, "cols": cols,
+		"rows": rows,
 		"palette": palette,
 		"hover": hover, "cursor": "pointing" if mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND else "arrow",
 		"height": lay.height, "scroll": scroll, "screen": lay.text_rows(), "items": shown, "motions": motions,

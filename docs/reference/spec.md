@@ -1489,6 +1489,38 @@ browser's CSS variables, the console's and the TUI's colours (the view's
 
 <p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-accordion"><code>&lt;ui:accordion&gt;</code></a> · <a href="./ui#ui-dividedbox"><code>&lt;ui:dividedbox&gt;</code></a> · <a href="./ui#ui-tree"><code>&lt;ui:tree&gt;</code></a> · <a href="./ui#ui-menu"><code>&lt;ui:menu&gt;</code></a> · <a href="./ui#ui-option"><code>&lt;ui:option&gt;</code></a> · <a href="./ui#ui-log"><code>&lt;ui:log&gt;</code></a> · <a href="./ui#ui-markdown"><code>&lt;ui:markdown&gt;</code></a> · <a href="./ui#ui-loading"><code>&lt;ui:loading&gt;</code></a> · <a href="./ui#ui-validator"><code>&lt;ui:validator&gt;</code></a> · <a href="./ui#ui-modal"><code>&lt;ui:modal&gt;</code></a> · <a href="./ui#ui-chart"><code>&lt;ui:chart&gt;</code></a> · <a href="./ui#ui-avatar"><code>&lt;ui:avatar&gt;</code></a> · <a href="./ui#ui-tooltip"><code>&lt;ui:tooltip&gt;</code></a> · <a href="./ui#ui-dropdown"><code>&lt;ui:dropdown&gt;</code></a> · <a href="./ui#ui-breadcrumb"><code>&lt;ui:breadcrumb&gt;</code></a> · <a href="./ui#ui-pagination"><code>&lt;ui:pagination&gt;</code></a> · <a href="./ui#ui-skeleton"><code>&lt;ui:skeleton&gt;</code></a> · <a href="./ui#ui-toast"><code>&lt;ui:toast&gt;</code></a> · <a href="./ui#ui-carousel"><code>&lt;ui:carousel&gt;</code></a> · <a href="./ui#ui-stepper"><code>&lt;ui:stepper&gt;</code></a> · <a href="./ui#ui-calendar"><code>&lt;ui:calendar&gt;</code></a> · <a href="./ui#ui-date-picker"><code>&lt;ui:date-picker&gt;</code></a> · <a href="./ui#ui-theme"><code>&lt;ui:theme&gt;</code></a> · <a href="./ui#ui-color"><code>&lt;ui:color&gt;</code></a></p>
 
+<a id="UI-22"></a>**[UI-22](#UI-22)** — `quantum package <app> --on tui --target linux|windows|macos` makes
+one file to hand someone: the application's server — the application, Quantum,
+the libraries it needs and a Python of its own built for the target — beside
+the TUI exported for that system (`<app>-linux.tar.gz`, `<app>-windows.zip`,
+`<app>-macos.zip` with an `.app`), and any target is made on any system. The
+TUI is the package's program: it starts the server beside it, waits for the
+line that says where it listens (`QUANTUM-SERVER http://127.0.0.1:<port>/`, or
+`QUANTUM-ERROR` and why, which it shows), and holds the server's input open,
+so the server ends when the TUI does, however it ends. What the application
+writes — its SQLite databases, uploads, logs, the server's log — lives in a
+folder of the user's (`~/.local/share/quantum/<app>`, `%LOCALAPPDATA%\Quantum\<app>`,
+`~/Library/Application Support/Quantum/<app>`), and the package itself is not
+written to; its pages, static files and migrations stay in it. Its SQLite
+databases are left out unless `--with-data` carries them (copied to the user's
+folder once, never over theirs), and its pending migrations run at each start.
+With `--on desktop` (Windows and macOS) its program is a window of its own
+on the system's web view instead (WebView2, WKWebView), as `quantum desktop`
+opens ([UI-4](#UI-4)): the package's Python runs the server and the window in one
+process (`Kanban.exe`, `Kanban.app`); on Linux, whose window would need Qt
+WebEngine, it is an error that says the TUI is Linux's package. A package runs
+the same script as every other version (`tests/package/test_package_kanban.py`).
+`--target web` exports the TUI alone
+for the browser into the application's static folder (`<app>/static/tui/`
+unless `--out` says), so the application's own server serves it at
+`/static/tui/index.html`, on the page `?page=` names: it asks that server for
+the pages through the browser's fetch, so the browser keeps the cookies and
+follows the redirects, a file field opens the browser's own picker, and
+`window.quantumTui.request(json)` answers its play protocol
+(`tests/package/test_tui_in_browser.py`); a package for a system leaves it out.
+
+<p class="spec-cited">Referenced by: <a href="./cli#cli-desktop"><code>quantum desktop</code></a> · <a href="./cli#cli-package"><code>quantum package</code></a></p>
+
 ## 11. Development
 
 <a id="DEV-1"></a>**[DEV-1](#DEV-1)** — With `server.debug: true`, the server records the process's last 30

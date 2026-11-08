@@ -193,6 +193,116 @@ jobs:
             ${{ runner.temp }}/games/rpg/bridge.png
           if-no-files-found: ignore
 
+  package:
+    # `quantum package` (SPEC.md UI-22, PLAN_PLATFORMS.md Phase 5): the Kanban's Linux, Windows and macOS packages
+    # are made here, each a Python of its own, Quantum, the libraries and the application beside the TUI exported
+    # for that system; the Linux one is unpacked and the Kanban's whole script runs in its program, which starts
+    # the server beside it (tests/package/). The packages' sizes and the time to the first page go to the summary.
+    # The TUI exported for the browser (--target web) runs the parity scripts and the Kanban's in Chromium.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install quantum
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          # the browser the TUI's web export runs in (tests/package/test_tui_in_browser.py)
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      # Godot and its export templates (1.2 GB), the games' cache; Python's builds land beside them
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cache/quantum
+            ~/.local/share/godot/export_templates
+          key: godot-export-${{ hashFiles('quantum/runtime/godot_bin.py') }}
+      - run: python scripts/godot.py install
+
+      - name: Package the Kanban, and run its script in the package and in the browser's TUI
+        env:
+          QUANTUM_PACKAGE_TESTS: '1'
+          QUANTUM_PACKAGE_OUT: ${{ runner.temp }}/packages
+        run: |
+          printf '| Package | Size | First page | Made in |\n|---|---|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
+          pytest tests/package
+
+      # the packages for the other systems, for the runners that run them (package-elsewhere)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: kanban-packages
+          path: |
+            ${{ runner.temp }}/packages/kanban-windows.zip
+            ${{ runner.temp }}/packages/kanban-macos.zip
+            ${{ runner.temp }}/packages/kanban-windows-desktop.zip
+            ${{ runner.temp }}/packages/kanban-macos-desktop.zip
+          if-no-files-found: error
+
+  package-elsewhere:
+    # A package made on Linux runs on the system it was made for: a Windows and a macOS runner unpack the Kanban's
+    # and run the start of its script in its program, and start its desktop package with no window
+    # (tests/package/test_package_runs_here.py). The desktop's is unpacked in a folder whose name has a space.
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: windows
+            program: kanban/kanban.exe
+            desktop: kanban/Kanban.exe
+          - os: macos-latest
+            target: macos
+            program: Kanban.app/Contents/MacOS/Kanban
+            desktop: Kanban.app/Contents/MacOS/Kanban
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      # only the test's driver: the server runs from the package, with its own Python
+      - name: Install the test's driver
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: kanban-packages
+          path: packages
+
+      - name: Unpack it
+        shell: bash
+        run: |
+          cd packages
+          mkdir "with a window"
+          if [ "${{ matrix.target }}" = macos ]; then
+            ditto -x -k kanban-macos.zip .
+            ditto -x -k kanban-macos-desktop.zip "with a window"
+          else
+            unzip -q kanban-windows.zip
+            unzip -q kanban-windows-desktop.zip -d "with a window"
+          fi
+
+      - name: Run its script, and its desktop with no window
+        shell: bash
+        env:
+          QUANTUM_PACKAGE_PROGRAM: ${{ github.workspace }}/packages/${{ matrix.program }}
+          QUANTUM_PACKAGE_DESKTOP: ${{ github.workspace }}/packages/with a window/${{ matrix.desktop }}
+        run: pytest tests/package/test_package_runs_here.py
+
   relay-image:
     # The relay as it is deployed (deploy/relay/Dockerfile): the image builds,
     # compiles the networked games, and answers its health check.
