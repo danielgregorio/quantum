@@ -781,6 +781,7 @@ there is no runtime in those files, so a `q:set`, `q:function` or any other
 command in them is an error that points here. Write the screen as a page to
 give it logic.
 
-`--target mobile` (React Native) is **Laboratory**: it translates the logic
-to JavaScript on its own, with no stability promise. Phones are not part of
-1.0. The old `--target desktop` was removed; `quantum desktop` replaces it.
+The old `--target desktop` was removed; `quantum desktop` replaces it. So was
+`--target mobile` (React Native, which translated the logic to JavaScript of
+its own): a phone's application is the TUI as a hosted application's client,
+`quantum package --target android|ios` ([On a phone](#on-a-phone)).

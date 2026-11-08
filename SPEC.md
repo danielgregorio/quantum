@@ -993,8 +993,9 @@ only: `--target html` (one page) and `--target textual` (a Textual app). Logic
 inside it (`q:set`, `q:function`, any statement) is an error that says to write
 the screen as a page — logic runs in the page's runtime. `--target desktop` was
 removed (it translated the logic to a JavaScript bridge of its own); the
-desktop is `quantum desktop` (UI-4), and `quantum run --target desktop` says so. `--target mobile` (React Native) is
-Laboratory: it warns once and keeps translating the logic, with no promise.
+desktop is `quantum desktop` (UI-4), and `quantum run --target desktop` says so. `--target mobile` (React Native,
+which translated the logic to JavaScript of its own) was removed too; a phone's application is the TUI as a
+hosted application's client (UI-22: `quantum package --target android|ios`), and `--target mobile` says so.
 
 **UI-9** — A `<ui:form on-submit="x">` takes each field's rules from action
 `x`'s `q:param`s: `required`, `minlength`, `maxlength`, `min`, `max`, the type

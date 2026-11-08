@@ -29,6 +29,7 @@ services it calls, and the AI tags (and, later, a REST API of its own). As faith
 | A REST API of its own | `q:endpoint` (API-1 to API-6) and its OpenAPI document, `/api/openapi.json` (API-7) | Core |
 | The versions | `quantum run <app> --on web\|desktop\|tui\|terminal` (UI-18): the browser, a pywebview window, the TUI drawn by Godot (UI-20) and the terminal (Textual, with a terminal's limits) | one parameter |
 | The same `ui:*` everywhere | 67 of 67 tags (the Core set, `UI_PARITY.md`) | Phase 4 done |
+| One file to hand someone | `quantum package <app>` for Linux, Windows, macOS, a browser tab and a phone, a server beside it or a hosted one's client (UI-22) | Phases 5 and 6 done |
 
 ## Rules
 
@@ -302,6 +303,12 @@ and its cursor), which the phones' launchers and iOS's export require.
 
 What changed from the plan (6b): the phone's TUI is not run in an emulator in CI — the touch is driven on the
 desktop's TUI with `--touch`, and the phone's package is checked as made and signed.
+
+**6c done 2026-11-08: the React Native target left.** `quantum run --target mobile` (`ui_mobile_adapter.py`,
+`ui_mobile_templates.py`, their tests and example, its Laboratory warning) is removed; the builder and the command
+line say a phone's application is `quantum package --target android|ios`. **Phase 6 is done, and with it the plan:**
+one application, its pages drawn by the browser, the desktop's window, the console, the Hive's screen and the TUI;
+packaged for Linux, Windows, macOS and a browser tab; and, as a hosted application's client, for a phone.
 
 ## Later — `q:endpoint`: a REST API in the Core
 

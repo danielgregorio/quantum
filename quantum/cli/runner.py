@@ -305,10 +305,14 @@ class QuantumRunner:
 
 
 def _ui_target(value):
-    """--target: `desktop` was removed (UI-8); say where the desktop went."""
+    """--target: `desktop` and `mobile` were removed (UI-8); say where they went."""
     if value == 'desktop':
         raise argparse.ArgumentTypeError('--target desktop was removed (UI-8): the desktop is '
                                          '`quantum desktop`, the application pages in a window (UI-4)')
+    if value in ('mobile', 'react-native'):
+        raise argparse.ArgumentTypeError(f'--target {value} (React Native) was removed (UI-8): a phone\'s '
+                                         'application is `quantum package <app> --server https://... '
+                                         '--target android|ios` (UI-22)')
     return value
 
 
@@ -371,8 +375,8 @@ Examples:
     run_parser.add_argument('--port', type=int, help='With --on web: the port (overrides the config)')
     run_parser.add_argument('--debug', action='store_true', help='Debug mode')
     run_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
-    run_parser.add_argument('--target', type=_ui_target, choices=['html', 'textual', 'mobile'], default='html',
-                            help='UI target (for type="ui" apps): html, textual, or mobile')
+    run_parser.add_argument('--target', type=_ui_target, choices=['html', 'textual'], default='html',
+                            help='UI target (for type="ui" apps): html or textual (layout only)')
     run_parser.add_argument('--out', metavar='DIR',
                             help='For a hive or a screen: write what it compiles to here (projects/<id>/hive or '
                                  'projects/<id>/screen by default)')

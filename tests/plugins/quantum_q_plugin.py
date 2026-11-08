@@ -138,7 +138,7 @@ class QuantumQItem(pytest.Item):
                 # A q:application is not a component. Calling
                 # execute_component on one raised "'ApplicationNode' object
                 # has no attribute 'params'" and then "... no attribute
-                # 'statements'" — seven test-ui-*.q and test-mobile.q failed
+                # 'statements'" — seven test-ui-*.q failed
                 # there, before reaching anything they were written to check.
                 self._run_application(ast, runtime)
             else:
@@ -162,10 +162,8 @@ class QuantumQItem(pytest.Item):
 
         if app_type == 'ui':
             from quantum.runtime.ui_builder import UIBuilder
-            # UI-8: html is layout only; the mobile example is built for its
-            # own (Laboratory) target, the one that runs its logic.
-            target_name = 'mobile' if self.name == 'test-mobile.q' else 'html'
-            output = UIBuilder().build(app, target=target_name)
+            # UI-8: html is layout only
+            output = UIBuilder().build(app, target='html')
             assert output and output.strip(), (
                 f"{self.name}: the UI builder produced nothing")
             return

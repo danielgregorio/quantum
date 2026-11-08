@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "generated": true,
-  "totalExamples": 147,
+  "totalExamples": 146,
   "categories": [
     {
       "id": "state-management",
@@ -231,7 +231,7 @@
       "description": "Complex examples combining multiple features",
       "icon": "🚀",
       "docsPath": "/architecture/",
-      "exampleCount": 25,
+      "exampleCount": 24,
       "examples": [
         "chat-messages.q",
         "chat-tui.q",
@@ -256,7 +256,6 @@
         "test-log-conditional.q",
         "test-log-databinding.q",
         "test-log-with-loop.q",
-        "test-mobile.q",
         "websocket-chat.q"
       ]
     }

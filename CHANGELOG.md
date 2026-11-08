@@ -1231,6 +1231,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Breaking
 
+- `quantum run --target mobile` (React Native, Laboratory) is removed. It
+  translated `q:set` and `q:function` to JavaScript of its own — the opposite
+  of one runtime — and said so with a warning. A phone's application is now the
+  TUI as a hosted application's client: `quantum package <app> --server
+  https://... --target android|ios`. `--target mobile` says where it went.
+
 - An attribute that is one expression and a dictionary, `{ {'id': 1} }`, is
   the dictionary (EXPR-17); it was left as the text. A JSON object written as
   text, `{"board": "{name}"}`, is still text with expressions in it (EXPR-4).

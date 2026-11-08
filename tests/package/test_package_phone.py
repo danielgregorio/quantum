@@ -38,7 +38,8 @@ def test_the_kanban_for_android(tmp_path):
         names = set(apk.namelist())
     assert 'AndroidManifest.xml' in names and 'classes.dex' in names
     assert any(n.startswith('lib/arm64-v8a/') and n.endswith('.so') for n in names)
-    assert any(n.startswith('assets/') and n.endswith('.pck') for n in names)
+    # the TUI's files, which Godot's Android export lays out under assets/ one by one (no single .pck)
+    assert sum(1 for n in names if n.startswith('assets/')) >= 3, sorted(names)[:40]
     # signed: the SDK's own apksigner says so
     tools = sorted((Path(os.environ['ANDROID_HOME']) / 'build-tools').iterdir())
     verified = subprocess.run([str(tools[-1] / 'apksigner'), 'verify', '--print-certs', str(made.path)],

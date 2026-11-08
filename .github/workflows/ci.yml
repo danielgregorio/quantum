@@ -64,7 +64,7 @@ jobs:
         # state (the root conftest restores logging per test). A test that
         # really has to run alone — a fixed port, a file outside tmp — carries
         # @pytest.mark.isolated and runs afterwards, serially.
-        # The Laboratory (games, Godot, React Native) runs in the job below.
+        # The Laboratory (games, Godot) runs in the job below.
         # QUANTUM_GODOT_REQUIRED: a TUI test without Godot fails here, it does not skip.
         env:
           QUANTUM_GODOT_REQUIRED: '1'
@@ -77,7 +77,7 @@ jobs:
           coverage report --fail-under=80 --include="*/runtime/llm_service.py,*/runtime/knowledge_service.py,*/runtime/llm_providers.py,*/runtime/llm_stream.py"
 
   laboratory:
-    # SUPPORT_TIERS.md: games, the Godot codegen and the React Native target
+    # SUPPORT_TIERS.md: games and the Godot codegen
     # stay in the repository and in the suite (decision D1), in a job of their
     # own — required like the other — so a red CI says at once whether the
     # Core or the Laboratory broke. The root conftest marks those tests by file.
@@ -228,7 +228,7 @@ jobs:
 
       # the phone's .apk: the runner has the Android SDK (ANDROID_HOME); Godot signs with its build tools, run by
       # a JDK 17 (tests/package/test_package_phone.py)
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'

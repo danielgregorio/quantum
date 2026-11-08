@@ -30,7 +30,7 @@ Execute a .q file, or run an application in one of its versions (--on).
 | `--port` | With --on web: the port (overrides the config) |  |  |
 | `--debug` | Debug mode |  |  |
 | `--config` | Config file | `quantum.config.yaml` |  |
-| `--target` | UI target (for type="ui" apps): html, textual, or mobile | `html` | `html`, `textual`, `mobile` |
+| `--target` | UI target (for type="ui" apps): html or textual (layout only) | `html` | `html`, `textual` |
 | `--out` | For a hive or a screen: write what it compiles to here (projects/&lt;id>/hive or projects/&lt;id>/screen by default) |  |  |
 | `--check` | For a game: after the build, open the Godot project headless and fail on any script error (needs Godot; `python scripts/godot.py install`) |  |  |
 | `--watch` | For a game: play it in Godot, and each time the .q (or a file beside it) is saved, build again and go on where the game was, under the new build |  |  |
@@ -143,7 +143,7 @@ Make one file to hand someone: the application's TUI and its server, for a syste
 | `--server` | a client of the application hosted at URL (https://...): its program alone, no server or Python of its own beside a TUI |  |  |
 | `--with-data` | carry its SQLite databases as they are (left out by default: its migrations make them when it starts) |  |  |
 
-Specified by: [UI-22](./spec#UI-22)
+Specified by: [UI-8](./spec#UI-8) · [UI-22](./spec#UI-22)
 
 <a id="cli-play"></a>
 

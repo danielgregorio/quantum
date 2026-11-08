@@ -170,25 +170,6 @@ def warn_app_type(app_type: str) -> None:
         )
 
 
-# UI-8: React Native translates the logic to JavaScript on its own — the
-# opposite of "one runtime, many renderers" — and phones are out of 1.0. It
-# stays to press on the language, like the games.
-LAB_UI_TARGETS = frozenset({"mobile", "react-native"})
-
-
-def warn_ui_target(target: str) -> None:
-    """One-time warning when a LABORATORY UI target is built."""
-    key = f"ui-target:{target}"
-    if target not in LAB_UI_TARGETS or key in _warned:
-        return
-    _warned.add(key)
-    logger.warning(
-        "quantum run --target %s is LABORATORY — it translates q:set and "
-        "q:function to JavaScript with no stability promise (SUPPORT_TIERS.md). "
-        "It may change or break without notice.", target
-    )
-
-
 def reset_warnings() -> None:
     """For tests, and for a reloading server."""
     _warned.clear()
