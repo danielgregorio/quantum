@@ -19,6 +19,7 @@ migrations make them when it starts.
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import re
@@ -56,6 +57,21 @@ TARGETS = {
 SERVER_LIBRARIES = ['flask', 'pyyaml', 'sqlparse', 'requests', 'bcrypt']
 DRIVER_LIBRARIES = {'postgres': 'psycopg2-binary', 'postgresql': 'psycopg2-binary', 'mysql': 'pymysql',
                     'mariadb': 'pymysql'}
+
+# The window's libraries (pywebview and what it needs on each system: pip's --platform does not read a
+# library's own markers for another system, so they are named here). Linux has none: its window would need Qt
+# WebEngine, half a gigabyte; its package is the TUI.
+DESKTOP_LIBRARIES = {
+    'windows': ['pywebview', 'proxy_tools', 'bottle', 'typing_extensions', 'pythonnet'],
+    'macos': ['pywebview', 'proxy_tools', 'bottle', 'typing_extensions', 'pyobjc-core', 'pyobjc-framework-Cocoa',
+              'pyobjc-framework-Quartz', 'pyobjc-framework-WebKit', 'pyobjc-framework-Security',
+              'pyobjc-framework-UniformTypeIdentifiers'],
+}
+# Libraries published only as source, pure Python: built into a wheel here, once
+SOURCE_ONLY = {'proxy_tools': '0.1.0'}
+# The Windows program of a desktop package: distlib's launcher (pip's own scripts' .exe), which runs the
+# Python its first line names, relative to itself, on the zip after it
+DISTLIB = '0.3.9'
 
 # What is never carried: a checkout's, an editor's, a run's leftovers.
 _LEFT_OUT = {'.git', '__pycache__', '.pytest_cache', 'node_modules', '.quantum.pid', '.DS_Store', 'dist',
@@ -121,13 +137,29 @@ def library_pins(names: List[str]) -> List[str]:
     return pins
 
 
+def source_wheels(names: List[str], progress: Callable[[str], None]) -> Path:
+    """The wheels of the libraries among `names` published only as source (pure Python), built once."""
+    folder = cache_dir() / 'wheels'
+    folder.mkdir(parents=True, exist_ok=True)
+    for name, version in SOURCE_ONLY.items():
+        if name in names and not list(folder.glob(f'{name}-{version}-*.whl')):
+            progress(f'a wheel of {name} {version} (published as source only)')
+            done = subprocess.run([sys.executable, '-m', 'pip', 'wheel', '--quiet', '--disable-pip-version-check',
+                                   '--use-pep517', '--no-deps', f'{name}=={version}', '-w', str(folder)],
+                                  capture_output=True, text=True)
+            if done.returncode != 0:
+                raise PackageError(f'pip could not build {name}:\n{done.stderr[-2000:]}')
+    return folder
+
+
 def install_libraries(target: str, site: Path, names: List[str], progress: Callable[[str], None]) -> Dict[str, str]:
     """The libraries, built for the target's system (wheels only), into the package's site-packages."""
     spec = TARGETS[target]
     platforms = [a for p in spec['pip'] for a in ('--platform', p)]
+    pins = [n if n in SOURCE_ONLY else p for n, p in zip(names, library_pins(names))]
     command = [sys.executable, '-m', 'pip', 'install', '--quiet', '--disable-pip-version-check', '--no-compile',
                '--target', str(site), *platforms, '--python-version', '3.12', '--implementation', 'cp',
-               '--only-binary=:all:', *library_pins(names)]
+               '--only-binary=:all:', '--find-links', str(source_wheels(names, progress)), *pins]
     progress(f'libraries for {target}: {", ".join(names)}')
     done = subprocess.run(command, capture_output=True, text=True)
     if done.returncode != 0:
@@ -207,6 +239,64 @@ def export_tui(target: str, title: str, name: str, out: Path, progress: Callable
         shutil.rmtree(project, ignore_errors=True)
 
 
+# -- the client: the desktop's window --------------------------------------------------------------------------
+
+def windows_launcher(progress: Callable[[str], None]) -> bytes:
+    """distlib's GUI launcher (w64.exe), from its wheel, kept in the cache."""
+    exe = cache_dir() / f'distlib-{DISTLIB}-w64.exe'
+    if not exe.is_file():
+        progress(f"distlib {DISTLIB}'s launcher (the Windows program)")
+        folder = cache_dir() / 'distlib'
+        folder.mkdir(parents=True, exist_ok=True)
+        done = subprocess.run([sys.executable, '-m', 'pip', 'download', '--quiet', '--disable-pip-version-check',
+                               '--no-deps', f'distlib=={DISTLIB}', '-d', str(folder)], capture_output=True, text=True)
+        wheels = list(folder.glob(f'distlib-{DISTLIB}-*.whl'))
+        if done.returncode != 0 or not wheels:
+            raise PackageError(f'pip could not get distlib {DISTLIB}:\n{done.stderr[-2000:]}')
+        with zipfile.ZipFile(wheels[0]) as z:
+            exe.write_bytes(z.read('distlib/w64.exe'))
+    return exe.read_bytes()
+
+
+def desktop_program(target: str, title: str, name: str, work: Path, progress: Callable[[str], None]):
+    """The desktop's program: (the folder it is in, the server folder beside it)."""
+    if target == 'windows':
+        folder = work / name
+        folder.mkdir()
+        # the launcher runs its first line's Python (beside it) on the zip after it: __main__ starts the desktop
+        body = io.BytesIO()
+        with zipfile.ZipFile(body, 'w') as z:
+            z.writestr('__main__.py', 'from quantum.runtime.packaged_desktop import main\nraise SystemExit(main())\n')
+        shebang = b'#!<launcher_dir>\\server\\python\\pythonw.exe -E -s\r\n'
+        program = re.sub(r'[\\/:*?"<>|]', '', title) or name
+        (folder / f'{program}.exe').write_bytes(windows_launcher(progress) + shebang + body.getvalue())
+        return folder, folder / 'server'
+    # a Mac's .app: its program a script that runs the package's Python
+    folder = work / f'{title}.app'
+    (folder / 'Contents' / 'MacOS').mkdir(parents=True)
+    (folder / 'Contents' / 'Info.plist').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key><string>{title}</string>
+  <key>CFBundleIdentifier</key><string>net.quantumframework.{re.sub(r'[^a-z0-9]', '', name)}</string>
+  <key>CFBundleName</key><string>{title}</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+</dict>
+</plist>
+''', encoding='utf-8')
+    program = folder / 'Contents' / 'MacOS' / title
+    program.write_text('#!/bin/sh\n# the package\'s Python, with the desktop (quantum.runtime.packaged_desktop)\n'
+                       'here="$(cd "$(dirname "$0")/.." && pwd)"\n'
+                       'exec "$here/Resources/server/python/bin/python3" -I -m quantum.runtime.packaged_desktop "$@"\n',
+                       encoding='utf-8')
+    program.chmod(0o755)
+    return folder, folder / 'Contents' / 'Resources' / 'server'
+
+
 # -- the file -------------------------------------------------------------------------------------------------
 
 def _zip(folder: Path, archive: Path) -> None:
@@ -239,23 +329,61 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
     """The package of `app` for `target`: the file, and the folder it holds (kept beside it, ready to run)."""
     started = time.monotonic()
     app = Path(app).resolve()
-    if on != 'tui':
-        raise PackageError(f'--on {on}: a package is made with the TUI as its program (--on tui); the desktop '
-                           f'window is PLAN_PLATFORMS.md Phase 5b')
+    if on not in ('tui', 'desktop'):
+        raise PackageError(f'--on {on}: a package\'s program is the TUI (--on tui) or a window (--on desktop)')
     if target not in TARGETS:
         raise PackageError(f'--target {target}: one of {", ".join(TARGETS)}')
+    if on == 'desktop' and target not in DESKTOP_LIBRARIES:
+        raise PackageError(f'--on desktop --target {target}: a window of its own on Linux needs Qt WebEngine, '
+                           f'about 550 MB; Linux\'s package is the TUI (--on tui)')
     config_file = app / 'quantum.config.yaml'
     if not config_file.is_file():
         raise PackageError(f'{app} has no quantum.config.yaml: `quantum package` takes an application\'s folder')
     config = yaml.safe_load(config_file.read_text(encoding='utf-8')) or {}
     name, title = app_name(app), app_title(app, config)
     out = Path(out or app / 'dist').resolve()
-    work = out / f'.{name}-{target}'
+    kind = f'{target}-desktop' if on == 'desktop' else target
+    work = out / f'.{name}-{kind}'
     shutil.rmtree(work, ignore_errors=True)
     folder = work / (f'{title}.app' if target == 'macos' else name)
     work.mkdir(parents=True)
 
     # the client first: it is the program, and on a Mac the folder the rest goes into
+    if on == 'desktop':
+        folder, server = desktop_program(target, title, name, work, progress)
+    else:
+        folder, server = tui_program(target, title, name, work, folder, progress)
+
+    server.mkdir(parents=True)
+    progress(f'Python {PYTHON_VERSION} for {target}')
+    unpack_python(python_archive(target, progress), server)
+    site = server / TARGETS[target]['site']
+    names = libraries_for(config) + (DESKTOP_LIBRARIES[target] if on == 'desktop' else [])
+    libraries = install_libraries(target, site, names, progress)
+    copy_quantum(site)
+    left_out = copy_app(app, server / 'app', config, with_data)
+    from quantum.runtime.ui_tui import design_tokens
+    (server / 'package.json').write_text(json.dumps({
+        'name': name, 'title': title, 'page': '/', 'program': on,
+        'python': TARGETS[target]['python'],
+        'args': ['-I', '-m', 'quantum.runtime.packaged_server', '--app', '{server}/app', '--name', name],
+        'tokens': design_tokens(),
+    }, indent=2) + '\n', encoding='utf-8')
+
+    suffix = '.tar.gz' if target == 'linux' else '.zip'
+    archive = out / f'{name}-{kind}{suffix}'
+    archive.unlink(missing_ok=True)
+    progress(f'packing {archive.name}')
+    (_tar if target == 'linux' else _zip)(folder, archive)
+    kept = out / f'{name}-{kind}'             # the package unpacked, ready to run: <kept>/<name>/<name>
+    shutil.rmtree(kept, ignore_errors=True)
+    work.rename(kept)
+    return Package(path=archive, folder=kept / folder.name, size=archive.stat().st_size,
+                   seconds=time.monotonic() - started, libraries=libraries, left_out=left_out)
+
+
+def tui_program(target: str, title: str, name: str, work: Path, folder: Path, progress: Callable[[str], None]):
+    """The TUI's program, exported: (the folder it is in, the server folder beside it)."""
     made = export_tui(target, title, name, work, progress)
     if target == 'macos':
         with zipfile.ZipFile(made) as z:
@@ -275,32 +403,7 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
         made.rename(program)
         program.chmod(program.stat().st_mode | 0o111)
         server = folder / 'server'
-
-    server.mkdir(parents=True)
-    progress(f'Python {PYTHON_VERSION} for {target}')
-    unpack_python(python_archive(target, progress), server)
-    site = server / TARGETS[target]['site']
-    libraries = install_libraries(target, site, libraries_for(config), progress)
-    copy_quantum(site)
-    left_out = copy_app(app, server / 'app', config, with_data)
-    from quantum.runtime.ui_tui import design_tokens
-    (server / 'package.json').write_text(json.dumps({
-        'name': name, 'title': title, 'page': '/',
-        'python': TARGETS[target]['python'],
-        'args': ['-I', '-m', 'quantum.runtime.packaged_server', '--app', '{server}/app', '--name', name],
-        'tokens': design_tokens(),
-    }, indent=2) + '\n', encoding='utf-8')
-
-    suffix = '.tar.gz' if target == 'linux' else '.zip'
-    archive = out / f'{name}-{target}{suffix}'
-    archive.unlink(missing_ok=True)
-    progress(f'packing {archive.name}')
-    (_tar if target == 'linux' else _zip)(folder, archive)
-    kept = out / f'{name}-{target}'           # the package unpacked, ready to run: <kept>/<name>/<name>
-    shutil.rmtree(kept, ignore_errors=True)
-    work.rename(kept)
-    return Package(path=archive, folder=kept / folder.name, size=archive.stat().st_size,
-                   seconds=time.monotonic() - started, libraries=libraries, left_out=left_out)
+    return folder, server
 
 
 def main(args) -> int:

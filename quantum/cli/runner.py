@@ -431,7 +431,8 @@ Examples:
     package_parser = subparsers.add_parser(
         'package', help="Make one file to hand someone: the application's TUI and its server, for a system")
     package_parser.add_argument('app', help="the application's folder (its quantum.config.yaml)")
-    package_parser.add_argument('--on', default='tui', choices=['tui'], help='its program: the TUI (default)')
+    package_parser.add_argument('--on', default='tui', choices=['tui', 'desktop'],
+                                help='its program: the TUI (default), or a window of its own (Windows, macOS)')
     package_parser.add_argument('--target', default='linux', choices=['linux', 'windows', 'macos'],
                                 help='the system it runs on (default: linux); any can be made on any')
     package_parser.add_argument('--out', help="where the file goes (default: the application's dist/)")

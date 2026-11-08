@@ -1504,10 +1504,14 @@ folder of the user's (`~/.local/share/quantum/<app>`, `%LOCALAPPDATA%\Quantum\<a
 written to; its pages, static files and migrations stay in it. Its SQLite
 databases are left out unless `--with-data` carries them (copied to the user's
 folder once, never over theirs), and its pending migrations run at each start.
-A package runs the same script as every other version
-(`tests/package/test_package_kanban.py`).
+With `--on desktop` (Windows and macOS) its program is a window of its own
+on the system's web view instead (WebView2, WKWebView), as `quantum desktop`
+opens ([UI-4](#UI-4)): the package's Python runs the server and the window in one
+process (`Kanban.exe`, `Kanban.app`); on Linux, whose window would need Qt
+WebEngine, it is an error that says the TUI is Linux's package. A package runs
+the same script as every other version (`tests/package/test_package_kanban.py`).
 
-<p class="spec-cited">Referenced by: <a href="./cli#cli-package"><code>quantum package</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./cli#cli-desktop"><code>quantum desktop</code></a> · <a href="./cli#cli-package"><code>quantum package</code></a></p>
 
 ## 11. Development
 

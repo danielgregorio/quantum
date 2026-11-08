@@ -665,8 +665,14 @@ theirs (`~/.local/share/quantum/kanban` on Linux, `%LOCALAPPDATA%\Quantum\kanban
 `~/Library/Application Support/Quantum/kanban` on a Mac), not into the package. Your databases
 stay with you: the package leaves them out and its migrations make them when it starts, unless
 `--with-data` carries them (copied to the person's folder the first time). The Kanban's is about
-60 MB and shows its first page in under two seconds; CI makes it for the three systems and runs
-the Kanban's whole script in the Linux one.
+60 MB and shows its first page in under two seconds; CI makes it for the three systems, runs
+the Kanban's whole script in the Linux one, and starts the Windows and macOS ones on those
+systems.
+
+With `--on desktop` the program is a window of its own instead, the pages as the browser shows
+them (`quantum desktop`, on the system's web view): `Kanban.exe` on Windows, `Kanban.app` on a Mac.
+Linux has no desktop package — its window would need Qt WebEngine, about 550 MB — and its package
+is the TUI.
 
 
 ## On the Hive's screen

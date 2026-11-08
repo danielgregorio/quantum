@@ -237,11 +237,14 @@ jobs:
           path: |
             ${{ runner.temp }}/packages/kanban-windows.zip
             ${{ runner.temp }}/packages/kanban-macos.zip
+            ${{ runner.temp }}/packages/kanban-windows-desktop.zip
+            ${{ runner.temp }}/packages/kanban-macos-desktop.zip
           if-no-files-found: error
 
   package-elsewhere:
     # A package made on Linux runs on the system it was made for: a Windows and a macOS runner unpack the Kanban's
-    # and run the start of its script in its program (tests/package/test_package_runs_here.py).
+    # and run the start of its script in its program, and start its desktop package with no window
+    # (tests/package/test_package_runs_here.py). The desktop's is unpacked in a folder whose name has a space.
     needs: package
     strategy:
       fail-fast: false
@@ -250,9 +253,11 @@ jobs:
           - os: windows-latest
             target: windows
             program: kanban/kanban.exe
+            desktop: kanban/Kanban.exe
           - os: macos-latest
             target: macos
             program: Kanban.app/Contents/MacOS/Kanban
+            desktop: Kanban.app/Contents/MacOS/Kanban
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -278,12 +283,20 @@ jobs:
         shell: bash
         run: |
           cd packages
-          if [ "${{ matrix.target }}" = macos ]; then ditto -x -k kanban-macos.zip .; else unzip -q kanban-windows.zip; fi
+          mkdir "with a window"
+          if [ "${{ matrix.target }}" = macos ]; then
+            ditto -x -k kanban-macos.zip .
+            ditto -x -k kanban-macos-desktop.zip "with a window"
+          else
+            unzip -q kanban-windows.zip
+            unzip -q kanban-windows-desktop.zip -d "with a window"
+          fi
 
-      - name: Run its script
+      - name: Run its script, and its desktop with no window
         shell: bash
         env:
           QUANTUM_PACKAGE_PROGRAM: ${{ github.workspace }}/packages/${{ matrix.program }}
+          QUANTUM_PACKAGE_DESKTOP: ${{ github.workspace }}/packages/with a window/${{ matrix.desktop }}
         run: pytest tests/package/test_package_runs_here.py
 
   relay-image:

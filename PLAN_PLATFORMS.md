@@ -224,7 +224,24 @@ What changed from the plan: the server is not frozen into one binary (PyInstalle
 its own, which is what makes a Windows or macOS package from Linux possible; the macOS package's Python is Apple
 silicon's; the desktop's package (its window as the program) and the TUI in the browser are 5b and 5c. On the way:
 an exported Godot does not flush its standard output on each print, which stalled the play protocol
-(`run/flush_stdout_on_print`), and the TUI's font is an imported resource once exported.
+(`run/flush_stdout_on_print`), and the TUI's font is an imported resource once exported. A Windows and a macOS
+runner then unpack the packages made on Linux and run the start of the Kanban's script in them
+(`tests/package/test_package_runs_here.py`); TuiSession reads Godot's output as UTF-8 for Windows.
+
+**5b done 2026-11-08: the desktop's package.** `quantum package <app> --on desktop --target windows|macos` makes
+the same package with a window as its program: the package's Python runs the server and pywebview's window in one
+process (`quantum/runtime/packaged_desktop.py`), on the system's web view (WebView2 through pythonnet, WKWebView
+through PyObjC), named for each system since pip does not read a library's markers for another one. On Windows the
+program is distlib's launcher (the one pip's own scripts use), whose first line runs the `pythonw.exe` beside it on
+the zip after it; on a Mac, an `.app` whose program is a script that runs the package's Python. Everything the
+process prints goes to the user's `server.log` (a window's Python has no output). `QUANTUM_PACKAGE_CHECK=<file>`
+starts it with no window, asks its first page and imports its window's library; CI's Windows and macOS runners run
+the Kanban's desktop packages so, the Windows one from a folder whose name has a space. Measured: 27 MB for
+Windows.
+
+What changed from the plan: Linux has no desktop package — its window would need Qt WebEngine (PyQt6-WebEngine,
+about 550 MB installed) — and says that its package is the TUI. The window itself is not driven in CI (a runner
+has no one at it); the check proves the program, its Python, its libraries and its server.
 
 ## Phase 6 — The phone, and a hosted application
 

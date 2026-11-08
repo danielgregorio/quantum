@@ -120,6 +120,7 @@ its own, for Linux, Windows or macOS — any of them made on any system ([the TU
 quantum package projects/kanban                    # dist/kanban-linux.tar.gz
 quantum package projects/kanban --target windows   # dist/kanban-windows.zip
 quantum package projects/kanban --target macos --with-data --out /tmp/release
+quantum package projects/kanban --on desktop --target windows   # a window of its own: kanban-windows-desktop.zip
 ```
 
 ## quantum check

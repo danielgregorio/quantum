@@ -7,6 +7,7 @@ network: what the application carries and leaves out, the user's folder, the ser
 
 import io
 import os
+import shutil
 import sqlite3
 import stat
 import subprocess
@@ -190,7 +191,34 @@ def test_the_archive_keeps_programs_runnable_and_links_as_links(tmp_path):
 def test_what_cannot_be_packaged_says_so(tmp_path):
     with pytest.raises(package.PackageError, match='quantum.config.yaml'):
         package.build(tmp_path, progress=lambda line: None)
-    with pytest.raises(package.PackageError, match='Phase 5b'):
-        package.build(tmp_path, on='desktop', progress=lambda line: None)
+    with pytest.raises(package.PackageError, match='the TUI .* or a window'):
+        package.build(tmp_path, on='phone', progress=lambda line: None)
+    with pytest.raises(package.PackageError, match="Qt WebEngine, about 550 MB; Linux's package is the TUI"):
+        package.build(tmp_path, on='desktop', target='linux', progress=lambda line: None)
     with pytest.raises(package.PackageError, match='linux, windows, macos'):
         package.build(tmp_path, target='beos', progress=lambda line: None)
+
+
+def test_the_desktops_program_checks_itself_with_no_window(app, tmp_path):
+    # QUANTUM_PACKAGE_CHECK: the server starts in the program's process, the first page is asked, and what
+    # happened is written down (CI's Windows and macOS runners run the real packages so)
+    import json
+    server = tmp_path / 'package' / 'server'
+    (server / 'python' / 'bin').mkdir(parents=True)
+    shutil.copytree(app, server / 'app')
+    (server / 'app' / 'data' / 'notes.db').unlink()
+    (server / 'package.json').write_text(json.dumps({'name': 'notes', 'title': 'Notes', 'page': '/'}))
+    result = tmp_path / 'check.json'
+    code = ("import sys; sys.executable = sys.argv[1]\n"
+            "from quantum.runtime import packaged_desktop as d\n"
+            "d.window_library = lambda: 'webview.platforms.test'\n"
+            "raise SystemExit(d.main())")
+    done = subprocess.run([sys.executable, '-c', code, str(server / 'python' / 'bin' / 'python3')], timeout=60,
+                          capture_output=True, text=True,
+                          env={**os.environ, 'QUANTUM_PACKAGE_CHECK': str(result), 'XDG_DATA_HOME': str(tmp_path / 'xdg')})
+    said = json.loads(result.read_text())
+    assert done.returncode == 0, said
+    assert said['status'] == 200 and said['title'] == 'Notes' and said['window'] == 'webview.platforms.test'
+    assert (tmp_path / 'xdg' / 'quantum' / 'notes' / 'data' / 'notes.db').is_file()
+    assert 'GET /' in (tmp_path / 'xdg' / 'quantum' / 'notes' / 'server.log').read_text()
+

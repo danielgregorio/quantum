@@ -86,3 +86,27 @@ def test_the_kanban_packaged_for_another_system(kanban, services, tmp_path, targ
                          / 'package.json').read_text())
     assert config['python'] == ('python/python.exe' if target == 'windows' else 'python/bin/python3')
     summary(f'| Kanban, {target} | {made.size / 1e6:.1f} MB | (built, not run here) | made in {made.seconds:.0f} s |')
+
+
+@pytest.mark.parametrize('target', ['windows', 'macos'])
+def test_the_kanban_packaged_with_a_window(kanban, services, tmp_path, target):  # noqa: F811
+    # --on desktop: its program a window of its own on the system's web view (WebView2, WKWebView), run by the
+    # package's Python; a Windows and a macOS runner run them (test_package_runs_here.py)
+    from quantum.runtime.package import build
+    out = os.environ.get('QUANTUM_PACKAGE_OUT') or tmp_path / 'dist'
+    made = build(kanban, on='desktop', target=target, out=out, progress=print)
+    assert made.path.name == f'kanban-{target}-desktop.zip'
+    with zipfile.ZipFile(made.path) as z:
+        names = set(z.namelist())
+        if target == 'windows':
+            program = z.read('kanban/Kanban.exe')
+            assert b'#!<launcher_dir>\\server\\python\\pythonw.exe' in program
+            assert {'kanban/server/python/pythonw.exe', 'kanban/server/package.json'} <= names
+            assert any(n.startswith('kanban/server/python/Lib/site-packages/pythonnet/') for n in names)
+        else:
+            assert {'Kanban.app/Contents/Info.plist', 'Kanban.app/Contents/MacOS/Kanban',
+                    'Kanban.app/Contents/Resources/server/package.json'} <= names
+            assert b'quantum.runtime.packaged_desktop' in z.read('Kanban.app/Contents/MacOS/Kanban')
+            assert any('site-packages/WebKit/' in n for n in names)
+    summary(f'| Kanban, {target}, a window | {made.size / 1e6:.1f} MB | (built, not run here) | '
+            f'made in {made.seconds:.0f} s |')

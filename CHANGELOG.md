@@ -19,8 +19,10 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the application writes lives in a folder of the user's, not in the package;
   its SQLite databases stay with you unless `--with-data` carries them, and its
   migrations run when it starts. The Kanban's package is about 60 MB and shows
-  its first page in under two seconds; CI makes it for the three systems and
-  runs the Kanban's whole script in the Linux one.
+  its first page in under two seconds; CI makes it for the three systems, runs
+  the Kanban's whole script in the Linux one, and starts the Windows and macOS
+  ones on those systems. With `--on desktop` (Windows, macOS) the program is a
+  window of its own on the system's web view, as `quantum desktop` opens.
 - Thirteen more `ui:*` tags in the Core set, drawn by every renderer — the
   browser, the console, the Hive's screen and the TUI (SPEC.md UI-21,
   `PLAN_PLATFORMS.md` Phase 4): `breadcrumb`, `menu` (its options post their

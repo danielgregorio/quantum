@@ -102,10 +102,8 @@ def migrate(data: Path, config: Dict[str, Any]) -> None:
         raise RuntimeError(f"a migration failed: {failed[0].get('version')} {failed[0].get('error', '')}")
 
 
-def serve(app: Path, name: str, port: int = 0, out=None, stdin=None) -> None:
-    """Prepare the user's folder, migrate, serve on 127.0.0.1 and say where; until `stdin` closes."""
-    out = out or sys.stdout
-    stdin = stdin or sys.stdin
+def start(app: Path, name: str, port: int = 0):
+    """Prepare the user's folder, migrate, and serve on 127.0.0.1 in a thread; returns (server, its URL)."""
     data = data_dir(name)
     config = prepare(app.resolve(), data)
     os.chdir(data)
@@ -115,7 +113,33 @@ def serve(app: Path, name: str, port: int = 0, out=None, stdin=None) -> None:
     logging.getLogger('werkzeug').setLevel(logging.ERROR)
     server = make_server('127.0.0.1', port, QuantumWebServer(str(data / 'quantum.config.yaml')).app, threaded=True)
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    out.write(f'{READY}http://127.0.0.1:{server.server_port}/\n')
+    return server, f'http://127.0.0.1:{server.server_port}/'
+
+
+def log_to(path: Path):
+    """Everything the process writes goes to `path` (descriptors 1 and 2 too); returns a handle on what the
+    standard output was, for the one line a client reads (None when there was none: a window's Python)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        protocol = os.fdopen(os.dup(sys.stdout.fileno()), 'w', encoding='utf-8')
+    except (AttributeError, OSError, ValueError):
+        protocol = None
+    log = open(path, 'w', encoding='utf-8', buffering=1)
+    for fd in (1, 2):
+        try:
+            os.dup2(log.fileno(), fd)
+        except OSError:
+            pass
+    sys.stdout = sys.stderr = log
+    return protocol
+
+
+def serve(app: Path, name: str, port: int = 0, out=None, stdin=None) -> None:
+    """Prepare the user's folder, migrate, serve on 127.0.0.1 and say where; until `stdin` closes."""
+    out = out or sys.stdout
+    stdin = stdin or sys.stdin
+    server, url = start(app, name, port)
+    out.write(f'{READY}{url}\n')
     out.flush()
     try:
         while stdin.readline():
@@ -134,14 +158,8 @@ def main(argv=None) -> int:
     # The standard output is the client's: one line, where the server is (or what went wrong). Everything
     # else the process writes — the application's log, its migrations, Python's warnings — goes to
     # server.log in the user's folder, so the client's pipes never fill (it reads only that line).
-    data = data_dir(args.name)
-    data.mkdir(parents=True, exist_ok=True)
-    log_path = data / 'server.log'
-    protocol = os.fdopen(os.dup(sys.stdout.fileno()), 'w', encoding='utf-8')
-    log = open(log_path, 'w', encoding='utf-8', buffering=1)
-    os.dup2(log.fileno(), 1)
-    os.dup2(log.fileno(), 2)
-    sys.stdout = sys.stderr = log
+    log_path = data_dir(args.name) / 'server.log'
+    protocol = log_to(log_path)
     try:
         serve(Path(args.app), args.name, args.port, out=protocol)
     except Exception as exc:              # the client shows what went wrong rather than wait for a line
