@@ -14,6 +14,11 @@
     <q:redirect url="/state" flash="Joined with {code}" />
   </q:action>
 
+  <q:action name="book" method="POST">
+    <q:param name="day" type="date" required="true" />
+    <q:redirect url="/state" flash="Booked: {day}" />
+  </q:action>
+
   <q:set name="welcome" value="{query.welcome}" default="" />
 
   <ui:window title="State">
@@ -58,6 +63,12 @@
       <ui:input bind="code" />
       <ui:input bind="again" />
       <ui:button>Join</ui:button>
+    </ui:form>
+
+    <!-- a calendar is a date field shown as a month: the day picked goes with its form -->
+    <ui:form on-submit="book">
+      <ui:calendar bind="day" value="2026-11-15" />
+      <ui:button>Book</ui:button>
     </ui:form>
   </ui:window>
 </q:component>

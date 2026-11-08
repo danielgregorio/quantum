@@ -136,6 +136,13 @@ STATE = [
     ("fill", "again", "ABC"),
     ("click", "Join"),
     ("sees", ["Joined with ABC"]),
+    # a calendar: a month, the next on its arrow, a day picked goes with the form
+    ("sees", ["November 2026"]),
+    ("month", "next"),
+    ("sees", ["December 2026"]),
+    ("day", "24"),
+    ("click", "Book"),
+    ("sees", ["Booked: 2026-12-24"]),
 ]
 
 

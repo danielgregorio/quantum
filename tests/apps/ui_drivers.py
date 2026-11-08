@@ -17,6 +17,8 @@ import asyncio
 import os
 import time
 
+import re
+
 import requests
 
 # The steps that load a page: the driver waits for it before the next step.
@@ -154,6 +156,13 @@ class Browser:
     def pick(self, label, option):
         self.p.locator("summary", has_text=label).click()
         self._go(self.p.get_by_role("button", name=option, exact=True))
+
+    def month(self, way):
+        self.p.get_by_role("button", name="Next month" if way == "next" else "Previous month").click()
+
+    def day(self, number):
+        days = self.p.locator(".q-calendar-day:not(.other-month):not(.disabled)")
+        days.filter(has_text=re.compile(rf"^\s*{number}\s*$")).first.click()
 
 
 # -- console ------------------------------------------------------------------

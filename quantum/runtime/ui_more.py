@@ -652,3 +652,43 @@ def theme_css(tokens: Dict[str, str]) -> str:
             if re.fullmatch(r'[a-z][a-z0-9-]*', k) and re.fullmatch(r'[#\w(),.%\s-]+', str(v))}
     body = ' '.join(f'--q-{k}: {v};' for k, v in safe.items())
     return f'<style data-quantum-theme>html:root {{ {body} }}</style>'
+
+
+# -- a calendar ----------------------------------------------------------------------------
+
+MONTHS = ('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
+          'October', 'November', 'December')
+
+
+def calendar_of(page, node) -> Dict[str, Any]:
+    """UI-21: a calendar in a page is a date field shown as a month: {bind, value, month, min, max,
+    disabled_dates, disabled_days, first_day, week_numbers}. The month shown first is the value's, else
+    today's; picking a day sets the field, which its form sends under `bind`."""
+    import datetime
+    page_only_attrs(node, 'ui:calendar', ('on_change',))
+    if getattr(node, 'on_month_change', None):
+        raise ValueError('<ui:calendar on-month-change=...> calls the standalone build\'s script (UI-8); in a '
+                         'page the month moves by itself in every renderer (UI-21)')
+    mode = _text(page, node.mode) or 'single'
+    if mode != 'single':
+        raise ValueError(f'<ui:calendar mode="{mode}">: a page\'s calendar picks one date (mode="single"); '
+                         f'a range or several dates are the standalone build\'s (UI-21)')
+
+    def iso(text) -> str:
+        text = _text(page, text).strip()
+        if not text:
+            return ''
+        try:
+            return datetime.date.fromisoformat(text).isoformat()
+        except ValueError:
+            raise ValueError(f'<ui:calendar>: "{text}" is not a date (YYYY-MM-DD) (UI-21)') from None
+
+    value = iso(node.value)
+    shown = datetime.date.fromisoformat(value) if value else datetime.date.today()
+    days = [int(d) for d in _list(_value(page, node.disabled_days)) if str(d).strip().lstrip('-').isdigit()]
+    return {'bind': _text(page, node.bind), 'value': value, 'month': shown.strftime('%Y-%m'),
+            'min': iso(node.min_date), 'max': iso(node.max_date),
+            'disabled_dates': [iso(d) for d in _list(_value(page, node.disabled_dates))],
+            'disabled_days': [d % 7 for d in days],
+            'first_day': int(_text(page, node.first_day_of_week) or 0) % 7,
+            'week_numbers': truthy(_value(page, node.show_week_numbers))}

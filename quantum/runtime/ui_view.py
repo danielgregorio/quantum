@@ -278,6 +278,13 @@ class UIViewBuilder:
             if isinstance(node, ui.UIDropdownNode):
                 return {'type': 'dropdown', 'props': self._layout_props(node), 'children': options}
             return {'type': 'menu', 'as': 'hbox', 'props': self._layout_props(node), 'children': options}
+        if isinstance(node, ui.UICalendarNode):
+            from quantum.runtime.ui_more import calendar_of
+            props = {k: v for k, v in self._layout_props(node).items()
+                     if k not in ('mode', 'value', 'bind', 'min_date', 'max_date', 'disabled_dates', 'disabled_days',
+                                  'first_day_of_week', 'show_week_numbers', 'locale', 'inline')}
+            props.update(calendar_of(self.r, node))
+            return {'type': 'calendar', 'props': props, 'children': []}
         if isinstance(node, ui.UIModalNode):
             from quantum.runtime.ui_more import modal_open
             view = self._ui_without_context(node, None)
