@@ -38,8 +38,8 @@ class TestHonesty:
         monkeypatch.chdir(tmp_path)
         app = QuantumParser().parse(APP)
         names = {target: Path(UIBuilder().build_to_file(app, target=target)).name
-                 for target in ('html', 'textual', 'mobile')}
-        assert names == {'html': 'Panel.html', 'textual': 'Panel_console.py', 'mobile': 'Panel.js'}
+                 for target in ('html', 'textual')}
+        assert names == {'html': 'Panel.html', 'textual': 'Panel_console.py'}
 
 
 PAGE = (f'<q:component name="p" {NS}>'
@@ -288,15 +288,18 @@ class TestStandaloneBuild:
         with pytest.raises(UIBuildError, match=rf'a {target} UI build draws layout only, and <q:set name="n"> would not run'):
             UIBuilder().build(QuantumParser().parse(self.LOGIC), target=target)
 
-    def test_mobile_is_laboratory(self, caplog):
-        # UI-8
-        import logging
-        from quantum.core import tiers
-        from quantum.runtime.ui_builder import UIBuilder
-        tiers.reset_warnings()
-        with caplog.at_level(logging.WARNING, logger='quantum.tiers'):
-            UIBuilder().build(QuantumParser().parse(self.LOGIC), target='mobile')
-        assert any('--target mobile is LABORATORY' in r.getMessage() for r in caplog.records)
+    @pytest.mark.parametrize('target', ['mobile', 'react-native'])
+    def test_the_react_native_target_is_gone_and_points_to_the_phone(self, target):
+        # UI-8, UI-22 (before: React Native, Laboratory, translated the logic to JavaScript of its own)
+        from quantum.runtime.ui_builder import UIBuildError, UIBuilder
+        with pytest.raises(UIBuildError, match=r'React Native\) was removed.*--target android\|ios'):
+            UIBuilder().build(QuantumParser().parse(self.LOGIC), target=target)
+
+    def test_the_command_line_says_where_mobile_went(self, capsys):
+        from quantum.cli.runner import build_parser
+        with pytest.raises(SystemExit):
+            build_parser()[0].parse_args(['run', 'app.q', '--target', 'mobile'])
+        assert '--target android|ios' in capsys.readouterr().err
 
 
 class TestBoundAttributesAreNotValidatedAsLiterals:

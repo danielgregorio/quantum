@@ -64,8 +64,9 @@ desktop window (`quantum desktop`).
 
 ## What it is not
 
-- **Not a mobile framework.** Phones are out of 1.0; the React Native target
-  is an experiment.
+- **Not a mobile framework.** A phone gets the application as the TUI, a
+  client of the hosted application (`quantum package --target android|ios`),
+  not native widgets.
 - **Not a SPA framework.** Pages are rendered on the server; the browser gets
   HTML, plus small scripts where a page needs them (search as you type,
   streamed answers).

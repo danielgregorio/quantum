@@ -993,8 +993,9 @@ only: `--target html` (one page) and `--target textual` (a Textual app). Logic
 inside it (`q:set`, `q:function`, any statement) is an error that says to write
 the screen as a page — logic runs in the page's runtime. `--target desktop` was
 removed (it translated the logic to a JavaScript bridge of its own); the
-desktop is `quantum desktop` (UI-4), and `quantum run --target desktop` says so. `--target mobile` (React Native) is
-Laboratory: it warns once and keeps translating the logic, with no promise.
+desktop is `quantum desktop` (UI-4), and `quantum run --target desktop` says so. `--target mobile` (React Native,
+which translated the logic to JavaScript of its own) was removed too; a phone's application is the TUI as a
+hosted application's client (UI-22: `quantum package --target android|ios`), and `--target mobile` says so.
 
 **UI-9** — A `<ui:form on-submit="x">` takes each field's rules from action
 `x`'s `q:param`s: `required`, `minlength`, `maxlength`, `min`, `max`, the type
@@ -1239,6 +1240,16 @@ the pages through the browser's fetch, so the browser keeps the cookies and
 follows the redirects, a file field opens the browser's own picker, and
 `window.quantumTui.request(json)` answers its play protocol
 (`tests/package/test_tui_in_browser.py`); a package for a system leaves it out.
+With `--server https://...` a package is a hosted application's client: the
+TUI alone, which asks that server (project.godot's `quantum/server`), or the
+desktop's window on it with the window's Python and no application; with
+`--target web` it is an error that says the browser's TUI belongs to the
+hosted application itself. `--target android|ios` is a phone's: the TUI as a
+hosted application's client (`--server` is required), an `.apk` signed with a
+debug key unless one is given, or an Xcode project; on a touch screen a tap
+acts where the finger was, a drag scrolls and acts on nothing, and a field
+with the focus asks for the phone's keyboard of its kind (email, password,
+number, url).
 
 ## 11. Development
 

@@ -555,32 +555,6 @@
       "lineCount": 8
     },
     {
-      "file": "test-mobile.q",
-      "title": "Mobile",
-      "description": "Example demonstrating Mobile",
-      "complexity": "advanced",
-      "tags": [
-        "advanced",
-        "q:application",
-        "ui:",
-        "q:function",
-        "databinding",
-        "q:set",
-        "multi-feature"
-      ],
-      "features": [
-        "databinding",
-        "q:application",
-        "q:function",
-        "q:set",
-        "ui:"
-      ],
-      "relatedDocs": [
-        "/architecture/"
-      ],
-      "lineCount": 34
-    },
-    {
       "file": "websocket-chat.q",
       "title": "Websocket Chat",
       "description": "State variables",

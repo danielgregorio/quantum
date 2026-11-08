@@ -23,6 +23,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the Kanban's whole script in the Linux one, and starts the Windows and macOS
   ones on those systems. With `--on desktop` (Windows, macOS) the program is a
   window of its own on the system's web view, as `quantum desktop` opens.
+- `quantum package <app> --server https://... --target android|ios`: the TUI
+  on a phone, a hosted application's client (`PLAN_PLATFORMS.md` Phase 6): an
+  `.apk` signed with a debug key (or yours), or the Xcode project a Mac builds.
+  On a touch screen a tap acts, a drag scrolls and a field brings up the
+  phone's keyboard of its kind.
+- `quantum package <app> --server https://...`: a client of the application
+  hosted there (`PLAN_PLATFORMS.md` Phase 6): the TUI alone, which asks that
+  server for the pages, or the desktop's window on it. CI runs the Kanban's
+  whole script in the Linux client against a hosted Kanban, and the Windows and
+  macOS clients on those systems.
 - `quantum package <app> --target web`: the TUI in a browser tab (SPEC.md
   UI-22, `PLAN_PLATFORMS.md` Phase 5c). It is exported into the application's
   `static/tui/`, so the application's own server serves it at
@@ -1220,6 +1230,12 @@ alter the behaviour of an existing app is listed under **Breaking**.
   round, so each round has its own luck and a replay the same.
 
 ### Breaking
+
+- `quantum run --target mobile` (React Native, Laboratory) is removed. It
+  translated `q:set` and `q:function` to JavaScript of its own — the opposite
+  of one runtime — and said so with a warning. A phone's application is now the
+  TUI as a hosted application's client: `quantum package <app> --server
+  https://... --target android|ios`. `--target mobile` says where it went.
 
 - An attribute that is one expression and a dictionary, `{ {'id': 1} }`, is
   the dictionary (EXPR-17); it was left as the text. A JSON object written as

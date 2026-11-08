@@ -128,11 +128,11 @@ def pytest_sessionfinish(session, exitstatus):
         session.exitstatus = pytest.ExitCode.TESTS_FAILED
 
 
-# Laboratory (SUPPORT_TIERS.md): the game engine, the Godot codegen and the
-# React Native target. Their tests stay in the suite (decision D1) but run in a
+# Laboratory (SUPPORT_TIERS.md): the game engine and the Godot codegen (the React
+# Native target, retired in PLAN_PLATFORMS.md Phase 6, was one too). Their tests stay in the suite (decision D1) but run in a
 # CI job of their own, so a red build says at once whether the Core or the
 # Laboratory broke. Marked here, by file, so a new test cannot forget it.
-LABORATORY = ("test_game_", "test_godot_", "test_mobile_target", "game_engine_2d", "test-mobile.q",
+LABORATORY = ("test_game_", "test_godot_", "game_engine_2d",
               "[game_engine/",   # the game feature's dataset examples (tests/dataset)
               "tests/gameserver/")   # the game server (PLAN_GAME_SERVER.md)
 

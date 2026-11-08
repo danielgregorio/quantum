@@ -110,3 +110,77 @@ def test_the_kanban_packaged_with_a_window(kanban, services, tmp_path, target): 
             assert any('site-packages/WebKit/' in n for n in names)
     summary(f'| Kanban, {target}, a window | {made.size / 1e6:.1f} MB | (built, not run here) | '
             f'made in {made.seconds:.0f} s |')
+
+
+def hosted(kanban, model_url, tmp_path, port=None):
+    """The Kanban served as a hosted application is (`quantum run --on web`), on a port; returns (process, url)."""
+    import subprocess
+    import sys
+    import time
+
+    import requests
+
+    from tests.apps.test_kanban_everywhere import free_port
+    port = port or free_port()
+    log = open(tmp_path / 'hosted.log', 'wb')
+    process = subprocess.Popen([sys.executable, '-m', 'quantum.cli.runner', 'run', str(kanban), '--on', 'web',
+                                '--port', str(port)], stdout=subprocess.DEVNULL, stderr=log,
+                               env={**os.environ, 'QUANTUM_LLM_BASE_URL': model_url})
+    url = f'http://127.0.0.1:{port}'
+    deadline = time.monotonic() + 60
+    while True:
+        assert process.poll() is None, (tmp_path / 'hosted.log').read_text(errors='replace')
+        try:
+            if requests.get(url + '/health', timeout=2).status_code == 200:
+                return process, url
+        except requests.ConnectionError:
+            pass
+        assert time.monotonic() < deadline, 'the hosted Kanban did not answer in 60 s'
+        time.sleep(0.2)
+
+
+def test_the_kanban_client_runs_its_script_against_the_hosted_application(kanban, services, tmp_path):  # noqa: F811
+    # Phase 6, --server: the package is the TUI alone, which asks the hosted application; the whole script
+    from quantum.runtime.package import build
+    from quantum.runtime.ui_tui import TuiSession
+    process, url = hosted(kanban, services[0].url, tmp_path)
+    try:
+        made = build(kanban, on='tui', target='linux', out=tmp_path / 'dist', server=url, progress=print)
+        assert made.path.name == 'kanban-linux-client.tar.gz' and made.libraries == {}
+        with tarfile.open(made.path) as tar:
+            names = tar.getnames()
+            tar.extractall(tmp_path / 'unpacked', filter='tar')
+        assert names == ['kanban', 'kanban/kanban']                     # the program, nothing beside it
+        with TuiSession(program=tmp_path / 'unpacked' / 'kanban' / 'kanban', cols=180, rows=60, timeout=90) as tui:
+            first_page = tui.first_page
+            assert tui.url == url
+            run_script(Tui(tui), SCRIPT)
+    finally:
+        process.terminate()
+        process.wait(10)
+    the_script_held(kanban, services[1])                               # in the hosted application's database
+    summary(f'| Kanban, linux, a client of a hosted Kanban | {made.size / 1e6:.1f} MB | first page in '
+            f'{first_page:.2f} s | made in {made.seconds:.0f} s |')
+
+
+@pytest.mark.parametrize('on', ['tui', 'desktop'])
+@pytest.mark.parametrize('target', ['windows', 'macos'])
+def test_the_kanban_clients_for_other_systems(kanban, services, tmp_path, target, on):  # noqa: F811
+    # the clients a Windows and a macOS runner run against a Kanban they host (test_package_runs_here.py)
+    from quantum.runtime.package import build
+    out = os.environ.get('QUANTUM_PACKAGE_OUT') or tmp_path / 'dist'
+    server = os.environ.get('QUANTUM_PACKAGE_CLIENT_SERVER', 'http://127.0.0.1:8095')
+    made = build(kanban, on=on, target=target, out=out, server=server, progress=print)
+    kind = f'{target}-desktop-client' if on == 'desktop' else f'{target}-client'
+    assert made.path.name == f'kanban-{kind}.zip'
+    with zipfile.ZipFile(made.path) as z:
+        names = set(z.namelist())
+    assert not any('/app/' in n for n in names)                         # no application beside a client
+    if on == 'tui':
+        assert not any('/server/' in n for n in names)
+    else:
+        config = next(n for n in names if n.endswith('server/package.json'))
+        with zipfile.ZipFile(made.path) as z:
+            assert json.loads(z.read(config))['server'] == server
+    summary(f'| Kanban, {target}, {on}, a client | {made.size / 1e6:.1f} MB | (built, run on its system) | '
+            f'made in {made.seconds:.0f} s |')

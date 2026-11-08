@@ -64,7 +64,7 @@ jobs:
         # state (the root conftest restores logging per test). A test that
         # really has to run alone — a fixed port, a file outside tmp — carries
         # @pytest.mark.isolated and runs afterwards, serially.
-        # The Laboratory (games, Godot, React Native) runs in the job below.
+        # The Laboratory (games, Godot) runs in the job below.
         # QUANTUM_GODOT_REQUIRED: a TUI test without Godot fails here, it does not skip.
         env:
           QUANTUM_GODOT_REQUIRED: '1'
@@ -77,7 +77,7 @@ jobs:
           coverage report --fail-under=80 --include="*/runtime/llm_service.py,*/runtime/knowledge_service.py,*/runtime/llm_providers.py,*/runtime/llm_stream.py"
 
   laboratory:
-    # SUPPORT_TIERS.md: games, the Godot codegen and the React Native target
+    # SUPPORT_TIERS.md: games and the Godot codegen
     # stay in the repository and in the suite (decision D1), in a job of their
     # own — required like the other — so a red CI says at once whether the
     # Core or the Laboratory broke. The root conftest marks those tests by file.
@@ -226,6 +226,13 @@ jobs:
           key: godot-export-${{ hashFiles('quantum/runtime/godot_bin.py') }}
       - run: python scripts/godot.py install
 
+      # the phone's .apk: the runner has the Android SDK (ANDROID_HOME); Godot signs with its build tools, run by
+      # a JDK 17 (tests/package/test_package_phone.py)
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Package the Kanban, and run its script in the package and in the browser's TUI
         env:
           QUANTUM_PACKAGE_TESTS: '1'
@@ -243,6 +250,10 @@ jobs:
             ${{ runner.temp }}/packages/kanban-macos.zip
             ${{ runner.temp }}/packages/kanban-windows-desktop.zip
             ${{ runner.temp }}/packages/kanban-macos-desktop.zip
+            ${{ runner.temp }}/packages/kanban-windows-client.zip
+            ${{ runner.temp }}/packages/kanban-macos-client.zip
+            ${{ runner.temp }}/packages/kanban-windows-desktop-client.zip
+            ${{ runner.temp }}/packages/kanban-macos-desktop-client.zip
           if-no-files-found: error
 
   package-elsewhere:
@@ -287,20 +298,27 @@ jobs:
         shell: bash
         run: |
           cd packages
-          mkdir "with a window"
+          mkdir "with a window" client "client with a window"
           if [ "${{ matrix.target }}" = macos ]; then
             ditto -x -k kanban-macos.zip .
             ditto -x -k kanban-macos-desktop.zip "with a window"
+            ditto -x -k kanban-macos-client.zip client
+            ditto -x -k kanban-macos-desktop-client.zip "client with a window"
           else
             unzip -q kanban-windows.zip
             unzip -q kanban-windows-desktop.zip -d "with a window"
+            unzip -q kanban-windows-client.zip -d client
+            unzip -q kanban-windows-desktop-client.zip -d "client with a window"
           fi
 
-      - name: Run its script, and its desktop with no window
+      # the clients (--server) were made to ask http://127.0.0.1:8095: the test hosts the Kanban there
+      - name: Run its script, its desktop with no window, and its clients against a hosted Kanban
         shell: bash
         env:
           QUANTUM_PACKAGE_PROGRAM: ${{ github.workspace }}/packages/${{ matrix.program }}
           QUANTUM_PACKAGE_DESKTOP: ${{ github.workspace }}/packages/with a window/${{ matrix.desktop }}
+          QUANTUM_PACKAGE_CLIENT: ${{ github.workspace }}/packages/client/${{ matrix.program }}
+          QUANTUM_PACKAGE_DESKTOP_CLIENT: ${{ github.workspace }}/packages/client with a window/${{ matrix.desktop }}
         run: pytest tests/package/test_package_runs_here.py
 
   relay-image:

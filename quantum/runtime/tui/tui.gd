@@ -17,7 +17,8 @@ extends Control
 #
 # Exported by `quantum package` (UI-22), it is the package's program: with no --url, it starts the server
 # folder beside it (server/package.json says how) with the package's own Python, waits for the line that says
-# where the server is, and holds the server's input open; when the TUI goes, so does the server.
+# where the server is, and holds the server's input open; when the TUI goes, so does the server. Exported with
+# --server, it is a hosted application's client: project.godot's quantum/server is the server it asks.
 #
 # Exported for the browser (`quantum package <app> --on tui --target web`, UI-22), it runs in a page the
 # application's server serves (/static/tui/index.html?page=/first): its requests go through the browser's fetch
@@ -97,6 +98,12 @@ var server_starting := false
 
 # UI-22: in a browser, what the browser does for the TUI (web.gd); null elsewhere
 var web = null
+# Phase 6: a touch screen (a phone, or --touch): cells sized to the screen, a tap clicks, a drag scrolls, a field
+# with the focus asks for the system's keyboard
+var touch := false
+var touch_from := Vector2.ZERO
+var touch_moved := false
+var keyboard_shown := false
 
 
 # -- starting -----------------------------------------------------------------
@@ -129,6 +136,12 @@ func _ready() -> void:
 				motion_on = v != "off"
 			"--shot":
 				shot = v
+			"--touch":
+				touch = true
+	if OS.has_feature("mobile"):
+		touch = true
+		# about 44 columns across the screen in portrait, whatever its density
+		font_size = clampi(int(DisplayServer.screen_get_size().x / (44 * 0.6)), 14, 72)
 	if OS.has_feature("web"):
 		# in a browser, on a page of the application's server: the server is the page's origin
 		web = Web.new(self)
@@ -139,6 +152,12 @@ func _ready() -> void:
 		var conf = JSON.parse_string(FileAccess.get_file_as_string(package.path_join("package.json")))
 		if conf is Dictionary and conf.get("tokens") is Dictionary and tokens.is_empty():
 			tokens = conf["tokens"]
+	elif not url_given and web == null and ProjectSettings.has_setting("quantum/server"):
+		# a hosted application's client (`quantum package --server`, Phase 6): its server is that address
+		base_url = str(ProjectSettings.get_setting("quantum/server")).rstrip("/")
+		var said = JSON.parse_string(str(ProjectSettings.get_setting("quantum/tokens", "{}")))
+		if said is Dictionary and tokens.is_empty():
+			tokens = said
 	base_tokens = tokens
 	_theme(tokens)
 	var file := FontFile.new()
@@ -159,11 +178,11 @@ func _ready() -> void:
 		var h := font.get_height(font_size)
 		if w > 0 and h > 0:
 			cell = Vector2(ceil(w), ceil(h))
-		if web == null:
+		if web == null and not OS.has_feature("mobile"):
 			get_window().size = Vector2i(int(cell.x * cols), int(cell.y * (rows + 2)))
 			get_window().min_size = Vector2i(int(cell.x * 40), int(cell.y * 12))
 		else:
-			_on_resized.call_deferred()          # the browser's window is the size: as many cells as fit
+			_on_resized.call_deferred()          # the browser's window, the phone's screen: as many cells as fit
 		if not play:
 			resized.connect(_on_resized)
 	if play:
@@ -707,8 +726,38 @@ func _set_focus(i: int) -> void:
 		elif it["y"] + it["h"] > scroll + _visible_rows():
 			scroll = float(it["y"] + it["h"] - _visible_rows())
 		_clamp_scroll()
+	_keyboard_follows()
 	_tips_follow()
 	queue_redraw()
+
+
+func _keyboard_follows() -> void:
+	# on a touch screen a field with the focus asks for the system's keyboard; anything else puts it away
+	if not touch:
+		return
+	var it: Dictionary = lay.items[focus] if focus >= 0 and focus < lay.items.size() else {}
+	var wants := str(it.get("kind", "")) in ["input", "textarea"] and str(it.get("input_type", "")) != "file"
+	if wants == keyboard_shown:
+		return
+	keyboard_shown = wants
+	if not DisplayServer.has_feature(DisplayServer.FEATURE_VIRTUAL_KEYBOARD):
+		return
+	if wants:
+		var kind := DisplayServer.KEYBOARD_TYPE_DEFAULT
+		match str(it.get("input_type", "")):
+			"email":
+				kind = DisplayServer.KEYBOARD_TYPE_EMAIL_ADDRESS
+			"password":
+				kind = DisplayServer.KEYBOARD_TYPE_PASSWORD
+			"number":
+				kind = DisplayServer.KEYBOARD_TYPE_NUMBER_DECIMAL
+			"url":
+				kind = DisplayServer.KEYBOARD_TYPE_URL
+		if str(it.get("kind", "")) == "textarea":
+			kind = DisplayServer.KEYBOARD_TYPE_MULTILINE
+		DisplayServer.virtual_keyboard_show(_value(it), _rect_of(it), kind)
+	else:
+		DisplayServer.virtual_keyboard_hide()
 
 
 func _tips_follow() -> void:
@@ -1226,10 +1275,38 @@ func _gui_input(event: InputEvent) -> void:
 
 func _handle(event: InputEvent) -> bool:
 	# what a key or the mouse does; whether it was this window's
+	if touch:
+		if event is InputEventMouse and event.device == InputEvent.DEVICE_ID_EMULATION:
+			return true                          # the mouse a touch makes: the touch itself acts, below
+		if event is InputEventScreenTouch:
+			if event.pressed:
+				touch_from = event.position
+				touch_moved = false
+			elif not touch_moved:
+				# a tap is a click where the finger was
+				var click := InputEventMouseButton.new()
+				click.button_index = MOUSE_BUTTON_LEFT
+				click.pressed = true
+				click.position = event.position
+				return _handle_pointer(click)
+			return true
+		if event is InputEventScreenDrag:
+			# a drag scrolls the page, as far as the finger goes
+			if touch_moved or event.position.distance_to(touch_from) > cell.y * 0.5:
+				touch_moved = true
+				scroll -= event.relative.y / cell.y
+				scroll_shown = scroll
+				_clamp_scroll()
+				queue_redraw()
+			return true
 	if event is InputEventKey and event.pressed:
 		_key(event)
 		return true
-	elif event is InputEventMouseMotion:
+	return _handle_pointer(event)
+
+
+func _handle_pointer(event: InputEvent) -> bool:
+	if event is InputEventMouseMotion:
 		var at := _cell_at(event.position)
 		pointer = at
 		_tips_follow()
@@ -1514,6 +1591,10 @@ func _rect_of(it: Dictionary) -> Rect2:
 
 
 func status_line() -> String:
+	if touch:
+		if not dropdown.is_empty():
+			return "tap an option"
+		return "type into the field" if keyboard_shown else "tap to act · drag to scroll"
 	if not dropdown.is_empty():
 		return "↑↓ choose · Enter takes it · Esc closes"
 	var kind := str(lay.items[focus]["kind"]) if focus >= 0 and focus < lay.items.size() else ""
@@ -1691,6 +1772,29 @@ func _serve(req: Dictionary) -> void:
 			event.pressed = true
 			event.position = Vector2(cell.x * (x + 0.5), cell.y * (1 + y - scroll_shown + 0.5))
 			_handle(event)
+		"tap", "drag":
+			# a finger (Phase 6): a tap on the content's cell (x, y), or a drag of `by` rows (up scrolls down)
+			var fy := int(req.get("y", 0))
+			if str(req.get("op")) == "tap" and (fy < scroll or fy >= scroll + rows):
+				scroll = float(max(0, fy - rows / 2))     # as a click: scrolled into view first
+				_clamp_scroll()
+				scroll_shown = scroll
+			var finger := InputEventScreenTouch.new()
+			finger.pressed = true
+			var at := Vector2(cell.x * (int(req.get("x", 0)) + 0.5),
+							  cell.y * (1 + int(req.get("y", 0)) - scroll_shown + 0.5))
+			finger.position = at
+			_handle(finger)
+			if str(req.get("op")) == "drag":
+				var move := InputEventScreenDrag.new()
+				move.position = at - Vector2(0, cell.y * float(req.get("by", 1)))
+				move.relative = Vector2(0, -cell.y * float(req.get("by", 1)))
+				_handle(move)
+				finger.position = move.position
+			var up := InputEventScreenTouch.new()
+			up.pressed = false
+			up.position = finger.position
+			_handle(up)
 		"hover":
 			var motion := InputEventMouseMotion.new()
 			motion.position = Vector2(cell.x * (int(req.get("x", 0)) + 0.5),
@@ -1775,6 +1879,7 @@ func observation() -> Dictionary:
 					   "w": image["w"], "h": image["h"]})
 	return {
 		"title": str(page.get("title", "")), "path": path, "url": base_url, "pages": pages_loaded, "cols": cols,
+		"touch": touch, "keyboard": keyboard_shown,
 		"rows": rows,
 		"palette": palette,
 		"hover": hover, "cursor": "pointing" if mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND else "arrow",

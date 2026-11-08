@@ -692,6 +692,40 @@ as many columns and rows as the window has room for. Nothing is carried but the 
 most of it Godot's WebAssembly); `--out` puts it elsewhere. CI runs the parity scripts and the
 Kanban's whole script in it, in Chromium.
 
+### A client of a hosted application
+
+When the application runs on a server of yours, `--server` makes its client: the program alone,
+which asks that server for the pages instead of starting one — no application, no Python beside
+the TUI.
+
+```bash
+quantum package projects/kanban --server https://kanban.example.com --target windows
+quantum package projects/kanban --server https://kanban.example.com --on desktop --target macos
+```
+
+The person signs in to the hosted application as on the web, and what they do is in its database.
+The TUI's client of the Kanban is about 26 MB; the desktop's carries its window's Python (the
+window is pywebview's), but no server. An address that is not `https` is said when the package is
+made: the session's cookie would cross the network unencrypted. CI runs the Kanban's whole script
+in the Linux client against a hosted Kanban, and the Windows and macOS clients on those systems.
+
+### On a phone
+
+A phone runs no server of its own, so its package is the TUI as a hosted application's client:
+
+```bash
+quantum package projects/kanban --server https://kanban.example.com --target android   # kanban-android.apk
+quantum package projects/kanban --server https://kanban.example.com --target ios       # kanban-ios.zip
+```
+
+On a touch screen the TUI takes the screen's width in cells (about 44 columns upright) and turns
+with it; a tap acts where the finger was, a drag scrolls the page and clicks nothing, and a field
+that takes the focus brings up the phone's keyboard — an email field the email keyboard, a
+password field the password one. The `.apk` is signed with a debug key, made once with the JDK's
+`keytool` (`QUANTUM_ANDROID_KEYSTORE`, with `_USER` and `_PASSWORD`, signs it with yours); it needs
+the Android SDK's build tools (`ANDROID_HOME`). iOS's package is the Xcode project a Mac builds and
+signs (`QUANTUM_IOS_TEAM_ID` names your team).
+
 
 ## On the Hive's screen
 
@@ -747,6 +781,7 @@ there is no runtime in those files, so a `q:set`, `q:function` or any other
 command in them is an error that points here. Write the screen as a page to
 give it logic.
 
-`--target mobile` (React Native) is **Laboratory**: it translates the logic
-to JavaScript on its own, with no stability promise. Phones are not part of
-1.0. The old `--target desktop` was removed; `quantum desktop` replaces it.
+The old `--target desktop` was removed; `quantum desktop` replaces it. So was
+`--target mobile` (React Native, which translated the logic to JavaScript of
+its own): a phone's application is the TUI as a hosted application's client,
+`quantum package --target android|ios` ([On a phone](#on-a-phone)).

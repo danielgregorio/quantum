@@ -252,3 +252,80 @@ def test_the_tui_for_the_browser_goes_into_the_applications_static_folder(app, t
 def test_a_window_in_a_browser_says_the_web_is_the_tuis(tmp_path):
     with pytest.raises(package.PackageError, match='--target web puts the TUI there'):
         package.build(tmp_path, on='desktop', target='web', progress=lambda line: None)
+
+
+def test_a_hosted_applications_address_is_checked():
+    # Phase 6: --server is where the client's program asks for the pages
+    assert package.server_url('https://kanban.example.com/') == 'https://kanban.example.com'
+    assert package.server_url('http://127.0.0.1:8095') == 'http://127.0.0.1:8095'
+    assert package.server_url('https://example.com/apps/kanban/') == 'https://example.com/apps/kanban'
+    for wrong in ('kanban.example.com', 'ftp://example.com', 'https://', 'https://example.com/?a=1'):
+        with pytest.raises(package.PackageError, match='the address of the application'):
+            package.server_url(wrong)
+
+
+def test_a_client_in_a_browser_is_the_hosted_applications_own(tmp_path):
+    with pytest.raises(package.PackageError, match='asks the server that serves it'):
+        package.build(tmp_path, target='web', server='https://example.com', progress=lambda line: None)
+
+
+def test_the_clients_tui_names_its_server(app, tmp_path, monkeypatch):
+    # the exported project carries the address (project.godot's quantum/server) and the colours; nothing beside it
+    from quantum.runtime import godot_bin, godot_export
+    seen = {}
+
+    def export(project, preset, target, godot, options=None, include=''):
+        seen['settings'] = (project / 'project.godot').read_text()
+        target.write_bytes(b'\x7fELF')
+        return target
+
+    monkeypatch.setattr(godot_export, 'export_project', export)
+    monkeypatch.setattr(godot_export, 'have_templates', lambda preset=None: True)
+    monkeypatch.setattr(godot_bin, 'ensure_godot', lambda **kw: Path('/bin/true'))
+    made = package.build(app, target='linux', out=tmp_path / 'dist', server='https://notes.example.com/',
+                         progress=lambda line: None)
+    assert made.path.name == 'my-notes-linux-client.tar.gz'
+    assert '[quantum]' in seen['settings'] and 'server="https://notes.example.com"' in seen['settings']
+    assert 'tokens="{\\"primary\\"' in seen['settings']
+    assert sorted(p.name for p in made.folder.iterdir()) == ['my-notes']     # the program alone
+    assert made.libraries == {} and made.left_out == []
+
+
+def test_the_desktops_client_needs_none_of_the_servers_libraries(tmp_path):
+    # Phase 6: a hosted application's window carries the window's libraries and requests, not the server's
+    # (PyYAML, Flask): its program must start without them (it did not, on Windows and macOS)
+    import http.server
+    import json
+    server = tmp_path / 'package' / 'server'
+    (server / 'python' / 'bin').mkdir(parents=True)
+
+    class Page(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'<html><head><title>Hosted Notes</title></head></html>')
+
+        def log_message(self, *args):
+            pass
+
+    hosted = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Page)
+    threading.Thread(target=hosted.serve_forever, daemon=True).start()
+    try:
+        (server / 'package.json').write_text(json.dumps({
+            'name': 'notes', 'title': 'Notes', 'page': '/', 'server': f'http://127.0.0.1:{hosted.server_port}'}))
+        result = tmp_path / 'check.json'
+        code = ("import sys; sys.executable = sys.argv[1]\n"
+                "sys.modules['yaml'] = None; sys.modules['flask'] = None; sys.modules['werkzeug'] = None\n"
+                "from quantum.runtime import packaged_desktop as d\n"
+                "d.window_library = lambda: 'webview.platforms.test'\n"
+                "raise SystemExit(d.main())")
+        done = subprocess.run([sys.executable, '-c', code, str(server / 'python' / 'bin' / 'python3')], timeout=60,
+                              capture_output=True, text=True,
+                              env={**os.environ, 'QUANTUM_PACKAGE_CHECK': str(result),
+                                   'XDG_DATA_HOME': str(tmp_path / 'xdg')})
+        assert result.is_file(), (done.stdout, done.stderr,
+                                  (tmp_path / 'xdg' / 'quantum' / 'notes' / 'server.log').read_text())
+        said = json.loads(result.read_text())
+        assert done.returncode == 0 and said['status'] == 200 and said['title'] == 'Hosted Notes', said
+    finally:
+        hosted.shutdown()
