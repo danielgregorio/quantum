@@ -78,6 +78,9 @@ class PixelClient:
     # -- the screen -----------------------------------------------------------
 
     def connect(self) -> None:
+        # what an earlier screen said of itself is not this one's (a second session in one process read it)
+        global _SCREEN_STATUS
+        _SCREEN_STATUS = None
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.connect(self.socket_path)
         self.reader = self.sock.makefile('r', encoding='utf-8')
@@ -102,6 +105,8 @@ class PixelClient:
             self.sock.close()
         finally:
             self.sock = None
+            global _SCREEN_STATUS
+            _SCREEN_STATUS = None         # off the screen, a page's runtime knows no screen
 
     # -- talking to the page --------------------------------------------------
 
