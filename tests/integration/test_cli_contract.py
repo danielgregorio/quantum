@@ -109,6 +109,18 @@ class TestNoTracebackInTheUsersFace:
     def test_stop_without_a_server(self, tmp_path):
         assert TRACEBACK not in output(cli("stop", cwd=tmp_path))
 
+    def test_package_of_a_folder_that_is_no_application(self, tmp_path):
+        # UI-22: a sentence that says what it takes, exit 1, no traceback — before anything is fetched
+        result = cli("package", str(tmp_path))
+        assert result.returncode == 1, output(result)[-300:]
+        assert "quantum.config.yaml" in output(result) and "application's folder" in output(result)
+        assert TRACEBACK not in output(result)
+
+    def test_a_desktop_package_for_linux_says_its_package_is_the_tui(self, tmp_path):
+        result = cli("package", str(tmp_path), "--on", "desktop", "--target", "linux")
+        assert result.returncode == 1 and "--on tui" in output(result)
+        assert TRACEBACK not in output(result)
+
 
 class TestMessagesSayWhatToDo:
     def test_a_missing_file_says_the_path(self):
@@ -144,7 +156,7 @@ class TestSubcommandsAnswer:
     # by my mistake, not by a defect of the CLI.
     TOP = ["run", "start", "stop", "pkg", "jobs", "mq",
            "migrate", "admin", "console", "desktop", "pixel", "check", "test", "play", "playtest", "relay",
-           "gameserver"]
+           "gameserver", "package"]
 
     @pytest.mark.parametrize("command", TOP)
     def test_the_subcommand_help_works(self, command):
