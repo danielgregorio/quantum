@@ -1,0 +1,163 @@
+"""The TUI drawn by Godot (SPEC.md UI-20, PLAN_PLATFORMS.md Phase 3), headless through its play protocol.
+
+What the parity script (tests/apps/test_ui_parity_script.py) and the Kanban's (tests/apps/test_kanban_everywhere.py)
+do not reach: search as you type, an editable table, a file field with a dialog of its own, an image, wide
+characters, the mouse and the wheel, the motions, a resize, a tag it does not draw. And the layout check:
+each page laid out at a size is the same cells as its reference frame in tests/tui/frames/
+(UPDATE_FRAMES=1 writes them again), and no element sits on another or past the right edge.
+"""
+
+import os
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+FRAMES = Path(__file__).parent / 'frames'
+
+
+@pytest.fixture
+def tui(godot, app_url):
+    from quantum.runtime.ui_tui import TuiSession
+    url, _project = app_url
+    with TuiSession(url, cols=100, rows=30, binary=godot) as session:
+        yield session
+
+
+def frame_matches(name: str, screen: list) -> None:
+    """UI-20's layout check: the cells as they were laid out when the frame was written."""
+    path = FRAMES / f'{name}.txt'
+    text = '\n'.join(screen) + '\n'
+    if os.environ.get('UPDATE_FRAMES') or not path.exists():
+        FRAMES.mkdir(exist_ok=True)
+        path.write_text(text, encoding='utf-8')
+    assert text == path.read_text(encoding='utf-8'), f'{name}: the layout changed (UPDATE_FRAMES=1 writes it again)'
+
+
+def no_overlaps(seen: dict) -> None:
+    """Every element inside the screen's width, none over another."""
+    taken = {}
+    for item in seen['items']:
+        assert item['x'] >= 0 and item['x'] + item['w'] <= seen['cols'], item
+        for row in range(item['y'], item['y'] + max(1, item['h'])):
+            for col in range(item['x'], item['x'] + max(1, item['w'])):
+                assert (col, row) not in taken, f"{item['kind']} {item['label']!r} over {taken[(col, row)]}"
+                taken[(col, row)] = f"{item['kind']} {item['label']!r}"
+
+
+class TestTheCoreSet:
+    """UI-12, UI-13, UI-14: what the Core set asks of a renderer, in the TUI."""
+
+    def test_search_as_you_type_keeps_the_field_and_its_cursor(self, tui):
+        field = tui.item('input', bind='q')
+        tui.click(field['x'], field['y'])
+        seen = tui.type('an')
+        assert seen['path'] == '/?q=an' and 'Banana' in tui.text() and 'Apple' not in tui.text()
+        field = tui.item('input', bind='q')
+        assert field['focus'] and field['value'] == 'an'
+        seen = tui.type('a')                                   # what is typed next adds to it
+        assert seen['path'] == '/?q=ana' and tui.item('input', bind='q')['value'] == 'ana'
+
+    def test_an_editable_cell_is_its_own_form(self, tui, app_url):
+        cell = tui.item('input', bind='value', value='Apple')
+        tui.click(cell['x'], cell['y'])
+        tui.key('ctrl+u')
+        tui.type('Apricot')
+        tui.key('enter')
+        rows = sqlite3.connect(app_url[1] / 'fruits.db').execute('SELECT name FROM fruits ORDER BY id').fetchall()
+        assert rows == [('Apricot',), ('Banana',), ('Cherry',)]
+        assert 'Apricot' in tui.text()
+
+    def test_a_file_field_has_a_dialog_of_its_own_and_the_form_sends_the_file(self, tui, app_url, tmp_path):
+        note = tmp_path / 'note.txt'
+        note.write_text('hello', encoding='utf-8')
+        tui.attach('doc', note)                                # chosen in the TUI's file dialog
+        assert tui.item('file', bind='doc')['file'] == str(note)
+        assert 'note.txt' in tui.text()
+        send = tui.item('button', 'Send')
+        tui.click(send['x'], send['y'])
+        assert 'Got note.txt' in tui.text()
+        assert (app_url[1] / 'uploads' / 'note.txt').read_text(encoding='utf-8') == 'hello'
+
+    def test_an_image_is_drawn_where_the_page_has_it(self, tui):
+        image, = tui.observe()['images']
+        assert image['alt'] == 'Brick' and image['loaded'] is True
+        assert (image['w'], image['h']) == (3, 2)             # 30 x 40 pixels in cells of 10 x 20
+
+
+class TestTheScreen:
+    """A terminal's look without its limits: wide characters, the mouse, the wheel, the motions, a resize."""
+
+    def test_wide_characters_take_two_cells_and_the_box_stays_closed(self, tui):
+        screen = tui.observe()['screen']
+        top = next(r for r in screen if '日本の果物' in r)
+        text = next(r for r in screen if 'りんご' in r)
+        bottom = screen[screen.index(text) + 1]
+
+        def cells(row):
+            from unicodedata import east_asian_width
+            return sum(2 if east_asian_width(c) in 'WF' else 1 for c in row)
+        assert cells(top) == cells(text) == cells(bottom) == 99    # the right border in the same column
+
+    def test_the_mouse_hovers_and_clicks_and_the_wheel_scrolls(self, tui):
+        seen = tui.visit('/long')
+        assert seen['height'] == 81 and seen['scroll'] == 0
+        seen = tui.wheel(5)
+        assert seen['scroll'] == 15
+        field = tui.item('input', bind='last')
+        seen = tui.click(field['x'], field['y'])               # out of view: scrolled to, then clicked
+        assert seen['scroll'] > 50 and tui.item('input', bind='last')['focus']
+        seen = tui.hover(field['x'], field['y'])
+        assert seen['items'][seen['hover']]['bind'] == 'last' and seen['cursor'] == 'pointing'
+
+    def test_the_page_and_its_elements_move_as_they_ask(self, tui):
+        # UI-19: the window slides in, the field fades in, the same list the browser records
+        assert tui.visit('/long')['motions'] == [{'kind': 'slide', 'speed': 'normal', 'what': 'page'},
+                                                 {'kind': 'fade', 'speed': 'normal', 'what': 'input'}]
+
+    def test_a_tag_it_does_not_draw_says_so(self, tui):
+        # UI-7: never something else in its place
+        assert tui.observe()['unsupported'] == ['accordion']
+        assert '[ui:accordion is not drawn in the TUI]' in tui.text()
+
+    def test_a_resize_lays_the_page_out_again(self, tui):
+        seen = tui.resize(60, 20)
+        assert seen['cols'] == 60 and max(len(r) for r in seen['screen']) <= 60
+        no_overlaps(seen)
+
+
+class TestTheLayout:
+    """UI-20's layout check: the same page at the same size gives the same cells."""
+
+    @pytest.mark.parametrize('size', [(120, 40), (70, 30)])
+    def test_the_showcase(self, godot, size):
+        from tests.apps.test_ui_parity_script import SHOWCASE
+        from quantum.runtime.ui_tui import TuiSession
+        import logging
+        import shutil
+        import tempfile
+        import threading
+        from werkzeug.serving import make_server
+        from quantum.runtime.web_server import QuantumWebServer
+        project = Path(tempfile.mkdtemp()) / 'showcase'
+        shutil.copytree(SHOWCASE, project, ignore=shutil.ignore_patterns('__pycache__', 'logs'))
+        here = os.getcwd()
+        os.chdir(project)
+        logging.disable(logging.WARNING)
+        server = make_server('127.0.0.1', 0, QuantumWebServer(str(project / 'quantum.config.yaml')).app, threaded=True)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            with TuiSession(f'http://127.0.0.1:{server.server_port}/', cols=size[0], rows=size[1], binary=godot) as tui:
+                seen = tui.observe()
+                no_overlaps(seen)
+                frame_matches(f'showcase-{size[0]}x{size[1]}', seen['screen'])
+        finally:
+            server.shutdown()
+            os.chdir(here)
+            logging.disable(logging.NOTSET)
+            shutil.rmtree(project.parent, ignore_errors=True)
+
+    def test_the_fruits(self, tui):
+        seen = tui.observe()
+        no_overlaps(seen)
+        frame_matches('fruits-100x30', seen['screen'])

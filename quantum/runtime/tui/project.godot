@@ -1,0 +1,23 @@
+; The TUI: a Quantum application's pages on a text screen drawn by Godot (SPEC.md UI-20).
+; quantum run <app> --on tui starts it (quantum/runtime/ui_tui.py).
+
+config_version=5
+
+[application]
+
+config/name="Quantum TUI"
+run/main_scene="res://main.tscn"
+run/low_processor_mode=true
+config/features=PackedStringArray("4.4")
+
+[display]
+
+window/size/viewport_width=1200
+window/size/viewport_height=840
+window/size/resizable=true
+window/stretch/mode="disabled"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

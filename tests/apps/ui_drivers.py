@@ -1,6 +1,7 @@
 """One script, every renderer: the steps are data, each renderer has a driver that knows how to do them.
 
-Used by tests/apps/test_ui_parity_script.py (the Core set of ui:*, UI-7),
+Used by tests/apps/test_ui_parity_script.py (the Core set of ui:*, UI-7, in the browser, the console, the
+Hive's screen and the TUI),
 tests/apps/test_settings.py and tests/apps/test_kanban_everywhere.py (one
 application in each of its versions, UI-18). A step is a tuple: ("sees", [texts]), ("does_not_see",
 [texts]), ("visit", path), ("fill", field, value), ("click", button),
@@ -12,6 +13,7 @@ its own —, and the parity script's own (image, progress, values, check, choose
 """
 
 import asyncio
+import os
 import time
 
 import requests
@@ -225,6 +227,103 @@ class Console:
         from textual.widgets import TabbedContent, TabPane
         tabs = self.app.query_one(TabbedContent)
         tabs.active = [p for p in tabs.query(TabPane) if str(p._title) == title][0].id
+
+
+def tui_godot():
+    """Godot for the TUI's tests (UI-20): skipped without it, a failure where CI requires it."""
+    import pytest
+    from quantum.runtime.godot_bin import GodotNotFound, ensure_godot
+    try:
+        return ensure_godot()
+    except GodotNotFound as exc:
+        if os.environ.get("QUANTUM_GODOT_REQUIRED"):
+            pytest.fail(str(exc))
+        pytest.skip(str(exc))
+
+
+class Tui:
+    """The TUI drawn by Godot (UI-20), headless, through its play protocol (quantum/runtime/ui_tui.py):
+    a button, a link or a tab is clicked with the mouse on its cell, a field clicked and typed into, a
+    box clicked, a select opened and its option clicked."""
+    name = "tui"
+
+    def __init__(self, session):
+        self.s = session
+
+    def base_url(self):
+        return self.s.url
+
+    def text(self):
+        return self.s.text(self.s.observe())
+
+    def visit(self, path):
+        self.s.visit(path)
+
+    def motions(self):
+        return self.s.observe()["motions"]
+
+    def waits_for(self, text):
+        self.s.wait(text, timeout=WAIT)
+
+    def _field(self, field):
+        found = self.s.items(where=lambda i: i.get("bind") == field and i["kind"] != "radio")
+        assert found, f"tui: no field {field!r}"
+        return found[0]
+
+    def _click(self, item):
+        self.s.click(item["x"], item["y"])
+
+    def click(self, label):
+        self._click(self.s.item("button", label))
+
+    def follow(self, label):
+        self._click(self.s.item("link", label))
+
+    def click_in(self, card, label):
+        self._click(self.s.item("button", label, card=card))
+
+    def follow_in(self, card, label):
+        self._click(self.s.item("link", label, card=card))
+
+    def tab(self, title):
+        self._click(self.s.item("tab", title))
+
+    def fill(self, field, value):
+        self._click(self._field(field))
+        self.s.key("ctrl+u")              # what was there goes
+        self.s.type(value)
+
+    def check(self, field, on):
+        box = self._field(field)
+        if box["checked"] != on:
+            self._click(box)
+        assert self._field(field)["checked"] is on
+
+    def choose(self, field, value):
+        radios = self.s.items("radio", where=lambda i: i.get("bind") == field and i["value"] == value)
+        if radios:
+            self._click(radios[0])
+            return
+        select = self._field(field)
+        self._click(select)                                  # the options open under it
+        index = self.s.last["dropdown"].index(value)
+        self.s.click(select["x"] + 1, select["y"] + 1 + index)
+
+    def values(self, expected):
+        for field, value in expected.items():
+            radios = self.s.items("radio", where=lambda i: i.get("bind") == field)
+            if radios:
+                assert [r["value"] for r in radios if r["checked"]] == [value], field
+            elif isinstance(value, bool):
+                assert self._field(field)["checked"] is value, field
+            else:
+                assert self._field(field)["value"] == value, field
+
+    def image(self, alt):
+        assert alt in [i["alt"] for i in self.s.observe()["images"]]
+
+    def progress(self, ident, value):
+        assert any(p["id"] == ident and p["value"] == value for p in self.s.observe()["progress"])
 
 
 async def run_console_script(app, pilot, script):

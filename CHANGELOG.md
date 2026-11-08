@@ -10,6 +10,18 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- `quantum run <app> --on tui`: the TUI, the application's pages on a text
+  screen in a window of its own, drawn by Godot (SPEC.md UI-20,
+  `PLAN_PLATFORMS.md` Phase 3). A terminal's look — a grid of characters,
+  boxes with borders, tables in columns — without a terminal's limits: the
+  browser's colours, the mouse (click, hover, wheel), scrolling that glides,
+  the motions of UI-19, the page's images, wide characters, and a file field
+  with a dialog of its own. It is a renderer like the browser: it asks the
+  application's server for each page's view tree and sends the same posts,
+  with the session's cookies. The parity script and the Kanban's script run
+  in it in CI, headless, through its play protocol
+  (`quantum.runtime.ui_tui.TuiSession`). The pinned Godot is fetched into the
+  cache the first time.
 - `/api/openapi.json`: the application's API described as an OpenAPI 3.1
   document, read from its `q:endpoint`s as they are (SPEC.md API-7): each
   component a path at its route (`[id]` as `{id}`), each endpoint an

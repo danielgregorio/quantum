@@ -1,6 +1,6 @@
 """The Kanban in each of its versions, by one parameter (UI-18, PLAN_PLATFORMS.md Phase 2).
 
-`quantum run <app> --on web|desktop|terminal` runs projects/kanban; the same SCRIPT — sign in, a card
+`quantum run <app> --on web|desktop|tui|terminal` runs projects/kanban; the same SCRIPT — sign in, a card
 added, moved and done (the webhook told), a card another program adds through the API (API-1), the
 AI's subtasks, its agent and its streamed summary, issues
 imported from a forge, a viewer who changes nothing — runs in each, through the drivers of
@@ -240,11 +240,26 @@ def test_on_terminal(kanban, services, monkeypatch):
     the_script_held(kanban, services[1])
 
 
-def test_on_tui_says_it_is_not_built_yet(kanban, capsys):
-    # UI-18: the TUI drawn by Godot is PLAN_PLATFORMS.md's Phase 3; until then it says so
+def test_on_tui(kanban, services, monkeypatch):
+    # UI-18, UI-20: `--on tui` draws the same pages on a text screen drawn by Godot; the script runs in it
+    # through its play protocol (headless), on the server `run_on` started
     from quantum.cli.platforms import run_on
-    assert run_on(str(kanban), "tui") == 2
-    assert "Phase 3" in capsys.readouterr().err
+    from quantum.runtime import ui_tui
+    from quantum.runtime.godot_bin import GodotNotFound, ensure_godot
+    from tests.apps.ui_drivers import Tui
+    try:
+        ensure_godot()
+    except GodotNotFound as exc:
+        pytest.skip(str(exc))
+
+    def launch(url, page="/"):
+        with ui_tui.TuiSession(url, page, cols=180, rows=60) as tui:
+            run_script(Tui(tui), SCRIPT)
+        return 0
+
+    monkeypatch.setattr(ui_tui, "launch", launch)
+    assert run_on(str(kanban), "tui") == 0
+    the_script_held(kanban, services[1])
 
 
 def test_what_is_not_an_application(tmp_path, capsys):

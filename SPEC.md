@@ -965,14 +965,14 @@ unchecked one does not go, as in the browser — use `<q:param default="off">`
 in the action.
 
 **UI-7** — The Core set of `ui:*` is drawn with the same meaning by every
-renderer (browser, console, desktop, the Hive's screen): `window`, `hbox`, `vbox`, `grid`,
+renderer (browser, console, desktop, the Hive's screen, the TUI): `window`, `hbox`, `vbox`, `grid`,
 `panel`, `section`, `scrollbox`, `spacer`, `rule`, `header`, `footer`, `card`
 (`card-header`, `card-body`, `card-footer`), `tabpanel`/`tab`, `text`, `badge`,
 `alert`, `link`, `image`, `progress`, `table`/`column`, `list`/`item`, `form`,
 `formitem`, `input`, `checkbox`, `switch`, `radio`, `select`/`option`,
 `button`, `pager` (UI-11), `history` (DB-11) and `stream` (IA-7). The same
 script (look, fill in, check, choose, click) passes the same in the browser,
-in the console and on the screen. `ui:section` is a titled group, always open; the title of a
+in the console, on the screen and in the TUI. `ui:section` is a titled group, always open; the title of a
 `ui:card` shows even next to a `ui:card-header`; a `ui:alert` is as tall as what it says; a tab
 opens on a click in the browser as on the arrows in the console and on the screen. The other `ui:*` tags work
 only in the browser (Experimental), and the console shows that it does not draw
@@ -1096,10 +1096,10 @@ that lists the tabs.
 application in that folder (its `quantum.config.yaml`, its paths relative to
 it) in one of its versions: `web` is `quantum start` (`--port` overrides the
 port), `desktop` is `quantum desktop` (UI-4) and `terminal` is `quantum console`
-(UI-3), on the page `--page` names (`/` by default). The versions are one
-application served by one runtime; only the renderer changes. `tui` exits with
-an error that says it is not built yet; a folder that is not an application is
-an error that says so.
+(UI-3), on the page `--page` names (`/` by default), and `tui` is the TUI
+drawn by Godot (UI-20). The versions are one application served by one
+runtime; only the renderer changes. A folder that is not an application is an
+error that says so.
 
 **UI-19** — Motion has three kinds — `fade`, `slide`, `expand` — and two
 speeds — `fast` (150 ms) and `normal` (250 ms, the default) — eased out, the
@@ -1117,6 +1117,30 @@ same steps give the same list and leave every element in place, fully shown.
 `ui.motion: off` in `quantum.config.yaml` turns every motion off; the browser
 also stops them for the system's reduced-motion setting. `ui:animate`'s other
 types are the browser's; the other renderers draw the content without them.
+
+**UI-20** — `quantum run <app> --on tui` opens the application's pages in the
+TUI: a text screen in a window of its own, drawn by Godot (the pinned version,
+fetched once into the user's cache when it is missing). It is a renderer as
+the console is (UI-3): it serves the application on a local port, asks each
+page for its view tree and sends what the user did as the same posts a browser
+sends, with the cookies the server set, following its redirects. It lays the
+tree out in cells of one font — boxes with borders, rows of fields, tables in
+columns; an `hbox` stacks and a `grid` takes its columns by the breakpoints in
+columns (UI-2: `sm` 80, `md` 96, `lg` 128); a wide character (CJK, most emoji)
+takes two cells — and draws it with the browser's design tokens for its
+colours. It draws the Core set (UI-7), and an element outside it as `[ui:kind
+is not drawn in the TUI]`. Where a terminal stops, it does not: the mouse (a
+click acts, a hover marks, the wheel scrolls), scrolling that glides, the
+motions of UI-19, the page's images, and a file field that opens a dialog of
+its own and sends the file in the form's `multipart/form-data` (UI-14). The
+keyboard is the Hive's screen's (UI-15) and Ctrl+Q closes it. Search as you
+type (UI-12) asks the page again after the pause and keeps the field's focus;
+an editable cell (UI-13) is sent with Enter, or when a box or an option in it
+changes. With `--play`, headless, it is driven by JSON requests on its stdin,
+each answered with what the screen shows (`quantum.runtime.ui_tui.TuiSession`:
+`observe`, `click` at a cell, `hover`, `wheel`, `key`, `type`, `attach` a file,
+`visit`, `resize`, `wait` for a text); its layout is checked against reference
+frames of cells and no element over another.
 
 ## 11. Development
 

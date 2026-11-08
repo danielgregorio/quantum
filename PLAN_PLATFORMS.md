@@ -8,7 +8,8 @@
 > Phase 1 done 2026-10-23: `projects/kanban`, tested end to end in `tests/apps/test_kanban.py`; what it found
 > in the runtime is below, each fixed with its rule and test. Phase 2 done the same day: `quantum run <app>
 > --on web|desktop|terminal` (UI-18), the Kanban's script in each version (`tests/apps/test_kanban_everywhere.py`),
-> and motion the same everywhere (UI-19), checked by that script; `--on tui` waits for Phase 3. Next: Phase 3.
+> and motion the same everywhere (UI-19), checked by that script. Phase 3 done 2026-11-08: `--on tui`, the TUI
+> drawn by Godot (UI-20; its record is under Phase 3). Next: Phase 4.
 
 ## The goal
 
@@ -26,7 +27,7 @@ services it calls, and the AI tags (and, later, a REST API of its own). As faith
 | To call REST services | `q:invoke url=` (bearer, apikey, basic) | Core |
 | AI | `q:llm`, `q:knowledge`, `q:agent`, `ui:stream` | AI |
 | A REST API of its own | `q:endpoint` (API-1 to API-6) and its OpenAPI document, `/api/openapi.json` (API-7) | Core |
-| The versions | `quantum start`, `quantum desktop` (a pywebview over the browser), `quantum console` (Textual, in the terminal, with a terminal's limits: its colours, its cells, no mouse to speak of, nothing that moves) | three commands, no TUI |
+| The versions | `quantum run <app> --on web\|desktop\|tui\|terminal` (UI-18): the browser, a pywebview window, the TUI drawn by Godot (UI-20) and the terminal (Textual, with a terminal's limits) | one parameter |
 | The same `ui:*` everywhere | about 40 of ~70 tags (the Core set); the other ~30 only in the browser | |
 
 ## Rules
@@ -114,6 +115,30 @@ table, the file field with a dialog of its own. The parity script gains a TUI dr
 as the games' agents use it), and a layout check compares its cells with the terminal's. It is a window,
 so it comes with an installer (the games' export pipeline), and it runs in the browser too.
 
+**Done 2026-11-08.** `quantum/runtime/tui/` is a Godot project (`tui.gd`, `layout.gd`, DejaVu Sans Mono) and
+`quantum/runtime/ui_tui.py` opens it: `quantum run <app> --on tui` serves the application on a local port and opens
+the window on it, fetching the pinned Godot into the cache the first time. The TUI speaks HTTP to the server itself
+(`HTTPClient`: the view as JSON, form posts and `multipart/form-data`, a cookie jar, redirects followed by hand so
+the session set on a redirect is kept), lays the view tree out in cells (`layout.gd`: boxes, rows of fields, tables
+in columns sized by their content, an `hbox` and a `grid` by the breakpoints in columns, wide characters in two
+cells) and draws them with the browser's design tokens. The Core set is drawn — the flash, the tabs (UI-17, and
+`expand` when the user opens one), search as you type (UI-12, the field keeping its focus and cursor), the field
+errors (UI-9), the editable table (UI-13: a cell sent with Enter, or when its box or option changes), the file field
+with a dialog of its own (UI-14), progress, images fetched and drawn in their cells, streams read as they are
+written (IA-7) — and anything else says `[ui:kind is not drawn in the TUI]`. The mouse clicks, hovers and scrolls
+(gliding); the motions of UI-19 run and are recorded as the browser records them. Its play protocol (`--play`,
+headless; `TuiSession`) is the driver of `tests/apps/ui_drivers.py`'s `Tui`: the parity script
+(`tests/apps/test_ui_parity_script.py`) and the Kanban's whole script — the API step and the motions included —
+pass in it, and `tests/tui/test_tui.py` covers what they do not reach. The CI's test job installs Godot for them.
+
+What changed from the plan. The layout check compares the TUI's cells with **reference frames** of its own
+(`tests/tui/frames/`, written again with `UPDATE_FRAMES=1`) and checks that no element sits on another or past the
+right edge, rather than with the terminal's cells: the terminal is Textual, whose widgets (a button three rows tall,
+its own paddings) are not cells of the same boxes, so equal cells would only measure Textual. What both show is
+compared where it means something, by the same scripts. The TUI's installer and its version in the browser use the
+games' export pipeline and are Phase 5's (an exported TUI in a browser cannot speak `HTTPClient` or keep its own
+cookies; it needs the browser's fetch).
+
 ## Phase 4 — Every `ui:*` tag everywhere
 
 The ~30 tags only the browser draws (accordion, modal, toast, tooltip, dropdown, menu, tree, chart,
@@ -125,7 +150,8 @@ each enters the Core set when it passes in every renderer; charts drawn natively
 
 `quantum package <app> --on desktop|tui --target linux|windows|macos`: the server frozen (Python, Quantum and
 the application) beside the client and started by it — the TUI exported with the games' pipeline, the
-desktop as its window — one file to hand someone. CI builds the Kanban's Linux packages and runs its script
+desktop as its window — one file to hand someone. The TUI exported for the browser too (from Phase 3), its requests
+through the browser's fetch. CI builds the Kanban's Linux packages and runs its script
 against them; size and time to the first page are measured.
 
 ## Phase 6 — The phone, and a hosted application

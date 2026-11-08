@@ -38,6 +38,18 @@ jobs:
           pip install playwright
           python -m playwright install --with-deps chromium
 
+      - name: Godot, for the TUI (pinned in quantum/runtime/godot_bin.py)
+        # The TUI drawn by Godot (UI-20) is a renderer of the Core: its tests
+        # (tests/tui/, the parity script and the Kanban's) run here, headless.
+        id: godot-version
+        run: echo "version=$(python scripts/godot.py version)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/quantum/godot
+          key: godot-${{ runner.os }}-${{ steps.godot-version.outputs.version }}
+      - name: Install Godot
+        run: python scripts/godot.py install
+
       - name: Lint with ruff
         # Blocking: the code is clean, and pyproject.toml says why each rule
         # left out is left out. A finding is fixed, not waved through.
@@ -53,6 +65,9 @@ jobs:
         # really has to run alone — a fixed port, a file outside tmp — carries
         # @pytest.mark.isolated and runs afterwards, serially.
         # The Laboratory (games, Godot, React Native) runs in the job below.
+        # QUANTUM_GODOT_REQUIRED: a TUI test without Godot fails here, it does not skip.
+        env:
+          QUANTUM_GODOT_REQUIRED: '1'
         run: |
           pytest -n auto -m "not isolated and not laboratory" --cov=quantum --cov-report=xml
           pytest -m "isolated and not laboratory" --cov=quantum --cov-append --cov-report=xml || [ $? -eq 5 ]
