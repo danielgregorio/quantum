@@ -1,7 +1,8 @@
 """The Kanban, packaged (SPEC.md UI-22, PLAN_PLATFORMS.md Phase 5): one file whose program is the TUI, which starts
 the server beside it — a Python of its own, Quantum, the libraries, the application. CI's package job builds it,
 unpacks it and runs the Kanban's whole script in its program (tests/apps/test_kanban_everywhere.py's SCRIPT, through
-the TUI's play protocol), and makes the Windows and macOS packages, whose layout it checks. The package's size and
+the TUI's play protocol), and makes the Windows and macOS packages, whose layout it checks; a Windows and a macOS
+runner then run those (tests/package/test_package_runs_here.py). The package's size and
 the time to its first page are measured and written to the job's summary.
 
 They need the network (Python's build, pip's libraries) and Godot's export templates: QUANTUM_PACKAGE_TESTS=1 runs
@@ -62,7 +63,10 @@ def test_the_kanban_packaged_for_linux_runs_its_script(kanban, services, tmp_pat
 @pytest.mark.parametrize('target', ['windows', 'macos'])
 def test_the_kanban_packaged_for_another_system(kanban, services, tmp_path, target):  # noqa: F811
     from quantum.runtime.package import build
-    made = build(kanban, on='tui', target=target, out=tmp_path / 'dist', progress=print)
+    # QUANTUM_PACKAGE_OUT keeps them: CI's package job hands them to a Windows and a macOS runner, which run them
+    # (tests/package/test_package_runs_here.py)
+    out = os.environ.get('QUANTUM_PACKAGE_OUT') or tmp_path / 'dist'
+    made = build(kanban, on='tui', target=target, out=out, progress=print)
     assert made.path.name == f'kanban-{target}.zip'
     with zipfile.ZipFile(made.path) as z:
         names = set(z.namelist())

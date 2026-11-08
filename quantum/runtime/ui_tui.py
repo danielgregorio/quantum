@@ -86,8 +86,10 @@ class TuiSession:
             command = godot_command(self.url, page, cols, rows, play=True, binary=binary, project=self._project,
                                     window=window)
         self.started = time.monotonic()
+        # Godot writes UTF-8 (the screen's box characters), whatever the system's own encoding is (Windows's)
         self._proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                      stderr=subprocess.STDOUT, text=True, bufsize=1, env=env)
+                                      stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace',
+                                      bufsize=1, env=env)
         self.last = self.request({'op': 'observe'})
         if not self.last.get('pages'):
             self.last = self.request({'op': 'wait', 'text': '', 'timeout': timeout})
