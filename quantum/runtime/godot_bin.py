@@ -33,6 +33,11 @@ GODOT_VERSION = '4.4.1'
 
 _RELEASE_URL = ('https://github.com/godotengine/godot/releases/download/'
                 '{version}-stable/Godot_v{version}-stable_{platform}.zip')
+# The same release from Godot's own download service (what godotengine.org's buttons link to), asked when
+# GitHub's release CDN keeps failing; its `platform` names, by the release's.
+_GODOT_DOWNLOADS_URL = ('https://downloads.godotengine.org/?version={version}&flavor=stable'
+                        '&slug={platform}.zip&platform={service}')
+_SERVICE_PLATFORMS = {'linux.x86_64': 'linux.64', 'linux.arm64': 'linux.arm64', 'win64.exe': 'windows.64'}
 
 # The official release names, by (system, machine).
 _PLATFORMS = {
@@ -100,14 +105,14 @@ def find_godot() -> Optional[Path]:
 
 
 # A release asset is served through GitHub's CDN, which now and then answers 502/503/504, for a moment or
-# for a while (on 2026-11-08 four in ten tries for an hour): the download is tried again after these many
-# seconds, some six minutes in all, before it gives up.
-RETRY_WAITS = (5, 10, 20, 30, 45, 60, 90, 120)
+# for a while (on 2026-11-08, for an hour, every try from CI's runners): each source is tried again after
+# these many seconds before the next source is asked.
+RETRY_WAITS = (5, 15, 30, 60)
 
 
-def _fetch(url: str, progress=None, sleep=time.sleep) -> bytes:
+def _fetch(url: str, progress=None, sleep=None, waits=None) -> bytes:
     """The bytes at `url`; a server's failure (5xx) or a dropped connection is tried again (RETRY_WAITS)."""
-    for attempt, wait in enumerate((*RETRY_WAITS, None)):
+    for attempt, wait in enumerate((*(RETRY_WAITS if waits is None else waits), None)):
         try:
             with urllib.request.urlopen(url, timeout=300) as resp:
                 return resp.read()
@@ -121,8 +126,17 @@ def _fetch(url: str, progress=None, sleep=time.sleep) -> bytes:
             why = str(getattr(exc, 'reason', exc))
         if progress:
             progress(f'{why}; trying again in {wait}s')
-        sleep(wait)
+        (sleep or time.sleep)(wait)
     raise AssertionError('unreachable')
+
+
+def release_urls(plat: str) -> List[str]:
+    """Where the pinned release is fetched from, in order: GitHub, then Godot's own download service."""
+    urls = [_RELEASE_URL.format(version=GODOT_VERSION, platform=plat)]
+    if plat in _SERVICE_PLATFORMS:
+        urls.append(_GODOT_DOWNLOADS_URL.format(version=GODOT_VERSION, platform=plat,
+                                                service=_SERVICE_PLATFORMS[plat]))
+    return urls
 
 
 def download_godot(progress=None) -> Path:
@@ -131,17 +145,26 @@ def download_godot(progress=None) -> Path:
     if plat.startswith('macos'):
         raise GodotNotFound('the macOS release is an .app bundle; set QUANTUM_GODOT to its '
                             'Contents/MacOS/Godot')
-    url = _RELEASE_URL.format(version=GODOT_VERSION, platform=plat)
     d = cache_dir()
     d.mkdir(parents=True, exist_ok=True)
-    if progress:
-        progress(f'downloading {url}')
-    data = _fetch(url, progress)
-    with zipfile.ZipFile(io.BytesIO(data)) as zf:
-        names = [n for n in zf.namelist() if n.startswith('Godot_v')]
-        if not names:
-            raise GodotNotFound(f'{url} holds no Godot binary')
-        zf.extract(names[0], d)
+    names, last = [], None
+    for url in release_urls(plat):
+        if progress:
+            progress(f'downloading {url}')
+        try:
+            data = _fetch(url, progress)
+            with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                names = [n for n in zf.namelist() if n.startswith('Godot_v')]
+                if not names:
+                    raise GodotNotFound(f'{url} holds no Godot binary')
+                zf.extract(names[0], d)
+            break
+        except (urllib.error.URLError, TimeoutError, ConnectionError, zipfile.BadZipFile, GodotNotFound) as exc:
+            last = exc
+            if progress:
+                progress(f'{url} failed: {exc}')
+    if not names:
+        raise last
     binary = d / names[0]
     binary.chmod(binary.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     if progress:
