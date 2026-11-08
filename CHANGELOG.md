@@ -24,6 +24,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   drew `ui:tree` and `ui:log` empty, `ui:markdown` as its raw text,
   `ui:pagination`'s buttons doing nothing and a `ui:date-picker` that could
   not pick; the console drew none of them.
+- Ten more `ui:*` tags in the Core set, those with a state of their own,
+  kept by each renderer the same way (SPEC.md UI-21): `accordion` (folds,
+  the first open), `modal` (above the page while `open`, an expression too,
+  until closed), `tooltip` (its tip while pointed at or focused), `dropdown`
+  (a button that opens its options, each posting its action), `toast` and
+  `toast-container` (shown for `duration`, while `show`), `carousel` and
+  `slide`, `stepper` and `step` (one at a time, with controls to move).
+  Before, a page drew them as markup that did not move — a carousel's arrows,
+  a stepper's steps and a toast's going needed a script only a standalone
+  build had — and a modal's `open="{...}"` never opened.
 - `UI_PARITY.md`: every `ui:*` tag against every renderer, written from
   `quantum/runtime/ui_parity.py` (`python -m quantum.runtime.ui_parity`). A
   page with every tag checks it in each renderer: each says "not drawn" for

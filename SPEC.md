@@ -1177,6 +1177,19 @@ shaded lines; a `ui:loading` a mark that turns and its text. A terminal draws
 them in the form it can — a chart in bars of characters, a link's target after
 its text in Markdown, the screen's emphasis as plain text — and the same
 scripts pass in every renderer (`tests/apps/showcase/components/more.q`).
+The tags with a state of their own keep it in the renderer, the same in each:
+a `ui:accordion`'s sections are folds, the first open, each opened and closed
+by the user; a `ui:modal` shows above the page while `open` (an expression
+too) until the user closes it; a `ui:toast` shows its title and message for
+`duration` milliseconds, and only while `show` is true; a `ui:tooltip` says
+its tip while its content is pointed at or has the focus; a `ui:dropdown` is
+a button that opens its options, each posting its action with its `value` as
+a menu's does; a `ui:carousel` shows one slide and moves to the previous and
+the next; a `ui:stepper` shows the steps' titles and the current step's
+content, and Back and Next move between them. What calls a standalone build's
+script — `on-change`, `on-complete` and `bind` on a carousel or a stepper,
+`on-close` on a toast — is an error in a page that says so
+(`tests/apps/showcase/components/state.q`).
 
 ## 11. Development
 

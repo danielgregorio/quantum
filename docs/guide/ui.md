@@ -462,13 +462,13 @@ on the screen and in the TUI:
 | Forms | `form`, `formitem`, `input`, `checkbox`, `switch`, `radio`, `select` / `option`, `button` |
 | Data features | `pager` (pages of a query), `history` (a row's changes), `stream` (an AI answer as it is written) |
 | Beyond the layout | `breadcrumb` / `breadcrumb-item`, `menu`, `avatar`, `markdown`, `chart`, `tree`, `log`, `dividedbox`, `pagination`, `skeleton`, `loading`, `date-picker`, `animate` ([below](#beyond-the-layout)) |
+| With a state of their own | `accordion`, `modal`, `tooltip`, `dropdown`, `toast` / `toast-container`, `carousel` / `slide`, `stepper` / `step` ([below](#beyond-the-layout)) |
 
-The other `ui:*` elements — modals, toasts, tooltips, dropdowns, accordions,
-carousels, steppers, calendars — work in the browser only and are
-**Experimental** (see the [UI tags reference](/reference/ui)). In the console,
-on the screen and in the TUI such an element shows
-`[ui:modal is not drawn in the console]` instead of something else in its
-place. [`UI_PARITY.md`](https://github.com/danielgregorio/quantum/blob/main/UI_PARITY.md)
+`ui:calendar` works in the browser only and is **Experimental** (see the
+[UI tags reference](/reference/ui)): in the console, on the screen and in the
+TUI it shows `[ui:calendar is not drawn in the console]` instead of something
+else in its place. `ui:validator` and `ui:theme` apply to a standalone build
+only so far. [`UI_PARITY.md`](https://github.com/danielgregorio/quantum/blob/main/UI_PARITY.md)
 is the map of every tag against every renderer, and a check keeps it true.
 
 Text directly inside a container is content: `<ui:card-header>Summary</ui:card-header>`.
@@ -554,6 +554,17 @@ characters, a skeleton in shaded lines.
   in a page.
 - A **date picker** is a date field of its form, YYYY-MM-DD, with the action's
   rules (UI-9).
+
+Some keep a state of their own, in every renderer the same way: an
+**accordion**'s sections are folds, the first open; a **modal** shows above the
+page while `open` is true (`open="{query.welcome == '1'}"`) until it is closed;
+a **toast** shows for its `duration`, while `show` is true; a **tooltip** says
+its tip when its content is pointed at or has the focus; a **dropdown** is a
+button that opens its options, each posting its action like a menu's; a
+**carousel** shows one slide, a **stepper** one step, with controls to move.
+Which slide or step is shown is the screen's, not the page's: `on-change`,
+`on-complete` and `bind`, which a standalone build's script calls, are an
+error in a page.
 
 ## In the TUI
 

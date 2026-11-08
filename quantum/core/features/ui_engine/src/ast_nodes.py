@@ -1956,4 +1956,7 @@ CORE_TAGS = frozenset({
     # UI-21: drawn by every renderer since Platforms Phase 4 (UI_PARITY.md)
     'breadcrumb', 'breadcrumb-item', 'menu', 'avatar', 'markdown', 'chart', 'tree', 'log', 'dividedbox',
     'pagination', 'skeleton', 'loading', 'date-picker', 'animate',
+    # and those with a state of their own (UI-21)
+    'accordion', 'modal', 'tooltip', 'dropdown', 'toast', 'toast-container', 'carousel', 'slide',
+    'stepper', 'step',
 })
