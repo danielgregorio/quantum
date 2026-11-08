@@ -238,7 +238,14 @@ class HtmlPostProcessing:
                             indent = '  ' * depth
                             output.append(f'{indent}{stripped}\n')
                         else:
-                            output.append(stripped)
+                            # a space the text has on its line, next to an inline element, is the text's:
+                            # "<b>bold</b> words" read "boldwords"; a line break is the builder's layout
+                            lead = token[:len(token) - len(token.lstrip())]
+                            trail = token[len(token.rstrip()):]
+                            output.append((' ' if lead and '\n' not in lead else '') + stripped
+                                          + (' ' if trail and '\n' not in trail else ''))
+                    elif not _at_line_start() and '\n' not in token:
+                        output.append(' ')            # "<a>one</a> <a>two</a>": the space between them
 
         result = ''.join(output)
         # Clean up multiple blank lines

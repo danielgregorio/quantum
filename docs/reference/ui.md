@@ -134,6 +134,18 @@ Also takes the [layout attributes](#layout-attributes), child elements.
 
 Specified by: [UI-7](./spec#UI-7)
 
+<a id="ui-dividedbox"></a>
+
+## `ui:dividedbox`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `direction` | string |  | `horizontal` |  |
+
+Also takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-form"></a>
 
 ## `ui:form`
@@ -432,6 +444,27 @@ Also takes the [layout attributes](#layout-attributes).
 
 Specified by: [UI-7](./spec#UI-7)
 
+<a id="ui-tree"></a>
+
+## `ui:tree`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `source` | string |  |  |  |
+| `on-select` | string |  |  |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-menu"></a>
+
+## `ui:menu`
+
+Takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-option"></a>
 
 ## `ui:option`
@@ -444,7 +477,29 @@ Specified by: [UI-7](./spec#UI-7)
 
 Also takes its text.
 
-Specified by: [UI-7](./spec#UI-7)
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-log"></a>
+
+## `ui:log`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `source` | string |  |  |  |
+| `auto-scroll` | boolean |  | `true` |  |
+| `max-lines` | number |  |  |  |
+
+Also takes the [layout attributes](#layout-attributes), its text.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-markdown"></a>
+
+## `ui:markdown`
+
+Takes the [layout attributes](#layout-attributes), its text.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
 
 <a id="ui-header"></a>
 
@@ -474,6 +529,18 @@ No attributes, no content.
 
 Specified by: [UI-7](./spec#UI-7)
 
+<a id="ui-loading"></a>
+
+## `ui:loading`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `text` | string |  |  |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-badge"></a>
 
 ## `ui:badge`
@@ -486,6 +553,26 @@ Specified by: [UI-7](./spec#UI-7)
 Also takes the [layout attributes](#layout-attributes), its text.
 
 Specified by: [UI-7](./spec#UI-7)
+
+<a id="ui-animate"></a>
+
+## `ui:animate`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `animate` | string |  |  |  |
+| `transition` | string |  |  |  |
+| `type` | string |  |  |  |
+| `duration` | string |  |  |  |
+| `delay` | string |  |  |  |
+| `easing` | string |  |  |  |
+| `repeat` | string |  |  |  |
+| `trigger` | string |  |  |  |
+| `direction` | string |  |  |  |
+
+Also takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-19](./spec#UI-19)
 
 <a id="ui-card"></a>
 
@@ -526,6 +613,39 @@ Takes the [layout attributes](#layout-attributes), child elements.
 
 Specified by: [UI-7](./spec#UI-7)
 
+<a id="ui-chart"></a>
+
+## `ui:chart`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `type` | string |  | `bar` |  |
+| `source` | string |  |  |  |
+| `labels` | string |  |  |  |
+| `values` | string |  |  |  |
+| `title` | string |  |  |  |
+| `colors` | string |  |  |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-avatar"></a>
+
+## `ui:avatar`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `src` | string |  |  |  |
+| `name` | string |  |  |  |
+| `size` | string |  |  |  |
+| `shape` | string |  | `circle` |  |
+| `status` | string |  |  |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-alert"></a>
 
 ## `ui:alert`
@@ -541,6 +661,85 @@ Also takes the [layout attributes](#layout-attributes), its text, child elements
 
 Specified by: [UI-7](./spec#UI-7) · [UI-16](./spec#UI-16)
 
+<a id="ui-breadcrumb"></a>
+
+## `ui:breadcrumb`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `separator` | string |  | `/` |  |
+
+Also takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-breadcrumb-item"></a>
+
+## `ui:breadcrumb-item`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `to` | string |  |  |  |
+| `icon` | string |  |  |  |
+| `label` | string |  |  |  |
+
+Also takes its text.
+
+Specified by: [UI-7](./spec#UI-7)
+
+<a id="ui-pagination"></a>
+
+## `ui:pagination`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `total` | string |  |  |  |
+| `page-size` | string |  | `10` |  |
+| `current` | string |  | `1` |  |
+| `bind` | string |  |  |  |
+| `on-change` | string |  |  |  |
+| `show-total` | boolean |  | `false` |  |
+| `show-jump` | boolean |  | `false` |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-skeleton"></a>
+
+## `ui:skeleton`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `variant` | string |  | `text` |  |
+| `lines` | number |  | `1` |  |
+| `animated` | boolean |  | `true` |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-date-picker"></a>
+
+## `ui:date-picker`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `value` | string |  |  |  |
+| `bind` | string |  |  |  |
+| `placeholder` | string |  | `Select date` |  |
+| `format` | string |  | `YYYY-MM-DD` |  |
+| `min-date` | string |  |  |  |
+| `max-date` | string |  |  |  |
+| `on-change` | string |  |  |  |
+| `clearable` | boolean |  | `true` |  |
+| `disabled` | boolean |  | `false` |  |
+| `required` | boolean |  | `false` |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <h1 class="reference-group">Experimental</h1>
 
 Browser only, with no stability promise: the console says it does not draw them ([UI-7](./spec#UI-7)).
@@ -550,60 +749,6 @@ Browser only, with no stability promise: the console says it does not draw them 
 ## `ui:accordion`
 
 Takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-dividedbox"></a>
-
-## `ui:dividedbox`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `direction` | string |  | `horizontal` |  |
-
-Also takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-tree"></a>
-
-## `ui:tree`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `source` | string |  |  |  |
-| `on-select` | string |  |  |  |
-
-Also takes the [layout attributes](#layout-attributes).
-
-<a id="ui-menu"></a>
-
-## `ui:menu`
-
-Takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-log"></a>
-
-## `ui:log`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `auto-scroll` | boolean |  | `true` |  |
-| `max-lines` | number |  |  |  |
-
-Also takes the [layout attributes](#layout-attributes).
-
-<a id="ui-markdown"></a>
-
-## `ui:markdown`
-
-Takes the [layout attributes](#layout-attributes), its text.
-
-<a id="ui-loading"></a>
-
-## `ui:loading`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `text` | string |  |  |  |
-
-Also takes the [layout attributes](#layout-attributes).
 
 <a id="ui-validator"></a>
 
@@ -627,26 +772,6 @@ Inside: [`ui:form`](#ui-form)
 | `message` | string |  |  |  |
 | `trigger` | string |  | `submit` |  |
 
-<a id="ui-animate"></a>
-
-## `ui:animate`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `animate` | string |  |  |  |
-| `transition` | string |  |  |  |
-| `type` | string |  |  |  |
-| `duration` | string |  |  |  |
-| `delay` | string |  |  |  |
-| `easing` | string |  |  |  |
-| `repeat` | string |  |  |  |
-| `trigger` | string |  |  |  |
-| `direction` | string |  |  |  |
-
-Also takes the [layout attributes](#layout-attributes), child elements.
-
-Specified by: [UI-19](./spec#UI-19)
-
 <a id="ui-modal"></a>
 
 ## `ui:modal`
@@ -661,35 +786,6 @@ Specified by: [UI-19](./spec#UI-19)
 | `closable` | boolean |  | `true` |  |
 
 Also takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-chart"></a>
-
-## `ui:chart`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `type` | string |  | `bar` |  |
-| `source` | string |  |  |  |
-| `labels` | string |  |  |  |
-| `values` | string |  |  |  |
-| `title` | string |  |  |  |
-| `colors` | string |  |  |  |
-
-Also takes the [layout attributes](#layout-attributes).
-
-<a id="ui-avatar"></a>
-
-## `ui:avatar`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `src` | string |  |  |  |
-| `name` | string |  |  |  |
-| `size` | string |  |  |  |
-| `shape` | string |  | `circle` |  |
-| `status` | string |  |  |  |
-
-Also takes the [layout attributes](#layout-attributes).
 
 <a id="ui-tooltip"></a>
 
@@ -713,56 +809,6 @@ Also takes the [layout attributes](#layout-attributes), its text, child elements
 | `align` | string |  | `left` |  |
 
 Also takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-breadcrumb"></a>
-
-## `ui:breadcrumb`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `separator` | string |  | `/` |  |
-
-Also takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-breadcrumb-item"></a>
-
-## `ui:breadcrumb-item`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `to` | string |  |  |  |
-| `icon` | string |  |  |  |
-| `label` | string |  |  |  |
-
-Also takes its text.
-
-<a id="ui-pagination"></a>
-
-## `ui:pagination`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `total` | string |  |  |  |
-| `page-size` | string |  | `10` |  |
-| `current` | string |  | `1` |  |
-| `bind` | string |  |  |  |
-| `on-change` | string |  |  |  |
-| `show-total` | boolean |  | `false` |  |
-| `show-jump` | boolean |  | `false` |  |
-
-Also takes the [layout attributes](#layout-attributes).
-
-<a id="ui-skeleton"></a>
-
-## `ui:skeleton`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `variant` | string |  | `text` |  |
-| `lines` | number |  | `1` |  |
-| `animated` | boolean |  | `true` |  |
-
-Also takes the [layout attributes](#layout-attributes).
 
 <a id="ui-toast"></a>
 
@@ -868,25 +914,6 @@ Also takes the [layout attributes](#layout-attributes), child elements.
 | `show-week-numbers` | boolean |  | `false` |  |
 | `first-day-of-week` | number |  | `0` |  |
 | `inline` | boolean |  | `true` |  |
-
-Also takes the [layout attributes](#layout-attributes).
-
-<a id="ui-date-picker"></a>
-
-## `ui:date-picker`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `value` | string |  |  |  |
-| `bind` | string |  |  |  |
-| `placeholder` | string |  | `Select date` |  |
-| `format` | string |  | `YYYY-MM-DD` |  |
-| `min-date` | string |  |  |  |
-| `max-date` | string |  |  |  |
-| `on-change` | string |  |  |  |
-| `clearable` | boolean |  | `true` |  |
-| `disabled` | boolean |  | `false` |  |
-| `required` | boolean |  | `false` |  |
 
 Also takes the [layout attributes](#layout-attributes).
 

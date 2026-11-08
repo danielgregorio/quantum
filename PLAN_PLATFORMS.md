@@ -28,7 +28,7 @@ services it calls, and the AI tags (and, later, a REST API of its own). As faith
 | AI | `q:llm`, `q:knowledge`, `q:agent`, `ui:stream` | AI |
 | A REST API of its own | `q:endpoint` (API-1 to API-6) and its OpenAPI document, `/api/openapi.json` (API-7) | Core |
 | The versions | `quantum run <app> --on web\|desktop\|tui\|terminal` (UI-18): the browser, a pywebview window, the TUI drawn by Godot (UI-20) and the terminal (Textual, with a terminal's limits) | one parameter |
-| The same `ui:*` everywhere | about 40 of ~70 tags (the Core set); the other ~30 only in the browser | |
+| The same `ui:*` everywhere | 53 of 67 tags (the Core set, `UI_PARITY.md`); the other 14 only in the browser | |
 
 ## Rules
 
@@ -145,6 +145,26 @@ The ~30 tags only the browser draws (accordion, modal, toast, tooltip, dropdown,
 calendar, date picker, stepper, carousel, breadcrumb, markdown, avatar, skeleton…) in the TUI, and in the
 terminal in the form it can (a chart in bars of characters, a modal as a layer, a toast as a line);
 each enters the Core set when it passes in every renderer; charts drawn natively.
+
+**4a done 2026-11-08: the tags the server can say whole.** `quantum/runtime/ui_more.py` works out what each
+means once — an avatar's initials, which crumb is the current page, a Markdown text's blocks (escaped, links
+only to http, https, mailto or a path), a chart's bars and their share, a tree's rows and the lines beside
+them, a log's last lines, a pagination's pages — and the view tree sends it (`as` naming the Core kind a
+composition is drawn as: a breadcrumb is a row of links, a date picker a date field); the browser's page
+draws its HTML from the same functions. The console, the Hive's screen (in Rust, its bars and a tree's lines in
+pixels: its font is ASCII and Latin-1) and the TUI draw them, and thirteen tags enter the Core set: breadcrumb,
+menu, avatar, markdown, chart, tree, log, dividedbox, pagination, skeleton, loading, date-picker and animate
+(SPEC.md UI-21). A second script (`tests/apps/showcase/components/more.q`) runs in the four renderers, and
+`UI_PARITY.md`, written from `quantum/runtime/ui_parity.py`, maps every tag against every renderer: a page
+with every tag checks that each says "not drawn" for exactly what the map says. On the way: the browser's
+page drew `ui:tree` and `ui:log` empty, `ui:markdown` raw, a bar chart squashed (its class was one bar's) and
+a date picker that could not pick; the screen lost what was inside a `ui:animate`; the page's HTML lost the
+space after an inline element.
+
+What changed from the plan: "charts drawn natively" is the browser's SVG and CSS and bars in the three
+others; the TUI could draw them in pixels and does not yet. Left for 4b, the tags with state of their own:
+accordion, modal, tooltip, dropdown, toast, carousel, stepper, calendar — and `ui:validator` and `ui:theme`,
+which a page leaves out today in every renderer, the browser too (UI_PARITY.md says so).
 
 ## Phase 5 — An installer
 

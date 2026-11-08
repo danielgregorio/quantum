@@ -39,24 +39,31 @@ def _href(renderer, param: str, page: int) -> str:
 def pager_items(renderer, node) -> List[Dict]:
     """The pager's items: {'kind': prev|page|gap|next, 'label', 'href' (None if not a link), 'current'}."""
     pagination = _pagination(renderer, node)
-    total = int(pagination.get('totalPages') or 0)
-    current_page = int(pagination.get('currentPage') or 1)
+    return page_items(renderer, node.param, int(pagination.get('totalPages') or 0),
+                      int(pagination.get('currentPage') or 1), int(node.window))
+
+
+def page_items(renderer, param: str, total: int, current_page: int, window: int = 2) -> List[Dict]:
+    """The items of a pager over `total` pages (none for one page): previous, the pages around the current
+    one — first and last always, a gap where pages are skipped — and next; each a link to the same page with
+    `param` set and the other URL parameters kept. ui:pager (UI-11) and ui:pagination (UI-21) draw these."""
     if total <= 1:
         return []
-    window = max(0, int(node.window))
+    current_page = min(max(1, current_page), total)
+    window = max(0, window)
     pages = sorted({1, total} | set(range(max(1, current_page - window), min(total, current_page + window) + 1)))
     items: List[Dict] = [{'kind': 'prev', 'label': '‹', 'aria': 'Previous page',
-                          'href': _href(renderer, node.param, current_page - 1) if current_page > 1 else None,
+                          'href': _href(renderer, param, current_page - 1) if current_page > 1 else None,
                           'current': False}]
     previous: Optional[int] = None
     for n in pages:
         if previous is not None and n > previous + 1:
             items.append({'kind': 'gap', 'label': '…', 'href': None, 'current': False, 'aria': ''})
         items.append({'kind': 'page', 'label': str(n), 'aria': f'Page {n}', 'current': n == current_page,
-                      'href': None if n == current_page else _href(renderer, node.param, n)})
+                      'href': None if n == current_page else _href(renderer, param, n)})
         previous = n
     items.append({'kind': 'next', 'label': '›', 'aria': 'Next page',
-                  'href': _href(renderer, node.param, current_page + 1) if current_page < total else None,
+                  'href': _href(renderer, param, current_page + 1) if current_page < total else None,
                   'current': False})
     return items
 

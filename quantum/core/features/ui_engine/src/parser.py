@@ -662,12 +662,14 @@ class UIParser:
         node = UILogNode()
         node.auto_scroll = self._parse_bool(element.get('auto-scroll'), True)
         node.max_lines = self._parse_int(element.get('max-lines')) if element.get('max-lines') else None
+        node.source = element.get('source')                  # UI-21: lines from the data
+        node.content = (element.text or '').strip('\n')      # UI-21: lines written in the element
         self._apply_layout_attrs(node, element)
         return node
 
     def _parse_ui_markdown(self, element: ET.Element) -> UIMarkdownNode:
         node = UIMarkdownNode()
-        node.content = (element.text or '').strip()
+        node.content = (element.text or '').strip('\n').rstrip()   # its indentation is the text's (UI-21)
         self._apply_layout_attrs(node, element)
         return node
 

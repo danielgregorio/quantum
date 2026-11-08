@@ -86,6 +86,8 @@ struct Node {
     /// A table's columns, and its rows of cells (each cell a list of nodes).
     columns: Vec<Value>,
     rows: Vec<Vec<Vec<usize>>>,
+    /// A chart's bars (UI-21): {label, shown, percent, color}.
+    bars: Vec<Value>,
     // what the keyboard changes
     value: String,
     cursor: usize,
@@ -188,6 +190,100 @@ fn wrap(text: &str, width: usize) -> Vec<String> {
     lines
 }
 
+/// The kinds of a page's view the screen draws (UI_PARITY.md); any other
+/// says `[ui:kind is not drawn on the screen]` in its place, its content left
+/// out (UI-7). An option is its select's, or a menu's drawn as a link.
+const DRAWN: &[&str] = &[
+    "page",
+    "window",
+    "vbox",
+    "scrollbox",
+    "form",
+    "cardbody",
+    "cardfooter",
+    "tab",
+    "list",
+    "item",
+    "hbox",
+    "grid",
+    "section",
+    "header",
+    "cardheader",
+    "formitem",
+    "panel",
+    "card",
+    "text",
+    "footer",
+    "stream",
+    "alert",
+    "badge",
+    "link",
+    "image",
+    "rule",
+    "spacer",
+    "progress",
+    "button",
+    "input",
+    "checkbox",
+    "switch",
+    "radio",
+    "select",
+    "option",
+    "tabpanel",
+    "table",
+    "column",
+    "avatar",
+    "chart",
+    "skeleton",
+    "loading",
+    "treeitem",
+];
+
+fn not_drawn(kind: &str) -> Option<String> {
+    (!DRAWN.contains(&kind)).then(|| format!("[ui:{} is not drawn on the screen]", kind))
+}
+
+/// A tree's row's depth (UI-21).
+fn depth_of(p: &Map<String, Value>) -> usize {
+    p.get("depth").and_then(Value::as_u64).unwrap_or(0) as usize
+}
+
+/// A pie or a doughnut says each bar's share in percent; the others its value.
+fn is_share(p: &Map<String, Value>) -> bool {
+    matches!(text_of(p.get("chart_type")).as_str(), "pie" | "doughnut")
+}
+
+fn shown(bar: &Value, share: bool) -> String {
+    if share {
+        let percent = bar.get("percent").and_then(Value::as_f64).unwrap_or(0.0);
+        if percent.fract() == 0.0 {
+            format!("{}%", percent as i64)
+        } else {
+            format!("{:.1}%", percent)
+        }
+    } else {
+        text_of(bar.get("shown"))
+    }
+}
+
+/// A chart's colour: a design token's name in the window's palette, or the
+/// page's own `#rrggbb`.
+fn chart_color(name: &str) -> u32 {
+    match name {
+        "primary" | "info" => LINK,
+        "success" => OK_TEXT,
+        "warning" => HONEY,
+        "danger" => DANGER_BG,
+        "secondary" => MUTED,
+        _ => name
+            .strip_prefix('#')
+            .filter(|h| h.len() == 6)
+            .and_then(|h| u32::from_str_radix(h, 16).ok())
+            .map(|rgb| 0xFF00_0000 | rgb)
+            .unwrap_or(LINK),
+    }
+}
+
 fn cut(text: &str, width: usize) -> String {
     text.chars().take(width).collect()
 }
@@ -262,7 +358,17 @@ impl Window {
             .and_then(Value::as_object)
             .cloned()
             .unwrap_or_default();
-        let kind = text_of(v.get("type"));
+        // UI-21: a tag beyond the layout set that is a composition of it says
+        // which kind it is drawn as
+        let kind = Some(text_of(v.get("as")))
+            .filter(|k| !k.is_empty())
+            .unwrap_or_else(|| text_of(v.get("type")));
+        let mut props = props;
+        if let Some(Value::String(t)) = props.get("text") {
+            // the font has ASCII and Latin-1: a pager's arrows and gap in signs it has
+            let t = t.replace('‹', "<").replace('›', ">").replace('…', "...");
+            props.insert("text".into(), Value::String(t));
+        }
         let mut node = Node {
             id: v.get("id").and_then(Value::as_u64).unwrap_or(0),
             kind: kind.clone(),
@@ -270,6 +376,11 @@ impl Window {
             parent,
             columns: v
                 .get("columns")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default(),
+            bars: v
+                .get("bars")
                 .and_then(Value::as_array)
                 .cloned()
                 .unwrap_or_default(),
@@ -473,6 +584,10 @@ impl Window {
                 .max(1),
             "spacer" => 1,
             "image" => text_of(p.get("alt")).chars().count() + 2,
+            "rule" if truthy(p.get("vertical")) => 1,
+            "avatar" => text_of(p.get("initials")).chars().count() + 4,
+            "loading" => text.chars().count() + 4,
+            "treeitem" => 3 * depth_of(p) + text.chars().count(),
             _ => w,
         };
         width.min(w).max(1)
@@ -483,13 +598,32 @@ impl Window {
         let kind = self.nodes[n].kind.clone();
         let props = self.nodes[n].props.clone();
         let children = self.nodes[n].children.clone();
-        if !self.in_table && Self::is_focusable(&kind, &props) {
+        let goes = kind == "treeitem"
+            && (self.nodes[n].event.is_some() || !text_of(props.get("to")).is_empty());
+        if !self.in_table && (Self::is_focusable(&kind, &props) || goes) {
             self.focusables.push(n);
         }
         let h = match kind.as_str() {
             "page" => self.stack(&children, x + 1, y, w.saturating_sub(2), 0),
+            "item" if props.contains_key("marker") => {
+                // an ordered list's number before the item (UI-21)
+                let m = text_of(props.get("marker")).chars().count() + 1;
+                self.stack(&children, x + m, y, w.saturating_sub(m), 0)
+            }
             "window" | "vbox" | "scrollbox" | "form" | "cardbody" | "cardfooter" | "tab"
             | "list" | "item" => self.stack(&children, x, y, w, Self::gap_rows(&props)),
+            "chart" => {
+                usize::from(!text_of(props.get("title")).is_empty())
+                    + self.nodes[n].bars.len().max(1)
+            }
+            "skeleton" => match text_of(props.get("variant")).as_str() {
+                "circle" => 1,
+                "text" | "" => text_of(props.get("lines"))
+                    .parse::<usize>()
+                    .unwrap_or(1)
+                    .max(1),
+                _ => 3,
+            },
             "section" | "header" | "cardheader" | "formitem" => {
                 let title = text_of(
                     props
@@ -543,7 +677,11 @@ impl Window {
                         text = format!("{}: {}", title, text);
                     }
                 }
-                let lines = wrap(&text, w);
+                // a quote is drawn after a bar (UI-21)
+                let lines = wrap(
+                    &text,
+                    w.saturating_sub(if truthy(props.get("quote")) { 2 } else { 0 }),
+                );
                 let h = lines.len();
                 self.nodes[n].lines = lines;
                 h
@@ -618,7 +756,14 @@ impl Window {
             line_h = line_h.max(h);
             cx += cw + 1;
         }
-        cy + line_h.max(1) - y
+        let height = cy + line_h.max(1) - y;
+        for &c in children {
+            // a dividedbox's divider goes down as far as its panes (UI-21)
+            if self.nodes[c].kind == "rule" && truthy(self.nodes[c].props.get("vertical")) {
+                self.nodes[c].rect.h = height - (self.nodes[c].rect.y - y);
+            }
+        }
+        height
     }
 
     fn place_table(&mut self, n: usize, x: usize, y: usize, w: usize) -> usize {
@@ -777,7 +922,7 @@ impl Window {
         match self.focused() {
             None => true,
             Some(n) => match self.nodes[n].kind.as_str() {
-                "button" | "link" | "checkbox" | "switch" | "tabpanel" => true,
+                "button" | "link" | "treeitem" | "checkbox" | "switch" | "tabpanel" => true,
                 "input" => {
                     matches!(key, Key::Up | Key::Down)
                         && text_of(self.nodes[n].props.get("rows")).is_empty()
@@ -878,7 +1023,16 @@ impl Window {
     fn activate(&mut self, n: usize) {
         let node = self.nodes[n].clone();
         match node.kind.as_str() {
-            "link" => {
+            "link" | "treeitem" if node.event.is_some() => {
+                // UI-21: a menu's option, a tree's row: a link that posts its action
+                let event = node.event.clone().unwrap_or(json!({}));
+                let action = text_of(event.get("action"));
+                let fields = event.get("fields").cloned().unwrap_or(json!({}));
+                self.events.push(
+                    json!({"event": "click", "id": node.id, "action": action, "fields": fields}),
+                );
+            }
+            "link" | "treeitem" => {
                 let to = text_of(node.props.get("to"));
                 self.events
                     .push(json!({"event": "navigate", "id": node.id, "to": to}));
@@ -1018,7 +1172,7 @@ impl Window {
                     _ => false,
                 }
             }
-            "button" | "link" => match key {
+            "button" | "link" | "treeitem" => match key {
                 Key::Enter | Key::Space => {
                     self.activate(n);
                     true
@@ -1234,6 +1388,10 @@ impl Window {
     fn collect_texts(&self, n: usize, out: &mut Vec<String>) {
         let node = &self.nodes[n];
         let p = &node.props;
+        if let Some(message) = not_drawn(&node.kind) {
+            out.push(message);
+            return;
+        }
         match node.kind.as_str() {
             "text" | "badge" | "link" | "button" | "footer" | "stream" | "alert" => {
                 let t = text_of(p.get("text"));
@@ -1254,6 +1412,19 @@ impl Window {
                 }
             }
             "checkbox" | "switch" => out.push(text_of(p.get("label"))),
+            "treeitem" | "loading" => out.push(text_of(p.get("text"))),
+            "avatar" => out.push(text_of(p.get("initials"))),
+            "chart" => {
+                let title = text_of(p.get("title"));
+                if !title.is_empty() {
+                    out.push(title);
+                }
+                let share = is_share(p);
+                for bar in &node.bars {
+                    out.push(text_of(bar.get("label")));
+                    out.push(shown(bar, share));
+                }
+            }
             "radio" | "select" => out.extend(self.options(n).into_iter().map(|(l, _)| l)),
             "image" => out.push(format!("[{}]", text_of(p.get("alt")))),
             "table" => {
@@ -1486,6 +1657,11 @@ impl Window {
         let x = self.ox + r.x as i32 * cw;
         let kind = node.kind.as_str();
         match kind {
+            "item" if p.contains_key("marker") => {
+                if let Some(y) = self.row_y(r.y, ch) {
+                    b.text(font, &text_of(p.get("marker")), x, y + 1, MUTED);
+                }
+            }
             "page" | "window" | "vbox" | "scrollbox" | "form" | "cardbody" | "cardfooter"
             | "tab" | "list" | "item" | "hbox" | "grid" => {}
             "section" | "header" | "cardheader" | "formitem" => {
@@ -1534,15 +1710,18 @@ impl Window {
                         }
                     }
                     "footer" => (None, MUTED),
+                    _ if truthy(p.get("muted")) || truthy(p.get("quote")) => (None, MUTED),
                     _ => (
                         None,
-                        if text_of(p.get("weight")) == "bold" {
+                        if text_of(p.get("weight")) == "bold" || p.contains_key("heading") {
                             HONEY
                         } else {
                             TEXT
                         },
                     ),
                 };
+                let quote = truthy(p.get("quote"));
+                let code = truthy(p.get("code"));
                 for (i, line) in node.lines.iter().enumerate() {
                     if let Some(y) = self.row_y(r.y + i, ch) {
                         if let Some((fill, light, dark)) = bg {
@@ -1557,9 +1736,20 @@ impl Window {
                             b.fill_rect(x, y, 1, ch as u32, light);
                             b.fill_rect(x + wpx as i32 - 1, y, 1, ch as u32, dark);
                         }
-                        b.text(font, line, x + i32::from(bg.is_some()) * 2, y + 1, color);
+                        if code {
+                            // UI-21: code on a sunken ground
+                            b.fill_rect(x, y, r.w as u32 * cw as u32, ch as u32, FIELD_BG);
+                        }
+                        if quote {
+                            b.fill_rect(x + cw / 2, y, 2, ch as u32, LINE);
+                        }
+                        let left = x + i32::from(bg.is_some()) * 2 + if quote { 2 * cw } else { 0 };
+                        b.text(font, line, left, y + 1, color);
                     }
                 }
+            }
+            "avatar" | "chart" | "skeleton" | "loading" | "treeitem" => {
+                self.draw_more(n, b, font, is_focus);
             }
             "badge" => {
                 if let Some(y) = self.row_y(r.y, ch) {
@@ -1591,6 +1781,14 @@ impl Window {
                         y + 1,
                         MUTED,
                     );
+                }
+            }
+            "rule" if truthy(p.get("vertical")) => {
+                for row in r.y..r.y + r.h.max(1) {
+                    if let Some(y) = self.row_y(row, ch) {
+                        b.fill_rect(x + cw / 2 - 1, y, 1, ch as u32, BLACK);
+                        b.fill_rect(x + cw / 2, y, 1, ch as u32, LIGHT);
+                    }
                 }
             }
             "rule" => {
@@ -1897,14 +2095,11 @@ impl Window {
                 return;
             }
             _ => {
-                if let Some(y) = self.row_y(r.y, ch) {
-                    b.text(
-                        font,
-                        &cut(&format!("[ui:{} is not drawn on the screen]", kind), r.w),
-                        x,
-                        y + 1,
-                        MUTED,
-                    );
+                if let Some(message) = not_drawn(kind) {
+                    if let Some(y) = self.row_y(r.y, ch) {
+                        b.text(font, &cut(&message, r.w), x, y + 1, MUTED);
+                    }
+                    return; // its content was not laid out
                 }
             }
         }
@@ -1916,6 +2111,168 @@ impl Window {
                 continue;
             }
             self.draw_node(c, b, font, focused, blink);
+        }
+    }
+
+    /// UI-21: the kinds that are not a composition of the layout set, drawn
+    /// with the window's palette; what the font has no sign for (a bar, a
+    /// tree's lines, a status) is drawn in pixels.
+    fn draw_more(&self, n: usize, b: &mut Band, font: &Font, is_focus: bool) {
+        let node = &self.nodes[n];
+        let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+        let (r, p) = (node.rect, &node.props);
+        let x = self.ox + r.x as i32 * cw;
+        match node.kind.as_str() {
+            "avatar" => {
+                if let Some(y) = self.row_y(r.y, ch) {
+                    let t = format!("({})", text_of(p.get("initials")));
+                    b.text(font, &t, x, y + 1, HONEY);
+                    let status = match text_of(p.get("status")).as_str() {
+                        "online" => Some(OK_TEXT),
+                        "away" => Some(TITLE_BG2),
+                        "busy" => Some(DANGER_BG),
+                        "offline" => Some(MUTED),
+                        _ => None,
+                    };
+                    if let Some(color) = status {
+                        let at = x + font.width_of(&t) as i32 + cw / 2;
+                        b.fill_rect(at, y + ch / 2 - 2, 4, 4, color);
+                    }
+                }
+            }
+            "chart" => {
+                let mut row = r.y;
+                let title = text_of(p.get("title"));
+                if !title.is_empty() {
+                    if let Some(y) = self.row_y(row, ch) {
+                        b.text(font, &cut(&title, r.w), x, y + 1, HONEY);
+                    }
+                    row += 1;
+                }
+                let share = is_share(p);
+                let names = node
+                    .bars
+                    .iter()
+                    .map(|b| text_of(b.get("label")).chars().count())
+                    .max()
+                    .unwrap_or(0);
+                let values = node
+                    .bars
+                    .iter()
+                    .map(|b| shown(b, share).chars().count())
+                    .max()
+                    .unwrap_or(0);
+                let room = r.w.saturating_sub(names + values + 2).max(4);
+                for bar in &node.bars {
+                    if let Some(y) = self.row_y(row, ch) {
+                        b.text(
+                            font,
+                            &cut(&text_of(bar.get("label")), names),
+                            x,
+                            y + 1,
+                            TEXT,
+                        );
+                        let percent = bar.get("percent").and_then(Value::as_f64).unwrap_or(0.0);
+                        let length = (room as f64 * cw as f64 * percent / 100.0).round() as u32;
+                        let left = x + (names as i32 + 1) * cw;
+                        if length > 0 {
+                            b.fill_rect(
+                                left,
+                                y + 2,
+                                length,
+                                (ch - 4).max(1) as u32,
+                                chart_color(&text_of(bar.get("color"))),
+                            );
+                        }
+                        b.text(
+                            font,
+                            &shown(bar, share),
+                            left + length as i32 + cw,
+                            y + 1,
+                            MUTED,
+                        );
+                    }
+                    row += 1;
+                }
+            }
+            "skeleton" => {
+                let variant = text_of(p.get("variant"));
+                let full = r.w as u32 * cw as u32;
+                for row in r.y..r.y + r.h {
+                    if let Some(y) = self.row_y(row, ch) {
+                        let w = match variant.as_str() {
+                            "circle" => 2 * cw as u32,
+                            "text" | "" if row + 1 == r.y + r.h && r.h > 1 => full * 3 / 5,
+                            _ => full,
+                        };
+                        b.fill_rect(x, y + 2, w, (ch - 4).max(1) as u32, MID);
+                    }
+                }
+            }
+            "loading" => {
+                if let Some(y) = self.row_y(r.y, ch) {
+                    b.text(font, "...", x, y + 1, HONEY);
+                    b.text(
+                        font,
+                        &cut(&text_of(p.get("text")), r.w.saturating_sub(4)),
+                        x + 4 * cw,
+                        y + 1,
+                        MUTED,
+                    );
+                }
+            }
+            "treeitem" => {
+                if let Some(y) = self.row_y(r.y, ch) {
+                    let depth = depth_of(p);
+                    if depth > 0 {
+                        // a line down for each level that goes on, then the branch to the row
+                        let lines: Vec<bool> = p
+                            .get("lines")
+                            .and_then(Value::as_array)
+                            .map(|a| a.iter().map(|v| truthy(Some(v))).collect())
+                            .unwrap_or_default();
+                        for (level, on) in lines.iter().enumerate() {
+                            if *on {
+                                b.fill_rect(
+                                    x + level as i32 * 3 * cw + cw / 2,
+                                    y,
+                                    1,
+                                    ch as u32,
+                                    LINE,
+                                );
+                            }
+                        }
+                        let at = x + (depth as i32 - 1) * 3 * cw + cw / 2;
+                        let last = truthy(p.get("last"));
+                        b.fill_rect(
+                            at,
+                            y,
+                            1,
+                            if last { ch as u32 / 2 + 1 } else { ch as u32 },
+                            LINE,
+                        );
+                        b.fill_rect(at, y + ch / 2, (2 * cw) as u32, 1, LINE);
+                    }
+                    let goes = node.event.is_some() || !text_of(p.get("to")).is_empty();
+                    let color = if is_focus {
+                        HONEY
+                    } else if goes {
+                        LINK
+                    } else {
+                        TEXT
+                    };
+                    let left = x + 3 * depth as i32 * cw;
+                    let room = r.w.saturating_sub(3 * depth);
+                    b.text(
+                        font,
+                        &cut(&text_of(p.get("text")), room),
+                        left,
+                        y + 1,
+                        color,
+                    );
+                }
+            }
+            _ => {}
         }
     }
 

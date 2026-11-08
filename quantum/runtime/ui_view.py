@@ -15,7 +15,7 @@ A view node is a dict:
 """
 
 import copy
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from quantum.core.ast_nodes import CommentNode, HTMLNode, TextNode
 from quantum.core.features.conditionals.src.ast_node import IfNode
@@ -127,15 +127,11 @@ class UIViewBuilder:
                              for e in entries]}
         if isinstance(node, UIPagerNode):
             # UI-11: the same items the browser gets, as links the console follows.
-            children = []
-            for item in pager_items(self.r, node):
-                if item['href']:
-                    children.append({'type': 'link', 'props': {'to': item['href'], 'text': item['label']},
-                                     'children': []})
-                else:
-                    text = f"[{item['label']}]" if item['current'] else item['label']
-                    children.append({'type': 'text', 'props': {'text': text}, 'children': []})
+            children = _pager_children(pager_items(self.r, node))
             return {'type': 'hbox', 'props': {'ui_id': getattr(node, 'ui_id', None)}, 'children': children}
+        more = self._more(node)
+        if more is not None:
+            return more
         error = None
         if getattr(node, 'search', None) and getattr(node, 'value', None) in (None, ''):
             # UI-12: the search field shows the search in the URL, as in the browser.
@@ -189,6 +185,106 @@ class UIViewBuilder:
         if action:
             view['event'] = {'action': action.strip().rstrip('()'), 'fields': self._fields(getattr(node, 'send', None))}
         return view
+
+    # -- the tags beyond the layout set (UI-21) ------------------------------------
+
+    def _layout_props(self, node) -> Dict[str, Any]:
+        """The node's props without its children and events — what any element sends."""
+        view = self._ui_without_context(_without_children(node), None)
+        view.pop('event', None)
+        return view['props']
+
+    def _more(self, node) -> Optional[Dict[str, Any]]:
+        """The view of a tag beyond the layout set, or None for the others. `as` names the Core kind a
+        renderer draws it as, when it is a composition of them (ui_more.py)."""
+        from quantum.core.features.ui_engine.src import ast_nodes as ui
+        from quantum.runtime import ui_more
+        if isinstance(node, ui.UIBreadcrumbNode):
+            return {'type': 'breadcrumb', 'as': 'hbox', 'props': self._layout_props(node),
+                    'children': ui_more.breadcrumb(ui_more.breadcrumb_items(self.r, node),
+                                                   self._text(node.separator) or '/')}
+        if isinstance(node, ui.UIAvatarNode):
+            props = self._layout_props(node)
+            props['initials'] = ui_more.initials(props.get('name'))
+            return {'type': 'avatar', 'props': props, 'children': []}
+        if isinstance(node, ui.UIMarkdownNode):
+            blocks = ui_more.markdown_blocks(self._text(node.content))
+            props = self._layout_props(node)
+            props.pop('text', None)
+            return {'type': 'markdown', 'as': 'vbox', 'props': props, 'children': ui_more.markdown_view(blocks)}
+        if isinstance(node, ui.UIChartNode):
+            props = self._layout_props(node)
+            for name in ('labels', 'values', 'colors'):
+                props.pop(name, None)
+            return {'type': 'chart', 'props': props, 'bars': ui_more.chart_of(self.r, node), 'children': []}
+        if isinstance(node, ui.UITreeNode):
+            items = []
+            for row in ui_more.tree_of(self.r, node):
+                item = {'type': 'treeitem', 'props': {'text': row['label'], 'depth': row['depth'],
+                                                      'last': row['last'], 'lines': row['lines']},
+                        'children': []}
+                if row['to']:
+                    item['props']['to'] = row['to']
+                elif node.on_select:
+                    item['event'] = {'action': node.on_select.strip().rstrip('()'), 'fields': {'value': row['value']}}
+                items.append(item)
+            return {'type': 'tree', 'as': 'vbox', 'props': self._layout_props(node), 'children': items}
+        if isinstance(node, ui.UILogNode):
+            props = self._layout_props(node)
+            props.pop('text', None)
+            lines = [{'type': 'text', 'props': {'text': line, 'code': True}, 'children': []}
+                     for line in ui_more.log_of(self.r, node)]
+            return {'type': 'log', 'as': 'panel', 'props': props, 'children': lines}
+        if isinstance(node, ui.UIDividedBoxNode):
+            vertical = (self._text(node.direction) or 'horizontal') == 'vertical'
+            children: List[Dict[str, Any]] = []
+            for child in self.build(node.children or []):
+                if children:
+                    children.append({'type': 'rule', 'props': {} if vertical else {'vertical': True}, 'children': []})
+                children.append(child)
+            return {'type': 'dividedbox', 'as': 'vbox' if vertical else 'hbox', 'props': self._layout_props(node),
+                    'children': children}
+        if isinstance(node, ui.UIPaginationNode):
+            shape = ui_more.pagination_of(self.r, node)
+            children = _pager_children(shape['items'])
+            if node.show_total:
+                children.append({'type': 'text', 'props': {'text': f"{shape['total']} items", 'muted': True},
+                                 'children': []})
+            if node.show_jump and shape['pages'] > 1:
+                children.append({'type': 'input', 'props': {'bind': shape['param'], 'search': 'pagination',
+                                                            'input_type': 'number', 'placeholder': 'Page',
+                                                            'min': '1', 'max': str(shape['pages'])},
+                                 'children': []})
+            props = {k: v for k, v in self._layout_props(node).items()
+                     if k not in ('total', 'page_size', 'current', 'bind', 'show_total', 'show_jump')}
+            return {'type': 'pagination', 'as': 'hbox', 'props': props, 'children': children}
+        if isinstance(node, ui.UIMenuNode):
+            options = []
+            for option in node.children or []:
+                if not isinstance(option, ui.UIOptionNode):
+                    options.extend(self.build([option]))
+                    continue
+                label = self._text(option.label) or self._text(option.value)
+                view = {'type': 'option', 'props': {'text': label}, 'children': []}
+                if option.on_click:
+                    view['as'] = 'link'
+                    value = self._text(option.value)
+                    view['event'] = {'action': option.on_click.strip().rstrip('()'),
+                                     'fields': {'value': value} if value else {}}
+                else:
+                    view['as'] = 'text'
+                options.append(view)
+            return {'type': 'menu', 'as': 'hbox', 'props': self._layout_props(node), 'children': options}
+        if isinstance(node, ui.UIDatePickerNode):
+            field = date_field(node)
+            view = self._ui(field)
+            view['type'], view['as'] = 'datepicker', 'input'
+            return view
+        if isinstance(node, ui.UIAnimateNode):
+            view = self._ui_without_context(node, None)
+            view['as'] = 'vbox'
+            return view
+        return None
 
     def _table(self, node: UITableNode, props: Dict[str, Any]) -> Dict[str, Any]:
         """UI-5: a table with its rows; each cell is a list of view nodes.
@@ -250,3 +346,38 @@ class UIViewBuilder:
         finally:
             ctx.local_vars = original
         return view
+
+
+def _without_children(node):
+    bare = copy.copy(node)
+    for name in ('children', 'on_click', 'on_submit'):
+        if hasattr(bare, name):
+            setattr(bare, name, [] if name == 'children' else None)
+    return bare
+
+
+def _pager_children(items) -> List[Dict[str, Any]]:
+    """UI-11: a pager's items as links the console follows, the current page and the gaps as text."""
+    children = []
+    for item in items:
+        if item['href']:
+            children.append({'type': 'link', 'props': {'to': item['href'], 'text': item['label']}, 'children': []})
+        else:
+            text = f"[{item['label']}]" if item['current'] else item['label']
+            children.append({'type': 'text', 'props': {'text': text}, 'children': []})
+    return children
+
+
+def date_field(node):
+    """UI-21: a ui:date-picker is a date field — a ui:input of type date, with its rules (UI-9)."""
+    from quantum.core.features.ui_engine.src.ast_nodes import UIInputNode
+    field = UIInputNode()
+    field.bind, field.value, field.placeholder = node.bind, node.value, node.placeholder
+    field.input_type = 'date'
+    field.min, field.max = node.min_date, node.max_date
+    field.required = bool(node.required)
+    layout = set(vars(UIInputNode())) - {'bind', 'value', 'placeholder', 'input_type', 'min', 'max', 'required'}
+    for name in ('source_line', 'source_file', *sorted(layout)):     # where it is, and its layout
+        if name in vars(node) and getattr(node, name) is not None and not isinstance(getattr(node, name), list):
+            setattr(field, name, getattr(node, name))
+    return field

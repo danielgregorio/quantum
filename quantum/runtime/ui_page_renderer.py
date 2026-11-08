@@ -29,6 +29,7 @@ from quantum.runtime.ui_html_adapter import UIHtmlAdapter
 from quantum.runtime.ui_form_rules import FORM_CSS, form_context, generated_fields, prepare_field, sends_files
 from quantum.runtime.ui_html_templates import CSS_THEME, RESPONSIVE_CSS, HtmlBuilder
 from quantum.runtime.ui_pager import PAGER_CSS, pager_items
+from quantum.runtime import ui_more
 from quantum.runtime.ui_motion import MOTION_CSS, html_attrs, motion_on, of_props
 from quantum.runtime.ui_table_edit import CELL_CSS, cell_field, edit_plan, sort_link
 from quantum.core.xml_lines import tag_error
@@ -154,7 +155,7 @@ class UIPageRenderer(UIHtmlAdapter):
     @staticmethod
     def css() -> str:
         return (CSS_THEME + '\n' + RESPONSIVE_CSS + '\n' + FORM_CSS + '\n' + PAGER_CSS + '\n' + CELL_CSS
-                + '\n' + MOTION_CSS)
+                + '\n' + MOTION_CSS + '\n' + ui_more.MORE_CSS)
 
     # -- dispatch ----------------------------------------------------------
 
@@ -329,7 +330,13 @@ class UIPageRenderer(UIHtmlAdapter):
 
     def _render_node(self, node, b: HtmlBuilder):
         special = {ui_nodes.UIPagerNode: self._render_pager, ui_nodes.UIHistoryNode: self._render_history,
-                   ui_nodes.UIStreamNode: self._render_stream}
+                   ui_nodes.UIStreamNode: self._render_stream,
+                   # UI-21: drawn from what ui_more works out, as the view tree sends it
+                   ui_nodes.UIMarkdownNode: self._render_markdown_page, ui_nodes.UIChartNode: self._render_chart_page,
+                   ui_nodes.UITreeNode: self._render_tree_page, ui_nodes.UILogNode: self._render_log_page,
+                   ui_nodes.UIPaginationNode: self._render_pagination_page,
+                   ui_nodes.UIMenuNode: self._render_menu_page, ui_nodes.UIDatePickerNode: self._render_date_page,
+                   ui_nodes.UIAvatarNode: self._render_avatar_page}
         draw = special.get(type(node))
         if draw is not None:
             try:
@@ -409,6 +416,118 @@ class UIPageRenderer(UIHtmlAdapter):
                 b.text(html.escape(item['label']))
                 b.close_tag('span')
         b.close_tag('nav')
+
+    # -- the tags beyond the layout set (UI-21) --------------------------------------
+
+    def _open(self, node, b: HtmlBuilder, tag: str, css_class: str, extra: Optional[dict] = None):
+        b.open_tag(tag, self._merge_attrs({'class': css_class, **(extra or {})},
+                                          self._layout_attrs(self._resolved(node))))
+
+    def _render_markdown_page(self, node, b: HtmlBuilder):
+        blocks = ui_more.markdown_blocks(ui_more._text(self._page, node.content))
+        self._open(node, b, 'div', 'q-markdown')
+        b.raw(ui_more.markdown_html(blocks))
+        b.close_tag('div')
+
+    def _render_chart_page(self, node, b: HtmlBuilder):
+        bars = ui_more.chart_of(self._page, node)
+        inner = HtmlBuilder()
+        inner.raw(ui_more.chart_html(ui_more._text(self._page, node.chart_type) or 'bar',
+                                     ui_more._text(self._page, node.title), bars))
+        b.raw(with_attrs(inner.build(), self._layout_attrs(self._resolved(node))))
+
+    def _render_tree_page(self, node, b: HtmlBuilder):
+        action = self._action(node.on_select, '<ui:tree on-select') if node.on_select else None
+        self._open(node, b, 'div', 'q-tree', {'role': 'tree'})
+        for row in ui_more.tree_of(self._page, node):
+            b.open_tag('div', {'class': 'q-tree-item', 'role': 'treeitem', 'aria-level': str(row['depth'] + 1)})
+            guides = ui_more.tree_guides(row)
+            if guides:
+                b.raw(f'<span class="q-tree-guides" aria-hidden="true">{html.escape(guides)}</span>')
+            label = html.escape(row['label'])
+            to = ui_more.safe_link(row['to']) if row['to'] else None
+            if to:
+                b.raw(f'<a href="{html.escape(to, quote=True)}">{label}</a>')
+            elif action:
+                b.open_tag('form', {'method': 'post', 'class': 'q-action'})
+                self._hidden_fields(b, action)
+                b.open_tag('input', {'type': 'hidden', 'name': 'value', 'value': html.escape(row['value'], quote=True)},
+                           self_closing=True)
+                b.raw(f'<button type="submit" class="q-link-action">{label}</button>')
+                b.close_tag('form')
+            else:
+                b.raw(f'<span>{label}</span>')
+            b.close_tag('div')
+        b.close_tag('div')
+
+    def _render_log_page(self, node, b: HtmlBuilder):
+        # on one line of the builder: it indents each line it is given, and a <pre> keeps that
+        lines = html.escape('\n'.join(ui_more.log_of(self._page, node))).replace('\n', '&#10;')
+        inner = HtmlBuilder()
+        inner.raw(f'<pre class="q-log" role="log">{lines}</pre>')
+        b.raw(with_attrs(inner.build(), self._layout_attrs(self._resolved(node))))
+
+    def _render_pagination_page(self, node, b: HtmlBuilder):
+        shape = ui_more.pagination_of(self._page, node)
+        self._open(node, b, 'nav', 'q-pager', {'aria-label': 'Pages'})
+        for item in shape['items']:
+            if item['href']:
+                b.raw(f'<a href="{html.escape(item["href"], quote=True)}" aria-label="{item["aria"]}" '
+                      f'class="q-page-{item["kind"]}">{html.escape(item["label"])}</a>')
+            else:
+                css_class = ('q-page-current' if item['current'] else
+                             'q-page-gap' if item['kind'] == 'gap' else 'q-page-disabled')
+                current = ' aria-current="page"' if item['current'] else ''
+                b.raw(f'<span class="{css_class}"{current}>{html.escape(item["label"])}</span>')
+        if node.show_total:
+            b.raw(f'<span class="q-pager-total">{html.escape(shape["total"])} items</span>')
+        if node.show_jump and shape['pages'] > 1:
+            # a GET form: the page number goes in the URL, as the links do
+            b.raw(f'<form method="get" role="search"><input type="number" name="{html.escape(shape["param"], quote=True)}" '
+                  f'min="1" max="{shape["pages"]}" placeholder="Page" aria-label="Go to page"></form>')
+        b.close_tag('nav')
+
+    def _render_menu_page(self, node, b: HtmlBuilder):
+        self._open(node, b, 'nav', 'q-menu')
+        for option in node.children or []:
+            if not isinstance(option, ui_nodes.UIOptionNode):
+                self._render_node(option, b)
+                continue
+            label = html.escape(ui_more._text(self._page, option.label) or ui_more._text(self._page, option.value))
+            if not option.on_click:
+                b.raw(f'<span class="q-menu-item">{label}</span>')
+                continue
+            action = self._action(option.on_click, '<ui:option on-click')
+            b.open_tag('form', {'method': 'post', 'class': 'q-action'})
+            self._hidden_fields(b, action)
+            value = ui_more._text(self._page, option.value)
+            if value:
+                b.open_tag('input', {'type': 'hidden', 'name': 'value', 'value': html.escape(value, quote=True)},
+                           self_closing=True)
+            b.raw(f'<button type="submit" class="q-menu-item q-link-action">{label}</button>')
+            b.close_tag('form')
+        b.close_tag('nav')
+
+    def _render_date_page(self, node, b: HtmlBuilder):
+        from quantum.runtime.ui_view import date_field
+        self._render_node_ui(date_field(node), b)
+
+    def _render_avatar_page(self, node, b: HtmlBuilder):
+        resolved = self._resolved(node)
+        cls = 'q-avatar' + (f' q-avatar-{resolved.size}' if resolved.size else '')
+        if resolved.shape == 'square':
+            cls += ' q-avatar-square'
+        b.open_tag('div', self._merge_attrs({'class': cls}, self._layout_attrs(resolved)))
+        name = ui_more._text(self._page, node.name)
+        if resolved.src:
+            b.raw(f'<img src="{resolved.src}" alt="{html.escape(name, quote=True)}">')
+        else:
+            b.raw(f'<span class="q-avatar-initials" aria-label="{html.escape(name, quote=True)}">'
+                  f'{html.escape(ui_more.initials(name))}</span>')
+        status = ui_more._text(self._page, node.status)
+        if status in ui_more.AVATAR_STATUSES:
+            b.raw(f'<span class="q-avatar-status q-avatar-status-{status}" title="{status}"></span>')
+        b.close_tag('div')
 
     # -- a section is a titled group, open (UI-7) ------------------------------
 

@@ -10,6 +10,24 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- Thirteen more `ui:*` tags in the Core set, drawn by every renderer — the
+  browser, the console, the Hive's screen and the TUI (SPEC.md UI-21,
+  `PLAN_PLATFORMS.md` Phase 4): `breadcrumb`, `menu` (its options post their
+  action), `avatar`, `markdown` (headings, emphasis, code, lists, quotes,
+  safe links), `chart` (`bar`, `line`, `pie`, `doughnut`, from `labels` and
+  `values` or `source` rows), `tree` (rows from `source`, each a link or an
+  action with its value), `log` (its lines, from its text or `source`, the
+  last `max-lines`), `dividedbox`, `pagination` (the pager's links over
+  `total` items), `skeleton`, `loading`, `date-picker` (a date field of its
+  form) and `animate`. The server works out what each means once
+  (`quantum/runtime/ui_more.py`) and every renderer draws that. Before, a page
+  drew `ui:tree` and `ui:log` empty, `ui:markdown` as its raw text,
+  `ui:pagination`'s buttons doing nothing and a `ui:date-picker` that could
+  not pick; the console drew none of them.
+- `UI_PARITY.md`: every `ui:*` tag against every renderer, written from
+  `quantum/runtime/ui_parity.py` (`python -m quantum.runtime.ui_parity`). A
+  page with every tag checks it in each renderer: each says "not drawn" for
+  exactly what the map says.
 - `quantum run <app> --on tui`: the TUI, the application's pages on a text
   screen in a window of its own, drawn by Godot (SPEC.md UI-20,
   `PLAN_PLATFORMS.md` Phase 3). A terminal's look — a grid of characters,
@@ -1398,6 +1416,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Changed
 
+- The HTML page keeps the space between a word and an inline element on the
+  same line: `<b>bold</b> words` was sent as `boldwords`.
+- A bar chart in a page was squashed to one bar's height: it wore the class
+  `q-chart-bar`, which is one bar's. It is `q-chart--bar` now, and each bar is
+  a share of the room its label leaves.
 - An endpoint's refusal for a role says the roles as a person would:
   "Only admin or member." (it said "Only admin,member.").
 - Laboratory: a scene's `q:set` whose value is computed (it calls a

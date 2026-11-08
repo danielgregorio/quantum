@@ -56,6 +56,9 @@ var streams_read := {}
 var dialog: FileDialog = null
 var dialog_key := ""
 var colors := {}
+var palette := {}
+var spinning := false             # a loading mark is on the screen: it is drawn again as it turns                 # the design tokens' colours, by name (a chart's bars use them)
+const SPINNER := "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 # the play protocol
 var inbox: Array = []
@@ -131,6 +134,7 @@ func _theme(tokens: Dictionary) -> void:
 			  "warning": "#f59e0b", "info": "#06b6d4"}
 	for k in tokens:
 		t[k] = tokens[k]
+	palette = t
 	var bg := Color("#0f172a")
 	var primary := Color(t["primary"])
 	var danger := Color(t["danger"])
@@ -581,10 +585,10 @@ func activate(i: int) -> void:
 	var it: Dictionary = lay.items[i]
 	_set_focus(i)
 	match it["kind"]:
-		"link":
-			load_page(str(it.get("to", "/")))
-		"button":
-			if it.has("event") and not it["event"].is_empty():
+		"link", "button":
+			if it["kind"] == "link" and not (it.has("event") and not it["event"].is_empty()):
+				load_page(str(it.get("to", "/")))
+			elif it.has("event") and not it["event"].is_empty():
 				var data := {"action": str(it["event"].get("action", ""))}
 				for k in it["event"].get("fields", {}):
 					data[k] = str(it["event"]["fields"][k])
@@ -908,6 +912,8 @@ func _process(_delta: float) -> void:
 		moving = true
 	if search_due > 0 and now >= search_due:
 		_search_now()
+	if spinning and not play:
+		moving = true
 	if moving:
 		queue_redraw()
 	if play:
@@ -986,6 +992,16 @@ func _style_colors(style: String) -> Array:
 			return [colors["muted"], colors["tab"]]
 		"tab_open":
 			return [Color.WHITE, colors["tab_open"]]
+		"code":
+			return [colors["fg"], colors["field"]]
+		"spinner":
+			return [colors["accent"], null]
+	if style.begins_with("fill:"):
+		# UI-21: a chart's bar, an avatar's status: a design token's colour, or the page's own
+		var name := style.substr(5)
+		if palette.has(name):
+			return [Color(palette[name]), null]
+		return [Color.from_string(name, colors["accent"]), null]
 	return [colors["fg"], null]
 
 
@@ -993,6 +1009,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), colors["bg"])
 	var ascent := font.get_ascent(font_size)
 	var now := Time.get_ticks_msec()
+	spinning = false
 	# the title bar
 	draw_rect(Rect2(0, 0, size.x, cell.y), colors["bar"])
 	draw_string(bold_font, Vector2(cell.x, ascent), " " + str(page.get("title", "")), HORIZONTAL_ALIGNMENT_LEFT, -1,
@@ -1022,7 +1039,11 @@ func _draw() -> void:
 			if str(c[0]) != " " and str(c[0]) != "":
 				var fg: Color = styled[0]
 				fg.a *= float(m[0])
-				draw_char(bold_font if str(c[1]) in ["bold", "title"] else font, Vector2(left, top + ascent), str(c[0]),
+				var ch := str(c[0])
+				if str(c[1]) == "spinner":            # UI-21: a loading mark turns
+					ch = SPINNER[int(now / 100) % SPINNER.length()]
+					spinning = true
+				draw_char(bold_font if str(c[1]) in ["bold", "title"] else font, Vector2(left, top + ascent), ch,
 						  font_size, fg)
 	# the page's images, over their cells
 	for image in lay.images:

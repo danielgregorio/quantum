@@ -116,6 +116,11 @@ static func has_num(node: Dictionary, name: String) -> bool:
 	return value is int or value is float or (value != null and str(value).strip_edges().is_valid_float())
 
 
+static func kind_of(node: Dictionary) -> String:
+	# UI-21: a tag beyond the layout set that is a composition of it says which kind it is drawn as
+	return str(node.get("as", node.get("type", "")))
+
+
 static func label_of(node: Dictionary) -> String:
 	var text := str(prop(node, "text", ""))
 	if text == "":
@@ -236,7 +241,7 @@ func stack(nodes: Array, x: int, y: int, w: int, ctx: Dictionary, gap: int) -> i
 
 func natural(node: Dictionary) -> int:
 	# The width a node asks for, in cells, before it is given any.
-	var kind := str(node.get("type", ""))
+	var kind := kind_of(node)
 	var children: Array = node.get("children", [])
 	if has_num(node, "width"):
 		return max(4, num(node, "width") / 8)
@@ -268,8 +273,18 @@ func natural(node: Dictionary) -> int:
 			return n
 		"image":
 			return text_width(str(prop(node, "alt", "image"))) + 2
-		"progress":
+		"progress", "skeleton":
 			return 24
+		"chart":
+			return 40
+		"avatar":
+			return text_width(str(prop(node, "initials", "?"))) + 4
+		"loading":
+			return text_width(str(prop(node, "text", ""))) + 2
+		"treeitem":
+			return text_width(tree_guides(node)) + text_width(label_of(node))
+		"rule":
+			return 1 if truthy(prop(node, "vertical", false)) else 4
 		"hbox":
 			var total := 0
 			for c in children:
@@ -367,7 +382,7 @@ func place(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 			motions.insert(first_motion, motions.pop_back())
 			regions.insert(first_motion, regions.pop_back())
 	var error := str(prop(node, "error", ""))
-	if error != "" and str(node.get("type", "")) in ["input", "select", "checkbox", "switch", "radio"]:
+	if error != "" and kind_of(node) in ["input", "select", "checkbox", "switch", "radio"]:
 		for line in wrap_text(error, w):
 			put(x, y + h, line, "error", w)
 			h += 1
@@ -375,7 +390,7 @@ func place(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 
 
 func _place(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
-	var kind := str(node.get("type", ""))
+	var kind := kind_of(node)
 	var children: Array = node.get("children", [])
 	var key: String = ctx["key"]
 	if has_num(node, "width") and kind in ["vbox", "panel", "card", "input", "select", "progress", "section"]:
@@ -421,15 +436,11 @@ func _place(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 		"table":
 			return _table(node, x, y, w, ctx)
 		"item":
-			put(x, y, "•", "muted")
-			return max(1, stack(children, x + 2, y, w - 2, ctx, 0))
+			var marker := str(prop(node, "marker", "•"))
+			put(x, y, marker, "muted")
+			return max(1, stack(children, x + text_width(marker) + 1, y, w - text_width(marker) - 1, ctx, 0))
 		"text", "footer":
-			var style := "muted" if kind == "footer" else ("bold" if str(prop(node, "weight", "")) == "bold" else "")
-			var used := 0
-			for line in wrap_text(str(prop(node, "text", "")), w):
-				put(x, y + used, line, style)
-				used += 1
-			return used
+			return _text(node, kind, x, y, w)
 		"stream":
 			var url := str(prop(node, "url", ""))
 			var text := str(streams.get(url, prop(node, "text", "")))
@@ -455,8 +466,13 @@ func _place(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 			put(x, y, text, "badge")
 			return 1
 		"rule":
+			if truthy(prop(node, "vertical", false)):
+				put(x, y, "│", "border")      # the hbox draws it down to its tallest child
+				return 1
 			put(x, y, "─".repeat(w), "border")
 			return 1
+		"avatar", "chart", "skeleton", "loading", "treeitem":
+			return _more(node, kind, x, y, w, ctx)
 		"spacer":
 			return 1
 		"progress":
@@ -487,8 +503,11 @@ func _place(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 			var lines := wrap_text(label, w)
 			for i in lines.size():
 				put(x, y + i, lines[i], "link")
-			_item({"kind": "link", "x": x, "y": y, "w": min(w, text_width(label)), "h": lines.size(), "key": key,
-				   "label": label, "to": str(prop(node, "to", "/")), "card": ctx["card"], "form": ctx["form"]})
+			var entry := {"kind": "link", "x": x, "y": y, "w": min(w, text_width(label)), "h": lines.size(), "key": key,
+						  "label": label, "to": str(prop(node, "to", "/")), "card": ctx["card"], "form": ctx["form"]}
+			if node.has("event"):
+				entry["event"] = node["event"]      # UI-21: a link that posts an action (a menu's option)
+			_item(entry)
 			return lines.size()
 		"button":
 			var label := label_of(node)
@@ -682,13 +701,15 @@ func _hbox(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 				widths[growers[k]] = rest / growers.size() + (1 if k < rest % growers.size() else 0)
 	var too_narrow := false
 	for i in n:
-		if int(widths[i]) < 3:
+		# narrower than it can be drawn in (a separator ">" needs one cell, a field more)
+		if int(widths[i]) < min(3, natural(children[i])):
 			too_narrow = true
 	if too_narrow:
 		return stack(node.get("children", []), x, y, w, ctx, 0)
 	var at := x
 	var tallest := 0
 	var index := 0
+	var dividers: Array = []
 	for i in node.get("children", []).size():
 		var c = node.get("children", [])[i]
 		if not (c is Dictionary):
@@ -696,9 +717,173 @@ func _hbox(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 		var inner := ctx.duplicate()
 		inner["key"] = "%s/%d" % [ctx["key"], i]
 		tallest = max(tallest, place(c, at, y, int(widths[index]), inner))
+		if kind_of(c) == "rule" and truthy(prop(c, "vertical", false)):
+			dividers.append(at)
 		at += int(widths[index]) + gap
 		index += 1
+	for column in dividers:                   # UI-21: a dividedbox's divider, as tall as its panes
+		for r in range(y, y + tallest):
+			put(column, r, "│", "border", 1)
 	return tallest
+
+
+# -- the tags beyond the layout set (UI-21) -------------------------------------
+
+static func tree_guides(node: Dictionary) -> String:
+	# the lines before a tree's row: one for each level that goes on, then its branch (ui_more.tree_guides)
+	var depth := num(node, "depth")
+	if depth == 0:
+		return ""
+	var out := ""
+	for on in prop(node, "lines", []):
+		out += "│  " if truthy(on) else "   "
+	return out + ("└─ " if truthy(prop(node, "last", false)) else "├─ ")
+
+
+func _text(node: Dictionary, kind: String, x: int, y: int, w: int) -> int:
+	# a text, with its look (bold, a heading, code, a quote, muted) and its spans
+	var style := "muted" if kind == "footer" or truthy(prop(node, "muted", false)) else ""
+	if str(prop(node, "weight", "")) == "bold" or has_num(node, "heading"):
+		style = "bold"
+	if truthy(prop(node, "code", false)):
+		var used := 0
+		for line in str(prop(node, "text", "")).split("\n"):
+			fill(x, y + used, w, "code")
+			put(x + 1, y + used, cut(line, w - 2), "code")
+			used += 1
+		return used
+	var quote := truthy(prop(node, "quote", false))
+	var left := x + (2 if quote else 0)
+	var room := w - (2 if quote else 0)
+	var spans: Array = prop(node, "spans", [])
+	var used := 0
+	if spans.is_empty():
+		for line in wrap_text(str(prop(node, "text", "")), room):
+			put(left, y + used, line, "muted" if quote else style)
+			used += 1
+	else:
+		used = _spans(spans, left, y, room, style)
+	if quote:
+		for r in max(1, used):
+			put(x, y + r, "│", "border")
+	return max(1, used)
+
+
+func _spans(spans: Array, x: int, y: int, w: int, base: String) -> int:
+	# words of each span, wrapped together, each in its span's style; a link's target after it (a terminal
+	# shows where it goes)
+	var words: Array = []
+	var space_before := false
+	for span in spans:
+		var style := base
+		if truthy(span.get("code", false)):
+			style = "code"
+		elif span.has("to"):
+			style = "link"
+		elif truthy(span.get("bold", false)):
+			style = "bold"
+		elif truthy(span.get("italic", false)):
+			style = "accent"
+		var text := str(span.get("text", ""))
+		var pieces := text.split(" ")
+		for i in pieces.size():
+			if pieces[i] != "":
+				words.append([pieces[i], style, space_before or i > 0])
+				space_before = false
+			elif i > 0 or text == "":
+				space_before = true            # "Some " and then "bold": a space between them
+			else:
+				space_before = true
+		if text.ends_with(" "):
+			space_before = true
+		if span.has("to"):
+			words.append(["(" + str(span["to"]) + ")", "muted", true])
+	var row := 0
+	var at := 0
+	for word in words:
+		var piece: String = word[0]
+		if piece == "":
+			continue
+		var need := text_width(piece) + (1 if word[2] and at > 0 else 0)
+		if at > 0 and at + need > w:
+			row += 1
+			at = 0
+			need = text_width(piece)
+		if word[2] and at > 0:
+			at += 1
+		at += put(x + at, y + row, cut(piece, w - at), word[1])
+	return row + 1
+
+
+func _more(node: Dictionary, kind: String, x: int, y: int, w: int, ctx: Dictionary) -> int:
+	match kind:
+		"avatar":
+			var used := put(x, y, "(" + str(prop(node, "initials", "?")) + ")", "bold")
+			var status := str(prop(node, "status", ""))
+			var mark := {"online": ["●", "fill:success"], "away": ["◐", "fill:warning"],
+						 "busy": ["●", "fill:danger"], "offline": ["○", "muted"]}
+			if mark.has(status):
+				put(x + used + 1, y, mark[status][0], mark[status][1])
+			return 1
+		"chart":
+			var used := 0
+			var title := str(prop(node, "title", ""))
+			if title != "":
+				put(x, y, cut(title, w), "bold")
+				used = 1
+			var bars: Array = node.get("bars", [])
+			var share := str(prop(node, "chart_type", "bar")) in ["pie", "doughnut"]
+			var names := 0
+			var values := 0
+			for bar in bars:
+				names = max(names, text_width(str(bar["label"])))
+				values = max(values, text_width(_shown(bar, share)))
+			var room: int = max(4, w - names - values - 2)
+			for bar in bars:
+				put(x, y + used, cut(str(bar["label"]), names))
+				var percent := float(bar["percent"])
+				var length: int = max(1 if percent > 0 else 0, int(round(room * percent / 100.0)))
+				put(x + names + 1, y + used, "█".repeat(length), "fill:" + str(bar["color"]))
+				put(x + names + 2 + length, y + used, _shown(bar, share), "muted")
+				used += 1
+			return max(1, used)
+		"skeleton":
+			var variant := str(prop(node, "variant", "text"))
+			if variant == "circle":
+				put(x, y, "(░░)", "muted")
+				return 1
+			var lines := num(node, "lines", 1) if variant == "text" else 3
+			for r in lines:
+				var length: int = w if r < lines - 1 or lines == 1 else max(1, w * 3 / 5)
+				put(x, y + r, "░".repeat(length), "muted")
+			return lines
+		"loading":
+			put(x, y, "⠋", "spinner")     # it turns as it is drawn (tui.gd)
+			put(x + 2, y, cut(str(prop(node, "text", "Loading")), w - 2), "muted")
+			return 1
+		"treeitem":
+			var guides := tree_guides(node)
+			var at := put(x, y, guides, "border")
+			var label := label_of(node)
+			if node.has("event") or str(prop(node, "to", "")) != "":
+				put(x + at, y, cut(label, w - at), "link")
+				var entry := {"kind": "link", "x": x + at, "y": y, "w": min(w - at, text_width(label)), "h": 1,
+							  "key": ctx["key"], "label": label, "to": str(prop(node, "to", "/")),
+							  "card": ctx["card"], "form": ctx["form"]}
+				if node.has("event"):
+					entry["event"] = node["event"]
+				_item(entry)
+			else:
+				put(x + at, y, cut(label, w - at))
+			return 1
+	return 1
+
+
+static func _shown(bar: Dictionary, share: bool) -> String:
+	if share:
+		var percent := float(bar["percent"])
+		return ("%d%%" % int(percent)) if percent == floor(percent) else ("%.1f%%" % percent)
+	return str(bar["shown"])
 
 
 func _grid(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
