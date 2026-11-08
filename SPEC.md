@@ -1239,6 +1239,11 @@ the pages through the browser's fetch, so the browser keeps the cookies and
 follows the redirects, a file field opens the browser's own picker, and
 `window.quantumTui.request(json)` answers its play protocol
 (`tests/package/test_tui_in_browser.py`); a package for a system leaves it out.
+With `--server https://...` a package is a hosted application's client: the
+TUI alone, which asks that server (project.godot's `quantum/server`), or the
+desktop's window on it with the window's Python and no application; with
+`--target web` it is an error that says the browser's TUI belongs to the
+hosted application itself.
 
 ## 11. Development
 

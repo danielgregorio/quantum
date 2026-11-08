@@ -243,6 +243,10 @@ jobs:
             ${{ runner.temp }}/packages/kanban-macos.zip
             ${{ runner.temp }}/packages/kanban-windows-desktop.zip
             ${{ runner.temp }}/packages/kanban-macos-desktop.zip
+            ${{ runner.temp }}/packages/kanban-windows-client.zip
+            ${{ runner.temp }}/packages/kanban-macos-client.zip
+            ${{ runner.temp }}/packages/kanban-windows-desktop-client.zip
+            ${{ runner.temp }}/packages/kanban-macos-desktop-client.zip
           if-no-files-found: error
 
   package-elsewhere:
@@ -287,20 +291,27 @@ jobs:
         shell: bash
         run: |
           cd packages
-          mkdir "with a window"
+          mkdir "with a window" client "client with a window"
           if [ "${{ matrix.target }}" = macos ]; then
             ditto -x -k kanban-macos.zip .
             ditto -x -k kanban-macos-desktop.zip "with a window"
+            ditto -x -k kanban-macos-client.zip client
+            ditto -x -k kanban-macos-desktop-client.zip "client with a window"
           else
             unzip -q kanban-windows.zip
             unzip -q kanban-windows-desktop.zip -d "with a window"
+            unzip -q kanban-windows-client.zip -d client
+            unzip -q kanban-windows-desktop-client.zip -d "client with a window"
           fi
 
-      - name: Run its script, and its desktop with no window
+      # the clients (--server) were made to ask http://127.0.0.1:8095: the test hosts the Kanban there
+      - name: Run its script, its desktop with no window, and its clients against a hosted Kanban
         shell: bash
         env:
           QUANTUM_PACKAGE_PROGRAM: ${{ github.workspace }}/packages/${{ matrix.program }}
           QUANTUM_PACKAGE_DESKTOP: ${{ github.workspace }}/packages/with a window/${{ matrix.desktop }}
+          QUANTUM_PACKAGE_CLIENT: ${{ github.workspace }}/packages/client/${{ matrix.program }}
+          QUANTUM_PACKAGE_DESKTOP_CLIENT: ${{ github.workspace }}/packages/client with a window/${{ matrix.desktop }}
         run: pytest tests/package/test_package_runs_here.py
 
   relay-image:

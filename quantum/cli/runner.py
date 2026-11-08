@@ -439,6 +439,9 @@ Examples:
                                      "TUI in the browser, in the application's static/tui/, which its server serves")
     package_parser.add_argument('--out', help="where the file goes (default: the application's dist/; for web, "
                                               "its static/tui/)")
+    package_parser.add_argument('--server', metavar='URL',
+                                help='a client of the application hosted at URL (https://...): its program '
+                                     'alone, no server or Python of its own beside a TUI')
     package_parser.add_argument('--with-data', action='store_true',
                                 help='carry its SQLite databases as they are (left out by default: its '
                                      'migrations make them when it starts)')

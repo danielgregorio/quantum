@@ -17,7 +17,8 @@ extends Control
 #
 # Exported by `quantum package` (UI-22), it is the package's program: with no --url, it starts the server
 # folder beside it (server/package.json says how) with the package's own Python, waits for the line that says
-# where the server is, and holds the server's input open; when the TUI goes, so does the server.
+# where the server is, and holds the server's input open; when the TUI goes, so does the server. Exported with
+# --server, it is a hosted application's client: project.godot's quantum/server is the server it asks.
 #
 # Exported for the browser (`quantum package <app> --on tui --target web`, UI-22), it runs in a page the
 # application's server serves (/static/tui/index.html?page=/first): its requests go through the browser's fetch
@@ -139,6 +140,12 @@ func _ready() -> void:
 		var conf = JSON.parse_string(FileAccess.get_file_as_string(package.path_join("package.json")))
 		if conf is Dictionary and conf.get("tokens") is Dictionary and tokens.is_empty():
 			tokens = conf["tokens"]
+	elif not url_given and web == null and ProjectSettings.has_setting("quantum/server"):
+		# a hosted application's client (`quantum package --server`, Phase 6): its server is that address
+		base_url = str(ProjectSettings.get_setting("quantum/server")).rstrip("/")
+		var said = JSON.parse_string(str(ProjectSettings.get_setting("quantum/tokens", "{}")))
+		if said is Dictionary and tokens.is_empty():
+			tokens = said
 	base_tokens = tokens
 	_theme(tokens)
 	var file := FontFile.new()

@@ -23,6 +23,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the Kanban's whole script in the Linux one, and starts the Windows and macOS
   ones on those systems. With `--on desktop` (Windows, macOS) the program is a
   window of its own on the system's web view, as `quantum desktop` opens.
+- `quantum package <app> --server https://...`: a client of the application
+  hosted there (`PLAN_PLATFORMS.md` Phase 6): the TUI alone, which asks that
+  server for the pages, or the desktop's window on it. CI runs the Kanban's
+  whole script in the Linux client against a hosted Kanban, and the Windows and
+  macOS clients on those systems.
 - `quantum package <app> --target web`: the TUI in a browser tab (SPEC.md
   UI-22, `PLAN_PLATFORMS.md` Phase 5c). It is exported into the application's
   `static/tui/`, so the application's own server serves it at

@@ -692,6 +692,23 @@ as many columns and rows as the window has room for. Nothing is carried but the 
 most of it Godot's WebAssembly); `--out` puts it elsewhere. CI runs the parity scripts and the
 Kanban's whole script in it, in Chromium.
 
+### A client of a hosted application
+
+When the application runs on a server of yours, `--server` makes its client: the program alone,
+which asks that server for the pages instead of starting one — no application, no Python beside
+the TUI.
+
+```bash
+quantum package projects/kanban --server https://kanban.example.com --target windows
+quantum package projects/kanban --server https://kanban.example.com --on desktop --target macos
+```
+
+The person signs in to the hosted application as on the web, and what they do is in its database.
+The TUI's client of the Kanban is about 26 MB; the desktop's carries its window's Python (the
+window is pywebview's), but no server. An address that is not `https` is said when the package is
+made: the session's cookie would cross the network unencrypted. CI runs the Kanban's whole script
+in the Linux client against a hosted Kanban, and the Windows and macOS clients on those systems.
+
 
 ## On the Hive's screen
 

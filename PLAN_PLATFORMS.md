@@ -277,6 +277,18 @@ carries (44 MB its program does not need).
 machine; and the phone (`--target android|ios`), the TUI's renderer with a look for a touch screen. The React
 Native target can then leave.
 
+**6a done 2026-11-08: a hosted application's client.** `quantum package <app> --server <url>` makes the same
+packages as clients: the TUI exported with the address in its project (`quantum/server` in project.godot, with the
+colours), which it asks instead of starting a server — the program alone, 26 MB for the Kanban on Linux — or the
+desktop's window opening on that address (`packaged_desktop` with `server` in package.json). CI runs the Kanban's
+whole script in the Linux client against a hosted Kanban (`quantum run --on web`), and the Windows and macOS runners
+run their TUI clients and check their windows against a Kanban they host. An address that is not https is said when
+the package is made.
+
+What changed from the plan: the desktop's client still carries a Python of its own — its window is pywebview's,
+which is Python — but no server and no application; "no Python on the machine" holds for every package, since
+none needs one installed.
+
 ## Later — `q:endpoint`: a REST API in the Core
 
 > Brought forward on 2026-10-23 for PandaFoot's beta reports (`PLAN_PANDAFOOT.md`) and built as designed below,

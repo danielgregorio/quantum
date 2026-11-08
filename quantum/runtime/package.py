@@ -224,7 +224,8 @@ def libraries_for(config: dict) -> List[str]:
 
 # -- the client: the TUI, exported ----------------------------------------------------------------------------
 
-def export_tui(target: str, title: str, name: str, out: Path, progress: Callable[[str], None]) -> Path:
+def export_tui(target: str, title: str, name: str, out: Path, progress: Callable[[str], None],
+               server: Optional[str] = None) -> Path:
     """The TUI exported for the target, its project named after the application; returns what Godot made (for
     the browser, its index.html, its files beside it)."""
     from quantum.runtime.godot_bin import ensure_godot
@@ -240,6 +241,11 @@ def export_tui(target: str, title: str, name: str, out: Path, progress: Callable
         settings = settings.replace('config/name="Quantum TUI"', f'config/name={json.dumps(title)}')
         if target == 'macos' and 'import_etc2_astc' not in settings:
             settings = settings.replace('[rendering]\n', '[rendering]\ntextures/vram_compression/import_etc2_astc=true\n')
+        if server:
+            # a hosted application's client (Phase 6): the TUI asks that server, which it does not start
+            from quantum.runtime.ui_tui import design_tokens
+            settings += (f'\n[quantum]\n\nserver={json.dumps(server)}\n'
+                         f'tokens={json.dumps(json.dumps(design_tokens()))}\n')
         (project / 'project.godot').write_text(settings, encoding='utf-8')
         made = out / {'linux': f'{name}.x86_64', 'windows': f'{name}.exe', 'macos': f'{name}.zip',
                       WEB: 'index.html'}[target]
@@ -353,9 +359,19 @@ def build_web(app: Path, config: dict, name: str, title: str, out: Optional[Path
     return Package(path=page, folder=folder, size=size, seconds=time.monotonic() - started)
 
 
+def server_url(server: str) -> str:
+    """A hosted application's address, checked: http(s), a host, nothing after its path."""
+    from urllib.parse import urlsplit
+    parts = urlsplit(server.strip())
+    if parts.scheme not in ('http', 'https') or not parts.netloc or parts.query or parts.fragment:
+        raise PackageError(f'--server {server}: the address of the application, as https://kanban.example.com')
+    return f'{parts.scheme}://{parts.netloc}{parts.path.rstrip("/")}'
+
+
 def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path] = None, with_data: bool = False,
-          progress: Callable[[str], None] = print) -> Package:
-    """The package of `app` for `target`: the file, and the folder it holds (kept beside it, ready to run)."""
+          progress: Callable[[str], None] = print, server: Optional[str] = None) -> Package:
+    """The package of `app` for `target`: the file, and the folder it holds (kept beside it, ready to run). With
+    `server`, a client of the application hosted there: its program alone, which asks that server."""
     started = time.monotonic()
     app = Path(app).resolve()
     if on not in ('tui', 'desktop'):
@@ -368,6 +384,11 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
                                '--target web puts the TUI there (--on tui)')
         raise PackageError(f'--on desktop --target {target}: a window of its own on Linux needs Qt WebEngine, '
                            f'about 550 MB; Linux\'s package is the TUI (--on tui)')
+    if server is not None:
+        if target == WEB:
+            raise PackageError('--target web --server: the TUI in a browser asks the server that serves it; '
+                               'put it in the hosted application (--target web, on its own folder)')
+        server = server_url(server)
     config_file = app / 'quantum.config.yaml'
     if not config_file.is_file():
         raise PackageError(f'{app} has no quantum.config.yaml: `quantum package` takes an application\'s folder')
@@ -376,7 +397,7 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
     if target == WEB:
         return build_web(app, config, name, title, out, started, progress)
     out = Path(out or app / 'dist').resolve()
-    kind = f'{target}-desktop' if on == 'desktop' else target
+    kind = (f'{target}-desktop' if on == 'desktop' else target) + ('-client' if server else '')
     work = out / f'.{name}-{kind}'
     shutil.rmtree(work, ignore_errors=True)
     folder = work / (f'{title}.app' if target == 'macos' else name)
@@ -384,25 +405,33 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
 
     # the client first: it is the program, and on a Mac the folder the rest goes into
     if on == 'desktop':
-        folder, server = desktop_program(target, title, name, work, progress)
+        folder, beside = desktop_program(target, title, name, work, progress)
     else:
-        folder, server = tui_program(target, title, name, work, folder, progress)
+        folder, beside = tui_program(target, title, name, work, folder, progress, server)
 
-    server.mkdir(parents=True)
-    progress(f'Python {PYTHON_VERSION} for {target}')
-    unpack_python(python_archive(target, progress), server)
-    site = server / TARGETS[target]['site']
-    names = libraries_for(config) + (DESKTOP_LIBRARIES[target] if on == 'desktop' else [])
-    libraries = install_libraries(target, site, names, progress)
-    copy_quantum(site)
-    left_out = copy_app(app, server / 'app', config, with_data)
-    from quantum.runtime.ui_tui import design_tokens
-    (server / 'package.json').write_text(json.dumps({
-        'name': name, 'title': title, 'page': '/', 'program': on,
-        'python': TARGETS[target]['python'],
-        'args': ['-I', '-m', 'quantum.runtime.packaged_server', '--app', '{server}/app', '--name', name],
-        'tokens': design_tokens(),
-    }, indent=2) + '\n', encoding='utf-8')
+    libraries: Dict[str, str] = {}
+    left_out: List[str] = []
+    if not (server and on == 'tui'):            # a TUI that asks a hosted server needs nothing beside it
+        beside.mkdir(parents=True)
+        progress(f'Python {PYTHON_VERSION} for {target}')
+        unpack_python(python_archive(target, progress), beside)
+        site = beside / TARGETS[target]['site']
+        if server:                              # a window on a hosted server: the window's libraries alone
+            names = ['requests'] + DESKTOP_LIBRARIES[target]
+        else:
+            names = libraries_for(config) + (DESKTOP_LIBRARIES[target] if on == 'desktop' else [])
+        libraries = install_libraries(target, site, names, progress)
+        copy_quantum(site)
+        if not server:
+            left_out = copy_app(app, beside / 'app', config, with_data)
+        from quantum.runtime.ui_tui import design_tokens
+        (beside / 'package.json').write_text(json.dumps({
+            'name': name, 'title': title, 'page': '/', 'program': on,
+            'python': TARGETS[target]['python'],
+            'args': ['-I', '-m', 'quantum.runtime.packaged_server', '--app', '{server}/app', '--name', name],
+            'tokens': design_tokens(),
+            **({'server': server} if server else {}),
+        }, indent=2) + '\n', encoding='utf-8')
 
     suffix = '.tar.gz' if target == 'linux' else '.zip'
     archive = out / f'{name}-{kind}{suffix}'
@@ -416,9 +445,10 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
                    seconds=time.monotonic() - started, libraries=libraries, left_out=left_out)
 
 
-def tui_program(target: str, title: str, name: str, work: Path, folder: Path, progress: Callable[[str], None]):
+def tui_program(target: str, title: str, name: str, work: Path, folder: Path, progress: Callable[[str], None],
+                server: Optional[str] = None):
     """The TUI's program, exported: (the folder it is in, the server folder beside it)."""
-    made = export_tui(target, title, name, work, progress)
+    made = export_tui(target, title, name, work, progress, server)
     if target == 'macos':
         with zipfile.ZipFile(made) as z:
             z.extractall(work)
@@ -444,7 +474,7 @@ def main(args) -> int:
     """The `quantum package` command."""
     try:
         made = build(Path(args.app), on=args.on, target=args.target, out=Path(args.out) if args.out else None,
-                     with_data=args.with_data)
+                     with_data=args.with_data, server=getattr(args, 'server', None))
     except PackageError as exc:
         print(f'[ERROR] {exc}', file=sys.stderr)
         return 1
@@ -453,6 +483,9 @@ def main(args) -> int:
         print(f'{made.path} ({made.size / 1e6:.1f} MB, made in {made.seconds:.0f} s){served}')
         return 0
     print(f'{made.path} ({made.size / 1e6:.1f} MB, made in {made.seconds:.0f} s)')
+    server = getattr(args, 'server', None)
+    if server and server.startswith('http://') and not server.startswith(('http://127.', 'http://localhost')):
+        print(f'{server} is not https: the session\'s cookie and what is typed cross the network unencrypted')
     if made.left_out:
         print(f'left out (the migrations make them when it starts; --with-data carries them): '
               f'{", ".join(made.left_out)}')

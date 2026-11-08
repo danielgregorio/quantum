@@ -8,6 +8,9 @@ from the Python running it (the folder above it that holds package.json); what t
 user's folder (quantum.runtime.packaged_server), and so does everything this process prints (server.log), since a
 window's Python has no standard output.
 
+A package made with --server (a hosted application's client) has no app folder: package.json names the server,
+and the window opens on it.
+
 QUANTUM_PACKAGE_CHECK=<file> makes no window: the server starts, the first page is asked, the window's library is
 imported, and what happened is written to that file as JSON, for a machine with no one at it (CI).
 """
@@ -64,6 +67,16 @@ def main(argv: Optional[list] = None) -> int:
     name, title, page = conf['name'], conf.get('title') or conf['name'], conf.get('page') or '/'
     log_to(data_dir(name) / 'server.log')
     wanted = os.environ.get('QUANTUM_PACKAGE_CHECK')
+    if conf.get('server'):
+        # a hosted application's window (Phase 6): no server here, the window asks that one
+        url = conf['server'].rstrip('/') + '/'
+        if wanted:
+            return check(Path(wanted), url, page, started)
+        import webview
+        from quantum.runtime.ui_desktop import open_window
+        open_window(webview, url.rstrip('/') + page, title=title)
+        webview.start(private_mode=True)
+        return 0
     try:
         httpd, url = start(server / 'app', name)
     except Exception as exc:

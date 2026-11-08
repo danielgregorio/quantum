@@ -252,3 +252,40 @@ def test_the_tui_for_the_browser_goes_into_the_applications_static_folder(app, t
 def test_a_window_in_a_browser_says_the_web_is_the_tuis(tmp_path):
     with pytest.raises(package.PackageError, match='--target web puts the TUI there'):
         package.build(tmp_path, on='desktop', target='web', progress=lambda line: None)
+
+
+def test_a_hosted_applications_address_is_checked():
+    # Phase 6: --server is where the client's program asks for the pages
+    assert package.server_url('https://kanban.example.com/') == 'https://kanban.example.com'
+    assert package.server_url('http://127.0.0.1:8095') == 'http://127.0.0.1:8095'
+    assert package.server_url('https://example.com/apps/kanban/') == 'https://example.com/apps/kanban'
+    for wrong in ('kanban.example.com', 'ftp://example.com', 'https://', 'https://example.com/?a=1'):
+        with pytest.raises(package.PackageError, match='the address of the application'):
+            package.server_url(wrong)
+
+
+def test_a_client_in_a_browser_is_the_hosted_applications_own(tmp_path):
+    with pytest.raises(package.PackageError, match='asks the server that serves it'):
+        package.build(tmp_path, target='web', server='https://example.com', progress=lambda line: None)
+
+
+def test_the_clients_tui_names_its_server(app, tmp_path, monkeypatch):
+    # the exported project carries the address (project.godot's quantum/server) and the colours; nothing beside it
+    from quantum.runtime import godot_bin, godot_export
+    seen = {}
+
+    def export(project, preset, target, godot, options=None, include=''):
+        seen['settings'] = (project / 'project.godot').read_text()
+        target.write_bytes(b'\x7fELF')
+        return target
+
+    monkeypatch.setattr(godot_export, 'export_project', export)
+    monkeypatch.setattr(godot_export, 'have_templates', lambda preset=None: True)
+    monkeypatch.setattr(godot_bin, 'ensure_godot', lambda **kw: Path('/bin/true'))
+    made = package.build(app, target='linux', out=tmp_path / 'dist', server='https://notes.example.com/',
+                         progress=lambda line: None)
+    assert made.path.name == 'my-notes-linux-client.tar.gz'
+    assert '[quantum]' in seen['settings'] and 'server="https://notes.example.com"' in seen['settings']
+    assert 'tokens="{\\"primary\\"' in seen['settings']
+    assert sorted(p.name for p in made.folder.iterdir()) == ['my-notes']     # the program alone
+    assert made.libraries == {} and made.left_out == []

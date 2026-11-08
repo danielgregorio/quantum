@@ -200,7 +200,7 @@ Specified by: [API-5](./spec#API-5) · [AUTH-4](./spec#AUTH-4) · [CFG-2](./spec
 
 Another key in this section is warned about when the configuration is loaded ([CFG-2](./spec#CFG-2), [CFG-3](./spec#CFG-3)).
 
-Specified by: [API-5](./spec#API-5) · [API-6](./spec#API-6) · [IA-1](./spec#IA-1) · [CFG-3](./spec#CFG-3) · [CFG-4](./spec#CFG-4) · [DEV-1](./spec#DEV-1)
+Specified by: [API-5](./spec#API-5) · [API-6](./spec#API-6) · [IA-1](./spec#IA-1) · [CFG-3](./spec#CFG-3) · [CFG-4](./spec#CFG-4) · [UI-22](./spec#UI-22) · [DEV-1](./spec#DEV-1)
 
 <a id="cfg-services"></a>
 
