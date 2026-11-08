@@ -39,6 +39,89 @@ def _number(value, default: float) -> float:
         return default
 
 
+def styled_text(text: str, props: dict) -> Text:
+    """A text with its look: bold, a heading, code, a quote, muted (UI-21: a Markdown text's blocks), and
+    its spans (bold, italic, code, a link's target in brackets — a terminal cannot follow it)."""
+    base = 'bold' if props.get('weight') == 'bold' or props.get('heading') else ''
+    if props.get('code'):
+        return Text(text, style='dim')
+    spans = props.get('spans')
+    out = Text('│ ' if props.get('quote') else '', style='dim')
+    if not spans:
+        out.append(text, style=('italic ' if props.get('quote') else '') + base)
+        return out
+    for span in spans:
+        style = ' '.join(filter(None, [base, 'bold' if span.get('bold') else '', 'italic' if span.get('italic') else '',
+                                       'reverse' if span.get('code') else '', 'underline' if span.get('to') else '']))
+        out.append(span['text'], style=style)
+        if span.get('to'):
+            out.append(f" ({span['to']})", style='dim')
+    return out
+
+
+class ChartBars(Static):
+    """UI-21: a chart as a terminal draws one — a row a label, a bar as long as its share, its value (a pie's
+    or a doughnut's share in percent)."""
+
+    def __init__(self, node: dict, id=None):
+        super().__init__('', classes='chart', id=id)
+        self._node = node
+
+    def render(self):
+        props, bars = self._node.get('props') or {}, self._node.get('bars') or []
+        share = props.get('chart_type') in ('pie', 'doughnut')
+        out = Text()
+        if props.get('title'):
+            out.append(str(props['title']) + '\n', style='bold')
+        names = max([len(b['label']) for b in bars] or [0])
+        shown = [f"{b['percent']:g}%" if share else b['shown'] for b in bars]
+        room = max(4, (self.size.width or 40) - names - max([len(v) for v in shown] or [0]) - 2)
+        for n, (bar, value) in enumerate(zip(bars, shown)):
+            out.append(bar['label'].ljust(names) + ' ')
+            out.append('█' * max(1 if bar['percent'] else 0, round(room * bar['percent'] / 100)),
+                       style=_chart_color(bar['color']))
+            out.append(' ' + value + ('\n' if n < len(bars) - 1 else ''))
+        return out
+
+
+def _chart_color(color: str) -> str:
+    return {'primary': 'blue', 'secondary': 'grey50', 'success': 'green', 'danger': 'red', 'warning': 'yellow',
+            'info': 'cyan'}.get(color, color if color.startswith('#') or color.isalpha() else 'blue')
+
+
+class Skeleton(Static):
+    """UI-21: a skeleton — lines of shade where text is coming; a circle, a block."""
+
+    def __init__(self, props: dict, id=None):
+        super().__init__('', classes='skeleton', id=id)
+        self._props = props
+
+    def render(self):
+        width = max(4, self.size.width or 40)
+        variant = self._props.get('variant') or 'text'
+        if variant == 'circle':
+            return Text('(░░)', style='dim')
+        lines = int(self._props.get('lines') or 1) if variant == 'text' else 3
+        rows = ['░' * (width if n < lines - 1 or lines == 1 else max(1, width * 3 // 5)) for n in range(lines)]
+        return Text('\n'.join(rows), style='dim')
+
+
+class Loading(Static):
+    """UI-21: a loading mark, turning, and what is loading."""
+    FRAMES = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+
+    def __init__(self, text: str, id=None):
+        super().__init__(f'{self.FRAMES[0]} {text}', classes='text', id=id)
+        self._text, self._frame = text, 0
+
+    def on_mount(self) -> None:
+        self.set_interval(0.1, self._turn)
+
+    def _turn(self) -> None:
+        self._frame = (self._frame + 1) % len(self.FRAMES)
+        self.update(f'{self.FRAMES[self._frame]} {self._text}')
+
+
 class ConsoleUI(App):
     """Draws a page's view tree; buttons and forms post the page's actions."""
 
@@ -64,6 +147,9 @@ class ConsoleUI(App):
     .cell { height: auto; padding: 0 1; }
     .label { color: $text-muted; }
     .unsupported { color: $warning; }
+    .muted { color: $text-muted; }
+    .vrule { width: 1; height: 100%; min-height: 1; border-left: solid $primary; margin-right: 1; }
+    .chart, .skeleton { height: auto; width: 1fr; margin-bottom: 1; }
     .field-error { color: $error; }
     .invalid { border: tall $error; }
     TabbedContent { height: auto; }
@@ -182,7 +268,8 @@ class ConsoleUI(App):
         return widget
 
     def _widget_without_width(self, node: dict, form: Optional[dict]):
-        kind, props = node.get('type'), node.get('props', {})
+        # UI-21: a tag beyond the layout set that is a composition of it says which kind it is drawn as
+        kind, props = node.get('as') or node.get('type'), node.get('props', {})
         children = node.get('children', [])
         ident = props.get('ui_id')
         text = str(props.get('text') or '')
@@ -247,8 +334,11 @@ class ConsoleUI(App):
             return button
         if kind == 'link':
             link = Button(text or props.get('to', ''), classes='link', id=ident)
-            self._actions[id(link)] = {'navigate': props.get('to', '/')}
+            # UI-21: a link with an action (a menu's option) posts it; else it goes to its page
+            self._actions[id(link)] = node['event'] if node.get('event') else {'navigate': props.get('to', '/')}
             return link
+        if kind in ('avatar', 'chart', 'skeleton', 'loading', 'treeitem'):
+            return self._more(kind, node, props, ident)
         if kind == 'input' and props.get('input_type') == 'file':
             # UI-14: a terminal has no file picker; the form posts without the file.
             return Static(Text(f"{props.get('bind') or 'file'}: attach files from the browser"),
@@ -310,8 +400,8 @@ class ConsoleUI(App):
         if kind == 'list':
             return Vertical(*self._build_widgets(children, form), classes='vbox', id=ident)
         if kind == 'item':
-            return Horizontal(Static('•', classes='text'), *self._build_widgets(children, form),
-                              classes='hbox', id=ident)
+            return Horizontal(Static(str(props.get('marker') or '•'), classes='text'),
+                              *self._build_widgets(children, form), classes='hbox', id=ident)
         if kind == 'progress':
             bar = ProgressBar(total=_number(props.get('max'), 100), show_eta=False, id=ident)
             bar.progress = _number(props.get('value'), 0)
@@ -329,17 +419,44 @@ class ConsoleUI(App):
         if kind == 'badge':
             return Static(Text(text), classes='badge', id=ident)
         if kind == 'text':
-            return Static(Text(text, style='bold' if props.get('weight') == 'bold' else ''),
-                          classes='text', id=ident)
+            return Static(styled_text(text, props), classes='muted' if props.get('muted') else 'text', id=ident)
         if kind == 'footer':
             return Static(Text(text, style='dim'), classes='text', id=ident)
         if kind == 'rule':
+            if props.get('vertical'):
+                return Static('', classes='vrule')          # UI-21: between the panes of a dividedbox
             return Static('─' * 40, classes='text')
         if kind == 'spacer':
             return Static('', classes='text')
         # UI-7: outside the core set, say so — never draw something else in its place.
         return Static(Text(f'[ui:{kind} is not drawn in the console]', style='italic'),
                       classes='unsupported', id=ident)
+
+    def _more(self, kind: str, node: dict, props: dict, ident):
+        """UI-21: the kinds that are not a composition of the layout set."""
+        from quantum.runtime.ui_more import tree_guides
+        if kind == 'avatar':
+            mark = {'online': ('●', 'green'), 'away': ('◐', 'yellow'), 'busy': ('●', 'red'),
+                    'offline': ('○', 'grey50')}.get(str(props.get('status') or ''))
+            label = Text(f"({props.get('initials') or '?'})", style='bold')
+            if mark:
+                label.append(' ' + mark[0], style=mark[1])
+            return Static(label, classes='text', id=ident)
+        if kind == 'chart':
+            return ChartBars(node, id=ident)
+        if kind == 'skeleton':
+            return Skeleton(props, id=ident)
+        if kind == 'loading':
+            return Loading(str(props.get('text') or 'Loading'), id=ident)
+        # a row of a tree: its guides, then its label, a link when it goes somewhere or posts an action
+        guides = Static(Text(tree_guides(props), style='dim'), classes='text')
+        label = str(props.get('text') or '')
+        if node.get('event') or props.get('to'):
+            row = Button(label, classes='link')
+            self._actions[id(row)] = node['event'] if node.get('event') else {'navigate': props['to']}
+        else:
+            row = Static(Text(label), classes='text')
+        return Horizontal(guides, row, classes='hbox', id=ident)
 
     def _read_stream(self, box: Static, url: str) -> None:
         """Read /_stream/<token> in a thread and show each piece as it arrives."""

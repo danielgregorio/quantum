@@ -240,7 +240,7 @@ class TestCoreSet:
 
         class Fixed(ConsoleUI):
             def _fetch(self, method, path, data=None):
-                return {'title': 'T', 'view': [{'type': 'chart', 'props': {}, 'children': []},
+                return {'title': 'T', 'view': [{'type': 'carousel', 'props': {}, 'children': []},
                                                {'type': 'text', 'props': {'text': 'ok'}, 'children': []}]}
 
         async def main():
@@ -250,18 +250,14 @@ class TestCoreSet:
                 return [str(w.render()) for w in app.query(Static)]
 
         texts = asyncio.run(main())
-        assert '[ui:chart is not drawn in the console]' in texts and 'ok' in texts
+        assert '[ui:carousel is not drawn in the console]' in texts and 'ok' in texts
 
-    def test_the_core_set_is_drawn_by_the_console(self):
-        # UI-7: every tag of the Core set has its own drawing in the console
-        import inspect
+    def test_the_core_set_is_drawn_by_every_renderer(self):
+        # UI-7, UI-21: a tag is in the Core set when every renderer draws it (UI_PARITY.md, whose map
+        # tests/conformance/test_ui_parity_map.py checks against what each renderer does)
         from quantum.core.features.ui_engine.src.ast_nodes import CORE_TAGS
-        from quantum.runtime.ui_console import ConsoleUI
-        source = inspect.getsource(ConsoleUI._widget_without_width)
-        # column/option: read by the table/select; pager: the tree already sends links (UI-11)
-        types = {t.replace('-', '') for t in CORE_TAGS} - {'column', 'option', 'pager', 'history'}
-        missing = [t for t in sorted(types) if f"'{t}'" not in source]
-        assert missing == []
+        from quantum.runtime.ui_parity import RENDERERS, status
+        assert [(t, r) for t in sorted(CORE_TAGS) for r in RENDERERS if not status(t, r).startswith('drawn')] == []
 
 
 class TestStandaloneBuild:

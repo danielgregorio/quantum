@@ -150,9 +150,10 @@ FORM_CSS = """
 
 def has_fields(nodes) -> bool:
     """Whether a form's markup already has fields of its own."""
+    from quantum.core.features.ui_engine.src.ast_nodes import UIDatePickerNode
     for node in nodes or []:
-        if isinstance(node, FIELDS) or has_fields(getattr(node, 'children', None)):
-            return True
+        if isinstance(node, (*FIELDS, UIDatePickerNode)) or has_fields(getattr(node, 'children', None)):
+            return True             # a date picker is a date field (UI-21)
     return False
 
 

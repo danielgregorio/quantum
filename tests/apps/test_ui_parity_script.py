@@ -15,12 +15,14 @@ import asyncio
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import threading
 from pathlib import Path
 
 import pytest
+import requests
 
 from tests.apps.ui_drivers import Browser, Tui, run_console_script, run_script
 
@@ -66,6 +68,29 @@ SCRIPT = [
     ("does_not_see", ["Content of the first"]),
 ]
 
+# UI-21: the tags beyond the layout set (tests/apps/showcase/components/more.q)
+MORE = [
+    ("visit", "/more"),
+    ("sees", ["Home", "Library", "Shelf", "New file", "Open file", "AL", "Signed in as Ana Lima",
+              "Notes", "bold", "words", "first point", "second point",
+              "Sales", "Mon", "Tue", "Share", "Red", "Blue", "25%", "75%",
+              "Docs", "Guide", "Reference", "Archive",
+              "started", "listening on 8080", "Left pane", "Right pane", "45 items", "Fetching"]),
+    ("does_not_see", ["booting", "is not drawn"]),          # the log shows its last two lines
+    # a menu's option and a tree's row post their action with their value
+    ("follow", "New file"),
+    ("sees", ["Picked: new"]),
+    ("follow", "Guide"),
+    ("sees", ["Picked: guide"]),
+    # a date picker is a date field: what is typed goes with the form
+    ("fill", "day", "2026-12-24"),
+    ("click", "Book"),
+    ("sees", ["Booked: 2026-12-24"]),
+    # a breadcrumb's items are links
+    ("follow", "Home"),
+    ("sees", ["Showcase header"]),
+]
+
 
 @pytest.fixture
 def url(tmp_path, monkeypatch):
@@ -98,7 +123,8 @@ def test_the_script_in_the_browser(url):
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.goto(url)
-            run_script(Browser(page), SCRIPT)
+            run_script(Browser(page, url), SCRIPT)
+            run_script(Browser(page, url), MORE)
             assert errors == []
         finally:
             chromium.close()
@@ -116,6 +142,7 @@ def test_the_script_in_the_console(url):
         async with app.run_test(size=(160, 120)) as pilot:
             await page_loaded(app, pilot)
             await run_console_script(app, pilot, SCRIPT)
+            await run_console_script(app, pilot, MORE)
 
     asyncio.run(main())
 
@@ -133,6 +160,7 @@ def test_the_script_in_the_tui(url):
     with TuiSession(url, cols=160, rows=60) as tui:
         run_script(Tui(tui), SCRIPT)
         assert tui.observe()["unsupported"] == []          # the whole Core set is drawn
+        run_script(Tui(tui), MORE)
 
 
 # -- the Hive's screen (quantum pixel) -------------------------------------------
@@ -173,8 +201,15 @@ class Pixel:
     pressed with Enter (a row's button through its table: a row, a column)."""
     name = "pixel"
 
-    def __init__(self, screen):
-        self.s = screen
+    def __init__(self, screen, client=None):
+        self.s, self.client = screen, client
+
+    def visit(self, path):
+        # the screen has no address bar: the page's runtime shows the page, as after a link
+        before = self.window()["shown"]
+        self.client.load(path)
+        obs = self.s.request({"op": "until", "shown": before + 1, "max_ticks": 600})
+        assert obs["stopped"] == "condition", f"the screen did not show {path}"
 
     def window(self):
         w = self.s.request({"op": "observe"})["window"]
@@ -227,9 +262,9 @@ class Pixel:
 
     def click(self, label):
         before = self.window()["shown"]
-        buttons = [i for i in self.window()["items"] if i["kind"] in ("button", "link") and i.get("label") == label]
+        buttons = [i for i in self.window()["items"] if i["kind"] in ("button", "link", "treeitem") and i.get("label") == label]
         if buttons:
-            self._focus(lambda i: i["kind"] in ("button", "link") and i.get("label") == label)
+            self._focus(lambda i: i["kind"] in ("button", "link", "treeitem") and i.get("label") == label)
         else:
             # a row's button: the table, then the row, then the button in it
             table = self._focus(lambda i: i["kind"] == "table" and any(label in r for r in i["rows"]))
@@ -243,6 +278,10 @@ class Pixel:
         # the action posted, the page came back: the screen shows it again
         obs = self.s.request({"op": "until", "shown": before + 1, "max_ticks": 600})
         assert obs["stopped"] == "condition", f"the page did not come back after {label}"
+
+    def follow(self, label):
+        # a link is reached and pressed as a button is: Tab to it, Enter
+        self.click(label)
 
     def tab(self, title):
         panel = self._focus(lambda i: i["kind"] == "tabpanel")
@@ -266,10 +305,70 @@ def test_the_script_on_the_pixel_screen(url, tmp_path):
         runtime.start()
         first = screen.request({"op": "until", "shown": 1, "max_ticks": 600})
         assert first["stopped"] == "condition", "quantum pixel did not bring the page"
-        run_script(Pixel(screen), SCRIPT)
+        run_script(Pixel(screen, client), SCRIPT)
+        run_script(Pixel(screen, client), MORE)
         # Esc closes the page; the page's runtime ends with it
         screen.request({"op": "act", "tap": ["escape"]})
         runtime.join(10)
         assert not runtime.is_alive()
+    finally:
+        screen.end()
+
+
+# -- every tag: each renderer says what it does not draw (UI-7, UI_PARITY.md) -------------
+
+NOT_DRAWN = re.compile(r"\[ui:([a-z]+) is not drawn ")
+
+
+def test_every_tag_in_the_browser(url):
+    # UI-7: the browser draws every tag of a page
+    html = requests.get(url + "every", timeout=30).text
+    assert "is not drawn" not in html and "Toast" in html and "Markdown" in html
+
+
+def test_every_tag_in_the_console(url):
+    from quantum.runtime.ui_console import ConsoleUI
+    from quantum.runtime.ui_parity import not_drawn
+    from tests.console_pilot import page_loaded
+    from textual.widgets import Static
+
+    async def main():
+        app = ConsoleUI(url, "/every")
+        async with app.run_test(size=(160, 200)) as pilot:
+            await page_loaded(app, pilot)
+            return {m.group(1) for w in app.query(Static) for m in NOT_DRAWN.finditer(str(w.render()))}
+
+    assert asyncio.run(main()) == not_drawn("console")
+
+
+def test_every_tag_in_the_tui(url):
+    from quantum.runtime.godot_bin import GodotNotFound, ensure_godot
+    from quantum.runtime.ui_parity import not_drawn
+    from quantum.runtime.ui_tui import TuiSession
+    try:
+        ensure_godot()
+    except GodotNotFound as exc:
+        pytest.skip(str(exc))
+    with TuiSession(url, page="/every", cols=160, rows=60) as tui:
+        seen = tui.observe()
+        assert set(seen["unsupported"]) == not_drawn("tui")
+        assert {m.group(1) for m in NOT_DRAWN.finditer(tui.text(seen))} == not_drawn("tui")
+
+
+def test_every_tag_on_the_screen(url, tmp_path):
+    binary = os.environ.get("HIVE_SCREEN") or str(OS_DIR / "target/debug/hive-screen")
+    if not Path(binary).is_file():
+        pytest.skip("hive-screen is not built (cd os && cargo build -p hive-screen, or HIVE_SCREEN=...)")
+    from quantum.runtime.ui_parity import not_drawn
+    from quantum.runtime.ui_pixel import PixelClient
+
+    socket_path = str(tmp_path / "pixel.sock")
+    screen = Screen(binary, socket_path)
+    try:
+        client = PixelClient(url, "/every", socket_path, log=lambda line: None)
+        threading.Thread(target=client.run, daemon=True).start()
+        assert screen.request({"op": "until", "shown": 1, "max_ticks": 600})["stopped"] == "condition"
+        texts = " | ".join(screen.request({"op": "observe"})["window"]["texts"])
+        assert {m.group(1) for m in NOT_DRAWN.finditer(texts)} == not_drawn("screen")
     finally:
         screen.end()

@@ -112,7 +112,9 @@ class Browser:
         self._go(self._button(self.p, label))
 
     def follow(self, label):
-        self._go(self.p.get_by_role("link", name=label, exact=True))
+        # UI-21: a menu's option or a tree's row with an action is a link that posts: a button in a form
+        posts = self.p.get_by_role("button", name=label, exact=True).and_(self.p.locator(".q-link-action"))
+        self._go(self.p.get_by_role("link", name=label, exact=True).or_(posts))
 
     def _card(self, title):
         return self.p.locator(".q-card").filter(has=self.p.locator(".q-card-title", has_text=title))

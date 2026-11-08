@@ -1076,7 +1076,8 @@ export const uiTags: TagSchema[] = [
         selfClosing: true,
         attributes: [
             { name: 'auto-scroll', description: 'Auto-scroll to bottom', type: 'boolean', default: 'true' },
-            { name: 'max-lines', description: 'Max lines to display', type: 'number' },
+            { name: 'max-lines', description: 'Max lines to display (the last ones)', type: 'number' },
+            { name: 'source', description: 'Lines from the data: a list, or a text (UI-21)', type: 'expression' },
             ...layoutAttributes
         ]
     },

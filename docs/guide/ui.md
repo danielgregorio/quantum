@@ -461,12 +461,15 @@ on the screen and in the TUI:
 | Data | `table` / `column`, `list` / `item` |
 | Forms | `form`, `formitem`, `input`, `checkbox`, `switch`, `radio`, `select` / `option`, `button` |
 | Data features | `pager` (pages of a query), `history` (a row's changes), `stream` (an AI answer as it is written) |
+| Beyond the layout | `breadcrumb` / `breadcrumb-item`, `menu`, `avatar`, `markdown`, `chart`, `tree`, `log`, `dividedbox`, `pagination`, `skeleton`, `loading`, `date-picker`, `animate` ([below](#beyond-the-layout)) |
 
-Every other `ui:*` element — charts, modals, toasts, date pickers, menus… —
-works in the browser only and is **Experimental** (see the
-[UI tags reference](/reference/ui)). In the console, such an element shows
-`[ui:chart is not drawn in the console]` instead of something else in its
-place.
+The other `ui:*` elements — modals, toasts, tooltips, dropdowns, accordions,
+carousels, steppers, calendars — work in the browser only and are
+**Experimental** (see the [UI tags reference](/reference/ui)). In the console,
+on the screen and in the TUI such an element shows
+`[ui:modal is not drawn in the console]` instead of something else in its
+place. [`UI_PARITY.md`](https://github.com/danielgregorio/quantum/blob/main/UI_PARITY.md)
+is the map of every tag against every renderer, and a check keeps it true.
 
 Text directly inside a container is content: `<ui:card-header>Summary</ui:card-header>`.
 Plain HTML can sit between `ui:*` elements; the console shows its text.
@@ -481,6 +484,64 @@ The flash shows where the page draws it, once: the console and the Hive's
 screen give it a line of their own only on a page that does not show it.
 `variant="{flashType == 'error' and 'danger' or 'success'}"` on its `ui:alert`
 draws a refused action's message in red.
+
+## Beyond the layout
+
+A breadcrumb, a menu, an avatar, Markdown, a chart, a tree, a log: each means the
+same in every renderer, because the server works out what it means — the
+initials of a name, which crumb is the current page, the blocks of a Markdown
+text, each bar's share, a tree's rows and the lines beside them — and every
+renderer draws that. A terminal draws it in the form it can: a chart in bars of
+characters, a skeleton in shaded lines.
+
+```xml
+<q:action name="pick" method="POST">
+  <q:param name="value" required="true" />
+  <q:redirect url="/" flash="Picked: {value}" />
+</q:action>
+
+<q:set name="sales" type="array" value='[{"label": "Mon", "value": 3}, {"label": "Tue", "value": 6}]' />
+<q:set name="folders" type="array"
+       value='[{"label": "Docs", "children": [{"label": "Guide", "value": "guide"}]}]' />
+
+<ui:breadcrumb separator=">">
+  <ui:breadcrumb-item label="Home" to="/" />
+  <ui:breadcrumb-item label="Shelf" />
+</ui:breadcrumb>
+<ui:menu>
+  <ui:option value="new" on-click="pick">New file</ui:option>
+</ui:menu>
+<ui:avatar name="Ana Lima" status="online" />
+<ui:markdown>
+  ## Notes
+  Some **bold** words and `code`.
+</ui:markdown>
+<ui:chart type="bar" title="Sales" source="{sales}" />
+<ui:chart type="pie" labels="Red,Blue" values="1,3" />
+<ui:tree source="{folders}" on-select="pick" />
+<ui:log max-lines="50" source="{events}" />
+<ui:pagination total="45" page-size="10" show-total="true" />
+<ui:form on-submit="book">
+  <ui:date-picker bind="day" />
+</ui:form>
+```
+
+- A **menu**'s option and a **tree**'s row with an action are links that post
+  it, with their `value` as the field `value`; a tree's row with a `to` goes
+  there.
+- **Markdown** takes headings, paragraphs with **bold**, *italic*, `code` and
+  links, lists, code, quotes and rules. Every text is escaped, and a link goes
+  only to `http`, `https`, `mailto` or a path.
+- A **chart** (`bar`, `line`, `pie`, `doughnut`) takes `labels` and `values`, or
+  `source` rows with a `label` and a `value`; a value that is not a number is an
+  error that names the chart.
+- A **log** shows its text's lines, then its `source`'s, the last `max-lines` of
+  them.
+- A **pagination** is the pager's links over `total` items: the page is the
+  URL's `bind` parameter (`page`), as for `ui:pager`, so `on-change` is an error
+  in a page.
+- A **date picker** is a date field of its form, YYYY-MM-DD, with the action's
+  rules (UI-9).
 
 ## In the TUI
 

@@ -1219,15 +1219,22 @@ renderer (browser, console, desktop, the Hive's screen, the TUI): `window`, `hbo
 (`card-header`, `card-body`, `card-footer`), `tabpanel`/`tab`, `text`, `badge`,
 `alert`, `link`, `image`, `progress`, `table`/`column`, `list`/`item`, `form`,
 `formitem`, `input`, `checkbox`, `switch`, `radio`, `select`/`option`,
-`button`, `pager` ([UI-11](#UI-11)), `history` ([DB-11](#DB-11)) and `stream` ([IA-7](#IA-7)). The same
+`button`, `pager` ([UI-11](#UI-11)), `history` ([DB-11](#DB-11)) and `stream` ([IA-7](#IA-7)), and those of
+[UI-21](#UI-21): `breadcrumb`/`breadcrumb-item`, `menu`, `avatar`, `markdown`, `chart`,
+`tree`, `log`, `dividedbox`, `pagination`, `skeleton`, `loading`,
+`date-picker` and `animate`. The same
 script (look, fill in, check, choose, click) passes the same in the browser,
 in the console, on the screen and in the TUI. `ui:section` is a titled group, always open; the title of a
 `ui:card` shows even next to a `ui:card-header`; a `ui:alert` is as tall as what it says; a tab
 opens on a click in the browser as on the arrows in the console and on the screen. The other `ui:*` tags work
-only in the browser (Experimental), and the console shows that it does not draw
-them instead of drawing something else in their place.
+only in the browser (Experimental), and the console, the screen and the TUI
+show that they do not draw them instead of drawing something else in their
+place. `UI_PARITY.md` is the map of every tag against every renderer, written
+from `quantum/runtime/ui_parity.py` and checked against what each renderer does
+on a page with every tag; a tag enters the Core set when every renderer draws
+it.
 
-<p class="spec-cited">Referenced by: <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-window"><code>&lt;ui:window&gt;</code></a> · <a href="./ui#ui-hbox"><code>&lt;ui:hbox&gt;</code></a> · <a href="./ui#ui-vbox"><code>&lt;ui:vbox&gt;</code></a> · <a href="./ui#ui-panel"><code>&lt;ui:panel&gt;</code></a> · <a href="./ui#ui-tabpanel"><code>&lt;ui:tabpanel&gt;</code></a> · <a href="./ui#ui-tab"><code>&lt;ui:tab&gt;</code></a> · <a href="./ui#ui-grid"><code>&lt;ui:grid&gt;</code></a> · <a href="./ui#ui-section"><code>&lt;ui:section&gt;</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-formitem"><code>&lt;ui:formitem&gt;</code></a> · <a href="./ui#ui-spacer"><code>&lt;ui:spacer&gt;</code></a> · <a href="./ui#ui-scrollbox"><code>&lt;ui:scrollbox&gt;</code></a> · <a href="./ui#ui-text"><code>&lt;ui:text&gt;</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-checkbox"><code>&lt;ui:checkbox&gt;</code></a> · <a href="./ui#ui-radio"><code>&lt;ui:radio&gt;</code></a> · <a href="./ui#ui-switch"><code>&lt;ui:switch&gt;</code></a> · <a href="./ui#ui-select"><code>&lt;ui:select&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-pager"><code>&lt;ui:pager&gt;</code></a> · <a href="./ui#ui-history"><code>&lt;ui:history&gt;</code></a> · <a href="./ui#ui-stream"><code>&lt;ui:stream&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a> · <a href="./ui#ui-item"><code>&lt;ui:item&gt;</code></a> · <a href="./ui#ui-image"><code>&lt;ui:image&gt;</code></a> · <a href="./ui#ui-link"><code>&lt;ui:link&gt;</code></a> · <a href="./ui#ui-progress"><code>&lt;ui:progress&gt;</code></a> · <a href="./ui#ui-option"><code>&lt;ui:option&gt;</code></a> · <a href="./ui#ui-header"><code>&lt;ui:header&gt;</code></a> · <a href="./ui#ui-footer"><code>&lt;ui:footer&gt;</code></a> · <a href="./ui#ui-rule"><code>&lt;ui:rule&gt;</code></a> · <a href="./ui#ui-badge"><code>&lt;ui:badge&gt;</code></a> · <a href="./ui#ui-card"><code>&lt;ui:card&gt;</code></a> · <a href="./ui#ui-card-header"><code>&lt;ui:card-header&gt;</code></a> · <a href="./ui#ui-card-body"><code>&lt;ui:card-body&gt;</code></a> · <a href="./ui#ui-card-footer"><code>&lt;ui:card-footer&gt;</code></a> · <a href="./ui#ui-alert"><code>&lt;ui:alert&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-window"><code>&lt;ui:window&gt;</code></a> · <a href="./ui#ui-hbox"><code>&lt;ui:hbox&gt;</code></a> · <a href="./ui#ui-vbox"><code>&lt;ui:vbox&gt;</code></a> · <a href="./ui#ui-panel"><code>&lt;ui:panel&gt;</code></a> · <a href="./ui#ui-tabpanel"><code>&lt;ui:tabpanel&gt;</code></a> · <a href="./ui#ui-tab"><code>&lt;ui:tab&gt;</code></a> · <a href="./ui#ui-grid"><code>&lt;ui:grid&gt;</code></a> · <a href="./ui#ui-section"><code>&lt;ui:section&gt;</code></a> · <a href="./ui#ui-dividedbox"><code>&lt;ui:dividedbox&gt;</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-formitem"><code>&lt;ui:formitem&gt;</code></a> · <a href="./ui#ui-spacer"><code>&lt;ui:spacer&gt;</code></a> · <a href="./ui#ui-scrollbox"><code>&lt;ui:scrollbox&gt;</code></a> · <a href="./ui#ui-text"><code>&lt;ui:text&gt;</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-checkbox"><code>&lt;ui:checkbox&gt;</code></a> · <a href="./ui#ui-radio"><code>&lt;ui:radio&gt;</code></a> · <a href="./ui#ui-switch"><code>&lt;ui:switch&gt;</code></a> · <a href="./ui#ui-select"><code>&lt;ui:select&gt;</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-pager"><code>&lt;ui:pager&gt;</code></a> · <a href="./ui#ui-history"><code>&lt;ui:history&gt;</code></a> · <a href="./ui#ui-stream"><code>&lt;ui:stream&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a> · <a href="./ui#ui-item"><code>&lt;ui:item&gt;</code></a> · <a href="./ui#ui-image"><code>&lt;ui:image&gt;</code></a> · <a href="./ui#ui-link"><code>&lt;ui:link&gt;</code></a> · <a href="./ui#ui-progress"><code>&lt;ui:progress&gt;</code></a> · <a href="./ui#ui-tree"><code>&lt;ui:tree&gt;</code></a> · <a href="./ui#ui-menu"><code>&lt;ui:menu&gt;</code></a> · <a href="./ui#ui-option"><code>&lt;ui:option&gt;</code></a> · <a href="./ui#ui-log"><code>&lt;ui:log&gt;</code></a> · <a href="./ui#ui-markdown"><code>&lt;ui:markdown&gt;</code></a> · <a href="./ui#ui-header"><code>&lt;ui:header&gt;</code></a> · <a href="./ui#ui-footer"><code>&lt;ui:footer&gt;</code></a> · <a href="./ui#ui-rule"><code>&lt;ui:rule&gt;</code></a> · <a href="./ui#ui-loading"><code>&lt;ui:loading&gt;</code></a> · <a href="./ui#ui-badge"><code>&lt;ui:badge&gt;</code></a> · <a href="./ui#ui-animate"><code>&lt;ui:animate&gt;</code></a> · <a href="./ui#ui-card"><code>&lt;ui:card&gt;</code></a> · <a href="./ui#ui-card-header"><code>&lt;ui:card-header&gt;</code></a> · <a href="./ui#ui-card-body"><code>&lt;ui:card-body&gt;</code></a> · <a href="./ui#ui-card-footer"><code>&lt;ui:card-footer&gt;</code></a> · <a href="./ui#ui-chart"><code>&lt;ui:chart&gt;</code></a> · <a href="./ui#ui-avatar"><code>&lt;ui:avatar&gt;</code></a> · <a href="./ui#ui-alert"><code>&lt;ui:alert&gt;</code></a> · <a href="./ui#ui-breadcrumb"><code>&lt;ui:breadcrumb&gt;</code></a> · <a href="./ui#ui-breadcrumb-item"><code>&lt;ui:breadcrumb-item&gt;</code></a> · <a href="./ui#ui-pagination"><code>&lt;ui:pagination&gt;</code></a> · <a href="./ui#ui-skeleton"><code>&lt;ui:skeleton&gt;</code></a> · <a href="./ui#ui-date-picker"><code>&lt;ui:date-picker&gt;</code></a></p>
 
 <a id="UI-8"></a>**[UI-8](#UI-8)** — `q:application type="ui"` compiles a standalone file with the layout
 only: `--target html` (one page) and `--target textual` (a Textual app). Logic
@@ -1418,6 +1425,37 @@ each answered with what the screen shows (`quantum.runtime.ui_tui.TuiSession`:
 frames of cells and no element over another.
 
 <p class="spec-cited">Referenced by: <a href="./cli#cli-run"><code>quantum run</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a></p>
+
+<a id="UI-21"></a>**[UI-21](#UI-21)** — The tags beyond the layout set mean the same in every renderer,
+because the server works out their meaning once (`quantum/runtime/ui_more.py`)
+and the view tree sends it; the browser's page draws its HTML from the same
+functions. A tag that is a composition of the Core set says which kind it is
+drawn as (`as` in the view): a `ui:breadcrumb` is a row of links, its last item
+(or one without `to`) the current page's text; a `ui:menu` is a row of its
+`ui:option`s, each a link that posts its `on-click` action with its `value` as
+the field `value`; a `ui:markdown` is its text's blocks — headings, paragraphs
+with their **bold**, *italic*, `code` and links, lists, code, quotes, rules —
+every text escaped and a link only to `http`, `https`, `mailto` or a path; a
+`ui:log` is a box of its lines (its text's, then its `source`'s), the last
+`max-lines` of them; a `ui:dividedbox` is its panes with a divider between
+them; a `ui:pagination` is the pager's links ([UI-11](#UI-11)) over `total` items,
+`page-size` a page, the page in the URL's `bind` parameter (`page`), with
+`show-total` and `show-jump` (a page number field), and `on-change` an error in
+a page; a `ui:date-picker` is a date field of its form ([UI-9](#UI-9), YYYY-MM-DD).
+The others are kinds of their own, with their data worked out: a `ui:avatar`
+its initials (or its image) and its status; a `ui:chart` (`bar`, `line`, `pie`,
+`doughnut`) its bars from `labels` and `values` or from `source` rows (a `label`
+and a `value`), each with its share — of the largest value, or of the total for
+a pie or a doughnut — so every renderer draws the same lengths, a value that is
+not a number an error; a `ui:tree` its rows from `source` (nodes with a `label`,
+a `value`, a `to` and `children`), the lines beside them, each row a link to
+its `to` or one that posts `on-select` with its `value`; a `ui:skeleton` its
+shaded lines; a `ui:loading` a mark that turns and its text. A terminal draws
+them in the form it can — a chart in bars of characters, a link's target after
+its text in Markdown, the screen's emphasis as plain text — and the same
+scripts pass in every renderer (`tests/apps/showcase/components/more.q`).
+
+<p class="spec-cited">Referenced by: <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-dividedbox"><code>&lt;ui:dividedbox&gt;</code></a> · <a href="./ui#ui-tree"><code>&lt;ui:tree&gt;</code></a> · <a href="./ui#ui-menu"><code>&lt;ui:menu&gt;</code></a> · <a href="./ui#ui-option"><code>&lt;ui:option&gt;</code></a> · <a href="./ui#ui-log"><code>&lt;ui:log&gt;</code></a> · <a href="./ui#ui-markdown"><code>&lt;ui:markdown&gt;</code></a> · <a href="./ui#ui-loading"><code>&lt;ui:loading&gt;</code></a> · <a href="./ui#ui-chart"><code>&lt;ui:chart&gt;</code></a> · <a href="./ui#ui-avatar"><code>&lt;ui:avatar&gt;</code></a> · <a href="./ui#ui-breadcrumb"><code>&lt;ui:breadcrumb&gt;</code></a> · <a href="./ui#ui-pagination"><code>&lt;ui:pagination&gt;</code></a> · <a href="./ui#ui-skeleton"><code>&lt;ui:skeleton&gt;</code></a> · <a href="./ui#ui-date-picker"><code>&lt;ui:date-picker&gt;</code></a></p>
 
 ## 11. Development
 

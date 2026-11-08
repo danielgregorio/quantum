@@ -970,13 +970,20 @@ renderer (browser, console, desktop, the Hive's screen, the TUI): `window`, `hbo
 (`card-header`, `card-body`, `card-footer`), `tabpanel`/`tab`, `text`, `badge`,
 `alert`, `link`, `image`, `progress`, `table`/`column`, `list`/`item`, `form`,
 `formitem`, `input`, `checkbox`, `switch`, `radio`, `select`/`option`,
-`button`, `pager` (UI-11), `history` (DB-11) and `stream` (IA-7). The same
+`button`, `pager` (UI-11), `history` (DB-11) and `stream` (IA-7), and those of
+UI-21: `breadcrumb`/`breadcrumb-item`, `menu`, `avatar`, `markdown`, `chart`,
+`tree`, `log`, `dividedbox`, `pagination`, `skeleton`, `loading`,
+`date-picker` and `animate`. The same
 script (look, fill in, check, choose, click) passes the same in the browser,
 in the console, on the screen and in the TUI. `ui:section` is a titled group, always open; the title of a
 `ui:card` shows even next to a `ui:card-header`; a `ui:alert` is as tall as what it says; a tab
 opens on a click in the browser as on the arrows in the console and on the screen. The other `ui:*` tags work
-only in the browser (Experimental), and the console shows that it does not draw
-them instead of drawing something else in their place.
+only in the browser (Experimental), and the console, the screen and the TUI
+show that they do not draw them instead of drawing something else in their
+place. `UI_PARITY.md` is the map of every tag against every renderer, written
+from `quantum/runtime/ui_parity.py` and checked against what each renderer does
+on a page with every tag; a tag enters the Core set when every renderer draws
+it.
 
 **UI-8** — `q:application type="ui"` compiles a standalone file with the layout
 only: `--target html` (one page) and `--target textual` (a Textual app). Logic
@@ -1141,6 +1148,35 @@ each answered with what the screen shows (`quantum.runtime.ui_tui.TuiSession`:
 `observe`, `click` at a cell, `hover`, `wheel`, `key`, `type`, `attach` a file,
 `visit`, `resize`, `wait` for a text); its layout is checked against reference
 frames of cells and no element over another.
+
+**UI-21** — The tags beyond the layout set mean the same in every renderer,
+because the server works out their meaning once (`quantum/runtime/ui_more.py`)
+and the view tree sends it; the browser's page draws its HTML from the same
+functions. A tag that is a composition of the Core set says which kind it is
+drawn as (`as` in the view): a `ui:breadcrumb` is a row of links, its last item
+(or one without `to`) the current page's text; a `ui:menu` is a row of its
+`ui:option`s, each a link that posts its `on-click` action with its `value` as
+the field `value`; a `ui:markdown` is its text's blocks — headings, paragraphs
+with their **bold**, *italic*, `code` and links, lists, code, quotes, rules —
+every text escaped and a link only to `http`, `https`, `mailto` or a path; a
+`ui:log` is a box of its lines (its text's, then its `source`'s), the last
+`max-lines` of them; a `ui:dividedbox` is its panes with a divider between
+them; a `ui:pagination` is the pager's links (UI-11) over `total` items,
+`page-size` a page, the page in the URL's `bind` parameter (`page`), with
+`show-total` and `show-jump` (a page number field), and `on-change` an error in
+a page; a `ui:date-picker` is a date field of its form (UI-9, YYYY-MM-DD).
+The others are kinds of their own, with their data worked out: a `ui:avatar`
+its initials (or its image) and its status; a `ui:chart` (`bar`, `line`, `pie`,
+`doughnut`) its bars from `labels` and `values` or from `source` rows (a `label`
+and a `value`), each with its share — of the largest value, or of the total for
+a pie or a doughnut — so every renderer draws the same lengths, a value that is
+not a number an error; a `ui:tree` its rows from `source` (nodes with a `label`,
+a `value`, a `to` and `children`), the lines beside them, each row a link to
+its `to` or one that posts `on-select` with its `value`; a `ui:skeleton` its
+shaded lines; a `ui:loading` a mark that turns and its text. A terminal draws
+them in the form it can — a chart in bars of characters, a link's target after
+its text in Markdown, the screen's emphasis as plain text — and the same
+scripts pass in every renderer (`tests/apps/showcase/components/more.q`).
 
 ## 11. Development
 

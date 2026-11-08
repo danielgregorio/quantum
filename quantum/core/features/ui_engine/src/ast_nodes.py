@@ -897,11 +897,13 @@ class UILogNode(QuantumNode, UILayoutMixin):
     def __init__(self):
         self.auto_scroll: bool = True
         self.max_lines: Optional[int] = None
+        self.source: Optional[str] = None   # UI-21: a list of lines (or a text) from the data
+        self.content: str = ""              # UI-21: lines written inside the element
         self._init_layout_attrs()
 
     def to_dict(self) -> Dict[str, Any]:
         d = {"type": "ui_log", "auto_scroll": self.auto_scroll,
-             "max_lines": self.max_lines}
+             "max_lines": self.max_lines, "source": self.source}
         d.update(self._layout_to_dict())
         return d
 
@@ -1951,4 +1953,7 @@ CORE_TAGS = frozenset({
     'text', 'badge', 'alert', 'link', 'image', 'progress',
     'table', 'column', 'list', 'item', 'pager', 'history', 'stream',
     'form', 'formitem', 'input', 'checkbox', 'switch', 'radio', 'select', 'option', 'button',
+    # UI-21: drawn by every renderer since Platforms Phase 4 (UI_PARITY.md)
+    'breadcrumb', 'breadcrumb-item', 'menu', 'avatar', 'markdown', 'chart', 'tree', 'log', 'dividedbox',
+    'pagination', 'skeleton', 'loading', 'date-picker', 'animate',
 })
