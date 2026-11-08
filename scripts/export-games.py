@@ -43,7 +43,6 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -105,8 +104,6 @@ orientation/portrait_upside_down=false
 # What the site builds: a browser's, and the desktops' downloads.
 DEFAULT_PRESETS = ['Web', 'Linux', 'Windows']
 
-TEMPLATES_URL = (f'https://github.com/godotengine/godot/releases/download/{GODOT_VERSION}-stable/'
-                 f'Godot_v{GODOT_VERSION}-stable_export_templates.tpz')
 
 
 def templates_dir() -> Path:
@@ -135,9 +132,11 @@ def install_templates(source: str = '') -> int:
     else:
         archive = Path.home() / '.cache' / 'quantum' / f'godot-{GODOT_VERSION}-export-templates.tpz'
         if not archive.is_file():
+            # GitHub's release first, then Godot's own download service; a 5xx is tried again (godot_bin)
+            from quantum.runtime.godot_bin import fetch_release, templates_urls
             archive.parent.mkdir(parents=True, exist_ok=True)
-            print(f'downloading {TEMPLATES_URL} (about 1.2 GB)...')
-            urllib.request.urlretrieve(TEMPLATES_URL, archive)
+            print('the export templates, about 1.2 GB...')
+            fetch_release(templates_urls(), archive, progress=print, check=lambda path: zipfile.ZipFile(path).close())
     target.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive) as z:
         for info in z.infolist():   # the archive holds templates/<file>; Godot wants <version>.stable/<file>
