@@ -331,6 +331,28 @@ class Console:
         await self._until(lambda: self._visible(boxes[0].menu), f"the dropdown {label!r} did not open")
         self._press(boxes[0].menu, option, link=True)
 
+    def _calendar(self):
+        from quantum.runtime.ui_console import PageCalendar
+        calendars = self._shown(PageCalendar)
+        assert calendars, "console: no calendar"
+        return calendars[0]
+
+    async def month(self, way):
+        calendar = self._calendar()
+        before = calendar.shown
+        self._press(calendar, "›" if way == "next" else "‹", link=True)
+        await self._until(lambda: calendar.shown != before, f"the calendar did not move to the {way} month")
+
+    async def day(self, number):
+        # the mouse on the day's cell in the grid, as a user picks it
+        calendar = self._calendar()
+        wanted = calendar.shown.replace(day=int(number))
+        cell = calendar.days.cell_of(wanted)
+        calendar.days.scroll_visible(animate=False)
+        await self.pilot.pause()
+        assert await self.pilot.click(calendar.days, offset=cell), f"console: the click on day {number} missed"
+        await self._until(lambda: calendar.value == wanted.isoformat(), f"the day {wanted} was not picked")
+
 
 def tui_godot():
     """Godot for the TUI's tests (UI-20): skipped without it, a failure where CI requires it."""
