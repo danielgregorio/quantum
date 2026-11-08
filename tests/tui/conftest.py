@@ -35,7 +35,7 @@ INDEX = f'''<q:component name="Fruits" {NS}>
     <ui:form on-submit="send" submit="Send">
       <ui:input bind="doc" type="file" />
     </ui:form>
-    <ui:accordion><ui:text>Folded</ui:text></ui:accordion>
+    <ui:calendar />
   </ui:window>
 </q:component>'''
 
@@ -43,6 +43,19 @@ LONG = f'''<q:component name="Long" {NS}>
   <ui:window title="Long" transition="slide">
     <q:loop type="range" var="i" from="1" to="80"><ui:text>Line {{i}}</ui:text></q:loop>
     <ui:input bind="last" enter="fade" placeholder="At the end" />
+  </ui:window>
+</q:component>'''
+
+
+LAYERS = f'''<q:component name="Layers" {NS}>
+  <ui:window title="Layers">
+    <ui:modal title="Hello" open="true"><ui:text>In the modal</ui:text></ui:modal>
+    <ui:toast message="Kept" duration="0" position="bottom-right" />
+    <ui:tooltip content="Type a name"><ui:input bind="name" /></ui:tooltip>
+    <ui:carousel auto-play="true" interval="500" loop="false">
+      <ui:slide><ui:text>One</ui:text></ui:slide><ui:slide><ui:text>Two</ui:text></ui:slide>
+    </ui:carousel>
+    <q:loop type="range" var="i" from="1" to="60"><ui:text>Row {{i}}</ui:text></q:loop>
   </ui:window>
 </q:component>'''
 
@@ -63,6 +76,7 @@ def app_url(tmp_path, monkeypatch):
     shutil.copy(HERE / 'brick.png', project / 'static' / 'brick.png')
     (project / 'components' / 'index.q').write_text(INDEX, encoding='utf-8')
     (project / 'components' / 'long.q').write_text(LONG, encoding='utf-8')
+    (project / 'components' / 'layers.q').write_text(LAYERS, encoding='utf-8')
     db = sqlite3.connect(project / 'fruits.db')
     db.executescript("CREATE TABLE fruits (id INTEGER PRIMARY KEY, name TEXT NOT NULL, stock INTEGER NOT NULL);"
                      "INSERT INTO fruits (name, stock) VALUES ('Apple', 4), ('Banana', 7), ('Cherry', 2);")

@@ -198,6 +198,7 @@ def test_the_script_in_the_tui(url):
         run_script(Tui(tui), SCRIPT)
         assert tui.observe()["unsupported"] == []          # the whole Core set is drawn
         run_script(Tui(tui), MORE)
+        run_script(Tui(tui), STATE)
 
 
 # -- the Hive's screen (quantum pixel) -------------------------------------------
