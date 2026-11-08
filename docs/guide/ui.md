@@ -647,6 +647,28 @@ answers with what the screen shows: the parity script and the Kanban's script ru
 (`quantum/runtime/ui_tui.py`, `TuiSession`), and its layout is checked against reference frames of
 cells (`tests/tui/frames/`).
 
+### A file to hand someone
+
+`quantum package <app> --on tui --target linux|windows|macos` makes one file of the application
+that runs where Quantum is not installed: the TUI as its program, and beside it the application's
+server with a Python of its own. Any target is made on any system; the first time, Python's build
+for that system, the libraries and Godot's export templates are fetched into your cache.
+
+```bash
+quantum package projects/kanban --target windows     # projects/kanban/dist/kanban-windows.zip
+```
+
+The person unpacks it and runs `kanban` (`kanban.exe`, or `Kanban.app` on a Mac with Apple
+silicon). The TUI starts the server, shows the first page, and the server ends when the window
+closes. What the application writes — its SQLite databases, uploads, logs — goes to a folder of
+theirs (`~/.local/share/quantum/kanban` on Linux, `%LOCALAPPDATA%\Quantum\kanban` on Windows,
+`~/Library/Application Support/Quantum/kanban` on a Mac), not into the package. Your databases
+stay with you: the package leaves them out and its migrations make them when it starts, unless
+`--with-data` carries them (copied to the person's folder the first time). The Kanban's is about
+60 MB and shows its first page in under two seconds; CI makes it for the three systems and runs
+the Kanban's whole script in the Linux one.
+
+
 ## On the Hive's screen
 
 On a Quantum OS machine the console is the Hive's screen: a pixel-art scene

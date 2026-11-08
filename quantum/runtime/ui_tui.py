@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Callable, List, Optional
 
@@ -67,20 +68,32 @@ def godot_command(url: str, page: str = '/', cols: int = 120, rows: int = 40, pl
 class TuiSession:
     """One TUI, headless, played request by request (the play protocol)."""
 
-    def __init__(self, url: str, page: str = '/', cols: int = 120, rows: int = 40,
-                 binary: Optional[Path] = None, timeout: float = 60, window: bool = False):
-        """`window`: drawn in a real window (a display is needed: xvfb-run), so `shot` can save its picture."""
+    def __init__(self, url: str = '', page: str = '/', cols: int = 120, rows: int = 40,
+                 binary: Optional[Path] = None, timeout: float = 60, window: bool = False,
+                 program: Optional[Path] = None, env: Optional[dict] = None):
+        """`window`: drawn in a real window (a display is needed: xvfb-run), so `shot` can save its picture.
+        `program`: a package's program (`quantum package`, UI-22) instead, which starts its own server; `url` is
+        then where that server is, once the first page is shown."""
         self.url = url.rstrip('/')
         self.timeout = timeout
         self.log: List[str] = []
-        self._project = project_copy()
-        self._proc = subprocess.Popen(
-            godot_command(self.url, page, cols, rows, play=True, binary=binary, project=self._project,
-                          window=window),
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+        if program is not None:
+            self._project = None
+            command = [str(program), '--headless', '--', '--play', f'--cols={cols}', f'--rows={rows}',
+                       *([f'--page={page}'] if page != '/' else [])]
+        else:
+            self._project = project_copy()
+            command = godot_command(self.url, page, cols, rows, play=True, binary=binary, project=self._project,
+                                    window=window)
+        self.started = time.monotonic()
+        self._proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT, text=True, bufsize=1, env=env)
         self.last = self.request({'op': 'observe'})
         if not self.last.get('pages'):
             self.last = self.request({'op': 'wait', 'text': '', 'timeout': timeout})
+        # how long the first page took to show, the server's start included for a package's program
+        self.first_page = time.monotonic() - self.started
+        self.url = self.url or str(self.last.get('url', '')).rstrip('/')
 
     def __enter__(self) -> 'TuiSession':
         return self
@@ -180,7 +193,8 @@ class TuiSession:
                 self._proc.wait(10)
             except subprocess.TimeoutExpired:
                 self._proc.kill()
-        shutil.rmtree(self._project, ignore_errors=True)
+        if self._project is not None:
+            shutil.rmtree(self._project, ignore_errors=True)
 
 
 def launch(url: str, page: str = '/') -> int:

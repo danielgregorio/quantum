@@ -10,6 +10,17 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- `quantum package <app> --on tui --target linux|windows|macos`: one file of the
+  application to hand someone who has no Quantum (SPEC.md UI-22,
+  `PLAN_PLATFORMS.md` Phase 5). Its program is the TUI, exported for that
+  system, which starts the application's server beside it — a Python of its
+  own (python-build-standalone), Quantum, the libraries and the application —
+  and ends it when its window closes. Any target is made on any system. What
+  the application writes lives in a folder of the user's, not in the package;
+  its SQLite databases stay with you unless `--with-data` carries them, and its
+  migrations run when it starts. The Kanban's package is about 60 MB and shows
+  its first page in under two seconds; CI makes it for the three systems and
+  runs the Kanban's whole script in the Linux one.
 - Thirteen more `ui:*` tags in the Core set, drawn by every renderer — the
   browser, the console, the Hive's screen and the TUI (SPEC.md UI-21,
   `PLAN_PLATFORMS.md` Phase 4): `breadcrumb`, `menu` (its options post their

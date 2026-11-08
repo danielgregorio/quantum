@@ -83,6 +83,7 @@ example, a guide page and a line in the status.
 | Scripting | `q:python`, `q:pyclass`, `q:pyimport` — **off by default**, turned on with `security.python_scripting` (see SECURITY.md) |
 | Events | `q:dispatchEvent` |
 | Decorators | `q:decorator` / `q:pydecorator` — a parser and an AST node with no consumer in the runtime; either decorators get designed for `q:function` or the tags leave. Not documented until then |
+| Packages | `quantum package --on tui` (UI-22): the Linux package runs the Kanban's script in CI; the Windows and macOS packages (an Apple silicon Mac's) are built there, not run |
 | UI / other targets | The standalone `q:application type="ui"` build (`--target html`/`textual`, layout only, UI-8); the terminal target (`qt:`), htmx, islands |
 
 ### Laboratory — stays in the repository, outside the promise

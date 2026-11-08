@@ -1210,6 +1210,24 @@ a check in a standalone build's script, is an error in a page. A page's
 browser's CSS variables, the console's and the TUI's colours (the view's
 `tokens`); the Hive's screen keeps its palette.
 
+**UI-22** — `quantum package <app> --on tui --target linux|windows|macos` makes
+one file to hand someone: the application's server — the application, Quantum,
+the libraries it needs and a Python of its own built for the target — beside
+the TUI exported for that system (`<app>-linux.tar.gz`, `<app>-windows.zip`,
+`<app>-macos.zip` with an `.app`), and any target is made on any system. The
+TUI is the package's program: it starts the server beside it, waits for the
+line that says where it listens (`QUANTUM-SERVER http://127.0.0.1:<port>/`, or
+`QUANTUM-ERROR` and why, which it shows), and holds the server's input open,
+so the server ends when the TUI does, however it ends. What the application
+writes — its SQLite databases, uploads, logs, the server's log — lives in a
+folder of the user's (`~/.local/share/quantum/<app>`, `%LOCALAPPDATA%\Quantum\<app>`,
+`~/Library/Application Support/Quantum/<app>`), and the package itself is not
+written to; its pages, static files and migrations stay in it. Its SQLite
+databases are left out unless `--with-data` carries them (copied to the user's
+folder once, never over theirs), and its pending migrations run at each start.
+A package runs the same script as every other version
+(`tests/package/test_package_kanban.py`).
+
 ## 11. Development
 
 **DEV-1** — With `server.debug: true`, the server records the process's last 30

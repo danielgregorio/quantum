@@ -328,6 +328,7 @@ Examples:
   quantum console                  # The application's pages in the terminal
   quantum desktop                  # The application's pages in a desktop window
   quantum run my-app --on desktop  # An application in one of its versions: web, desktop, terminal
+  quantum package my-app --on tui --target windows   # One file to hand someone: the TUI and its server
   quantum check                    # Pages parse, SQL compiles, query fields exist
   quantum test                     # Run the app's *.test.q tests
   quantum run game.q               # Build a Godot 4 project
@@ -425,6 +426,18 @@ Examples:
     desktop_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
     desktop_parser.add_argument('--width', type=int, default=1024, help='Window width (default: 1024)')
     desktop_parser.add_argument('--height', type=int, default=720, help='Window height (default: 720)')
+
+    # Package: the application with its server and a Python of its own, one file to hand someone (UI-22)
+    package_parser = subparsers.add_parser(
+        'package', help="Make one file to hand someone: the application's TUI and its server, for a system")
+    package_parser.add_argument('app', help="the application's folder (its quantum.config.yaml)")
+    package_parser.add_argument('--on', default='tui', choices=['tui'], help='its program: the TUI (default)')
+    package_parser.add_argument('--target', default='linux', choices=['linux', 'windows', 'macos'],
+                                help='the system it runs on (default: linux); any can be made on any')
+    package_parser.add_argument('--out', help="where the file goes (default: the application's dist/)")
+    package_parser.add_argument('--with-data', action='store_true',
+                                help='carry its SQLite databases as they are (left out by default: its '
+                                     'migrations make them when it starts)')
 
     # Play: a game step by step, for a person or (with --mcp) an agent (PLAN_PLAY_PROTOCOL.md)
     play_parser = subparsers.add_parser('play', help='Play a game step by step (or serve it to an agent, --mcp)')
@@ -547,6 +560,10 @@ def main():
     elif args.command == 'desktop':
         from quantum.runtime.ui_desktop import run_desktop
         sys.exit(run_desktop(args.config, args.path, width=args.width, height=args.height))
+
+    elif args.command == 'package':
+        from quantum.runtime.package import main as package_main
+        sys.exit(package_main(args))
 
     elif args.command == 'play':
         from quantum.cli.play import main as play_main

@@ -20,6 +20,7 @@ every command and option.
 | `stop` | Stop the server `quantum start` started |
 | `console` | The application's pages in the terminal |
 | `desktop` | The application's pages in a desktop window |
+| `package` | One file of the application to hand someone: its TUI and its server |
 | `check` | Pages parse, SQL compiles, query fields exist |
 | `test` | Run the app's `*.test.q` tests |
 | `migrate` | Apply, roll back and plan database migrations |
@@ -108,6 +109,17 @@ The same pages in a desktop window ([Desktop](/targets/desktop)):
 ```bash
 quantum desktop
 quantum desktop /reports --width 800 --height 600
+```
+
+## quantum package
+
+One file of the application for someone without Quantum: its TUI and its server, with a Python of
+its own, for Linux, Windows or macOS — any of them made on any system ([the TUI's guide](../guide/ui#a-file-to-hand-someone)).
+
+```bash
+quantum package projects/kanban                    # dist/kanban-linux.tar.gz
+quantum package projects/kanban --target windows   # dist/kanban-windows.zip
+quantum package projects/kanban --target macos --with-data --out /tmp/release
 ```
 
 ## quantum check

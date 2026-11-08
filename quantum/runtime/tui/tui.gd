@@ -14,6 +14,10 @@ extends Control
 #
 # With --play it is driven from its stdin, a JSON request a line, each answered on stdout with "QTP " and
 # what the screen shows (the play protocol, as the games' agents use it; quantum/runtime/ui_tui.py).
+#
+# Exported by `quantum package` (UI-22), it is the package's program: with no --url, it starts the server
+# folder beside it (server/package.json says how) with the package's own Python, waits for the line that says
+# where the server is, and holds the server's input open; when the TUI goes, so does the server.
 
 const Layout = preload("res://layout.gd")
 const VIEW := "application/vnd.quantum.view+json"
@@ -76,17 +80,27 @@ var ended := false
 var shot := ""                   # --shot=file.png: the window's picture once the page has settled, then quit
 var shot_frames := 0
 
+# UI-22: the package's server, started by the TUI: {pid, stdio, stderr} while it runs
+const SERVER_READY := "QUANTUM-SERVER "
+const SERVER_ERROR := "QUANTUM-ERROR "
+var server := {}
+var server_reader: Thread = null
+var server_title := ""
+var server_starting := false
+
 
 # -- starting -----------------------------------------------------------------
 
 func _ready() -> void:
 	var tokens := {}
+	var url_given := false
 	for arg in OS.get_cmdline_user_args():
 		var k := arg.get_slice("=", 0)
 		var v := arg.substr(k.length() + 1)
 		match k:
 			"--url":
 				base_url = v.rstrip("/")
+				url_given = true
 			"--page":
 				path = v if v.begins_with("/") else "/" + v
 			"--play":
@@ -105,10 +119,19 @@ func _ready() -> void:
 				motion_on = v != "off"
 			"--shot":
 				shot = v
+	var package := "" if url_given else _package_dir()
+	if package != "":
+		var conf = JSON.parse_string(FileAccess.get_file_as_string(package.path_join("package.json")))
+		if conf is Dictionary and conf.get("tokens") is Dictionary and tokens.is_empty():
+			tokens = conf["tokens"]
 	base_tokens = tokens
 	_theme(tokens)
 	var file := FontFile.new()
-	if file.load_dynamic_font("res://DejaVuSansMono.ttf") == OK:
+	if OS.has_feature("template"):
+		# exported (a package, UI-22): the font is an imported resource in the pack
+		var loaded = load("res://DejaVuSansMono.ttf")
+		font = loaded if loaded is Font else ThemeDB.fallback_font
+	elif file.load_dynamic_font("res://DejaVuSansMono.ttf") == OK:
 		font = file
 	else:
 		font = ThemeDB.fallback_font
@@ -132,7 +155,106 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_ALL
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	grab_focus()
+	if package != "":
+		_start_server(package)
+	else:
+		load_page(path)
+
+
+# -- the package's server (UI-22) ---------------------------------------------
+
+func _package_dir() -> String:
+	# an exported TUI with the package's server folder beside it (in a Mac's .app, in its Resources)
+	if not OS.has_feature("template"):
+		return ""
+	var here := OS.get_executable_path().get_base_dir()
+	for dir in [here.path_join("server"), here.path_join("../Resources/server")]:
+		if FileAccess.file_exists(dir.path_join("package.json")):
+			return dir.simplify_path()
+	return ""
+
+
+func _start_server(dir: String) -> void:
+	var conf = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("package.json")))
+	if not (conf is Dictionary):
+		_server_failed("server/package.json cannot be read")
+		return
+	server_title = str(conf.get("title", ""))
+	if path == "/" and str(conf.get("page", "")) != "":
+		path = str(conf["page"])
+	var args := PackedStringArray()
+	for a in conf.get("args", []):
+		args.append(str(a).replace("{server}", dir))
+	busy += 1                                   # the play protocol waits for the first page, as a person does
+	server_starting = true
+	get_window().title = "Starting %s — Quantum" % server_title
+	server = OS.execute_with_pipe(dir.path_join(str(conf.get("python", ""))), args)
+	if server.is_empty():
+		_server_failed("the package's Python did not start (%s)" % dir.path_join(str(conf.get("python", ""))))
+		return
+	server_reader = Thread.new()
+	server_reader.start(_read_server)
+
+
+func _read_server() -> void:
+	# on its own thread: the server's first line says where it is, or what went wrong
+	var pipe: FileAccess = server["stdio"]
+	while true:
+		var line := pipe.get_line()
+		if line.begins_with(SERVER_READY):
+			call_deferred("_server_ready", line.substr(SERVER_READY.length()).strip_edges())
+			return
+		if line.begins_with(SERVER_ERROR):
+			call_deferred("_server_failed", line.substr(SERVER_ERROR.length()).strip_edges())
+			return
+		if line == "" and pipe.get_error() != OK:
+			call_deferred("_server_failed", "the server stopped before it started")
+			return
+
+
+func _server_started() -> void:
+	if server_starting:
+		server_starting = false
+		busy -= 1
+
+
+func _server_ready(url: String) -> void:
+	_server_started()
+	base_url = url.rstrip("/")
 	load_page(path)
+
+
+func _server_failed(reason: String) -> void:
+	_server_started()
+	page = {"title": server_title, "flash": "%s could not start: %s" % [server_title, reason],
+			"flashType": "error", "flashShown": false, "view": []}
+	get_window().title = "%s — Quantum" % server_title
+	relayout()
+	pages_loaded += 1
+	queue_redraw()
+
+
+func _stop_server() -> void:
+	# its input ends and it shuts down; one that does not within a second is stopped
+	if server.is_empty():
+		return
+	var pid := int(server["pid"])
+	(server["stdio"] as FileAccess).close()
+	for i in 50:
+		if not OS.is_process_running(pid):
+			break
+		OS.delay_msec(20)
+	if OS.is_process_running(pid):
+		OS.kill(pid)
+	if server_reader != null:
+		server_reader.wait_to_finish()
+		server_reader = null
+	server = {}
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE:
+		_stop_server()
 
 
 func _theme(tokens: Dictionary) -> void:
@@ -1574,7 +1696,8 @@ func observation() -> Dictionary:
 		images.append({"alt": image["alt"], "src": image["src"], "loaded": textures.has(image["src"]),
 					   "w": image["w"], "h": image["h"]})
 	return {
-		"title": str(page.get("title", "")), "path": path, "pages": pages_loaded, "cols": cols, "rows": rows,
+		"title": str(page.get("title", "")), "path": path, "url": base_url, "pages": pages_loaded, "cols": cols,
+		"rows": rows,
 		"palette": palette,
 		"hover": hover, "cursor": "pointing" if mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND else "arrow",
 		"height": lay.height, "scroll": scroll, "screen": lay.text_rows(), "items": shown, "motions": motions,

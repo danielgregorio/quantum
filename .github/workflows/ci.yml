@@ -193,6 +193,42 @@ jobs:
             ${{ runner.temp }}/games/rpg/bridge.png
           if-no-files-found: ignore
 
+  package:
+    # `quantum package` (SPEC.md UI-22, PLAN_PLATFORMS.md Phase 5): the Kanban's Linux, Windows and macOS packages
+    # are made here, each a Python of its own, Quantum, the libraries and the application beside the TUI exported
+    # for that system; the Linux one is unpacked and the Kanban's whole script runs in its program, which starts
+    # the server beside it (tests/package/). The packages' sizes and the time to the first page go to the summary.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install quantum
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # Godot and its export templates (1.2 GB), the games' cache; Python's builds land beside them
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cache/quantum
+            ~/.local/share/godot/export_templates
+          key: godot-export-${{ hashFiles('quantum/runtime/godot_bin.py') }}
+      - run: python scripts/godot.py install
+
+      - name: Package the Kanban, and run its script in the package
+        env:
+          QUANTUM_PACKAGE_TESTS: '1'
+        run: |
+          printf '| Package | Size | First page | Made in |\n|---|---|---|---|\n' >> "$GITHUB_STEP_SUMMARY"
+          pytest tests/package
+
   relay-image:
     # The relay as it is deployed (deploy/relay/Dockerfile): the image builds,
     # compiles the networked games, and answers its health check.

@@ -8,6 +8,8 @@ config_version=5
 config/name="Quantum TUI"
 run/main_scene="res://main.tscn"
 run/low_processor_mode=true
+; the play protocol is a line at a time: exported (a release build), stdout is not flushed on each print otherwise
+run/flush_stdout_on_print=true
 config/features=PackedStringArray("4.4")
 
 [display]

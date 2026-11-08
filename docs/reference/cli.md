@@ -128,6 +128,22 @@ Open the application's pages in a desktop window.
 
 Specified by: [UI-4](./spec#UI-4) · [UI-8](./spec#UI-8) · [UI-18](./spec#UI-18)
 
+<a id="cli-package"></a>
+
+## `quantum package`
+
+Make one file to hand someone: the application's TUI and its server, for a system.
+
+| Argument | Meaning | Default | Values |
+|---|---|---|---|
+| `app` | the application's folder (its quantum.config.yaml) |  |  |
+| `--on` | its program: the TUI (default) | `tui` | `tui` |
+| `--target` | the system it runs on (default: linux); any can be made on any | `linux` | `linux`, `windows`, `macos` |
+| `--out` | where the file goes (default: the application's dist/) |  |  |
+| `--with-data` | carry its SQLite databases as they are (left out by default: its migrations make them when it starts) |  |  |
+
+Specified by: [UI-22](./spec#UI-22)
+
 <a id="cli-play"></a>
 
 ## `quantum play`

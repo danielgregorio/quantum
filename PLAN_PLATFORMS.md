@@ -204,6 +204,28 @@ desktop as its window — one file to hand someone. The TUI exported for the bro
 through the browser's fetch. CI builds the Kanban's Linux packages and runs its script
 against them; size and time to the first page are measured.
 
+**5a done 2026-11-08: the TUI's package.** `quantum package <app> --on tui --target linux|windows|macos`
+(`quantum/runtime/package.py`, SPEC.md UI-22) makes one file: the TUI exported with the games' pipeline (now
+`quantum/runtime/godot_export.py`, which both use) and, beside it, `server/` — python-build-standalone's Python for
+the target, the server's libraries installed by pip for that system (wheels only, pinned to the versions this
+Quantum runs with), Quantum itself and the application. Any target is made on any system. The exported TUI is the
+program: with no `--url` it reads `server/package.json`, starts the server with the package's Python
+(`OS.execute_with_pipe`), shows the first page when the server's line says where it listens, and holds the server's
+input open, so the server (`quantum/runtime/packaged_server.py`) ends when its input does — however the TUI ends.
+The server writes only to a folder of the user's: its configuration is the package's with the application's paths
+pointing into the package, its SQLite databases are made by the application's migrations at each start (the
+package leaves yours out unless `--with-data`), and everything it prints goes to `server.log` there, so the pipes
+the TUI does not read never fill. CI's `package` job makes the Kanban's three packages and runs its whole script in
+the Linux one through the TUI's play protocol (`TuiSession(program=...)`), the board's answer from its cards aside
+(chromadb, which the Kanban's package does not carry). Measured: 61 MB for Linux, 78 MB for macOS (Godot's
+universal binary), the first page in about 1.5 s, the package made in about 35 s once the cache is warm.
+
+What changed from the plan: the server is not frozen into one binary (PyInstaller) but carried with a Python of
+its own, which is what makes a Windows or macOS package from Linux possible; the macOS package's Python is Apple
+silicon's; the desktop's package (its window as the program) and the TUI in the browser are 5b and 5c. On the way:
+an exported Godot does not flush its standard output on each print, which stalled the play protocol
+(`run/flush_stdout_on_print`), and the TUI's font is an imported resource once exported.
+
 ## Phase 6 — The phone, and a hosted application
 
 `--server https://...`: the TUI and the desktop as clients of a hosted application, no Python on the
