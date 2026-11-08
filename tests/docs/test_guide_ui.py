@@ -47,8 +47,11 @@ def tree_texts(nodes) -> str:
     parts = []
     for node in nodes:
         props = node.get('props', {})
-        parts += [str(props[c]) for c in ('text', 'title', 'label') if props.get(c)]
+        parts += [str(props[c]) for c in ('text', 'title', 'label', 'initials') if props.get(c)]
         parts += [c['label'] for c in node.get('columns', [])]
+        for bar in node.get('bars', []):          # UI-21: a chart's bars, with their value or their share
+            share = props.get('chart_type') in ('pie', 'doughnut')
+            parts += [bar['label'], f"{bar['percent']:g}%" if share else bar['shown']]
         for row in node.get('rows', []):
             for cell in row:
                 parts.append(tree_texts(cell))

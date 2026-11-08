@@ -44,7 +44,7 @@ page, and a line in `FEATURE_STATUS.md`.
 | `q:import` / `q:slot` | Component composition |
 | `q:file` | Uploads under `paths.uploads`, and downloads a page decides who may have (FILE-1, FILE-2) |
 | `q:mail` | Mail through the `mail:` config, with a log mode for development (MAIL-1, MAIL-2) |
-| `ui:*` — the Core set | Screens in a page, listed in SPEC UI-7. Drawn with the same meaning by the browser (`quantum start`), the console (`quantum console`) and the window (`quantum desktop`, the page in a local window); one parity script runs in a real browser and in the console |
+| `ui:*` — the Core set | Screens in a page, listed in SPEC UI-7 and UI-21. Drawn with the same meaning by the browser (`quantum start`), the console (`quantum console`), the window (`quantum desktop`, the page in a local window), the Hive's screen (`quantum pixel`) and the TUI (`--on tui`); the parity scripts run in each, and `UI_PARITY.md` maps every tag against every renderer |
 | `require_auth` / `require_role` | Authentication and authorisation per component, over the `session` scope (decision D4); `hashPassword` / `verifyPassword` in expressions |
 
 ### AI — the reason the project exists
@@ -73,7 +73,7 @@ example, a guide page and a line in the status.
 | Scripting | `q:python`, `q:pyclass`, `q:pyimport` — **off by default**, turned on with `security.python_scripting` (see SECURITY.md) |
 | Events | `q:dispatchEvent` |
 | Decorators | `q:decorator` / `q:pydecorator` — a parser and an AST node with no consumer in the runtime; either decorators get designed for `q:function` or the tags leave. Not documented until then |
-| UI / other targets | `ui:*` elements outside the Core set (browser only; the console says it does not draw them); the standalone `q:application type="ui"` build (`--target html`/`textual`, layout only, UI-8); the terminal target (`qt:`), htmx, islands |
+| UI / other targets | `ui:*` elements outside the Core set (browser only; the console, the screen and the TUI say they do not draw them, `UI_PARITY.md`); the standalone `q:application type="ui"` build (`--target html`/`textual`, layout only, UI-8); the terminal target (`qt:`), htmx, islands |
 
 ### Laboratory — stays in the repository, outside the promise
 

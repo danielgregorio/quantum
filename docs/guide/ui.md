@@ -495,36 +495,48 @@ renderer draws that. A terminal draws it in the form it can: a chart in bars of
 characters, a skeleton in shaded lines.
 
 ```xml
-<q:action name="pick" method="POST">
-  <q:param name="value" required="true" />
-  <q:redirect url="/" flash="Picked: {value}" />
-</q:action>
+<q:component name="Shelf">
+  <q:action name="pick" method="POST">
+    <q:param name="value" required="true" />
+    <q:redirect url="/" flash="Picked: {value}" />
+  </q:action>
+  <q:action name="book" method="POST">
+    <q:param name="day" type="date" required="true" />
+    <q:redirect url="/" flash="Booked: {day}" />
+  </q:action>
 
-<q:set name="sales" type="array" value='[{"label": "Mon", "value": 3}, {"label": "Tue", "value": 6}]' />
-<q:set name="folders" type="array"
-       value='[{"label": "Docs", "children": [{"label": "Guide", "value": "guide"}]}]' />
+  <q:set name="sales" type="array" value='[{"label": "Mon", "value": 3}, {"label": "Tue", "value": 6}]' />
+  <q:set name="folders" type="array" value='[{"label": "Docs", "children": [
+           {"label": "Guide", "value": "guide"}]}]' />
+  <q:set name="events" type="array" value='["started", "listening on 8080"]' />
 
-<ui:breadcrumb separator=">">
-  <ui:breadcrumb-item label="Home" to="/" />
-  <ui:breadcrumb-item label="Shelf" />
-</ui:breadcrumb>
-<ui:menu>
-  <ui:option value="new" on-click="pick">New file</ui:option>
-</ui:menu>
-<ui:avatar name="Ana Lima" status="online" />
-<ui:markdown>
-  ## Notes
-  Some **bold** words and `code`.
-</ui:markdown>
-<ui:chart type="bar" title="Sales" source="{sales}" />
-<ui:chart type="pie" labels="Red,Blue" values="1,3" />
-<ui:tree source="{folders}" on-select="pick" />
-<ui:log max-lines="50" source="{events}" />
-<ui:pagination total="45" page-size="10" show-total="true" />
-<ui:form on-submit="book">
-  <ui:date-picker bind="day" />
-</ui:form>
+  <ui:window title="Shelf">
+    <ui:breadcrumb separator=">">
+      <ui:breadcrumb-item label="Home" to="/" />
+      <ui:breadcrumb-item label="Shelf" />
+    </ui:breadcrumb>
+    <ui:menu>
+      <ui:option value="new" on-click="pick">New file</ui:option>
+    </ui:menu>
+    <ui:avatar name="Ana Lima" status="online" />
+    <ui:markdown>
+      ## Notes
+      Some **bold** words and `code`.
+    </ui:markdown>
+    <ui:chart type="bar" title="Sales" source="{sales}" />
+    <ui:chart type="pie" labels="Red,Blue" values="1,3" />
+    <ui:tree source="{folders}" on-select="pick" />
+    <ui:log max-lines="50" source="{events}" />
+    <ui:pagination total="45" page-size="10" show-total="true" />
+    <ui:form on-submit="book">
+      <ui:date-picker bind="day" />
+      <ui:button>Book</ui:button>
+    </ui:form>
+  </ui:window>
+</q:component>
 ```
+
+**Shows:** `Home` · `Shelf` · `New file` · `AL` · `Notes` · `Sales` · `Mon` · `Red` · `25%` · `Docs` · `Guide` · `listening on 8080` · `45 items`
 
 - A **menu**'s option and a **tree**'s row with an action are links that post
   it, with their `value` as the field `value`; a tree's row with a `to` goes
