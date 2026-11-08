@@ -37,6 +37,9 @@ _RELEASE_URL = ('https://github.com/godotengine/godot/releases/download/'
 _GODOT_DOWNLOADS_URL = ('https://downloads.godotengine.org/?version={version}&flavor=stable'
                         '&slug={platform}.zip&platform={service}')
 _SERVICE_PLATFORMS = {'linux.x86_64': 'linux.64', 'linux.arm64': 'linux.arm64', 'win64.exe': 'windows.64'}
+# The client every download names. That service is behind Cloudflare, which turned away a request that
+# named Python's urllib as its client (403, from CI's runners on 2026-11-08) before asking where it went.
+USER_AGENT = 'quantum-framework (Godot download)'
 
 # The official release names, by (system, machine).
 _PLATFORMS = {
@@ -115,7 +118,8 @@ def _fetch_to(url: str, target: Path, progress=None, sleep=None, waits=None) -> 
     part = target.with_name(target.name + '.part')
     for wait in (*(RETRY_WAITS if waits is None else waits), None):
         try:
-            with urllib.request.urlopen(url, timeout=300) as resp, open(part, 'wb') as out:
+            request = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
+            with urllib.request.urlopen(request, timeout=300) as resp, open(part, 'wb') as out:
                 shutil.copyfileobj(resp, out, 1 << 20)
             part.replace(target)
             return

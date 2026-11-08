@@ -21,7 +21,8 @@ def answers(*replies):
     """An urlopen that answers each call with the next reply: a status (an error) or bytes."""
     calls = []
 
-    def urlopen(url, timeout):
+    def urlopen(request, timeout):
+        url = request.full_url
         calls.append(url)
         reply = replies[min(len(calls), len(replies)) - 1]
         if isinstance(reply, int):
@@ -61,7 +62,8 @@ def test_it_gives_up_after_the_last_wait_and_on_a_404_at_once(monkeypatch, tmp_p
 def test_when_github_keeps_failing_godots_own_service_is_asked(monkeypatch, tmp_path):
     asked = []
 
-    def urlopen(url, timeout):
+    def urlopen(request, timeout):
+        url = request.full_url
         asked.append(url)
         if 'github.com' in url:
             raise urllib.error.HTTPError(url, 504, 'Gateway Time-out', {}, io.BytesIO())
@@ -75,6 +77,19 @@ def test_when_github_keeps_failing_godots_own_service_is_asked(monkeypatch, tmp_
     assert sum('github.com' in u for u in asked) == len(godot_bin.RETRY_WAITS) + 1
     assert asked[-1] == ('https://downloads.godotengine.org/?version=4.4.1&flavor=stable'
                          '&slug=linux.x86_64.zip&platform=linux.64')
+
+
+def test_each_request_names_its_client(monkeypatch, tmp_path):
+    # Godot's download service turns away a request that names Python's urllib as its client (403)
+    seen = []
+
+    def urlopen(request, timeout):
+        seen.append(request.get_header('User-agent'))
+        return io.BytesIO(b'zip')
+
+    monkeypatch.setattr(godot_bin.urllib.request, 'urlopen', urlopen)
+    godot_bin._fetch_to('https://downloads.godotengine.org/?version=4.4.1', tmp_path / 'g.zip')
+    assert seen == [godot_bin.USER_AGENT] and 'urllib' not in godot_bin.USER_AGENT
 
 
 def test_a_page_that_is_not_the_release_asks_the_next_source(monkeypatch, tmp_path):
