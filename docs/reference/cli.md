@@ -138,8 +138,8 @@ Make one file to hand someone: the application's TUI and its server, for a syste
 |---|---|---|---|
 | `app` | the application's folder (its quantum.config.yaml) |  |  |
 | `--on` | its program: the TUI (default), or a window of its own (Windows, macOS) | `tui` | `tui`, `desktop` |
-| `--target` | the system it runs on (default: linux); any can be made on any | `linux` | `linux`, `windows`, `macos` |
-| `--out` | where the file goes (default: the application's dist/) |  |  |
+| `--target` | the system it runs on (default: linux); any can be made on any; web: the TUI in the browser, in the application's static/tui/, which its server serves | `linux` | `linux`, `windows`, `macos`, `web` |
+| `--out` | where the file goes (default: the application's dist/; for web, its static/tui/) |  |  |
 | `--with-data` | carry its SQLite databases as they are (left out by default: its migrations make them when it starts) |  |  |
 
 Specified by: [UI-22](./spec#UI-22)

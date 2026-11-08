@@ -329,6 +329,7 @@ Examples:
   quantum desktop                  # The application's pages in a desktop window
   quantum run my-app --on desktop  # An application in one of its versions: web, desktop, terminal
   quantum package my-app --on tui --target windows   # One file to hand someone: the TUI and its server
+  quantum package my-app --target web                # The TUI in the browser, served by the app (static/tui/)
   quantum check                    # Pages parse, SQL compiles, query fields exist
   quantum test                     # Run the app's *.test.q tests
   quantum run game.q               # Build a Godot 4 project
@@ -433,9 +434,11 @@ Examples:
     package_parser.add_argument('app', help="the application's folder (its quantum.config.yaml)")
     package_parser.add_argument('--on', default='tui', choices=['tui', 'desktop'],
                                 help='its program: the TUI (default), or a window of its own (Windows, macOS)')
-    package_parser.add_argument('--target', default='linux', choices=['linux', 'windows', 'macos'],
-                                help='the system it runs on (default: linux); any can be made on any')
-    package_parser.add_argument('--out', help="where the file goes (default: the application's dist/)")
+    package_parser.add_argument('--target', default='linux', choices=['linux', 'windows', 'macos', 'web'],
+                                help='the system it runs on (default: linux); any can be made on any; web: the '
+                                     "TUI in the browser, in the application's static/tui/, which its server serves")
+    package_parser.add_argument('--out', help="where the file goes (default: the application's dist/; for web, "
+                                              "its static/tui/)")
     package_parser.add_argument('--with-data', action='store_true',
                                 help='carry its SQLite databases as they are (left out by default: its '
                                      'migrations make them when it starts)')

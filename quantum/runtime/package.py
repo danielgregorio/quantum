@@ -1,4 +1,4 @@
-"""`quantum package <app> --on tui --target linux|windows|macos`: one file to hand someone (SPEC.md UI-22,
+"""`quantum package <app> --on tui --target linux|windows|macos|web`: one file to hand someone (SPEC.md UI-22,
 PLAN_PLATFORMS.md Phase 5).
 
 A package holds the application's server — the application, Quantum, the libraries it needs and a Python of its
@@ -15,6 +15,10 @@ its client, which starts it: the TUI, exported with the games' pipeline (Godot's
 The server keeps what the application writes in a folder of the user's (quantum/runtime/packaged_server.py), so
 the package itself can be read-only; its SQLite databases are left out unless asked (``--with-data``) and its
 migrations make them when it starts.
+
+``--target web`` is the TUI alone, exported for the browser into the application's static folder
+(``<app>/static/tui/``): the application's own server serves it, at /static/tui/index.html, and it asks that
+server for the pages through the browser's fetch (quantum/runtime/tui/web.gd).
 """
 
 from __future__ import annotations
@@ -51,6 +55,9 @@ TARGETS = {
     'macos': {'triple': 'aarch64-apple-darwin', 'pip': ['macosx_11_0_arm64'], 'preset': 'macOS',
               'python': 'python/bin/python3', 'site': 'python/lib/python3.12/site-packages'},
 }
+
+# The browser: the TUI alone, exported into the application's static folder; its server is the application's own.
+WEB = 'web'
 
 # The libraries the server needs (Quantum's dependencies but the terminal's and gunicorn), and those a
 # datasource's driver needs.
@@ -184,16 +191,18 @@ def copy_quantum(site: Path) -> None:
 
 def copy_app(app: Path, target: Path, config: dict, with_data: bool) -> List[str]:
     """The application's folder without what is never carried, and without its SQLite databases unless
-    `with_data`; returns what was left out that a reader should know of."""
+    `with_data`; returns what was left out that a reader should know of. The TUI made for the browser
+    (`--target web`) stays out too: the package's program is the TUI."""
     from quantum.runtime.packaged_server import sqlite_files
     databases = {(app / p).resolve() for p in sqlite_files(config)}
+    web_tui = web_folder(app, config)
     left_out: List[str] = []
 
     def ignore(folder: str, names: List[str]) -> List[str]:
         out = []
         for n in names:
             path = (Path(folder) / n).resolve()
-            if n in _LEFT_OUT or n.endswith(('.pyc', '-journal', '-wal', '-shm')):
+            if n in _LEFT_OUT or n.endswith(('.pyc', '-journal', '-wal', '-shm')) or path == web_tui:
                 out.append(n)
             elif path in databases and not with_data:
                 out.append(n)
@@ -216,12 +225,13 @@ def libraries_for(config: dict) -> List[str]:
 # -- the client: the TUI, exported ----------------------------------------------------------------------------
 
 def export_tui(target: str, title: str, name: str, out: Path, progress: Callable[[str], None]) -> Path:
-    """The TUI exported for the target, its project named after the application; returns what Godot made."""
+    """The TUI exported for the target, its project named after the application; returns what Godot made (for
+    the browser, its index.html, its files beside it)."""
     from quantum.runtime.godot_bin import ensure_godot
-    from quantum.runtime.godot_export import DESKTOP_PRESETS, export_project, have_templates, install_templates
+    from quantum.runtime.godot_export import PRESETS, export_project, have_templates, install_templates
     from quantum.runtime.ui_tui import project_copy
     godot = ensure_godot(download=True, progress=progress)
-    preset = TARGETS[target]['preset']
+    preset = 'Web' if target == WEB else TARGETS[target]['preset']
     if not have_templates(preset):
         install_templates(progress=progress, preset=preset)
     project = project_copy()
@@ -231,8 +241,9 @@ def export_tui(target: str, title: str, name: str, out: Path, progress: Callable
         if target == 'macos' and 'import_etc2_astc' not in settings:
             settings = settings.replace('[rendering]\n', '[rendering]\ntextures/vram_compression/import_etc2_astc=true\n')
         (project / 'project.godot').write_text(settings, encoding='utf-8')
-        made = out / {'linux': f'{name}.x86_64', 'windows': f'{name}.exe', 'macos': f'{name}.zip'}[target]
-        options = DESKTOP_PRESETS[preset][1].replace('{id}', re.sub(r'[^a-z0-9]', '', name))
+        made = out / {'linux': f'{name}.x86_64', 'windows': f'{name}.exe', 'macos': f'{name}.zip',
+                      WEB: 'index.html'}[target]
+        options = PRESETS[preset][1].replace('{id}', re.sub(r'[^a-z0-9]', '', name))
         progress(f'the TUI for {target} (Godot, {preset})')
         return export_project(project, preset, made, godot, options)
     finally:
@@ -324,6 +335,24 @@ def _tar(folder: Path, archive: Path) -> None:
         tar.add(folder, arcname=folder.name)
 
 
+def web_folder(app: Path, config: dict) -> Path:
+    """Where the TUI for the browser goes unless `--out` says: tui/ in the application's static folder, which its
+    server serves at /static/tui/."""
+    paths = config.get('paths') if isinstance(config.get('paths'), dict) else {}
+    return (app / str(paths.get('static') or './static') / 'tui').resolve()
+
+
+def build_web(app: Path, config: dict, name: str, title: str, out: Optional[Path], started: float,
+              progress: Callable[[str], None]) -> Package:
+    """`--target web`: the TUI exported for the browser into the application's static folder, so the
+    application's own server serves it (/static/tui/index.html) — the same origin as its pages, so the browser's
+    cookies are the session. Nothing else is carried: the server is the application's."""
+    folder = Path(out).resolve() if out else web_folder(app, config)
+    page = export_tui(WEB, title, name, folder, progress)
+    size = sum(f.stat().st_size for f in folder.glob('index.*') if f.is_file())
+    return Package(path=page, folder=folder, size=size, seconds=time.monotonic() - started)
+
+
 def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path] = None, with_data: bool = False,
           progress: Callable[[str], None] = print) -> Package:
     """The package of `app` for `target`: the file, and the folder it holds (kept beside it, ready to run)."""
@@ -331,9 +360,12 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
     app = Path(app).resolve()
     if on not in ('tui', 'desktop'):
         raise PackageError(f'--on {on}: a package\'s program is the TUI (--on tui) or a window (--on desktop)')
-    if target not in TARGETS:
-        raise PackageError(f'--target {target}: one of {", ".join(TARGETS)}')
+    if target not in TARGETS and target != WEB:
+        raise PackageError(f'--target {target}: one of {", ".join([*TARGETS, WEB])}')
     if on == 'desktop' and target not in DESKTOP_LIBRARIES:
+        if target == WEB:
+            raise PackageError('--on desktop --target web: in a browser the pages are the web\'s own; '
+                               '--target web puts the TUI there (--on tui)')
         raise PackageError(f'--on desktop --target {target}: a window of its own on Linux needs Qt WebEngine, '
                            f'about 550 MB; Linux\'s package is the TUI (--on tui)')
     config_file = app / 'quantum.config.yaml'
@@ -341,6 +373,8 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
         raise PackageError(f'{app} has no quantum.config.yaml: `quantum package` takes an application\'s folder')
     config = yaml.safe_load(config_file.read_text(encoding='utf-8')) or {}
     name, title = app_name(app), app_title(app, config)
+    if target == WEB:
+        return build_web(app, config, name, title, out, started, progress)
     out = Path(out or app / 'dist').resolve()
     kind = f'{target}-desktop' if on == 'desktop' else target
     work = out / f'.{name}-{kind}'
@@ -414,6 +448,10 @@ def main(args) -> int:
     except PackageError as exc:
         print(f'[ERROR] {exc}', file=sys.stderr)
         return 1
+    if args.target == WEB:
+        served = '' if args.out else '; the application serves it at /static/tui/index.html'
+        print(f'{made.path} ({made.size / 1e6:.1f} MB, made in {made.seconds:.0f} s){served}')
+        return 0
     print(f'{made.path} ({made.size / 1e6:.1f} MB, made in {made.seconds:.0f} s)')
     if made.left_out:
         print(f'left out (the migrations make them when it starts; --with-data carries them): '

@@ -93,9 +93,13 @@ def test_the_libraries_are_the_servers_and_its_drivers(app):
 
 def test_the_application_is_carried_without_its_data(app, tmp_path):
     config = yaml.safe_load((app / 'quantum.config.yaml').read_text())
+    (app / 'static' / 'tui').mkdir(parents=True)              # the TUI made for the browser (--target web)
+    (app / 'static' / 'tui' / 'index.wasm').write_bytes(b'\0asm')
+    (app / 'static' / 'logo.png').write_bytes(b'png')
     left_out = package.copy_app(app, tmp_path / 'out', config, with_data=False)
     assert left_out == [str(Path('data') / 'notes.db')]
     assert (tmp_path / 'out' / 'components' / 'index.q').is_file()
+    assert (tmp_path / 'out' / 'static' / 'logo.png').is_file() and not (tmp_path / 'out' / 'static' / 'tui').exists()
     assert not (tmp_path / 'out' / 'data' / 'notes.db').exists()
     assert not (tmp_path / 'out' / '__pycache__').exists() and not (tmp_path / 'out' / '.quantum.pid').exists()
     assert package.copy_app(app, tmp_path / 'with', config, with_data=True) == []
@@ -195,7 +199,7 @@ def test_what_cannot_be_packaged_says_so(tmp_path):
         package.build(tmp_path, on='phone', progress=lambda line: None)
     with pytest.raises(package.PackageError, match="Qt WebEngine, about 550 MB; Linux's package is the TUI"):
         package.build(tmp_path, on='desktop', target='linux', progress=lambda line: None)
-    with pytest.raises(package.PackageError, match='linux, windows, macos'):
+    with pytest.raises(package.PackageError, match='linux, windows, macos, web'):
         package.build(tmp_path, target='beos', progress=lambda line: None)
 
 
@@ -222,3 +226,29 @@ def test_the_desktops_program_checks_itself_with_no_window(app, tmp_path):
     assert (tmp_path / 'xdg' / 'quantum' / 'notes' / 'data' / 'notes.db').is_file()
     assert 'GET /' in (tmp_path / 'xdg' / 'quantum' / 'notes' / 'server.log').read_text()
 
+
+def test_the_tui_for_the_browser_goes_into_the_applications_static_folder(app, tmp_path, monkeypatch, capsys):
+    # UI-22, --target web: the application's own server serves it (/static/tui/), and nothing else is carried;
+    # Godot's export is tests/package/test_tui_in_browser.py's
+    def export(target, title, name, out, progress):
+        assert (target, title, name) == ('web', 'Notes', 'my-notes')
+        out.mkdir(parents=True, exist_ok=True)
+        (out / 'index.html').write_text('<canvas>')
+        (out / 'index.wasm').write_bytes(b'\0asm')
+        return out / 'index.html'
+
+    monkeypatch.setattr(package, 'export_tui', export)
+    made = package.build(app, target='web', progress=lambda line: None)
+    assert made.folder == (app / 'static' / 'tui').resolve() and made.path == made.folder / 'index.html'
+    assert made.size == len('<canvas>') + 4
+    assert not (app / 'dist').exists()                          # no server, no Python, no archive
+    assert package.web_folder(app, {'paths': {'static': './public'}}) == (app / 'public' / 'tui').resolve()
+    package.main(type('Args', (), {'app': str(app), 'on': 'tui', 'target': 'web', 'out': None, 'with_data': False}))
+    assert capsys.readouterr().out.rstrip().endswith('the application serves it at /static/tui/index.html')
+    elsewhere = package.build(app, target='web', out=tmp_path / 'elsewhere', progress=lambda line: None)
+    assert elsewhere.folder == (tmp_path / 'elsewhere').resolve()
+
+
+def test_a_window_in_a_browser_says_the_web_is_the_tuis(tmp_path):
+    with pytest.raises(package.PackageError, match='--target web puts the TUI there'):
+        package.build(tmp_path, on='desktop', target='web', progress=lambda line: None)

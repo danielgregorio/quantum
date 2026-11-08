@@ -674,6 +674,24 @@ them (`quantum desktop`, on the system's web view): `Kanban.exe` on Windows, `Ka
 Linux has no desktop package — its window would need Qt WebEngine, about 550 MB — and its package
 is the TUI.
 
+### In the browser
+
+`--target web` puts the TUI in a browser tab instead: it is exported into the application's static
+folder, and the application's own server serves it with its pages.
+
+```bash
+quantum package projects/kanban --target web     # projects/kanban/static/tui/
+quantum run projects/kanban --on web             # http://127.0.0.1:8090/static/tui/index.html
+```
+
+`/static/tui/index.html` opens the first page, and `?page=/board/1` another. The TUI asks the
+same server for the pages through the browser's own requests, so the browser keeps the session's
+cookies and follows the redirects — a person signs in once, as in the web version — and a file
+field opens the browser's file picker. It is the same TUI: the same cells, the same keys and mouse,
+as many columns and rows as the window has room for. Nothing is carried but the TUI (about 44 MB,
+most of it Godot's WebAssembly); `--out` puts it elsewhere. CI runs the parity scripts and the
+Kanban's whole script in it, in Chromium.
+
 
 ## On the Hive's screen
 

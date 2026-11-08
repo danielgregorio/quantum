@@ -1510,6 +1510,14 @@ opens ([UI-4](#UI-4)): the package's Python runs the server and the window in on
 process (`Kanban.exe`, `Kanban.app`); on Linux, whose window would need Qt
 WebEngine, it is an error that says the TUI is Linux's package. A package runs
 the same script as every other version (`tests/package/test_package_kanban.py`).
+`--target web` exports the TUI alone
+for the browser into the application's static folder (`<app>/static/tui/`
+unless `--out` says), so the application's own server serves it at
+`/static/tui/index.html`, on the page `?page=` names: it asks that server for
+the pages through the browser's fetch, so the browser keeps the cookies and
+follows the redirects, a file field opens the browser's own picker, and
+`window.quantumTui.request(json)` answers its play protocol
+(`tests/package/test_tui_in_browser.py`); a package for a system leaves it out.
 
 <p class="spec-cited">Referenced by: <a href="./cli#cli-desktop"><code>quantum desktop</code></a> · <a href="./cli#cli-package"><code>quantum package</code></a></p>
 

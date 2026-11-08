@@ -243,6 +243,34 @@ What changed from the plan: Linux has no desktop package — its window would ne
 about 550 MB installed) — and says that its package is the TUI. The window itself is not driven in CI (a runner
 has no one at it); the check proves the program, its Python, its libraries and its server.
 
+**5c done 2026-11-08: the TUI in the browser.** `quantum package <app> --target web` exports the TUI with Godot's
+templates for the web (threads off, as the games', so the page needs no cross-origin isolation; the canvas the
+window's size) into the application's static folder, `<app>/static/tui/` unless `--out` says: the application's
+own server serves it at `/static/tui/index.html`, on the page `?page=` names, the same origin as the pages, so the
+browser's cookies are the session. Nothing else is made, no Python and no server folder. In a browser
+(`OS.has_feature("web")`) the TUI's requests go through the browser's fetch (`quantum/runtime/tui/web.gd`, a helper
+installed once by `JavaScriptBridge`, its answers back through callbacks matched by an id): `credentials:
+'same-origin'`, the redirects the browser's, the address they end at the page's path; bodies cross as base64 both
+ways, so pictures and multipart forms go unchanged; a stream is read with the response's reader as it is written; a
+file field opens the browser's own file picker, and the form sends the file it read. The cookie jar, the redirects
+followed by hand and the file dialog stay for the window, unchanged. `window.quantumTui.request(json)` is a Promise
+of the play protocol's answer, the same requests and answers as stdin and stdout; `TuiInBrowser`
+(`quantum/runtime/ui_tui.py`) plays it from a Playwright page with a `TuiSession`'s requests, so the parity driver
+`Tui` drives it unchanged. `tests/package/test_tui_in_browser.py` runs in Chromium (WebGL by SwiftShader, as the
+games' check) the parity scripts — SCRIPT, MORE and STATE — on the showcase, a file chosen in the browser's picker and
+sent, a picture, search as you type and an editable cell on the TUI's own application, and the Kanban's whole script
+(signed in and out, its stream, its API, opened on `?page=/login`), each on the application's own server; CI's
+`package` job installs Chromium for them, and without the templates or Chromium they are skipped elsewhere.
+Measured: 44 MB (Godot's WebAssembly, 43.7 MB of it), exported in about 7 s, the first page in about 2 s in
+SwiftShader's Chromium.
+
+What changed from the plan: the TUI in the browser has the window's columns and rows rather than `--cols` and
+`--rows`, and its design tokens are its own defaults (the browser's, the same colours): it has no command line. In
+the browser Ctrl+Q does nothing (the browser closes its tab), and a shot of the play protocol is the page's
+screenshot (`TuiInBrowser.shot`); the observation's `cookies` is empty, as the browser keeps them where the page
+cannot read the session's. A package for a system leaves the TUI made for the browser out of the application it
+carries (44 MB its program does not need).
+
 ## Phase 6 — The phone, and a hosted application
 
 `--server https://...`: the TUI and the desktop as clients of a hosted application, no Python on the

@@ -115,12 +115,15 @@ quantum desktop /reports --width 800 --height 600
 
 One file of the application for someone without Quantum: its TUI and its server, with a Python of
 its own, for Linux, Windows or macOS — any of them made on any system ([the TUI's guide](../guide/ui#a-file-to-hand-someone)).
+`--target web` is the TUI alone, for the browser, in the application's `static/tui/`: its own
+server serves it at `/static/tui/index.html` ([in the browser](../guide/ui#in-the-browser)).
 
 ```bash
 quantum package projects/kanban                    # dist/kanban-linux.tar.gz
 quantum package projects/kanban --target windows   # dist/kanban-windows.zip
 quantum package projects/kanban --target macos --with-data --out /tmp/release
 quantum package projects/kanban --on desktop --target windows   # a window of its own: kanban-windows-desktop.zip
+quantum package projects/kanban --target web       # static/tui/index.html
 ```
 
 ## quantum check

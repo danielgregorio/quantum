@@ -198,6 +198,7 @@ jobs:
     # are made here, each a Python of its own, Quantum, the libraries and the application beside the TUI exported
     # for that system; the Linux one is unpacked and the Kanban's whole script runs in its program, which starts
     # the server beside it (tests/package/). The packages' sizes and the time to the first page go to the summary.
+    # The TUI exported for the browser (--target web) runs the parity scripts and the Kanban's in Chromium.
     runs-on: ubuntu-latest
 
     steps:
@@ -212,6 +213,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+          # the browser the TUI's web export runs in (tests/package/test_tui_in_browser.py)
+          pip install playwright
+          python -m playwright install --with-deps chromium
 
       # Godot and its export templates (1.2 GB), the games' cache; Python's builds land beside them
       - uses: actions/cache@v6
@@ -222,7 +226,7 @@ jobs:
           key: godot-export-${{ hashFiles('quantum/runtime/godot_bin.py') }}
       - run: python scripts/godot.py install
 
-      - name: Package the Kanban, and run its script in the package
+      - name: Package the Kanban, and run its script in the package and in the browser's TUI
         env:
           QUANTUM_PACKAGE_TESTS: '1'
           QUANTUM_PACKAGE_OUT: ${{ runner.temp }}/packages
