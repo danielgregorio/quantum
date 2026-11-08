@@ -179,6 +179,7 @@ def test_the_script_in_the_console(url):
             await page_loaded(app, pilot)
             await run_console_script(app, pilot, SCRIPT)
             await run_console_script(app, pilot, MORE)
+            await run_console_script(app, pilot, STATE)
 
     asyncio.run(main())
 
