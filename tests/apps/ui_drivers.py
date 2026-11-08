@@ -269,7 +269,8 @@ def tui_godot():
 class Tui:
     """The TUI drawn by Godot (UI-20), headless, through its play protocol (quantum/runtime/ui_tui.py):
     a button, a link or a tab is clicked with the mouse on its cell, a field clicked and typed into, a
-    box clicked, a select opened and its option clicked."""
+    box clicked, a select opened and its option clicked; a fold's header, a modal's close, a carousel's
+    arrow, a stepper's Next and a dropdown's button clicked, a tooltip's element hovered (UI-21)."""
     name = "tui"
 
     def __init__(self, session):
@@ -349,6 +350,32 @@ class Tui:
 
     def progress(self, ident, value):
         assert any(p["id"] == ident and p["value"] == value for p in self.s.observe()["progress"])
+
+    # UI-21: what a tag with a state of its own does as the user does it, with the mouse
+
+    def close(self, title):
+        # a modal's or a toast's close control, on its top edge
+        self._click(self.s.item("close", title))
+
+    def fold(self, title):
+        self._click(self.s.item("fold", title))
+
+    def tip(self, label, text):
+        # the mouse over the element; its tip is drawn next to it
+        found = sorted(self.s.items(where=lambda i: i.get("label") == label), key=lambda i: i["kind"] != "tooltip")
+        assert found, f"tui: nothing labelled {label!r}"
+        self.s.hover(found[0]["x"], found[0]["y"])
+        self.s.wait(text, timeout=WAIT)
+
+    def next(self, kind):
+        self._click(self.s.item(kind, "Next slide" if kind == "carousel" else "Next"))
+
+    def gone(self, text):
+        self.s.wait(text, timeout=WAIT, gone=True)
+
+    def pick(self, label, option):
+        self._click(self.s.item("dropdown", label))        # its options open under it
+        self._click(self.s.item("link", option, menu=label))
 
 
 async def run_console_script(app, pilot, script):

@@ -46,6 +46,11 @@ var caret := 0
 var scroll := 0.0                # the first row shown, where it is going
 var scroll_shown := 0.0          # and where it is now: it glides there
 var dropdown := {}               # an open select's options: {item, options, index}
+var held := {}                   # UI-21: what a tag with a state of its own holds now, by key (layout.gd)
+var focus_key := ""              # the key of the item with the focus, and the cell under the mouse: a
+var pointer := Vector2i(-1, -1)  # tooltip's tip shows while either is on its element
+var toast_due := {}              # UI-21: when each toast shown goes, by key
+var play_due := {}               # and when each carousel that plays moves on
 var search_due := -1
 var search := {}
 var textures := {}
@@ -150,6 +155,8 @@ func _theme(tokens: Dictionary) -> void:
 		"badge": Color(t["info"]).darkened(0.35), "tab": Color("#1e293b"), "tab_open": primary,
 		"focus": Color(t["warning"]), "hover": Color("#ffffff", 0.08), "placeholder": Color(t["secondary"]),
 		"unsupported": Color(t["warning"]),
+		# UI-21: what is drawn over the page (a modal, a toast, a dropdown's options), and a tooltip's tip
+		"layer": Color("#1a2540"), "tip": Color("#e2e8f0"), "tip_fg": bg,
 	}
 
 
@@ -339,8 +346,12 @@ func load_page(target: String, method: String = "GET", data: Dictionary = {}, fi
 	tabs = {}
 	tabs_opened = {}
 	dropdown = {}
+	held = {}                    # UI-21: a page shown again opens as it says (a modal closed opens again)
+	toast_due = {}
+	play_due = {}
 	focus = -1
 	focus_id = ""
+	focus_key = ""
 	scroll = 0.0
 	scroll_shown = 0.0
 	motion_on = bool(page.get("motion", true)) and motion_on
@@ -455,6 +466,11 @@ func _read_stream(url: String) -> void:
 func relayout() -> void:
 	lay.state = state
 	lay.tabs = tabs
+	lay.held = held
+	lay.pointer = pointer
+	lay.focus_key = focus_key
+	lay.view_top = int(round(scroll))
+	lay.view_rows = rows
 	lay.motion_on = motion_on
 	lay.streams = streams
 	lay.textures = image_sizes
@@ -472,7 +488,14 @@ func relayout() -> void:
 
 
 static func _id_of(it: Dictionary) -> String:
-	return "%s|%s|%s" % [it.get("key", ""), it.get("kind", ""), str(it.get("value", "")) if it.get("kind", "") == "radio" else ""]
+	# a radio's options share their key, and so do a carousel's or a stepper's controls (UI-21)
+	var kind := str(it.get("kind", ""))
+	var which := ""
+	if kind == "radio":
+		which = str(it.get("value", ""))
+	elif kind in ["carousel", "stepper", "step"]:
+		which = str(it.get("label", ""))
+	return "%s|%s|%s" % [it.get("key", ""), kind, which]
 
 
 func _clamp_scroll() -> void:
@@ -492,6 +515,7 @@ func _reacts(it: Dictionary) -> bool:
 func _set_focus(i: int) -> void:
 	focus = i
 	focus_id = _id_of(lay.items[i]) if i >= 0 else ""
+	focus_key = str(lay.items[i]["key"]) if i >= 0 else ""
 	if i >= 0:
 		var it: Dictionary = lay.items[i]
 		caret = str(it.get("value", "")).length()
@@ -501,7 +525,16 @@ func _set_focus(i: int) -> void:
 		elif it["y"] + it["h"] > scroll + _visible_rows():
 			scroll = float(it["y"] + it["h"] - _visible_rows())
 		_clamp_scroll()
+	_tips_follow()
 	queue_redraw()
+
+
+func _tips_follow() -> void:
+	# UI-21: a tooltip's tip shows while the mouse is over its element or the focus is in it
+	lay.pointer = pointer
+	lay.focus_key = focus_key
+	if lay.tips_changed():
+		relayout()
 
 
 func _move_focus(step: int) -> void:
@@ -517,7 +550,8 @@ func _move_focus(step: int) -> void:
 
 
 func _item_at(cx: int, cy: int) -> int:
-	for i in lay.items.size():
+	# the last laid out first: what is drawn over the page (UI-21) takes the click
+	for i in range(lay.items.size() - 1, -1, -1):
 		var it: Dictionary = lay.items[i]
 		if _reacts(it) and cx >= it["x"] and cx < it["x"] + max(1, it["w"]) and cy >= it["y"] and cy < it["y"] + max(1, it["h"]):
 			return i
@@ -619,7 +653,102 @@ func activate(i: int) -> void:
 			_choose_file(it)
 		"input", "textarea":
 			caret = _value(it).length()
+		"fold", "dropdown", "close", "carousel", "stepper", "step":
+			_change_held(it)
 	queue_redraw()
+
+
+func _change_held(it: Dictionary) -> void:
+	# UI-21: an item of a tag with a state of its own carries what it changes it to (layout.gd)
+	var key := str(it["key"])
+	match str(it["kind"]):
+		"fold":
+			_hold(key, "open", not bool(it.get("open", false)))
+		"dropdown":
+			_close_menus(key)
+			_hold(key, "open", not bool(it.get("open", false)))
+		"close":
+			_hold(key, "closed" if str(it.get("of", "")) == "modal" else "gone", true)
+		"carousel":
+			_hold(key, "at", int(it["goto"]))
+			play_due.erase(key)                 # moved by hand, it waits its interval again
+		"stepper", "step":
+			_hold(key, "at", int(it["goto"]))
+			_hold(key, "done", it.get("done", []))
+	relayout()
+
+
+func _hold(key: String, field: String, value: Variant) -> void:
+	var kept: Dictionary = held.get(key, {})
+	kept[field] = value
+	held[key] = kept
+
+
+func _open_menus() -> Array:
+	var keys: Array = []
+	for layer in lay.layers:
+		if str(layer["kind"]) == "menu":
+			keys.append(str(layer["key"]))
+	return keys
+
+
+func _close_menus(but: String = "") -> void:
+	for key in _open_menus():
+		if key != but:
+			_hold(key, "open", false)
+
+
+func _in_layer(at: Vector2i, kind: String) -> bool:
+	for layer in lay.layers:
+		if str(layer["kind"]) == kind and Rect2i(layer["x"], layer["y"], layer["w"], layer["h"]).has_point(at):
+			return true
+	return false
+
+
+func _top_modal() -> Dictionary:
+	var top := {}
+	for layer in lay.layers:
+		if str(layer["kind"]) == "modal":
+			top = layer
+	return top
+
+
+func _escape() -> bool:
+	# Esc closes an open dropdown's options, else the modal on top when it can be closed (UI-21)
+	if not _open_menus().is_empty():
+		_close_menus()
+		relayout()
+		return true
+	var modal := _top_modal()
+	if not modal.is_empty() and bool(modal.get("closable", false)):
+		_hold(str(modal["key"]), "closed", true)
+		relayout()
+		return true
+	return false
+
+
+func _timers(now: int) -> void:
+	# UI-21: a toast goes after its duration; a carousel that plays moves on after its interval, and waits
+	# while the mouse is over it
+	var changed := false
+	for t in lay.toasts:
+		var key := str(t["key"])
+		if not toast_due.has(key):
+			toast_due[key] = now + int(t["ms"])
+		elif now >= int(toast_due[key]):
+			_hold(key, "gone", true)
+			changed = true
+	for c in lay.autoplay:
+		var key := str(c["key"])
+		var over := Rect2i(c["x"], c["y"], c["w"], c["h"]).has_point(pointer)
+		if over or not play_due.has(key):
+			play_due[key] = now + int(c["ms"])
+		elif now >= int(play_due[key]):
+			play_due[key] = now + int(c["ms"])
+			_hold(key, "at", int(c["next"]))
+			changed = true
+	if changed:
+		relayout()
 
 
 func _changed(it: Dictionary) -> void:
@@ -720,6 +849,8 @@ func _key(event: InputEventKey) -> void:
 			KEY_ESCAPE:
 				dropdown = {}
 		queue_redraw()
+		return
+	if code == KEY_ESCAPE and _escape():
 		return
 	if event.ctrl_pressed and code == KEY_Q:
 		get_tree().quit()
@@ -864,10 +995,14 @@ func _handle(event: InputEvent) -> bool:
 		return true
 	elif event is InputEventMouseMotion:
 		var at := _cell_at(event.position)
+		pointer = at
+		_tips_follow()
 		var over := _item_at(at.x, at.y)
 		if over != hover:
 			hover = over
-			mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if over >= 0 else Control.CURSOR_ARROW
+			# a tooltip's element takes the focus for its tip, but a click does nothing on it
+			var acts := over >= 0 and str(lay.items[over]["kind"]) != "tooltip"
+			mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if acts else Control.CURSOR_ARROW
 			queue_redraw()
 		return true
 	elif event is InputEventMouseButton and event.pressed:
@@ -880,16 +1015,22 @@ func _handle(event: InputEvent) -> bool:
 				_clamp_scroll()
 			MOUSE_BUTTON_LEFT:
 				var at := _cell_at(event.position)
+				var i := _item_at(at.x, at.y)
 				if not dropdown.is_empty():
 					var r := _dropdown_rect()
 					if r.has_point(at):
 						_choose_option(at.y - r.position.y)
 					else:
 						dropdown = {}
-				else:
-					var i := _item_at(at.x, at.y)
-					if i >= 0:
-						activate(i)
+				elif not _open_menus().is_empty() and not _in_layer(at, "menu") \
+						and not (i >= 0 and str(lay.items[i]["kind"]) == "dropdown"):
+					# a click away from an open dropdown's options closes them (UI-21)
+					_close_menus()
+					relayout()
+				elif i >= 0:
+					activate(i)
+				pointer = at              # the mouse is where it clicked: a tooltip's tip follows it
+				_tips_follow()
 		queue_redraw()
 		return true
 	return false
@@ -912,6 +1053,10 @@ func _process(_delta: float) -> void:
 		moving = true
 	if search_due > 0 and now >= search_due:
 		_search_now()
+	if not lay.toasts.is_empty() or not lay.autoplay.is_empty():
+		_timers(now)
+	if lay.follows_view and int(round(scroll)) != lay.view_top:
+		relayout()                 # UI-21: a modal, a toast stay on the screen as the page scrolls
 	if spinning and not play:
 		moving = true
 	if moving:
@@ -996,6 +1141,8 @@ func _style_colors(style: String) -> Array:
 			return [colors["fg"], colors["field"]]
 		"spinner":
 			return [colors["accent"], null]
+		"tip":
+			return [colors["tip_fg"], colors["tip"]]
 	if style.begins_with("fill:"):
 		# UI-21: a chart's bar, an avatar's status: a design token's colour, or the page's own
 		var name := style.substr(5)
@@ -1017,6 +1164,28 @@ func _draw() -> void:
 	var where := path if busy == 0 else path + "  …"
 	draw_string(font, Vector2(size.x - cell.x * (Layout.text_width(where) + 2), ascent), where,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, colors["muted"])
+	# UI-21: the boxes drawn over the page on a ground of their own; under an open modal, the page dimmed
+	var content := Rect2(0, cell.y, size.x, cell.y * rows)
+	var modal_at := -1
+	for k in lay.layers.size():
+		if str(lay.layers[k]["kind"]) == "modal":
+			modal_at = k
+	var lit: Array = []                           # the modal and what is drawn over it: not dimmed
+	for k in range(max(0, modal_at), lay.layers.size() if modal_at >= 0 else 0):
+		var m: Dictionary = lay.layers[k]
+		lit.append(Rect2i(m["x"], m["y"], m["w"], m["h"]))
+	for k in lay.layers.size():
+		var layer: Dictionary = lay.layers[k]
+		if str(layer["kind"]) == "tip":
+			continue                              # its cells have a ground of their own
+		var ground: Color = colors["layer"]
+		if k < modal_at:
+			ground = ground.lerp(colors["bg"], 0.6)
+		# inside its frame, whose lines run through the middle of the border's cells
+		var box := Rect2(cell.x * (layer["x"] + 0.5), cell.y * (1.5 + layer["y"]) - scroll_shown * cell.y,
+						 cell.x * (layer["w"] - 1), cell.y * (layer["h"] - 1)).intersection(content)
+		if box.has_area():
+			draw_rect(box, ground)
 	# the content, glided to where it scrolls
 	var first := int(floor(scroll_shown))
 	var shift := (scroll_shown - first) * cell.y
@@ -1030,15 +1199,18 @@ func _draw() -> void:
 			var m := _motion_at(x, r, now) if not running.is_empty() else [1.0, 0.0, true]
 			if not m[2]:
 				continue
+			var alpha := float(m[0])
+			if modal_at >= 0 and not _lit(lit, Vector2i(x, r)):
+				alpha *= 0.4
 			var styled := _style_colors(str(c[1]))
 			var left: float = cell.x * (x + float(m[1]))
 			if styled[1] != null:
 				var bg: Color = styled[1]
-				bg.a *= float(m[0])
+				bg.a *= alpha
 				draw_rect(Rect2(left, top, cell.x + 0.5, cell.y), bg)
 			if str(c[0]) != " " and str(c[0]) != "":
 				var fg: Color = styled[0]
-				fg.a *= float(m[0])
+				fg.a *= alpha
 				var ch := str(c[0])
 				if str(c[1]) == "spinner":            # UI-21: a loading mark turns
 					ch = SPINNER[int(now / 100) % SPINNER.length()]
@@ -1047,10 +1219,11 @@ func _draw() -> void:
 						  font_size, fg)
 	# the page's images, over their cells
 	for image in lay.images:
-		if textures.has(image["src"]):
+		if textures.has(image["src"]) and not image.get("covered", false):    # UI-21: not under a layer
 			var rect := Rect2(cell.x * image["x"], cell.y * (1 + image["y"]) - scroll_shown * cell.y,
 							  cell.x * image["w"], cell.y * image["h"])
-			draw_texture_rect(textures[image["src"]], rect, false)
+			var under := modal_at >= 0 and not _lit(lit, Vector2i(image["x"], image["y"]))
+			draw_texture_rect(textures[image["src"]], rect, false, Color(1, 1, 1, 0.4 if under else 1.0))
 	# hover and focus
 	if hover >= 0 and hover < lay.items.size():
 		draw_rect(_rect_of(lay.items[hover]), colors["hover"])
@@ -1088,6 +1261,13 @@ func _draw() -> void:
 				colors["muted"])
 
 
+static func _lit(rects: Array, at: Vector2i) -> bool:
+	for rect in rects:
+		if (rect as Rect2i).has_point(at):
+			return true
+	return false
+
+
 func _rect_of(it: Dictionary) -> Rect2:
 	return Rect2(cell.x * it["x"], cell.y * (1 + it["y"]) - scroll_shown * cell.y, cell.x * max(1, it["w"]),
 				 cell.y * max(1, it["h"]))
@@ -1116,6 +1296,16 @@ func status_line() -> String:
 			return "Enter opens the tab · Tab moves"
 		"file":
 			return "Enter chooses a file · Tab moves"
+		"fold":
+			return "Enter opens or closes · Tab moves"
+		"dropdown":
+			return "Enter opens its options · Esc closes them · Tab moves"
+		"close":
+			return "Enter closes · Tab moves"
+		"carousel", "stepper", "step":
+			return "Enter moves to it · Tab moves"
+	if not _top_modal().is_empty() and bool(_top_modal().get("closable", false)):
+		return "Esc closes · Tab moves · click acts"
 	return "Tab moves · click acts · wheel scrolls · F5 reloads · Ctrl+Q quits"
 
 
@@ -1149,14 +1339,18 @@ func _serve_play() -> void:
 			settle_frames = 0
 		var op := str(pending.get("op", ""))
 		if op == "wait":
+			# a text to appear, or with `gone` to go (a toast after its duration, UI-21)
 			var text := "\n".join(lay.text_rows())
 			var wanted := str(pending.get("text", ""))
-			if (wanted == "" or wanted in text) and _settled():
+			var gone := bool(pending.get("gone", false))
+			var there := wanted in text
+			if ((not there) if gone else (wanted == "" or there)) and _settled():
 				pending = {}
 				_answer(observation())
 			elif Time.get_ticks_msec() > int(pending["deadline"]):
+				var said := "%s did not %s in %ss" % [wanted, "go" if gone else "appear", str(pending.get("timeout", 15))]
 				pending = {}
-				_answer({"error": "%s did not appear in %ss" % [str(pending.get("text", "")), str(pending.get("timeout", 15))]})
+				_answer({"error": said})
 			return
 		if op == "shot":
 			# the window's picture once the page has settled and nothing moves (not headless: it draws nothing)
@@ -1300,12 +1494,17 @@ func observation() -> Dictionary:
 			for o in it.get("options", []):
 				labels.append(str(o[0]))
 			entry["options"] = labels
-		if it["kind"] == "tab":
+		if it["kind"] in ["tab", "fold", "dropdown"]:
 			entry["open"] = bool(it.get("open", false))
 		if it["kind"] == "file":
 			entry["file"] = str(state.get(it["key"], {}).get("file", ""))
 		if it.has("event"):
 			entry["action"] = str(it["event"].get("action", ""))
+		for k in ["menu", "of"]:               # UI-21: an open dropdown's option, what a close control closes
+			if it.has(k):
+				entry[k] = str(it[k])
+		if it.get("covered", false):           # under what is drawn over the page: it cannot be reached
+			entry["covered"] = true
 		shown.append(entry)
 	var images: Array = []
 	for image in lay.images:
@@ -1316,7 +1515,7 @@ func observation() -> Dictionary:
 		"hover": hover, "cursor": "pointing" if mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND else "arrow",
 		"height": lay.height, "scroll": scroll, "screen": lay.text_rows(), "items": shown, "motions": motions,
 		"moving": not running.is_empty(), "progress": lay.progress, "images": images,
-		"unsupported": lay.unsupported, "status": status_line(),
+		"unsupported": lay.unsupported, "status": status_line(), "layers": lay.layers,
 		"dropdown": [] if dropdown.is_empty() else dropdown["options"].map(func(o): return str(o[0])),
 		"flash": str(page.get("flash", "")) if not bool(page.get("flashShown", false)) else "",
 		"cookies": cookies.keys(),
