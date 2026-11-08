@@ -25,7 +25,6 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, List
 
-import yaml
 
 READY = 'QUANTUM-SERVER '
 ERROR = 'QUANTUM-ERROR '
@@ -63,6 +62,7 @@ def sqlite_files(config: Dict[str, Any]) -> List[str]:
 def prepare(app: Path, data: Path) -> Dict[str, Any]:
     """The user's folder made ready: its quantum.config.yaml (the package's, with the application's paths into the
     package) and the databases the package carries, copied the first time. Returns the configuration."""
+    import yaml                          # here: a hosted application's window (packaged_desktop) has no PyYAML
     raw = yaml.safe_load((app / 'quantum.config.yaml').read_text(encoding='utf-8')) or {}
     paths = dict(raw.get('paths') or {})
     for key in PACKAGE_PATHS:

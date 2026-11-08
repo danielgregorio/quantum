@@ -60,7 +60,16 @@ def check(result: Path, url: str, page: str, started: float) -> int:
 
 
 def main(argv: Optional[list] = None) -> int:
-    started = time.monotonic()
+    wanted = os.environ.get('QUANTUM_PACKAGE_CHECK')
+    try:
+        return run(time.monotonic())
+    except Exception as exc:              # a check says what went wrong rather than leave nothing behind
+        if wanted:
+            Path(wanted).write_text(json.dumps({'error': f'{type(exc).__name__}: {exc}'}), encoding='utf-8')
+        raise
+
+
+def run(started: float) -> int:
     from quantum.runtime.packaged_server import data_dir, log_to, start
     server = server_folder()
     conf = json.loads((server / 'package.json').read_text(encoding='utf-8'))
