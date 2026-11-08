@@ -633,12 +633,12 @@ There is no mouse, and no key to learn beyond the console's own:
 | Key | Does |
 |---|---|
 | Tab, Shift+Tab | the next, the previous element that reacts, in the page's order; the one with the focus shows in honey |
-| arrows | inside the element: the cursor in a field, the option of a `radio` or `select`, the row and the button of a `table`, the tab of a `tabpanel`; Up and Down go to the element before and after when what has the focus does not use them (a one-line field, a button, a box) |
-| Enter | acts: a button, a link, a row's button; in a field, sends its form |
+| arrows | inside the element: the cursor in a field, the option of a `radio` or `select`, the row and the button of a `table`, the tab of a `tabpanel`, the day of a `calendar` (a week with Up and Down); Up and Down go to the element before and after when what has the focus does not use them (a one-line field, a button, a box) |
+| Enter | acts: a button, a link, a row's button; in a field, sends its form; in a `calendar`, picks the day, which its form sends |
 | Space | marks: a `checkbox`, a `switch` |
 | Esc | closes the page |
 | Home, End | the first and the last element (in a field, the ends of its text) |
-| Page Up, Page Down | scroll; a bar at the right edge says where in a long page the screen is |
+| Page Up, Page Down | scroll; a bar at the right edge says where in a long page the screen is; in a `calendar`, the month before and after |
 | F5 | asks the page again |
 | F1 | the Hive's offers in a menu over the page (Enter approves, Del dismisses, Esc shuts it); the status bar says how many wait |
 
