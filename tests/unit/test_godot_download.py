@@ -25,16 +25,16 @@ def test_a_server_failure_is_tried_again(monkeypatch):
     monkeypatch.setattr(godot_bin.urllib.request, 'urlopen', urlopen)
     said, waited = [], []
     assert godot_bin._fetch('https://example.test/godot.zip', said.append, waited.append) == b'zip'
-    assert len(calls) == 3 and waited == [5, 15]
-    assert said == ['HTTP 504; trying again in 5s', 'HTTP 502; trying again in 15s']
+    assert len(calls) == 3 and waited == [5, 10]
+    assert said == ['HTTP 504; trying again in 5s', 'HTTP 502; trying again in 10s']
 
 
 def test_it_gives_up_after_the_last_wait_and_a_404_at_once(monkeypatch):
-    urlopen, calls = failing(504, 504, 504, 504)
+    urlopen, calls = failing(*[504] * (len(godot_bin.RETRY_WAITS) + 1))
     monkeypatch.setattr(godot_bin.urllib.request, 'urlopen', urlopen)
     with pytest.raises(urllib.error.HTTPError):
         godot_bin._fetch('https://example.test/godot.zip', sleep=lambda s: None)
-    assert len(calls) == 4
+    assert len(calls) == len(godot_bin.RETRY_WAITS) + 1
     urlopen, calls = failing(404)
     monkeypatch.setattr(godot_bin.urllib.request, 'urlopen', urlopen)
     with pytest.raises(urllib.error.HTTPError):

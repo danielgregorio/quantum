@@ -99,9 +99,10 @@ def find_godot() -> Optional[Path]:
     return _cached_binary()
 
 
-# A release asset is served through GitHub's CDN, which now and then answers 502/503/504 for a while:
-# the download is tried again after these many seconds before it gives up.
-RETRY_WAITS = (5, 15, 45)
+# A release asset is served through GitHub's CDN, which now and then answers 502/503/504, for a moment or
+# for a while (on 2026-11-08 four in ten tries for an hour): the download is tried again after these many
+# seconds, some six minutes in all, before it gives up.
+RETRY_WAITS = (5, 10, 20, 30, 45, 60, 90, 120)
 
 
 def _fetch(url: str, progress=None, sleep=time.sleep) -> bytes:
