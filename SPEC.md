@@ -1146,7 +1146,7 @@ an editable cell (UI-13) is sent with Enter, or when a box or an option in it
 changes. With `--play`, headless, it is driven by JSON requests on its stdin,
 each answered with what the screen shows (`quantum.runtime.ui_tui.TuiSession`:
 `observe`, `click` at a cell, `hover`, `wheel`, `key`, `type`, `attach` a file,
-`visit`, `resize`, `wait` for a text); its layout is checked against reference
+`visit`, `resize`, `wait` for a text, or for it to go); its layout is checked against reference
 frames of cells and no element over another.
 
 **UI-21** — The tags beyond the layout set mean the same in every renderer,
