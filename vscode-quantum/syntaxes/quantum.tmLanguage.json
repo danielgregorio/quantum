@@ -48,7 +48,7 @@
     },
     "quantum-tag-self-closing": {
       "name": "meta.tag.quantum.self-closing",
-      "begin": "(<)(q:)(action|agent|application|attachment|body|column|component|compute|data|dispatchEvent|dump|else|elseif|execute|field|file|filter|flash|function|header|if|import|instruction|invoke|job|knowledge|limit|llm|log|loop|mail|message|onEvent|param|prompt|query|redirect|return|script|set|slot|sort|source|system|tool|transaction|transform)(?=\\s|/>)",
+      "begin": "(<)(q:)(action|agent|application|attachment|body|column|component|compute|data|dispatchEvent|dump|else|elseif|endpoint|execute|field|file|filter|flash|function|header|if|import|instruction|invoke|job|knowledge|limit|llm|log|loop|mail|message|onEvent|param|prompt|query|redirect|respond|return|script|set|slot|sort|source|system|tool|transaction|transform)(?=\\s|/>)",
       "end": "/>",
       "beginCaptures": {
         "1": { "name": "punctuation.definition.tag.begin.quantum" },
@@ -64,7 +64,7 @@
     },
     "quantum-tag-open": {
       "name": "meta.tag.quantum.open",
-      "begin": "(<)(q:)(action|agent|application|attachment|body|column|component|compute|data|dispatchEvent|dump|else|elseif|execute|field|file|filter|flash|function|header|if|import|instruction|invoke|job|knowledge|limit|llm|log|loop|mail|message|onEvent|param|prompt|query|redirect|return|script|set|slot|sort|source|system|tool|transaction|transform)(?=\\s|>)",
+      "begin": "(<)(q:)(action|agent|application|attachment|body|column|component|compute|data|dispatchEvent|dump|else|elseif|endpoint|execute|field|file|filter|flash|function|header|if|import|instruction|invoke|job|knowledge|limit|llm|log|loop|mail|message|onEvent|param|prompt|query|redirect|respond|return|script|set|slot|sort|source|system|tool|transaction|transform)(?=\\s|>)",
       "end": ">",
       "beginCaptures": {
         "1": { "name": "punctuation.definition.tag.begin.quantum" },
@@ -80,7 +80,7 @@
     },
     "quantum-tag-close": {
       "name": "meta.tag.quantum.close",
-      "match": "(</)(q:)(action|agent|application|attachment|body|column|component|compute|data|dispatchEvent|dump|else|elseif|execute|field|file|filter|flash|function|header|if|import|instruction|invoke|job|knowledge|limit|llm|log|loop|mail|message|onEvent|param|prompt|query|redirect|return|script|set|slot|sort|source|system|tool|transaction|transform)(>)",
+      "match": "(</)(q:)(action|agent|application|attachment|body|column|component|compute|data|dispatchEvent|dump|else|elseif|endpoint|execute|field|file|filter|flash|function|header|if|import|instruction|invoke|job|knowledge|limit|llm|log|loop|mail|message|onEvent|param|prompt|query|redirect|respond|return|script|set|slot|sort|source|system|tool|transaction|transform)(>)",
       "captures": {
         "1": { "name": "punctuation.definition.tag.begin.quantum" },
         "2": { "name": "entity.name.tag.namespace.quantum" },

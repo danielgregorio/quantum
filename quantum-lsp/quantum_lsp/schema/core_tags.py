@@ -200,6 +200,21 @@ CORE_AI_TAGS: Dict[str, TagInfo] = {t.full_name: t for t in [
         a("columns", "Only these columns, in this order (UI-10)"),
         a("require_role", "Only these roles (comma-separated) may run it; others get 403 (AUTH-8)"),
     ], children=["q:param", "q:set", "q:query", "q:if", "q:loop", "q:file", "q:mail", "q:flash", "q:redirect"]),
+    tag("endpoint", "A component's REST API: what one HTTP method answers, in JSON (API-1..API-7)", [
+        a("method", "HTTP method", E, required=True, values=["GET", "POST", "PUT", "PATCH", "DELETE"]),
+        a("require_role", "Only these roles (comma-separated) may call it; others get 403 (API-3)"),
+        a("origins", "Sites whose pages may call it from a browser, comma-separated, or * (API-4)"),
+        a("limit", "Calls from one address: `10/minute` (second, minute, hour, day); one more is 429 (API-5)"),
+        a("maxsize", "Largest body: `64kb`, `2mb`; a larger one is 413 (API-5)"),
+        a("description", "What it does: the operation's summary in /api/openapi.json (API-7)"),
+    ], children=["q:param", "q:set", "q:query", "q:if", "q:loop", "q:invoke", "q:file", "q:mail", "q:respond"],
+        examples=['<q:endpoint method="POST" require_role="member" limit="10/minute">\n'
+                  '  <q:param name="title" required="true" maxlength="120" />\n'
+                  '  <q:respond status="201" json="{ {\'title\': title} }" />\n</q:endpoint>']),
+    tag("respond", "What a q:endpoint answers; it ends the endpoint (API-2)", [
+        a("json", "The answer, as JSON: one expression (a dictionary may be written in place, EXPR-17)", X),
+        a("status", "HTTP status", I, default="200"),
+    ], self_closing=True),
     tag("redirect", "Ends the action or page with a redirect (ACT-3, ACT-7)", [
         a("url", "Where to", X), a("to", "Where to (same as url)", X),
         a("flash", "Message for the next page", X),

@@ -393,7 +393,7 @@ method without an endpoint is `405` with `Allow`; `HEAD` answers as `GET`. Two
 endpoints of one method, an endpoint inside another tag, and a component with
 both `q:endpoint` and `q:action` are parse errors.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./tags#q-endpoint"><code>&lt;q:endpoint&gt;</code></a></p>
 
 <a id="API-2"></a>**[API-2](#API-2)** — `q:respond json="{…}" status="201"` is what the endpoint answers:
 the value of `json=` as JSON (an attribute that is one expression may be a
@@ -403,13 +403,15 @@ or in a `q:if` in it, and anywhere else it is a parse error. An endpoint that
 ends without one answers `204`. `q:redirect` and `q:flash` in an endpoint are
 parse errors: it answers JSON.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-redirect"><code>&lt;q:redirect&gt;</code></a> · <a href="./tags#q-flash"><code>&lt;q:flash&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-respond"><code>&lt;q:respond&gt;</code></a> · <a href="./tags#q-redirect"><code>&lt;q:redirect&gt;</code></a> · <a href="./tags#q-flash"><code>&lt;q:flash&gt;</code></a></p>
 
 <a id="API-3"></a>**[API-3](#API-3)** — An endpoint is protected as a page is: the component's
 `require_auth`, `require_role` and `require_permission`, the endpoint's own
 `require_role=`, and the component's guards ([AUTH-6](#AUTH-6)), which run before it. The
 refusals are JSON: `401` when no one is signed in, `403` when the one signed in
 may not, or a guard redirects.
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-endpoint"><code>&lt;q:endpoint&gt;</code></a></p>
 
 <a id="API-4"></a>**[API-4](#API-4)** — A browser's page on another site may call an endpoint only when its
 `origins=` names that site (`origins="https://example.com, https://b.example"`,
@@ -420,6 +422,8 @@ before anything runs. To an allowed site the answer carries
 request without an `Origin` (a game on the desktop, a script) and one from this
 server's own pages go on. Credentials are never allowed across sites.
 
+<p class="spec-cited">Referenced by: <a href="./tags#q-endpoint"><code>&lt;q:endpoint&gt;</code></a></p>
+
 <a id="API-5"></a>**[API-5](#API-5)** — `limit="10/minute"` (per `second`, `minute`, `hour` or `day`) lets
 one address call the endpoint so many times in that time: one more is `429`
 with `Retry-After`, before anything runs. The count is kept by the server's
@@ -427,7 +431,7 @@ process. `maxsize="64kb"` refuses a larger body with `413` before reading it;
 without it, `security.max_content_length` applies ([CFG-2](#CFG-2)). Behind a reverse
 proxy, `server.proxies` makes the address the caller's ([CFG-4](#CFG-4)).
 
-<p class="spec-cited">Referenced by: <a href="./config#cfg-security"><code>security:</code></a> · <a href="./config#cfg-security"><code>security.max_content_length</code></a> · <a href="./config#cfg-server"><code>server:</code></a> · <a href="./config#cfg-server"><code>server.proxies</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-endpoint"><code>&lt;q:endpoint&gt;</code></a> · <a href="./config#cfg-security"><code>security:</code></a> · <a href="./config#cfg-security"><code>security.max_content_length</code></a> · <a href="./config#cfg-server"><code>server:</code></a> · <a href="./config#cfg-server"><code>server.proxies</code></a></p>
 
 <a id="API-6"></a>**[API-6](#API-6)** — A failure in an endpoint's statements is `500` with
 `{"error": "server"}`, never a page; the message is in the answer only with
@@ -453,7 +457,7 @@ session's cookie, with the roles of `require_role`; `origins=`, `limit=` and
 default). Any site may read it. With no endpoint, or with `api.openapi: false`,
 it is `404`. `quantum check --openapi FILE` writes the same document ([DEV-3](#DEV-3)).
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-api"><code>api:</code></a> · <a href="./config#cfg-api"><code>api.title</code></a> · <a href="./config#cfg-api"><code>api.version</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-endpoint"><code>&lt;q:endpoint&gt;</code></a> · <a href="./tags#q-respond"><code>&lt;q:respond&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-api"><code>api:</code></a> · <a href="./config#cfg-api"><code>api.title</code></a> · <a href="./config#cfg-api"><code>api.version</code></a></p>
 
 ## 4. Authentication
 
@@ -761,6 +765,8 @@ also takes a list and an index, or tested with `'k' in d`.
 in place: `{ {'id': 1, 'tags': ['a']} }` is the dictionary, not the text,
 quotes and nesting respected. A JSON object written as text
 (`{"board": "{name}"}`) is not one: its expressions are found inside it ([EXPR-4](#EXPR-4)).
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-respond"><code>&lt;q:respond&gt;</code></a></p>
 
 <a id="EXPR-18"></a>**[EXPR-18](#EXPR-18)** — `base64(v)` is the text in base64, of its UTF-8: what an API asks
 for a file's content (a forge's `contents`).
@@ -1431,7 +1437,7 @@ which only one ever answers ([ROUTE-1](#ROUTE-1)). Its summary lists the endpoin
 found, and `--openapi FILE` writes their OpenAPI document there ([API-7](#API-7)). The
 command exits with 1 if there is a problem.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-agent"><code>&lt;q:agent&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-endpoint"><code>&lt;q:endpoint&gt;</code></a> · <a href="./tags#q-respond"><code>&lt;q:respond&gt;</code></a> · <a href="./tags#q-agent"><code>&lt;q:agent&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a></p>
 
 <a id="DEV-4"></a>**[DEV-4](#DEV-4)** — `quantum start --hot-reload` watches the `paths.components` and
 `paths.static` folders, and every page it serves opens a WebSocket to it
