@@ -40,6 +40,19 @@ texture_format/etc2_astc=true
 '''),
 }
 
+# The browser's preset (the games' and the TUI's): threads off, so any host serves it as plain files (no
+# cross-origin isolation), the canvas as large as the window, and the keyboard in it from the start.
+WEB_PRESET = ('Web', '''variant/extensions_support=false
+variant/thread_support=false
+vram_texture_compression/for_desktop=true
+html/export_icon=true
+html/canvas_resize_policy=2
+html/focus_canvas_on_start=true
+progressive_web_app/enabled=false
+''')
+
+PRESETS = {**DESKTOP_PRESETS, 'Web': WEB_PRESET}
+
 
 def templates_dir() -> Path:
     """Where Godot looks for its export templates, on this system."""
@@ -52,12 +65,13 @@ def templates_dir() -> Path:
     return base / 'export_templates' / f'{GODOT_VERSION}.stable'
 
 
-# The templates each desktop preset is exported with (Godot checks for the debug one too).
+# The templates each preset is exported with (for a desktop, Godot checks for the debug one too).
 TEMPLATE_FILES = {
     'Linux': ['linux_release.x86_64', 'linux_debug.x86_64'],
     'Windows': ['windows_release_x86_64.exe', 'windows_debug_x86_64.exe',
                 'windows_release_x86_64_console.exe', 'windows_debug_x86_64_console.exe'],
     'macOS': ['macos.zip'],
+    'Web': ['web_nothreads_release.zip'],
 }
 
 
@@ -113,9 +127,10 @@ def preset_text(preset: str, platform: str, options: str, target: Path, include:
 
 def export_project(project: Path, preset: str, target: Path, godot: Path, options: Optional[str] = None,
                    include: str = '', timeout: float = 900) -> Path:
-    """`project` exported with `preset` (one of DESKTOP_PRESETS, its options formatted by the caller when they
-    name an id) to `target`; raises with Godot's errors when nothing was made."""
-    platform, default = DESKTOP_PRESETS[preset]
+    """`project` exported with `preset` (one of PRESETS, its options formatted by the caller when they name an
+    id) to `target` (for the browser, its index.html, the files beside it); raises with Godot's errors when
+    nothing was made."""
+    platform, default = PRESETS[preset]
     target.parent.mkdir(parents=True, exist_ok=True)
     (project / 'export_presets.cfg').write_text(preset_text(preset, platform, options or default, target, include),
                                                 encoding='utf-8')

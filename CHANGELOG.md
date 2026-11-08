@@ -21,6 +21,16 @@ alter the behaviour of an existing app is listed under **Breaking**.
   migrations run when it starts. The Kanban's package is about 60 MB and shows
   its first page in under two seconds; CI makes it for the three systems and
   runs the Kanban's whole script in the Linux one.
+- `quantum package <app> --target web`: the TUI in a browser tab (SPEC.md
+  UI-22, `PLAN_PLATFORMS.md` Phase 5c). It is exported into the application's
+  `static/tui/`, so the application's own server serves it at
+  `/static/tui/index.html` (`?page=` names the first page), and it asks that
+  server for the pages through the browser's fetch: the browser keeps the
+  session's cookies and follows the redirects, and a file field opens the
+  browser's file picker. `window.quantumTui.request()` answers its play
+  protocol, and `TuiInBrowser` (`quantum/runtime/ui_tui.py`) drives it from
+  Playwright: CI runs the parity scripts and the Kanban's whole script in it,
+  in Chromium.
 - Thirteen more `ui:*` tags in the Core set, drawn by every renderer — the
   browser, the console, the Hive's screen and the TUI (SPEC.md UI-21,
   `PLAN_PLATFORMS.md` Phase 4): `breadcrumb`, `menu` (its options post their

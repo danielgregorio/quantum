@@ -1505,7 +1505,14 @@ written to; its pages, static files and migrations stay in it. Its SQLite
 databases are left out unless `--with-data` carries them (copied to the user's
 folder once, never over theirs), and its pending migrations run at each start.
 A package runs the same script as every other version
-(`tests/package/test_package_kanban.py`).
+(`tests/package/test_package_kanban.py`). `--target web` exports the TUI alone
+for the browser into the application's static folder (`<app>/static/tui/`
+unless `--out` says), so the application's own server serves it at
+`/static/tui/index.html`, on the page `?page=` names: it asks that server for
+the pages through the browser's fetch, so the browser keeps the cookies and
+follows the redirects, a file field opens the browser's own picker, and
+`window.quantumTui.request(json)` answers its play protocol
+(`tests/package/test_tui_in_browser.py`); a package for a system leaves it out.
 
 <p class="spec-cited">Referenced by: <a href="./cli#cli-package"><code>quantum package</code></a></p>
 
