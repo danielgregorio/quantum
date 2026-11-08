@@ -50,14 +50,14 @@ def project_copy() -> Path:
     installed package's folder may not be writable."""
     target = Path(tempfile.mkdtemp(prefix='quantum-tui-'))
     for item in TUI_DIR.iterdir():
-        if item.is_file() and item.suffix in ('.gd', '.tscn', '.godot', '.ttf', '.txt'):
+        if item.is_file() and item.suffix in ('.gd', '.tscn', '.godot', '.ttf', '.txt', '.png'):
             shutil.copy2(item, target / item.name)
     return target
 
 
 def godot_command(url: str, page: str = '/', cols: int = 120, rows: int = 40, play: bool = False,
                   binary: Optional[Path] = None, project: Optional[Path] = None, motion: bool = True,
-                  window: bool = False) -> List[str]:
+                  window: bool = False, touch: bool = False) -> List[str]:
     from quantum.runtime.godot_bin import ensure_godot
     godot = [str(binary or ensure_godot())]
     if play and not window:
@@ -65,7 +65,7 @@ def godot_command(url: str, page: str = '/', cols: int = 120, rows: int = 40, pl
     return [*godot, '--path', str(project or TUI_DIR), '--',
             f'--url={url.rstrip("/")}', f'--page={page}', f'--cols={cols}', f'--rows={rows}',
             f'--tokens={json.dumps(design_tokens())}', *(['--play'] if play else []),
-            *([] if motion else ['--motion=off'])]
+            *([] if motion else ['--motion=off']), *(['--touch'] if touch else [])]
 
 
 class TuiSession:
@@ -73,21 +73,22 @@ class TuiSession:
 
     def __init__(self, url: str = '', page: str = '/', cols: int = 120, rows: int = 40,
                  binary: Optional[Path] = None, timeout: float = 60, window: bool = False,
-                 program: Optional[Path] = None, env: Optional[dict] = None):
+                 program: Optional[Path] = None, env: Optional[dict] = None, touch: bool = False):
         """`window`: drawn in a real window (a display is needed: xvfb-run), so `shot` can save its picture.
         `program`: a package's program (`quantum package`, UI-22) instead, which starts its own server; `url` is
-        then where that server is, once the first page is shown."""
+        then where that server is, once the first page is shown. `touch`: a phone's TUI (a tap clicks, a drag
+        scrolls, a field asks for the system's keyboard; Phase 6), driven with `tap` and `drag`."""
         self.url = url.rstrip('/')
         self.timeout = timeout
         self.log: List[str] = []
         if program is not None:
             self._project = None
             command = [str(program), '--headless', '--', '--play', f'--cols={cols}', f'--rows={rows}',
-                       *([f'--page={page}'] if page != '/' else [])]
+                       *([f'--page={page}'] if page != '/' else []), *(['--touch'] if touch else [])]
         else:
             self._project = project_copy()
             command = godot_command(self.url, page, cols, rows, play=True, binary=binary, project=self._project,
-                                    window=window)
+                                    window=window, touch=touch)
         self.started = time.monotonic()
         # Godot writes UTF-8 (the screen's box characters), whatever the system's own encoding is (Windows's)
         self._proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -140,6 +141,14 @@ class TuiSession:
 
     def wheel(self, by: int) -> dict:
         return self.request({'op': 'wheel', 'by': int(by)})
+
+    def tap(self, x: int, y: int) -> dict:
+        """A finger on the content's cell (x, y), lifted where it was: a click (Phase 6, `touch`)."""
+        return self.request({'op': 'tap', 'x': int(x), 'y': int(y)})
+
+    def drag(self, x: int, y: int, by: int) -> dict:
+        """A finger put on (x, y) and moved `by` rows up (the page scrolls down), then lifted."""
+        return self.request({'op': 'drag', 'x': int(x), 'y': int(y), 'by': int(by)})
 
     def key(self, *keys: str) -> dict:
         return self.request({'op': 'key', 'keys': list(keys)})

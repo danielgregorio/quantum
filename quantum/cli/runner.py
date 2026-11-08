@@ -434,9 +434,10 @@ Examples:
     package_parser.add_argument('app', help="the application's folder (its quantum.config.yaml)")
     package_parser.add_argument('--on', default='tui', choices=['tui', 'desktop'],
                                 help='its program: the TUI (default), or a window of its own (Windows, macOS)')
-    package_parser.add_argument('--target', default='linux', choices=['linux', 'windows', 'macos', 'web'],
+    package_parser.add_argument('--target', default='linux', choices=['linux', 'windows', 'macos', 'web', 'android', 'ios'],
                                 help='the system it runs on (default: linux); any can be made on any; web: the '
-                                     "TUI in the browser, in the application's static/tui/, which its server serves")
+                                     "TUI in the browser, in the application's static/tui/, which its server serves; "
+                                     'android, ios: a phone, with --server')
     package_parser.add_argument('--out', help="where the file goes (default: the application's dist/; for web, "
                                               "its static/tui/)")
     package_parser.add_argument('--server', metavar='URL',

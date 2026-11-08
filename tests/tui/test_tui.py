@@ -225,3 +225,38 @@ class TestTheLayout:
         seen = tui.observe()
         no_overlaps(seen)
         frame_matches('fruits-100x30', seen['screen'])
+
+
+class TestTouch:
+    """Phase 6: the phone's TUI (--touch here; a phone's export turns it on): a tap clicks where the finger was, a
+    drag scrolls and clicks nothing, a field with the focus asks for the system's keyboard."""
+
+    @pytest.fixture
+    def finger(self, godot, app_url):
+        from quantum.runtime.ui_tui import TuiSession
+        url, _project = app_url
+        with TuiSession(url, cols=60, rows=20, binary=godot, touch=True) as session:
+            yield session
+
+    def test_a_tap_on_a_field_asks_for_the_keyboard_and_types_into_it(self, finger):
+        seen = finger.observe()
+        assert seen['touch'] and not seen['keyboard'] and seen['status'] == 'tap to act · drag to scroll'
+        field = finger.item('input', bind='q')
+        seen = finger.tap(field['x'], field['y'])
+        assert seen['keyboard'] and finger.item('input', bind='q')['focus']
+        seen = finger.type('an')
+        assert finger.item('input', bind='q')['value'] == 'an'
+
+    def test_a_drag_scrolls_and_clicks_nothing(self, finger):
+        seen = finger.visit('/long')
+        assert seen['scroll'] == 0
+        seen = finger.drag(2, 5, 10)
+        assert seen['scroll'] == 10 and seen['path'] == '/long'
+        seen = finger.drag(2, 15, -4)                                  # back up
+        assert seen['scroll'] == 6
+
+    def test_a_tap_on_a_field_out_of_view_scrolls_to_it(self, finger):
+        finger.visit('/long')
+        field = finger.item('input', bind='last')
+        seen = finger.tap(field['x'], field['y'])                      # scrolled into view, then tapped
+        assert finger.item('input', bind='last')['focus'] and seen['keyboard']

@@ -58,6 +58,8 @@ TARGETS = {
 
 # The browser: the TUI alone, exported into the application's static folder; its server is the application's own.
 WEB = 'web'
+# The phones (Phase 6): the TUI alone, a hosted application's client (a phone runs no server of its own)
+PHONES = {'android': 'Android', 'ios': 'iOS'}
 
 # The libraries the server needs (Quantum's dependencies but the terminal's and gunicorn), and those a
 # datasource's driver needs.
@@ -232,15 +234,18 @@ def export_tui(target: str, title: str, name: str, out: Path, progress: Callable
     from quantum.runtime.godot_export import PRESETS, export_project, have_templates, install_templates
     from quantum.runtime.ui_tui import project_copy
     godot = ensure_godot(download=True, progress=progress)
-    preset = 'Web' if target == WEB else TARGETS[target]['preset']
+    preset = 'Web' if target == WEB else PHONES.get(target) or TARGETS[target]['preset']
     if not have_templates(preset):
         install_templates(progress=progress, preset=preset)
     project = project_copy()
     try:
         settings = (project / 'project.godot').read_text(encoding='utf-8')
         settings = settings.replace('config/name="Quantum TUI"', f'config/name={json.dumps(title)}')
-        if target == 'macos' and 'import_etc2_astc' not in settings:
+        if target in ('macos', *PHONES) and 'import_etc2_astc' not in settings:   # Apple's chips, phones
             settings = settings.replace('[rendering]\n', '[rendering]\ntextures/vram_compression/import_etc2_astc=true\n')
+        if target in PHONES:
+            # a phone's screen turns: the TUI lays itself out again in as many cells as fit
+            settings = settings.replace('[display]\n', '[display]\n\nwindow/handheld/orientation=6\n', 1)
         if server:
             # a hosted application's client (Phase 6): the TUI asks that server, which it does not start
             from quantum.runtime.ui_tui import design_tokens
@@ -248,12 +253,105 @@ def export_tui(target: str, title: str, name: str, out: Path, progress: Callable
                          f'tokens={json.dumps(json.dumps(design_tokens()))}\n')
         (project / 'project.godot').write_text(settings, encoding='utf-8')
         made = out / {'linux': f'{name}.x86_64', 'windows': f'{name}.exe', 'macos': f'{name}.zip',
-                      WEB: 'index.html'}[target]
-        options = PRESETS[preset][1].replace('{id}', re.sub(r'[^a-z0-9]', '', name))
+                      WEB: 'index.html', 'android': f'{name}.apk', 'ios': f'{name}.ipa'}[target]
+        options = (PRESETS[preset][1].replace('{id}', re.sub(r'[^a-z0-9]', '', name))
+                   .replace('{title}', title.replace('"', ''))
+                   .replace('{team}', os.environ.get('QUANTUM_IOS_TEAM_ID') or 'XXXXXXXXXX'))
         progress(f'the TUI for {target} (Godot, {preset})')
+        if target == 'android':
+            debug, env = android_signing(progress)
+            return export_project(project, preset, made, godot, options, debug=debug, env=env)
+        if target == 'ios':
+            # an Xcode project (export_project_only), which a Mac builds and signs
+            export_project(project, preset, made, godot, options, made=out / f'{name}.xcodeproj')
+            return out
         return export_project(project, preset, made, godot, options)
     finally:
         shutil.rmtree(project, ignore_errors=True)
+
+
+def android_tools() -> None:
+    """Godot signs an .apk with the Android SDK's build tools (apksigner) run by a JDK: their folders, from
+    ANDROID_HOME (or ANDROID_SDK_ROOT) and JAVA_HOME (or the java on the PATH), written into Godot's editor
+    settings, where its export looks for them."""
+    sdk = os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT')
+    if not sdk or not Path(sdk, 'build-tools').is_dir():
+        raise PackageError('an Android package is signed with the Android SDK\'s build tools (apksigner): set '
+                           'ANDROID_HOME to the SDK, with its build-tools installed (sdkmanager "build-tools;34.0.0")')
+    java = os.environ.get('JAVA_HOME')
+    if not java and shutil.which('java'):
+        java = str(Path(shutil.which('java')).resolve().parents[1])
+    if not java:
+        raise PackageError('an Android package is signed by a JDK\'s tools: set JAVA_HOME (JDK 17)')
+    from quantum.runtime.godot_bin import GODOT_VERSION
+    folder = (Path(os.environ.get('APPDATA', Path.home() / 'AppData' / 'Roaming')) / 'Godot' if sys.platform == 'win32'
+              else Path.home() / 'Library' / 'Application Support' / 'Godot' if sys.platform == 'darwin'
+              else Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / 'godot')
+    settings = folder / f'editor_settings-{".".join(GODOT_VERSION.split(".")[:2])}.tres'
+    text = settings.read_text(encoding='utf-8') if settings.is_file() else \
+        '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n'
+    lines = [line for line in text.splitlines() if not line.startswith(('export/android/android_sdk_path',
+                                                                        'export/android/java_sdk_path'))]
+    at = lines.index('[resource]') + 1 if '[resource]' in lines else len(lines)
+    lines[at:at] = [f'export/android/android_sdk_path = {json.dumps(str(Path(sdk)))}',
+                    f'export/android/java_sdk_path = {json.dumps(java)}']
+    folder.mkdir(parents=True, exist_ok=True)
+    settings.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+
+def android_signing(progress: Callable[[str], None]):
+    """How an .apk is signed: (debug, environment for Godot). A release key when QUANTUM_ANDROID_KEYSTORE (with
+    _USER and _PASSWORD) names one; otherwise a debug key, made once in the cache with the JDK's keytool."""
+    if os.environ.get('QUANTUM_ANDROID_KEYSTORE'):
+        return False, {'GODOT_ANDROID_KEYSTORE_RELEASE_PATH': os.environ['QUANTUM_ANDROID_KEYSTORE'],
+                       'GODOT_ANDROID_KEYSTORE_RELEASE_USER': os.environ.get('QUANTUM_ANDROID_KEYSTORE_USER', ''),
+                       'GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD': os.environ.get('QUANTUM_ANDROID_KEYSTORE_PASSWORD', '')}
+    keystore = cache_dir() / 'debug.keystore'
+    if not keystore.is_file():
+        keytool = shutil.which('keytool')
+        if not keytool:
+            raise PackageError('an Android package is signed with a key: the debug key is made with the JDK\'s '
+                               'keytool, which is not on this machine (install a JDK, or set QUANTUM_ANDROID_KEYSTORE)')
+        keystore.parent.mkdir(parents=True, exist_ok=True)
+        progress('a debug key for the Android package (keytool)')
+        done = subprocess.run([keytool, '-genkeypair', '-keystore', str(keystore), '-storepass', 'android',
+                               '-alias', 'androiddebugkey', '-keypass', 'android', '-keyalg', 'RSA', '-keysize', '2048',
+                               '-validity', '10000', '-dname', 'CN=Android Debug,O=Android,C=US'],
+                              capture_output=True, text=True)
+        if done.returncode != 0:
+            raise PackageError(f'keytool could not make the debug key:\n{done.stderr[-1000:]}')
+    return True, {'GODOT_ANDROID_KEYSTORE_DEBUG_PATH': str(keystore), 'GODOT_ANDROID_KEYSTORE_DEBUG_USER': 'androiddebugkey',
+                  'GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD': 'android'}
+
+
+def build_phone(app: Path, name: str, title: str, target: str, out: Optional[Path], server: str, started: float,
+                progress: Callable[[str], None]) -> 'Package':
+    """The TUI for a phone, a client of the application hosted at `server`: an .apk, or an Xcode project's zip."""
+    if target == 'android':
+        android_tools()                       # before anything is fetched: the SDK and the JDK are there
+    out = Path(out or app / 'dist').resolve()
+    work = out / f'.{name}-{target}'
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir(parents=True)
+    made = export_tui(target, title, name, work, progress, server)
+    if target == 'android':
+        archive = out / f'{name}-android.apk'
+        archive.unlink(missing_ok=True)
+        made.rename(archive)
+    else:
+        archive = out / f'{name}-ios.zip'
+        archive.unlink(missing_ok=True)
+        folder = out / f'{name}-ios'
+        shutil.rmtree(folder, ignore_errors=True)
+        work.rename(folder)
+        progress(f'packing {archive.name}')
+        with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
+            for path in sorted(folder.rglob('*')):
+                if path.is_file():
+                    z.write(path, path.relative_to(folder).as_posix())
+    shutil.rmtree(work, ignore_errors=True)
+    return Package(path=archive, folder=archive if target == 'android' else out / f'{name}-ios',
+                   size=archive.stat().st_size, seconds=time.monotonic() - started)
 
 
 # -- the client: the desktop's window --------------------------------------------------------------------------
@@ -376,8 +474,11 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
     app = Path(app).resolve()
     if on not in ('tui', 'desktop'):
         raise PackageError(f'--on {on}: a package\'s program is the TUI (--on tui) or a window (--on desktop)')
-    if target not in TARGETS and target != WEB:
-        raise PackageError(f'--target {target}: one of {", ".join([*TARGETS, WEB])}')
+    if target not in TARGETS and target != WEB and target not in PHONES:
+        raise PackageError(f'--target {target}: one of {", ".join([*TARGETS, WEB, *PHONES])}')
+    if target in PHONES and (on != 'tui' or not server):
+        raise PackageError(f'--target {target}: a phone runs no server of its own; its package is the TUI as a '
+                           f'hosted application\'s client: --server https://... (--on tui)')
     if on == 'desktop' and target not in DESKTOP_LIBRARIES:
         if target == WEB:
             raise PackageError('--on desktop --target web: in a browser the pages are the web\'s own; '
@@ -396,6 +497,8 @@ def build(app: Path, on: str = 'tui', target: str = 'linux', out: Optional[Path]
     name, title = app_name(app), app_title(app, config)
     if target == WEB:
         return build_web(app, config, name, title, out, started, progress)
+    if target in PHONES:
+        return build_phone(app, name, title, target, out, server, started, progress)
     out = Path(out or app / 'dist').resolve()
     kind = (f'{target}-desktop' if on == 'desktop' else target) + ('-client' if server else '')
     work = out / f'.{name}-{kind}'

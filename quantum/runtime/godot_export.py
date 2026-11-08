@@ -51,7 +51,28 @@ html/focus_canvas_on_start=true
 progressive_web_app/enabled=false
 ''')
 
-PRESETS = {**DESKTOP_PRESETS, 'Web': WEB_PRESET}
+# A phone's (Phase 6): an .apk Godot's template makes, signed with the debug key unless a release key is given
+# (GODOT_ANDROID_KEYSTORE_* in the environment), and an Xcode project a Mac builds and signs.
+PHONE_PRESETS = {
+    'Android': ('Android', '''gradle_build/use_gradle_build=false
+architectures/armeabi-v7a=true
+architectures/arm64-v8a=true
+package/unique_name="net.quantumframework.{id}"
+package/name="{title}"
+screen/immersive_mode=false
+permissions/internet=true
+'''),
+    'iOS': ('iOS', '''application/app_store_team_id="{team}"
+application/bundle_identifier="net.quantumframework.{id}"
+application/export_project_only=true
+application/targeted_device_family=2
+orientation/portrait=true
+orientation/landscape_left=true
+orientation/landscape_right=true
+orientation/portrait_upside_down=false
+'''),
+}
+PRESETS = {**DESKTOP_PRESETS, 'Web': WEB_PRESET, **PHONE_PRESETS}
 
 
 def templates_dir() -> Path:
@@ -72,6 +93,8 @@ TEMPLATE_FILES = {
                 'windows_release_x86_64_console.exe', 'windows_debug_x86_64_console.exe'],
     'macOS': ['macos.zip'],
     'Web': ['web_nothreads_release.zip'],
+    'Android': ['android_debug.apk', 'android_release.apk'],
+    'iOS': ['ios.zip'],
 }
 
 
@@ -126,7 +149,8 @@ def preset_text(preset: str, platform: str, options: str, target: Path, include:
 
 
 def export_project(project: Path, preset: str, target: Path, godot: Path, options: Optional[str] = None,
-                   include: str = '', timeout: float = 900) -> Path:
+                   include: str = '', timeout: float = 900, debug: bool = False, env: Optional[dict] = None,
+                   made: Optional[Path] = None) -> Path:
     """`project` exported with `preset` (one of PRESETS, its options formatted by the caller when they name an
     id) to `target` (for the browser, its index.html, the files beside it); raises with Godot's errors when
     nothing was made."""
@@ -134,10 +158,13 @@ def export_project(project: Path, preset: str, target: Path, godot: Path, option
     target.parent.mkdir(parents=True, exist_ok=True)
     (project / 'export_presets.cfg').write_text(preset_text(preset, platform, options or default, target, include),
                                                 encoding='utf-8')
-    result = subprocess.run([str(godot), '--headless', '--path', str(project), '--export-release', preset,
-                             str(target)], capture_output=True, text=True, timeout=timeout)
+    result = subprocess.run([str(godot), '--headless', '--path', str(project),
+                             '--export-debug' if debug else '--export-release', preset, str(target)],
+                            capture_output=True, text=True, timeout=timeout,
+                            env={**os.environ, **env} if env else None)
     errors = script_errors(result.stdout + result.stderr)
-    if errors or not target.is_file():
+    made = made or target                     # an iOS export writes an Xcode project beside its target
+    if errors or not made.exists():
         raise RuntimeError(f'{project.name} ({preset}): the export failed\n' + '\n'.join(errors)
                            + (result.stderr or result.stdout)[-2000:])
     return target

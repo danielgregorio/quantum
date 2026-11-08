@@ -1522,7 +1522,12 @@ With `--server https://...` a package is a hosted application's client: the
 TUI alone, which asks that server (project.godot's `quantum/server`), or the
 desktop's window on it with the window's Python and no application; with
 `--target web` it is an error that says the browser's TUI belongs to the
-hosted application itself.
+hosted application itself. `--target android|ios` is a phone's: the TUI as a
+hosted application's client (`--server` is required), an `.apk` signed with a
+debug key unless one is given, or an Xcode project; on a touch screen a tap
+acts where the finger was, a drag scrolls and acts on nothing, and a field
+with the focus asks for the phone's keyboard of its kind (email, password,
+number, url).
 
 <p class="spec-cited">Referenced by: <a href="./cli#cli-desktop"><code>quantum desktop</code></a> · <a href="./cli#cli-package"><code>quantum package</code></a> · <a href="./config#cfg-server"><code>server:</code></a></p>
 

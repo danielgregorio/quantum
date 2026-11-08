@@ -138,7 +138,7 @@ Make one file to hand someone: the application's TUI and its server, for a syste
 |---|---|---|---|
 | `app` | the application's folder (its quantum.config.yaml) |  |  |
 | `--on` | its program: the TUI (default), or a window of its own (Windows, macOS) | `tui` | `tui`, `desktop` |
-| `--target` | the system it runs on (default: linux); any can be made on any; web: the TUI in the browser, in the application's static/tui/, which its server serves | `linux` | `linux`, `windows`, `macos`, `web` |
+| `--target` | the system it runs on (default: linux); any can be made on any; web: the TUI in the browser, in the application's static/tui/, which its server serves; android, ios: a phone, with --server | `linux` | `linux`, `windows`, `macos`, `web`, `android`, `ios` |
 | `--out` | where the file goes (default: the application's dist/; for web, its static/tui/) |  |  |
 | `--server` | a client of the application hosted at URL (https://...): its program alone, no server or Python of its own beside a TUI |  |  |
 | `--with-data` | carry its SQLite databases as they are (left out by default: its migrations make them when it starts) |  |  |

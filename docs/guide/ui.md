@@ -709,6 +709,23 @@ window is pywebview's), but no server. An address that is not `https` is said wh
 made: the session's cookie would cross the network unencrypted. CI runs the Kanban's whole script
 in the Linux client against a hosted Kanban, and the Windows and macOS clients on those systems.
 
+### On a phone
+
+A phone runs no server of its own, so its package is the TUI as a hosted application's client:
+
+```bash
+quantum package projects/kanban --server https://kanban.example.com --target android   # kanban-android.apk
+quantum package projects/kanban --server https://kanban.example.com --target ios       # kanban-ios.zip
+```
+
+On a touch screen the TUI takes the screen's width in cells (about 44 columns upright) and turns
+with it; a tap acts where the finger was, a drag scrolls the page and clicks nothing, and a field
+that takes the focus brings up the phone's keyboard — an email field the email keyboard, a
+password field the password one. The `.apk` is signed with a debug key, made once with the JDK's
+`keytool` (`QUANTUM_ANDROID_KEYSTORE`, with `_USER` and `_PASSWORD`, signs it with yours); it needs
+the Android SDK's build tools (`ANDROID_HOME`). iOS's package is the Xcode project a Mac builds and
+signs (`QUANTUM_IOS_TEAM_ID` names your team).
+
 
 ## On the Hive's screen
 

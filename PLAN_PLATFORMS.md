@@ -285,9 +285,23 @@ whole script in the Linux client against a hosted Kanban (`quantum run --on web`
 run their TUI clients and check their windows against a Kanban they host. An address that is not https is said when
 the package is made.
 
-What changed from the plan: the desktop's client still carries a Python of its own — its window is pywebview's,
+What changed from the plan (6a): the desktop's client still carries a Python of its own — its window is pywebview's,
 which is Python — but no server and no application; "no Python on the machine" holds for every package, since
 none needs one installed.
+
+**6b done 2026-11-08: the phone.** `quantum package <app> --server <url> --target android|ios` exports the TUI as
+a hosted application's client for a phone (Godot's Android and iOS presets, beside the desktops' in
+`godot_export.py`): an `.apk` signed with a debug key the JDK's `keytool` makes once (or yours,
+`QUANTUM_ANDROID_KEYSTORE`), Godot pointed at the Android SDK and the JDK through its editor settings, and the Xcode
+project a Mac builds and signs (95 MB, made on Linux). On a touch screen (a phone, or `--touch`) the TUI sizes its
+cells to the screen's width and turns with it; a tap acts where the finger was, a drag scrolls and acts on nothing
+(the mouse a touch makes is left aside), and a field with the focus brings up the phone's keyboard of its kind. The
+play protocol's `tap` and `drag` drive it (tests/tui/test_tui.py's TestTouch); CI's package job makes the Kanban's
+`.apk` and has the SDK's `apksigner` verify it, and makes its Xcode project. The TUI has an icon now (a text screen
+and its cursor), which the phones' launchers and iOS's export require.
+
+What changed from the plan (6b): the phone's TUI is not run in an emulator in CI — the touch is driven on the
+desktop's TUI with `--touch`, and the phone's package is checked as made and signed.
 
 ## Later — `q:endpoint`: a REST API in the Core
 

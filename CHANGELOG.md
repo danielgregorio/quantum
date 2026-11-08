@@ -23,6 +23,11 @@ alter the behaviour of an existing app is listed under **Breaking**.
   the Kanban's whole script in the Linux one, and starts the Windows and macOS
   ones on those systems. With `--on desktop` (Windows, macOS) the program is a
   window of its own on the system's web view, as `quantum desktop` opens.
+- `quantum package <app> --server https://... --target android|ios`: the TUI
+  on a phone, a hosted application's client (`PLAN_PLATFORMS.md` Phase 6): an
+  `.apk` signed with a debug key (or yours), or the Xcode project a Mac builds.
+  On a touch screen a tap acts, a drag scrolls and a field brings up the
+  phone's keyboard of its kind.
 - `quantum package <app> --server https://...`: a client of the application
   hosted there (`PLAN_PLATFORMS.md` Phase 6): the TUI alone, which asks that
   server for the pages, or the desktop's window on it. CI runs the Kanban's

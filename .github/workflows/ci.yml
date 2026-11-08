@@ -226,6 +226,13 @@ jobs:
           key: godot-export-${{ hashFiles('quantum/runtime/godot_bin.py') }}
       - run: python scripts/godot.py install
 
+      # the phone's .apk: the runner has the Android SDK (ANDROID_HOME); Godot signs with its build tools, run by
+      # a JDK 17 (tests/package/test_package_phone.py)
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Package the Kanban, and run its script in the package and in the browser's TUI
         env:
           QUANTUM_PACKAGE_TESTS: '1'

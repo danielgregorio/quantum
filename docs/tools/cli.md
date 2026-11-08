@@ -125,6 +125,7 @@ quantum package projects/kanban --target macos --with-data --out /tmp/release
 quantum package projects/kanban --on desktop --target windows   # a window of its own: kanban-windows-desktop.zip
 quantum package projects/kanban --target web       # static/tui/index.html
 quantum package projects/kanban --server https://kanban.example.com   # a client: the TUI alone
+quantum package projects/kanban --server https://kanban.example.com --target android   # a phone's .apk
 ```
 
 ## quantum check
