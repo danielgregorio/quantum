@@ -60,6 +60,15 @@ LAYERS = f'''<q:component name="Layers" {NS}>
 </q:component>'''
 
 
+# UI-21: a calendar's weeks from Monday with their numbers, and the days that cannot be picked
+DATES = f'''<q:component name="Dates" {NS}>
+  <ui:window title="Dates">
+    <ui:calendar bind="day" value="2026-03-04" min-date="2026-03-03" max-date="2026-04-10"
+                 disabled-dates="2026-03-12" disabled-days="0,6" first-day-of-week="1" show-week-numbers="true" />
+  </ui:window>
+</q:component>'''
+
+
 @pytest.fixture
 def godot():
     from tests.apps.ui_drivers import tui_godot
@@ -77,6 +86,7 @@ def app_url(tmp_path, monkeypatch):
     (project / 'components' / 'index.q').write_text(INDEX, encoding='utf-8')
     (project / 'components' / 'long.q').write_text(LONG, encoding='utf-8')
     (project / 'components' / 'layers.q').write_text(LAYERS, encoding='utf-8')
+    (project / 'components' / 'dates.q').write_text(DATES, encoding='utf-8')
     db = sqlite3.connect(project / 'fruits.db')
     db.executescript("CREATE TABLE fruits (id INTEGER PRIMARY KEY, name TEXT NOT NULL, stock INTEGER NOT NULL);"
                      "INSERT INTO fruits (name, stock) VALUES ('Apple', 4), ('Banana', 7), ('Cherry', 2);")

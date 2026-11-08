@@ -348,7 +348,8 @@ class Tui:
     """The TUI drawn by Godot (UI-20), headless, through its play protocol (quantum/runtime/ui_tui.py):
     a button, a link or a tab is clicked with the mouse on its cell, a field clicked and typed into, a
     box clicked, a select opened and its option clicked; a fold's header, a modal's close, a carousel's
-    arrow, a stepper's Next and a dropdown's button clicked, a tooltip's element hovered (UI-21)."""
+    arrow, a stepper's Next, a dropdown's button, a calendar's arrow and its day clicked, a tooltip's
+    element hovered (UI-21)."""
     name = "tui"
 
     def __init__(self, session):
@@ -454,6 +455,14 @@ class Tui:
     def pick(self, label, option):
         self._click(self.s.item("dropdown", label))        # its options open under it
         self._click(self.s.item("link", option, menu=label))
+
+    def month(self, way):
+        # a calendar's arrow, beside its month's title
+        self._click(self.s.item("month", "Next month" if way == "next" else "Previous month"))
+
+    def day(self, number):
+        # a day of the month shown that can be picked
+        self._click(self.s.item("day", str(number)))
 
 
 async def run_console_script(app, pilot, script):

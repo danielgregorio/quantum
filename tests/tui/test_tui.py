@@ -3,8 +3,8 @@
 What the parity script (tests/apps/test_ui_parity_script.py) and the Kanban's (tests/apps/test_kanban_everywhere.py)
 do not reach: search as you type, an editable table, a file field with a dialog of its own, an image, wide
 characters, the mouse and the wheel, the motions, a resize, a tag it does not draw, and of the tags with a state
-of their own (UI-21) Esc, a modal that takes the clicks, a tip on the focus, a toast that stays on the screen
-and a carousel that plays. And the layout check:
+of their own (UI-21) Esc, a modal that takes the clicks, a tip on the focus, a toast that stays on the screen,
+a carousel that plays and a calendar's weeks, its days that cannot be picked and its keys. And the layout check:
 each page laid out at a size is the same cells as its reference frame in tests/tui/frames/
 (UPDATE_FRAMES=1 writes them again), and no element sits on another or past the right edge.
 """
@@ -130,7 +130,8 @@ class TestTheScreen:
 
 class TestTheTagsWithAState:
     """UI-21: what the parity script's STATE does not reach: Esc, a modal that takes the clicks, a tooltip's tip
-    on the focus, a toast that stays on the screen as the page scrolls, a carousel that plays."""
+    on the focus, a toast that stays on the screen as the page scrolls, a carousel that plays, a calendar's weeks
+    from another day with their numbers, its days that cannot be picked and its keys."""
 
     def test_a_modal_takes_the_clicks_until_esc_closes_it(self, tui):
         tui.visit('/layers')
@@ -154,6 +155,38 @@ class TestTheTagsWithAState:
         assert seen['scroll'] == 15 and toast['y'] + toast['h'] == seen['scroll'] + seen['rows']
         assert 'Kept' in tui.text()
         tui.wait('Two')                                        # its interval past, the next slide
+
+    def test_a_calendar_s_days_that_cannot_be_picked_and_its_keys(self, tui):
+        seen = tui.visit('/dates')
+        pages = seen['pages']
+        title = tui.item('calendar')
+        assert (title['label'], title['value']) == ('March 2026', '2026-03-04')
+        rows = seen['screen'][title['y'] + 1:title['y'] + 4]
+        # the weeks from Monday, each with its ISO number: March 1st 2026 is the Sunday of week 9
+        assert [row.strip(' │').split() for row in rows] == [
+            ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'], ['9', '1'], ['10', '2', '3', '4', '5', '6', '7', '8']]
+        # drawn, but not to be picked: before min-date, a disabled date, the weekends (disabled-days)
+        assert [d['label'] for d in tui.items('day')] == [
+            '3', '4', '5', '6', '9', '10', '11', '13', '16', '17', '18', '19', '20', '23', '24', '25', '26', '27',
+            '30', '31']
+        friday = tui.item('day', '6')
+        tui.click(friday['x'] + 3, friday['y'])                # Saturday the 7th: nothing takes the click
+        assert tui.item('calendar')['value'] == '2026-03-04'
+        eleven = tui.item('day', '11')
+        tui.click(eleven['x'], eleven['y'])                    # outside a form a day picked is only marked
+        assert tui.item('calendar')['value'] == '2026-03-11' and tui.item('day', '11')['selected']
+        assert tui.observe()['pages'] == pages
+        # the arrows move the focus over the days that cannot be picked, into the next month; Enter picks
+        tui.key('right', 'right')
+        assert tui.item('day', '16')['focus']
+        tui.key('enter', 'down', 'down', 'down')
+        title = tui.item('calendar')
+        assert (title['label'], title['value']) == ('April 2026', '2026-03-16')
+        assert tui.item('day', '6')['focus'] and tui.item('day', '6')['date'] == '2026-04-06'
+        tui.key('down')                                        # past max-date: nothing to move to
+        assert tui.item('day', '6')['focus']
+        tui.key('tab')                                         # Tab leaves the days, to what follows them
+        assert tui.item('month', 'Previous month')['focus']
 
 
 class TestTheLayout:

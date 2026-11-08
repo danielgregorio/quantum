@@ -26,7 +26,8 @@ var right_edge := 1000000      # the column a node being laid out may not write 
 var state: Dictionary         # what the user changed, by key: {value, checked}; kept across layouts
 var tabs: Dictionary          # the open tab of each tab panel, by key
 # UI-21: what a tag with a state of its own holds now, by key, kept across layouts: {open} a fold or a
-# dropdown, {closed} a modal, {gone} a toast, {at} the slide or the step shown, {done} a stepper's steps done
+# dropdown, {closed} a modal, {gone} a toast, {at} the slide or the step shown, {done} a stepper's steps done,
+# {month} the month a calendar shows (YYYY-MM)
 var held: Dictionary
 var motion_on := true
 var focus_key := ""           # the key of the item with the focus: a tooltip's tip shows while it is inside it
@@ -310,6 +311,8 @@ func natural(node: Dictionary) -> int:
 			return 0                       # drawn over the page, they take no room in it (UI-21)
 		"dropdown":
 			return text_width(_dropdown_label(node)) + 6
+		"calendar":
+			return CALENDAR_WIDTH + (3 if truthy(prop(node, "week_numbers", false)) else 0)
 		"accordion":
 			var widest := 0
 			for c in children:
@@ -520,7 +523,7 @@ func _place(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 			return 1
 		"avatar", "chart", "skeleton", "loading", "treeitem":
 			return _more(node, kind, x, y, w, ctx)
-		"accordion", "modal", "toast", "tooltip", "dropdown", "carousel", "stepper":
+		"accordion", "modal", "toast", "tooltip", "dropdown", "carousel", "stepper", "calendar":
 			return _stateful(node, kind, x, y, w, ctx)
 		"spacer":
 			return 1
@@ -944,6 +947,11 @@ static func _shown(bar: Dictionary, share: bool) -> String:
 
 const TOAST_ICONS := {"info": "i", "success": "✓", "warning": "⚠", "danger": "✗"}
 const MODAL_WIDTHS := {"sm": 38, "md": 62, "lg": 100, "xl": 137}
+const MONTH_NAMES := ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+					  "October", "November", "December"]
+const DAY_NAMES := ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+const CALENDAR_WIDTH := 24        # a calendar's box: seven columns of three cells, its border and margins
+const NO_DAY := -100000000        # what day_of says of a text that is not a date
 
 
 func _held(key: String, field: String, fallback: Variant) -> Variant:
@@ -991,6 +999,8 @@ func _stateful(node: Dictionary, kind: String, x: int, y: int, w: int, ctx: Dict
 			return _carousel(node, x, y, w, ctx)
 		"stepper":
 			return _stepper(node, x, y, w, ctx)
+		"calendar":
+			return _calendar(node, x, y, w, ctx)
 	return 0
 
 
@@ -1217,6 +1227,154 @@ static func _step_note(step: Dictionary) -> String:
 	if description != "":
 		return description
 	return "Optional" if truthy(prop(step, "optional", false)) else ""
+
+
+# -- a calendar: a date field shown as a month (UI-21) ---------------------------------
+#
+# The view sends its meaning (ui_more.calendar_of): its field (`bind`), its value, the month shown first, `min`
+# and `max`, the dates and the weekdays that cannot be picked (0 = Sunday), the first day of the week and
+# whether the weeks' numbers show. A date is counted here as its day from 1970-01-01.
+
+static func days_from(year: int, month: int, day: int) -> int:
+	var t := Time.get_unix_time_from_datetime_dict({"year": year, "month": month, "day": day, "hour": 0,
+													"minute": 0, "second": 0})
+	return floori(t / 86400.0)
+
+
+static func days_in(year: int, month: int) -> int:
+	return days_from(year + 1 if month == 12 else year, 1 if month == 12 else month + 1, 1) - days_from(year, month, 1)
+
+
+static func day_of(date: String) -> int:
+	# a date (YYYY-MM-DD) as its day from 1970-01-01; NO_DAY when it is not one
+	var parts := date.split("-")
+	if parts.size() != 3 or not (parts[0].is_valid_int() and parts[1].is_valid_int() and parts[2].is_valid_int()):
+		return NO_DAY
+	var year := parts[0].to_int()
+	var month := parts[1].to_int()
+	var day := parts[2].to_int()
+	if month < 1 or month > 12 or day < 1 or day > days_in(year, month):
+		return NO_DAY
+	return days_from(year, month, day)
+
+
+static func date_of(day: int) -> String:
+	return Time.get_date_string_from_unix_time(day * 86400)
+
+
+static func weekday_of(day: int) -> int:
+	# 0 = Sunday, as the view counts them (1970-01-01 was a Thursday)
+	return posmod(day + 4, 7)
+
+
+static func iso_week(day: int) -> int:
+	# the date's ISO week: counted from the week of its year's first Thursday (the browser's, ui_html_adapter)
+	var thursday := day + 3 - posmod(weekday_of(day) + 6, 7)
+	var year := int(Time.get_datetime_dict_from_unix_time(thursday * 86400)["year"])
+	return (thursday - days_from(year, 1, 1)) / 7 + 1
+
+
+static func day_open(rules: Dictionary, date: String) -> bool:
+	# whether a calendar's day can be picked: not before `min`, not after `max`, not one of `dates`, not on one of
+	# `days` (weekdays); dates written YYYY-MM-DD compare as text
+	var low := str(rules.get("min", ""))
+	var high := str(rules.get("max", ""))
+	if (low != "" and date < low) or (high != "" and date > high):
+		return false
+	var dates: Array = rules.get("dates", [])
+	var days: Array = rules.get("days", [])
+	return not (date in dates) and not (weekday_of(day_of(date)) in days)
+
+
+static func _month_start(shown: String, value: String) -> Array:
+	# [year, month] a calendar shows: `shown` (YYYY-MM), else its value's month, else today's
+	for text: String in [shown, value.substr(0, 7), Time.get_date_string_from_system().substr(0, 7)]:
+		var parts := text.split("-")
+		if parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int() \
+				and parts[1].to_int() >= 1 and parts[1].to_int() <= 12:
+			return [parts[0].to_int(), parts[1].to_int()]
+	return [1970, 1]
+
+
+func _calendar(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
+	# In a box: the month's title between the arrows to the month before and the month after (it moves here, kept
+	# in `held`), the weekdays from `first_day`, the month's days in their columns, each week's number before it
+	# when asked. A day clicked is the field's value, kept in `state` as an input's (tui.gd), which its form sends
+	# under `bind`; outside a form it is only marked. The day picked is marked, today in the accent's colour; a day
+	# that cannot be picked is drawn dim and does not react. Tab reaches one day; the arrow keys move between them.
+	var key: String = ctx["key"]
+	var value := _field_value(key, node)
+	var start := _month_start(str(_held(key, "month", prop(node, "month", ""))), value)
+	var year: int = start[0]
+	var month: int = start[1]
+	var first := days_from(year, month, 1)
+	var count := days_in(year, month)
+	var first_day := posmod(num(node, "first_day", 0), 7)
+	var lead := 3 if truthy(prop(node, "week_numbers", false)) else 0      # the weeks' numbers' column
+	var bw: int = CALENDAR_WIDTH + lead
+	var dates: Array = []
+	var days: Array = []
+	var listed: Variant = prop(node, "disabled_dates", [])
+	if listed is Array:
+		for d: Variant in listed:
+			dates.append(str(d))
+	listed = prop(node, "disabled_days", [])
+	if listed is Array:
+		for d: Variant in listed:
+			days.append(posmod(int(d), 7))
+	var rules := {"min": str(prop(node, "min", "")), "max": str(prop(node, "max", "")), "dates": dates, "days": days}
+	var offset := posmod(weekday_of(first) - first_day, 7)
+	var h := (offset + count + 6) / 7 + 4
+	box(x, y, bw, h, "")
+	var left := x + 2
+	# the title between the arrows
+	var before := "%04d-%02d" % [year - 1 if month == 1 else year, 12 if month == 1 else month - 1]
+	var after := "%04d-%02d" % [year + 1 if month == 12 else year, 1 if month == 12 else month + 1]
+	var used := put(left, y + 1, " ‹ ", "button")
+	_item({"kind": "month", "x": left, "y": y + 1, "w": used, "h": 1, "key": key, "label": "Previous month",
+		   "goto": before, "card": ctx["card"]})
+	var title := "%s %d" % [MONTH_NAMES[month - 1], year]
+	var room := bw - 10
+	var shown := cut(title, room)
+	var tx := left + 3 + (room - text_width(shown)) / 2
+	put(tx, y + 1, shown, "bold")
+	_add_field({"kind": "calendar", "x": tx, "y": y + 1, "w": text_width(shown), "h": 1, "key": key, "label": title,
+				"bind": str(prop(node, "bind", "")), "value": value, "month": "%04d-%02d" % [year, month],
+				"rules": rules, "react": false, "card": ctx["card"], "form": ctx["form"]})
+	used = put(x + bw - 5, y + 1, " › ", "button")
+	_item({"kind": "month", "x": x + bw - 5, "y": y + 1, "w": used, "h": 1, "key": key, "label": "Next month",
+		   "goto": after, "card": ctx["card"]})
+	# the weekdays, and the days under them
+	for k in 7:
+		put(left + lead + 3 * k, y + 2, DAY_NAMES[(first_day + k) % 7], "muted")
+	if lead > 0:
+		for r in h - 4:
+			put(left, y + 3 + r, "%2d" % iso_week(first - offset + 7 * r), "muted")
+	var today := Time.get_date_string_from_system()
+	var open: Array = []                   # the items of the days that can be picked
+	var entry := -1                        # the one Tab reaches: the day picked, else today, else the first
+	for d in range(1, count + 1):
+		var cell := offset + d - 1
+		var at := left + lead + 3 * (cell % 7)
+		var row := y + 3 + cell / 7
+		var date := "%04d-%02d-%02d" % [year, month, d]
+		var can := day_open(rules, date)
+		var style := "dim"
+		if date == value:
+			style = "tab_open"
+		elif can:
+			style = "today" if date == today else ""
+		put(at, row, "%2d" % d, style)
+		if can:
+			open.append(_item({"kind": "day", "x": at, "y": row, "w": 2, "h": 1, "key": key, "label": str(d),
+							   "date": date, "selected": date == value, "tab": false, "card": ctx["card"]}))
+			if date == value or (date == today and entry < 0):
+				entry = open[-1]
+	if entry < 0 and not open.is_empty():
+		entry = open[0]
+	if entry >= 0:
+		items[entry]["tab"] = true
+	return h
 
 
 func _drawn_width(x: int, y: int, w: int, h: int) -> int:
