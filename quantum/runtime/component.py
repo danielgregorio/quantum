@@ -420,8 +420,9 @@ class ComponentRuntime:
             # and served a 500 the moment the legacy if-elif chain that used to
             # swallow it was removed.
             ComponentCallNode,
-        )) or is_ui_node(statement):
-            # ui:* inside a page is markup (UI-1): the renderer draws it.
+        )) or is_ui_node(statement) or type(statement).__name__ in ('UIThemeNode', 'UIColorNode'):
+            # ui:* inside a page is markup (UI-1): the renderer draws it. A ui:theme is too (UI-21): it
+            # lives in the theming feature, not with the other ui:* nodes, and a page with one was a 500.
             return None
 
         # A <q:return> nested in q:if / q:else / q:loop. It has no executor

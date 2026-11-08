@@ -20,7 +20,9 @@
 //! its `duration` (counted in ticks); an accordion's folds open and close
 //! on their headers, the first open; a tooltip's tip shows while it has the
 //! focus; a dropdown's button opens its options; a carousel shows one
-//! slide, a stepper one step, with their controls.
+//! slide, a stepper one step, with their controls; a calendar, a date field
+//! shown as a month, moves its cursor with the arrows and its month with
+//! PgUp and PgDn, and Enter picks the day, which its form sends.
 
 use crate::canvas::{Band, Font};
 use crate::world::{Key, TICK_RATE};
@@ -121,6 +123,9 @@ struct Node {
     /// A table's active row (-1: the header) and the action in it.
     row: isize,
     col: usize,
+    /// UI-21: a calendar's cursor, in days from 1970-01-01; the month it is
+    /// in is the month shown. Its `value` is the day picked (YYYY-MM-DD).
+    day: i64,
     // laid out
     rect: Rect,
     lines: Vec<String>,
@@ -294,6 +299,7 @@ const DRAWN: &[&str] = &[
     "carousel",
     "stepper",
     "step",
+    "calendar",
 ];
 
 fn not_drawn(kind: &str) -> Option<String> {
@@ -356,6 +362,119 @@ fn cut_at_separator(text: &str, width: usize) -> String {
         Some(at) => head[..at].to_string(),
         None => head,
     }
+}
+
+// ---------------------------------------------------------------- dates (UI-21)
+//
+// A calendar's days are counted from 1970-01-01 in the proleptic Gregorian
+// calendar (H. Hinnant's days_from_civil and civil_from_days); a month is
+// counted from January of the year 0.
+
+const MONTHS: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+const WEEKDAYS: [&str; 7] = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+/// The days from 1970-01-01 to that date (`m` 1 to 12).
+fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    era * 146_097 + doe - 719_468
+}
+
+/// The date `days` from 1970-01-01: (year, month 1 to 12, day).
+fn civil_from_days(days: i64) -> (i64, i64, i64) {
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    (yoe + era * 400 + i64::from(m <= 2), m, d)
+}
+
+/// The day of the week of a day, 0 = Sunday (1970-01-01 was a Thursday).
+fn weekday(days: i64) -> i64 {
+    (days + 4).rem_euclid(7)
+}
+
+/// The month a day is in.
+fn month_of(days: i64) -> i64 {
+    let (y, m, _) = civil_from_days(days);
+    y * 12 + m - 1
+}
+
+/// The first day of a month.
+fn month_start(month: i64) -> i64 {
+    days_from_civil(month.div_euclid(12), month.rem_euclid(12) + 1, 1)
+}
+
+fn month_len(month: i64) -> i64 {
+    month_start(month + 1) - month_start(month)
+}
+
+/// "November 2026": the month's name in English, then the year.
+fn month_title(month: i64) -> String {
+    format!(
+        "{} {}",
+        MONTHS[month.rem_euclid(12) as usize],
+        month.div_euclid(12)
+    )
+}
+
+/// A date as YYYY-MM-DD.
+fn iso_date(days: i64) -> String {
+    let (y, m, d) = civil_from_days(days);
+    format!("{:04}-{:02}-{:02}", y, m, d)
+}
+
+/// A YYYY-MM-DD date that exists, in days.
+fn parse_date(text: &str) -> Option<i64> {
+    let mut parts = text.trim().splitn(3, '-');
+    let y: i64 = parts.next()?.parse().ok()?;
+    let m: i64 = parts.next()?.parse().ok()?;
+    let d: i64 = parts.next()?.parse().ok()?;
+    let month = y * 12 + m - 1;
+    ((1..=12).contains(&m) && (1..=month_len(month)).contains(&d)).then(|| days_from_civil(y, m, d))
+}
+
+/// A YYYY-MM month.
+fn parse_month(text: &str) -> Option<i64> {
+    let (y, m) = text.trim().split_once('-')?;
+    let (y, m): (i64, i64) = (y.parse().ok()?, m.parse().ok()?);
+    (1..=12).contains(&m).then_some(y * 12 + m - 1)
+}
+
+/// The ISO week of a day: the week of its Thursday, counted from the week of
+/// its year's first Thursday.
+fn iso_week(days: i64) -> i64 {
+    let thursday = days - (weekday(days) + 6) % 7 + 3;
+    let (y, _, _) = civil_from_days(thursday);
+    (thursday - days_from_civil(y, 1, 1)) / 7 + 1
+}
+
+/// Today, by the machine's clock: the month a calendar shows first when the
+/// view does not say.
+fn today() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| (d.as_secs() / 86_400) as i64)
 }
 
 impl Window {
@@ -559,8 +678,61 @@ impl Window {
                     }
                 }
             }
+            "calendar" => {
+                // the month the view says (the value's, else today's); the cursor
+                // on the day picked when it is in it, else on the month's first
+                let p = &self.nodes[n].props;
+                let picked = parse_date(&text_of(p.get("value")));
+                let month = parse_month(&text_of(p.get("month")))
+                    .or(picked.map(month_of))
+                    .unwrap_or_else(|| month_of(today()));
+                let node = &mut self.nodes[n];
+                node.value = picked.map(iso_date).unwrap_or_default();
+                node.day = picked
+                    .filter(|&d| month_of(d) == month)
+                    .unwrap_or_else(|| month_start(month));
+            }
             _ => {}
         }
+    }
+
+    /// UI-21: whether a calendar's day can be picked: not before `min`, not
+    /// after `max`, not one of `disabled_dates`, not on one of
+    /// `disabled_days` (0 = Sunday).
+    fn pickable(&self, n: usize, day: i64) -> bool {
+        let p = &self.nodes[n].props;
+        let bound = |key: &str| parse_date(&text_of(p.get(key)));
+        let list = |key: &str| p.get(key).and_then(Value::as_array).cloned();
+        bound("min").map_or(true, |min| day >= min)
+            && bound("max").map_or(true, |max| day <= max)
+            && !list("disabled_dates")
+                .unwrap_or_default()
+                .iter()
+                .any(|d| parse_date(&text_of(Some(d))) == Some(day))
+            && !list("disabled_days")
+                .unwrap_or_default()
+                .iter()
+                .any(|d| number(Some(d)).map(|w| (w as i64).rem_euclid(7)) == Some(weekday(day)))
+    }
+
+    /// A calendar's first day of the week (0 = Sunday), whether it shows the
+    /// weeks' numbers, and the cells of its grid: a day takes two and one
+    /// between (the week's number too, before the days).
+    fn calendar_shape(&self, n: usize) -> (i64, bool, usize) {
+        let p = &self.nodes[n].props;
+        let first = number(p.get("first_day")).unwrap_or(0.0) as i64;
+        let weeks = truthy(p.get("week_numbers"));
+        (first.rem_euclid(7), weeks, 20 + if weeks { 3 } else { 0 })
+    }
+
+    /// The month a calendar shows, the column of its first day (from the
+    /// first day of the week) and its rows of weeks.
+    fn calendar_month(&self, n: usize) -> (i64, i64, usize) {
+        let month = month_of(self.nodes[n].day);
+        let (first_day, _, _) = self.calendar_shape(n);
+        let lead = (weekday(month_start(month)) - first_day).rem_euclid(7);
+        let weeks = (lead + month_len(month) + 6) / 7;
+        (month, lead, weeks as usize)
     }
 
     /// A carousel's slides (each child is one), a stepper's steps.
@@ -620,6 +792,40 @@ impl Window {
             cur = self.nodes[n].parent;
         }
         None
+    }
+
+    /// UI-21: what a calendar shows, as text: its title, the weekdays, a
+    /// line a week (its number first when it shows them).
+    fn calendar_texts(&self, n: usize) -> Vec<String> {
+        let (first_day, numbered, _) = self.calendar_shape(n);
+        let (month, lead, weeks) = self.calendar_month(n);
+        let start = month_start(month);
+        let mut out = vec![
+            month_title(month),
+            (0..7)
+                .map(|i| WEEKDAYS[((first_day + i) % 7) as usize])
+                .collect::<Vec<_>>()
+                .join(" "),
+        ];
+        for week in 0..weeks as i64 {
+            let mut line = String::new();
+            if numbered {
+                line.push_str(&format!("{:>2} ", iso_week(start - lead + 7 * week)));
+            }
+            let days: Vec<String> = (0..7)
+                .map(|col| {
+                    let d = 7 * week + col - lead + 1;
+                    if (1..=month_len(month)).contains(&d) {
+                        format!("{:>2}", d)
+                    } else {
+                        "  ".into()
+                    }
+                })
+                .collect();
+            line.push_str(&days.join(" "));
+            out.push(line.trim().to_string());
+        }
+        out
     }
 
     /// What a tooltip holds, as text: the label a driver finds it by.
@@ -737,7 +943,7 @@ impl Window {
         match kind {
             "input" => text_of(props.get("input_type")) != "file",
             "checkbox" | "switch" | "radio" | "select" | "button" | "link" | "table"
-            | "tabpanel" => true,
+            | "tabpanel" | "calendar" => true,
             _ => false,
         }
     }
@@ -804,6 +1010,7 @@ impl Window {
             }
             "tooltip" => self.content_width(n, w),
             "modal" | "toast" => 1,
+            "calendar" => self.calendar_shape(n).2,
             _ => w,
         };
         width.min(w).max(1)
@@ -900,6 +1107,17 @@ impl Window {
                 1 + slide.map_or(0, |s| self.place(s, x, y, w))
             }
             "stepper" => self.place_stepper(n, x, y, w),
+            "calendar" => {
+                // its title with the month's keys, the weekdays, a row a week,
+                // then an error the action gave it (UI-9)
+                let error = text_of(props.get("error"));
+                self.nodes[n].lines = if error.is_empty() {
+                    Vec::new()
+                } else {
+                    wrap(&error, w)
+                };
+                2 + self.calendar_month(n).2 + self.nodes[n].lines.len()
+            }
             "item" if props.contains_key("marker") => {
                 // an ordered list's number before the item (UI-21)
                 let m = text_of(props.get("marker")).chars().count() + 1;
@@ -1248,7 +1466,7 @@ impl Window {
         if let Some(i) = self.focusables.iter().position(|&n| {
             matches!(
                 self.nodes[n].kind.as_str(),
-                "input" | "checkbox" | "switch" | "radio" | "select"
+                "input" | "checkbox" | "switch" | "radio" | "select" | "calendar"
             )
         }) {
             self.focus = i;
@@ -1412,6 +1630,10 @@ impl Window {
                         fields.insert(bind, Value::String(v.clone()));
                     }
                 }
+                // UI-21: a calendar is a date field: the day picked, or nothing picked
+                "calendar" if !bind.is_empty() => {
+                    fields.insert(bind, Value::String(node.value.clone()));
+                }
                 _ => {}
             }
             for &c in node.children.iter().rev() {
@@ -1549,6 +1771,11 @@ impl Window {
                 self.events.push(json!({"event": "reload"}));
                 return true;
             }
+            // a calendar with the focus takes PgUp and PgDn for its months (UI-21)
+            Key::PageDown | Key::PageUp
+                if self
+                    .focused()
+                    .is_some_and(|n| self.nodes[n].kind == "calendar") => {}
             Key::PageDown => {
                 let rows = self.content_rows();
                 let max = self.content_height.saturating_sub(rows);
@@ -1652,6 +1879,7 @@ impl Window {
                 _ => false,
             },
             "table" => self.key_in_table(n, key),
+            "calendar" => self.key_in_calendar(n, key),
             "tabpanel" => {
                 let tabs = self.nodes[n]
                     .children
@@ -1901,6 +2129,41 @@ impl Window {
         }
     }
 
+    /// UI-21: a calendar's keys. The arrows move its cursor a day or a week,
+    /// into the month before or after when they go past its ends; Home and
+    /// End to its first and last day; PgUp and PgDn show the month before
+    /// and after (the cursor on the same day, or the month's last); Enter or
+    /// Space picks the day under the cursor, when it can be picked: the
+    /// calendar's value, which its form sends under `bind`.
+    fn key_in_calendar(&mut self, n: usize, key: Key) -> bool {
+        let day = self.nodes[n].day;
+        let month = month_of(day);
+        let into = |m: i64| month_start(m) + (day - month_start(month)).min(month_len(m) - 1);
+        let to = match key {
+            Key::Left => day - 1,
+            Key::Right => day + 1,
+            Key::Up => day - 7,
+            Key::Down => day + 7,
+            Key::Home => month_start(month),
+            Key::End => month_start(month) + month_len(month) - 1,
+            Key::PageUp => into(month - 1),
+            Key::PageDown => into(month + 1),
+            Key::Enter | Key::Space => {
+                if self.pickable(n, day) {
+                    self.nodes[n].value = iso_date(day);
+                }
+                return true;
+            }
+            _ => return false,
+        };
+        self.nodes[n].day = to;
+        if month_of(to) != month {
+            // another month: its weeks may be more or fewer
+            self.relayout();
+        }
+        true
+    }
+
     /// A tick: a search due sends its change. Whether the picture changed
     /// (the cursor blinks).
     pub fn tick(&mut self, tick: u64) -> bool {
@@ -1985,6 +2248,7 @@ impl Window {
             "modal" => "Enter or Esc closes it · Tab moves".into(),
             "toast" => "Enter dismisses · Tab moves · Esc closes".into(),
             "tooltip" => "Tab moves · Esc closes".into(),
+            "calendar" => "arrows: day · PgUp PgDn: month · Enter picks · Tab moves".into(),
             _ => "Tab moves · Enter chooses · Esc closes".into(),
         }
     }
@@ -2069,6 +2333,7 @@ impl Window {
                 }
             }
             "image" => out.push(format!("[{}]", text_of(p.get("alt")))),
+            "calendar" => out.extend(self.calendar_texts(n)),
             "table" => {
                 for c in &node.columns {
                     let label = text_of(c.get("label"));
@@ -2176,6 +2441,18 @@ impl Window {
                         v["moves"] = json!("stepper");
                         v["step"] = json!(self.nodes[stepper].tab);
                         v["steps"] = json!(self.moving_parts(stepper).len());
+                    }
+                    "calendar" => {
+                        // the month shown (YYYY-MM), the day picked, the cursor's day
+                        let month = month_of(node.day);
+                        v["value"] = json!(node.value);
+                        v["month"] = json!(format!(
+                            "{:04}-{:02}",
+                            month.div_euclid(12),
+                            month.rem_euclid(12) + 1
+                        ));
+                        v["title"] = json!(month_title(month));
+                        v["cursor"] = json!(iso_date(node.day));
                     }
                     _ => {}
                 }
@@ -2363,6 +2640,11 @@ impl Window {
             "dropdown" => self.draw_dropdown(n, b, font, focused, is_focus),
             "carousel" => self.draw_carousel(n, b, font, is_focus),
             "stepper" => self.draw_stepper(n, b, font),
+            "calendar" => {
+                self.draw_calendar(n, b, font, is_focus);
+                let below = 2 + self.calendar_month(n).2;
+                self.draw_error(node, b, font, below);
+            }
             "section" | "header" | "cardheader" | "formitem" => {
                 if let (Some(line), Some(y)) = (node.lines.first(), self.row_y(r.y, ch)) {
                     if !line.trim().is_empty() {
@@ -3006,6 +3288,95 @@ impl Window {
                 if let Some(y) = self.row_y(r.y + below + i, ch) {
                     b.text(font, line, x, y + 1, if *error { ERR_TEXT } else { MUTED });
                 }
+            }
+        }
+    }
+
+    /// UI-21: a calendar, a date field shown as a month: a row with the
+    /// month's title between its keys (PgUp and PgDn, lit while it has the
+    /// focus), the weekdays over a rule, a row a week with each day in its
+    /// column (the week's number before them when it shows them). The day
+    /// picked is a honey box; the cursor, while it has the focus, a honey
+    /// frame (white around the day picked); a day that cannot be picked is
+    /// dim. The days of the months around are left out, as `cal` does.
+    fn draw_calendar(&self, n: usize, b: &mut Band, font: &Font, is_focus: bool) {
+        let node = &self.nodes[n];
+        let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+        let r = node.rect;
+        let x = self.ox + r.x as i32 * cw;
+        let (first_day, numbered, cells) = self.calendar_shape(n);
+        let (month, lead, weeks) = self.calendar_month(n);
+        let gx = x + if numbered { 3 * cw } else { 0 };
+        // the title between the month's keys
+        if let Some(y) = self.row_y(r.y, ch) {
+            let (light, dark, ink) = if is_focus {
+                (HONEY, HONEY, HONEY)
+            } else {
+                (LIGHT, BLACK, TEXT)
+            };
+            for (kx, to) in [
+                (x, Toward::Left),
+                (x + (cells as i32 - 2) * cw, Toward::Right),
+            ] {
+                bevel_out(b, kx, y, 2 * cw as u32, ch as u32, MID, light, dark);
+                arrow(b, kx + cw - 2, y + 2, to, ink);
+            }
+            let title = month_title(month);
+            let tx = x + (cells as i32 * cw - font.width_of(&title) as i32) / 2;
+            b.text(font, &title, tx, y, HONEY);
+        }
+        // the weekdays, from the first day of the week, over a rule
+        if let Some(y) = self.row_y(r.y + 1, ch) {
+            for i in 0..7 {
+                let name = WEEKDAYS[((first_day + i) % 7) as usize];
+                b.text(font, name, gx + 3 * i as i32 * cw, y, MUTED);
+            }
+            let wpx = (cells as i32 * cw - if numbered { 3 * cw } else { 0 }) as u32;
+            b.fill_rect(gx, y + ch - 1, wpx, 1, LINE);
+        }
+        let start = month_start(month);
+        for week in 0..weeks as i64 {
+            let Some(y) = self.row_y(r.y + 2 + week as usize, ch) else {
+                continue;
+            };
+            if numbered {
+                let number = format!("{:>2}", iso_week(start - lead + 7 * week));
+                b.text(font, &number, x, y, MUTED);
+            }
+            for col in 0..7 {
+                let d = 7 * week + col - lead;
+                if d < 0 || d >= month_len(month) {
+                    continue;
+                }
+                let day = start + d;
+                let dx = gx + 3 * col as i32 * cw;
+                let picked = parse_date(&node.value) == Some(day);
+                let cursor = is_focus && node.day == day;
+                let pickable = self.pickable(n, day);
+                let (bx, bw) = (dx - 2, 2 * cw as u32 + 4);
+                let ink = match (picked, cursor) {
+                    (true, true) => {
+                        bevel_out(b, bx, y, bw, ch as u32, TITLE_BG, TEXT, TEXT);
+                        INK
+                    }
+                    (true, false) => {
+                        bevel_out(b, bx, y, bw, ch as u32, TITLE_BG2, TITLE_BG, TITLE_DARK);
+                        INK
+                    }
+                    (false, true) => {
+                        bevel_out(b, bx, y, bw, ch as u32, MID, HONEY, HONEY);
+                        if pickable {
+                            HONEY
+                        } else {
+                            LINE
+                        }
+                    }
+                    (false, false) if pickable => TEXT,
+                    (false, false) => LINE,
+                };
+                let text = (d + 1).to_string();
+                let tx = dx + 2 * cw - font.width_of(&text) as i32;
+                b.text(font, &text, tx, y, ink);
             }
         }
     }
@@ -3907,6 +4278,132 @@ mod tests {
             w.tick(t);
         }
         assert!(shows(&w, "one"), "round again");
+    }
+
+    #[test]
+    fn a_calendar_s_days_are_the_gregorian_calendar_s() {
+        assert_eq!(days_from_civil(1970, 1, 1), 0);
+        for days in -800_000..800_000 {
+            let (y, m, d) = civil_from_days(days);
+            assert_eq!(days_from_civil(y, m, d), days);
+        }
+        let day = |text: &str| parse_date(text).unwrap();
+        assert_eq!(weekday(day("2026-11-01")), 0, "a Sunday");
+        assert_eq!(weekday(day("2000-01-01")), 6, "a Saturday");
+        assert_eq!(month_len(month_of(day("2024-02-10"))), 29);
+        assert_eq!(month_len(month_of(day("2100-02-10"))), 28);
+        assert_eq!(month_len(month_of(day("2000-02-10"))), 29);
+        assert_eq!(parse_date("2026-02-29"), None);
+        assert_eq!(parse_date("2026-13-01"), None);
+        assert_eq!(iso_date(day("2026-12-24")), "2026-12-24");
+        assert_eq!(
+            parse_month("2026-11").map(month_title).unwrap(),
+            "November 2026"
+        );
+        // ISO weeks, as Python's isocalendar() says them
+        assert_eq!(iso_week(day("2026-10-26")), 44);
+        assert_eq!(iso_week(day("2026-12-28")), 53);
+        assert_eq!(iso_week(day("2027-01-03")), 53);
+        assert_eq!(iso_week(day("2027-01-04")), 1);
+        assert_eq!(iso_week(day("2024-12-30")), 1);
+    }
+
+    /// UI-21: a form with a calendar, as the view of
+    /// tests/apps/showcase/components/state.q sends it.
+    fn booking(props: Value) -> Window {
+        let mut p = json!({"bind": "day", "value": "2026-11-15", "month": "2026-11", "min": "",
+                           "max": "", "disabled_dates": [], "disabled_days": [], "first_day": 0,
+                           "week_numbers": false});
+        for (k, v) in props.as_object().unwrap() {
+            p[k] = v.clone();
+        }
+        let page = json!({"title": "Book", "view": [{"type": "form", "props": {},
+            "event": {"action": "book", "fields": {}}, "children": [
+                {"type": "calendar", "props": p},
+                {"type": "button", "props": {"text": "Book"}}]}]});
+        Window::new(&page, 320, 180)
+    }
+
+    fn calendar(w: &Window) -> Value {
+        w.observe()["items"][0].clone()
+    }
+
+    #[test]
+    fn a_calendar_shows_a_month_moves_and_the_day_it_picks_goes_with_its_form() {
+        let mut w = booking(json!({}));
+        let c = calendar(&w);
+        assert_eq!(
+            (c["kind"].clone(), c["focus"].clone()),
+            (json!("calendar"), json!(true))
+        );
+        assert_eq!(
+            (c["month"].clone(), c["value"].clone(), c["cursor"].clone()),
+            (json!("2026-11"), json!("2026-11-15"), json!("2026-11-15"))
+        );
+        assert!(shows(&w, "November 2026") && shows(&w, "Su Mo Tu We Th Fr Sa"));
+        assert!(w.help().contains("PgUp PgDn: month"));
+        // PgDn: the next month, the cursor on the same day
+        w.key(Key::PageDown, 0);
+        assert!(shows(&w, "December 2026") && !shows(&w, "November 2026"));
+        assert_eq!(calendar(&w)["cursor"], "2026-12-15");
+        // the arrows: a week, a day; Enter picks the day under the cursor
+        keys(&mut w, &[Key::Down, Key::Right, Key::Right, Key::Enter]);
+        assert_eq!(calendar(&w)["value"], "2026-12-24");
+        keys(&mut w, &[Key::Tab, Key::Enter]);
+        let events = w.take_events();
+        assert_eq!(events[0]["event"], "submit");
+        assert_eq!(events[0]["fields"]["day"], "2026-12-24");
+        // past the month's ends the month moves with the cursor
+        let mut w = booking(json!({"value": "2026-12-01", "month": "2026-12"}));
+        w.key(Key::Left, 0);
+        assert_eq!(calendar(&w)["month"], "2026-11");
+        assert_eq!(calendar(&w)["cursor"], "2026-11-30");
+        keys(&mut w, &[Key::Home, Key::Up]);
+        assert_eq!(calendar(&w)["cursor"], "2026-10-25");
+        // a month shorter than the cursor's day: its last
+        let mut w = booking(json!({"value": "2027-01-31", "month": "2027-01"}));
+        w.key(Key::PageDown, 0);
+        assert_eq!(calendar(&w)["cursor"], "2027-02-28");
+        keys(&mut w, &[Key::PageUp, Key::PageUp]);
+        assert_eq!(calendar(&w)["cursor"], "2026-12-28");
+        assert_eq!(calendar(&w)["value"], "2027-01-31", "moving picks nothing");
+    }
+
+    #[test]
+    fn a_calendar_s_day_out_of_bounds_or_disabled_cannot_be_picked() {
+        let mut w = booking(json!({"min": "2026-11-03", "max": "2026-11-27",
+            "disabled_dates": ["2026-11-18"], "disabled_days": [0, 6], "value": "",
+            "month": "2026-11"}));
+        assert_eq!(
+            calendar(&w)["cursor"],
+            "2026-11-01",
+            "nothing picked: the month's first"
+        );
+        let pick = |w: &mut Window, day: &str| {
+            let n = w.focused().unwrap();
+            w.nodes[n].day = parse_date(day).unwrap();
+            w.key(Key::Enter, 0);
+            calendar(w)["value"].as_str().unwrap().to_string()
+        };
+        assert_eq!(pick(&mut w, "2026-11-02"), "", "before min");
+        assert_eq!(pick(&mut w, "2026-11-30"), "", "after max");
+        assert_eq!(pick(&mut w, "2026-11-18"), "", "a date disabled");
+        assert_eq!(pick(&mut w, "2026-11-21"), "", "a Saturday");
+        assert_eq!(pick(&mut w, "2026-11-19"), "2026-11-19");
+        // the week from Monday, with the weeks' numbers before the days
+        let w = booking(json!({"first_day": 1, "week_numbers": true}));
+        assert!(shows(&w, "Mo Tu We Th Fr Sa Su"));
+        assert_eq!(
+            w.texts()[2],
+            "44                    1",
+            "Sunday the 1st, last of week 44"
+        );
+        assert_eq!(w.texts()[3], "45  2  3  4  5  6  7  8");
+        // outside the calendar, PgDn scrolls the page as before
+        let mut w = booking(json!({}));
+        w.key(Key::Tab, 0);
+        w.key(Key::PageDown, 0);
+        assert_eq!(calendar(&w)["month"], "2026-11");
     }
 
     #[test]

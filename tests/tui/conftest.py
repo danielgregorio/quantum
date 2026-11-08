@@ -1,5 +1,6 @@
 """The TUI's tests (SPEC.md UI-20): a small application served on a local port, and the TUI headless on it."""
 
+import json
 import logging
 import shutil
 import sqlite3
@@ -35,7 +36,6 @@ INDEX = f'''<q:component name="Fruits" {NS}>
     <ui:form on-submit="send" submit="Send">
       <ui:input bind="doc" type="file" />
     </ui:form>
-    <ui:calendar />
   </ui:window>
 </q:component>'''
 
@@ -60,6 +60,30 @@ LAYERS = f'''<q:component name="Layers" {NS}>
 </q:component>'''
 
 
+# UI-21: a calendar's weeks from Monday with their numbers, and the days that cannot be picked
+DATES = f'''<q:component name="Dates" {NS}>
+  <ui:window title="Dates">
+    <ui:calendar bind="day" value="2026-03-04" min-date="2026-03-03" max-date="2026-04-10"
+                 disabled-dates="2026-03-12" disabled-days="0,6" first-day-of-week="1" show-week-numbers="true" />
+  </ui:window>
+</q:component>'''
+
+
+def with_a_kind_none_draws(app):
+    """UI-7: /hologram is a page whose view names a kind no renderer knows (a newer server's; every ui:* tag is
+    drawn, UI_PARITY.md), for the test that the TUI says so instead of drawing something else in its place."""
+    def serve(environ, start_response):
+        if environ.get('PATH_INFO') != '/hologram':
+            return app(environ, start_response)
+        body = json.dumps({'title': 'Hologram', 'flash': '', 'flashType': '', 'flashShown': False, 'motion': False,
+                           'view': [{'type': 'hologram', 'props': {}, 'children': []},
+                                    {'type': 'text', 'props': {'text': 'Still drawn'}, 'children': []}]}).encode()
+        start_response('200 OK', [('Content-Type', 'application/vnd.quantum.view+json'),
+                                   ('Content-Length', str(len(body)))])
+        return [body]
+    return serve
+
+
 @pytest.fixture
 def godot():
     from tests.apps.ui_drivers import tui_godot
@@ -77,6 +101,7 @@ def app_url(tmp_path, monkeypatch):
     (project / 'components' / 'index.q').write_text(INDEX, encoding='utf-8')
     (project / 'components' / 'long.q').write_text(LONG, encoding='utf-8')
     (project / 'components' / 'layers.q').write_text(LAYERS, encoding='utf-8')
+    (project / 'components' / 'dates.q').write_text(DATES, encoding='utf-8')
     db = sqlite3.connect(project / 'fruits.db')
     db.executescript("CREATE TABLE fruits (id INTEGER PRIMARY KEY, name TEXT NOT NULL, stock INTEGER NOT NULL);"
                      "INSERT INTO fruits (name, stock) VALUES ('Apple', 4), ('Banana', 7), ('Cherry', 2);")
@@ -89,7 +114,8 @@ def app_url(tmp_path, monkeypatch):
     from werkzeug.serving import make_server
     from quantum.runtime.web_server import QuantumWebServer
     logging.disable(logging.WARNING)
-    server = make_server('127.0.0.1', 0, QuantumWebServer(str(project / 'quantum.config.yaml')).app, threaded=True)
+    app = with_a_kind_none_draws(QuantumWebServer(str(project / 'quantum.config.yaml')).app)
+    server = make_server('127.0.0.1', 0, app, threaded=True)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     yield f'http://127.0.0.1:{server.server_port}/', project
     server.shutdown()

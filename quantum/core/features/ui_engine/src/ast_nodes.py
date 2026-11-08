@@ -1958,5 +1958,7 @@ CORE_TAGS = frozenset({
     'pagination', 'skeleton', 'loading', 'date-picker', 'animate',
     # and those with a state of their own (UI-21)
     'accordion', 'modal', 'tooltip', 'dropdown', 'toast', 'toast-container', 'carousel', 'slide',
-    'stepper', 'step',
+    'stepper', 'step', 'calendar',
+    # and what is not an element of a page: a form's rules, a page's colours (UI-21)
+    'validator', 'theme', 'color',
 })

@@ -1905,9 +1905,9 @@ window.__quantumCalendar = (function() {
 
             // Header
             html += '<div class="q-calendar-header">';
-            html += '<button class="q-calendar-nav" onclick="__quantumCalendar.prevMonth(\'' + id + '\')">&lt;</button>';
+            html += '<button type="button" class="q-calendar-nav" aria-label="Previous month" onclick="__quantumCalendar.prevMonth(\'' + id + '\')">&lt;</button>';
             html += '<span class="q-calendar-title">' + monthNames[state.viewMonth] + ' ' + state.viewYear + '</span>';
-            html += '<button class="q-calendar-nav" onclick="__quantumCalendar.nextMonth(\'' + id + '\')">&gt;</button>';
+            html += '<button type="button" class="q-calendar-nav" aria-label="Next month" onclick="__quantumCalendar.nextMonth(\'' + id + '\')">&gt;</button>';
             html += '</div>';
 
             // Grid

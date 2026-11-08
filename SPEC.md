@@ -973,14 +973,17 @@ renderer (browser, console, desktop, the Hive's screen, the TUI): `window`, `hbo
 `button`, `pager` (UI-11), `history` (DB-11) and `stream` (IA-7), and those of
 UI-21: `breadcrumb`/`breadcrumb-item`, `menu`, `avatar`, `markdown`, `chart`,
 `tree`, `log`, `dividedbox`, `pagination`, `skeleton`, `loading`,
-`date-picker` and `animate`. The same
+`date-picker`, `animate`, `accordion`, `modal`, `tooltip`, `dropdown`,
+`toast`/`toast-container`, `carousel`/`slide`, `stepper`/`step` and
+`calendar`, with a form's `validator`s and a page's `theme`/`color` — every
+`ui:*` tag. The same
 script (look, fill in, check, choose, click) passes the same in the browser,
 in the console, on the screen and in the TUI. `ui:section` is a titled group, always open; the title of a
 `ui:card` shows even next to a `ui:card-header`; a `ui:alert` is as tall as what it says; a tab
-opens on a click in the browser as on the arrows in the console and on the screen. The other `ui:*` tags work
-only in the browser (Experimental), and the console, the screen and the TUI
-show that they do not draw them instead of drawing something else in their
-place. `UI_PARITY.md` is the map of every tag against every renderer, written
+opens on a click in the browser as on the arrows in the console and on the screen. A kind a renderer does
+not know (a newer server's) it shows that it does not draw — `[ui:kind is not
+drawn ...]` — instead of drawing something else in its place.
+`UI_PARITY.md` is the map of every tag against every renderer, written
 from `quantum/runtime/ui_parity.py` and checked against what each renderer does
 on a page with every tag; a tag enters the Core set when every renderer draws
 it.
@@ -1135,7 +1138,7 @@ tree out in cells of one font — boxes with borders, rows of fields, tables in
 columns; an `hbox` stacks and a `grid` takes its columns by the breakpoints in
 columns (UI-2: `sm` 80, `md` 96, `lg` 128); a wide character (CJK, most emoji)
 takes two cells — and draws it with the browser's design tokens for its
-colours. It draws the Core set (UI-7), and an element outside it as `[ui:kind
+colours. It draws the Core set (UI-7), and a kind it does not know as `[ui:kind
 is not drawn in the TUI]`. Where a terminal stops, it does not: the mouse (a
 click acts, a hover marks, the wheel scrolls), scrolling that glides, the
 motions of UI-19, the page's images, and a file field that opens a dialog of
@@ -1186,10 +1189,26 @@ its tip while its content is pointed at or has the focus; a `ui:dropdown` is
 a button that opens its options, each posting its action with its `value` as
 a menu's does; a `ui:carousel` shows one slide and moves to the previous and
 the next; a `ui:stepper` shows the steps' titles and the current step's
-content, and Back and Next move between them. What calls a standalone build's
-script — `on-change`, `on-complete` and `bind` on a carousel or a stepper,
-`on-close` on a toast — is an error in a page that says so
-(`tests/apps/showcase/components/state.q`).
+content, and Back and Next move between them; a `ui:calendar` is a date field
+of its form shown as a month (YYYY-MM-DD under its `bind`, UI-9): its `value`
+(and the month first shown, else today's), `min-date`, `max-date`,
+`disabled-dates`, `disabled-days`, `first-day-of-week` and
+`show-week-numbers`; the user moves from month to month and picks a day that
+can be picked, and the day sent comes back in it with its field's error. What
+calls a standalone build's script — `on-change`, `on-complete` and `bind` on a
+carousel or a stepper, `on-close` on a toast, `on-change` and
+`on-month-change` on a calendar — is an error in a page that says so, and so
+is a calendar's `mode` other than `single`
+(`tests/apps/showcase/components/state.q`). A form's `ui:validator`s are
+checked by the server when it is sent, before its action runs: a `pattern`, a
+form (`email`, `url`, `phone`), `match` another field, `min`/`max`,
+`minlength`/`maxlength`, a `server-expression` that must be true; an empty
+field passes them (its q:param says whether it is required), and a failure
+brings the form back with the error by its field, as UI-9's do; `expression`,
+a check in a standalone build's script, is an error in a page. A page's
+`ui:theme` (a `preset`, its `ui:color`s over it) gives its colours: the
+browser's CSS variables, the console's and the TUI's colours (the view's
+`tokens`); the Hive's screen keeps its palette.
 
 ## 11. Development
 

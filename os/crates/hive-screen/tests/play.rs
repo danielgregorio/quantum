@@ -606,3 +606,36 @@ fn the_tags_with_a_state_of_their_own_open_close_move_and_go() {
         .iter()
         .all(|i| i["kind"] != "toast"));
 }
+
+/// UI-21: a calendar in a form, as the view sends it: a day that cannot be
+/// picked before `min`, on a date disabled and on Sundays, the week from
+/// Monday, the weeks' numbers.
+fn booking() -> Value {
+    json!({"title": "Book", "view": [{"type": "window", "props": {"title": "Book"}, "children": [
+        {"type": "form", "props": {}, "event": {"action": "book", "fields": {}}, "children": [
+            {"type": "calendar", "props": {"bind": "day", "value": "2026-11-15", "month": "2026-11",
+                                           "min": "2026-11-03", "max": "", "disabled_dates": ["2026-11-20"],
+                                           "disabled_days": [0], "first_day": 1, "week_numbers": true}},
+            {"type": "button", "props": {"text": "Book"}}]}]}]})
+}
+
+#[test]
+fn a_calendar_shows_a_month_moves_by_the_keyboard_and_its_day_goes_with_its_form() {
+    let mut s = Screen::start();
+    s.request(json!({"op": "show", "page": booking()}));
+    let obs = s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
+    let calendar = &obs["window"]["items"][0];
+    assert_eq!(calendar["kind"], "calendar");
+    assert_eq!(calendar["focus"], true, "a date field: the first");
+    assert!(shows(&obs, "November 2026") && shows(&obs, "Mo Tu We Th Fr Sa Su"));
+    // the cursor a week down and two days on, a honey frame by the day picked
+    s.request(json!({"op": "act", "tap": ["down", "right", "right"], "ticks": 1}));
+    s.frame("window-calendar");
+    // PgDn: the next month; Enter picks; the form sends the day under `bind`
+    let obs = s.request(json!({"op": "act", "tap": ["pgdn", "enter"], "ticks": 1}));
+    assert!(shows(&obs, "December 2026"));
+    assert_eq!(obs["window"]["items"][0]["value"], "2026-12-24");
+    let obs = s.request(json!({"op": "act", "tap": ["tab", "enter"], "ticks": 1}));
+    let submit = find(&obs, "submit").expect("a submit event");
+    assert_eq!(submit["fields"]["day"], "2026-12-24");
+}

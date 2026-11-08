@@ -61,7 +61,8 @@ class ActionHandler:
         self,
         action: ActionNode,
         context: Optional[ExecutionContext] = None,
-        route_params: Optional[Dict[str, str]] = None
+        route_params: Optional[Dict[str, str]] = None,
+        validators: Optional[list] = None,
     ) -> Tuple[Optional[str], int]:
         """
         Handle action execution.
@@ -91,6 +92,9 @@ class ActionHandler:
 
             # 2. Validate parameters
             validated_params = self._validate_parameters(self._params_of(action), form_data, action)
+            if validators:
+                # UI-21: the rules of the page's ui:validators, checked by the server in a page
+                self._check_validators(validators, form_data, context)
 
             # 3. Add validated params to context
             for key, value in validated_params.items():
@@ -312,6 +316,22 @@ class ActionHandler:
         if first:
             raise ValidationError(first, by_field)
         return validated
+
+    def _check_validators(self, validators: list, form_data: Dict[str, Any], context) -> None:
+        from quantum.runtime.ui_validators import failures
+        fields = {k: v for k, v in form_data.items()
+                  if k != 'files' and not param_validation.is_uploaded_file(v)}
+
+        def evaluate(expression: str, values: Dict[str, Any]) -> bool:
+            value = self.component_runtime._apply_databinding(
+                expression, {**context.get_all_variables(), **values})
+            if isinstance(value, str):
+                return value.strip().lower() in ('true', '1', 'yes', 'on')
+            return bool(value)
+
+        errors = failures(validators, fields, evaluate)
+        if errors:
+            raise ValidationError(next(iter(errors.values())), errors)
 
     @staticmethod
     def _secret_fields(action) -> set:

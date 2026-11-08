@@ -340,6 +340,7 @@ class UIPageRenderer(UIHtmlAdapter):
                    ui_nodes.UIAvatarNode: self._render_avatar_page,
                    ui_nodes.UIAccordionNode: self._render_accordion_page,
                    ui_nodes.UIModalNode: self._render_modal_page,
+                   ui_nodes.UICalendarNode: self._render_calendar_page,
                    ui_nodes.UIDropdownNode: self._render_dropdown_page,
                    ui_nodes.UIToastNode: self._render_toast_page,
                    ui_nodes.UICarouselNode: self._render_moving_page, ui_nodes.UIStepperNode: self._render_moving_page}
@@ -545,6 +546,32 @@ class UIPageRenderer(UIHtmlAdapter):
         self._options_html(node, b, 'q-menu-item')
         b.close_tag('div')
         b.close_tag('details')
+
+    def _render_calendar_page(self, node, b: HtmlBuilder):
+        # UI-21: a date field shown as a month; the picked day goes with its form under `bind`, and comes back in
+        # it with its error (UI-9)
+        node, error = ui_more.calendar_field(node, getattr(self, '_form_ctx', None))
+        shape = ui_more.calendar_of(self._page, node)
+        inner = HtmlBuilder()
+        self._render_node_ui(node, inner)
+        markup = inner.build()
+        b.raw(markup)
+        found = re.search(r'<div[^>]*\bid="([^"]+)"[^>]*class="q-calendar\b|<div[^>]*class="q-calendar\b[^"]*"[^>]*\bid="([^"]+)"',
+                          markup)
+        if shape['bind'] and found:
+            ident = html.unescape(found.group(1) or found.group(2))
+            name = html.escape(shape['bind'], quote=True)
+            b.raw(f'<input type="hidden" name="{name}" value="{html.escape(shape["value"], quote=True)}" '
+                  f'data-calendar-for="{html.escape(ident, quote=True)}">')
+            sync = ("document.addEventListener('click',function(e){var c=document.getElementById(" + json.dumps(ident)
+                    + ");if(!c||!c.contains(e.target))return;setTimeout(function(){var s=window.__quantumState||{};"
+                    "var f=document.querySelector('input[data-calendar-for=\"'+c.id+'\"]');"
+                    "if(f&&s[" + json.dumps(shape['bind']) + "])f.value=s[" + json.dumps(shape['bind']) + "];},0);},true);")
+            b.raw(f'<script>{sync}</script>')
+        if error:
+            b.open_tag('span', {'class': 'q-field-error', 'role': 'alert'})
+            b.text(html.escape(error))
+            b.close_tag('span')
 
     def _render_modal_page(self, node, b: HtmlBuilder):
         # UI-21: open as the page is drawn (`open`, or an expression); its close button closes it

@@ -542,8 +542,10 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
                     # guard_runtime has entered this component with this
                     # request's scopes.
                     try:
+                        from quantum.runtime.ui_validators import form_validators
                         redirect_url, status_code = ActionHandler(guard_runtime).handle_action(
-                            action_node, route_params=path_params)
+                            action_node, route_params=path_params,
+                            validators=form_validators(getattr(ast, 'statements', []), action_node.name))
                     except PageRedirect as r:
                         # q:redirect reached through a q:function or q:loop in the action
                         return self._page_redirect(r)
@@ -615,6 +617,10 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
                     'motion': motion_on(self.config),
                     'view': view,
                 }
+                from quantum.runtime.ui_more import page_theme
+                tokens = page_theme(ast.statements)
+                if tokens:
+                    payload['tokens'] = tokens          # UI-21: the page's ui:theme
                 return Response(_json.dumps(payload, ensure_ascii=False, default=str),
                                 mimetype='application/vnd.quantum.view+json')
 

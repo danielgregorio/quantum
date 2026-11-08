@@ -12,6 +12,7 @@ Each step is data; each renderer has a driver that knows how to do it.
 """
 
 import asyncio
+import datetime
 import json
 import logging
 import os
@@ -124,6 +125,29 @@ STATE = [
     ("does_not_see", ["Move"]),
     ("pick", "Actions", "Move"),
     ("sees", ["Picked: move"]),
+    # a form's ui:validators: the server checks them, and the error comes back by its field
+    ("fill", "code", "abc"),
+    ("fill", "again", "abc"),
+    ("click", "Join"),
+    ("sees", ["Three capital letters"]),
+    ("fill", "code", "ABC"),
+    ("fill", "again", "ABD"),
+    ("click", "Join"),
+    ("sees", ["The codes differ"]),
+    ("fill", "again", "ABC"),
+    ("click", "Join"),
+    ("sees", ["Joined with ABC"]),
+    # a calendar: a month, the next on its arrow, a day picked goes with the form; one its validator refuses
+    # comes back in it (its month shown), with the error by it
+    ("sees", ["November 2026"]),
+    ("month", "next"),
+    ("sees", ["December 2026"]),
+    ("day", "25"),
+    ("click", "Book"),
+    ("sees", ["Closed on the 25th", "December 2026"]),
+    ("day", "24"),
+    ("click", "Book"),
+    ("sees", ["Booked: 2026-12-24"]),
 ]
 
 
@@ -236,7 +260,9 @@ class Screen:
 class Pixel:
     """The screen is keyboard-only: a field is reached with Tab, typed into,
     a box marked with Space, an option chosen with the arrows, a button
-    pressed with Enter (a row's button through its table: a row, a column)."""
+    pressed with Enter (a row's button through its table: a row, a column),
+    a calendar's month moved with PgUp and PgDn and its day picked with the
+    arrows and Enter (UI-21)."""
     name = "pixel"
 
     def __init__(self, screen, client=None):
@@ -360,6 +386,22 @@ class Pixel:
         self.s.request({"op": "act", "tap": ["enter"]})
         self.click(option)
 
+    def month(self, way):
+        # a calendar with the focus shows the next month on PgDn, the one before on PgUp
+        self._focus(lambda i: i["kind"] == "calendar")
+        self.s.request({"op": "act", "tap": ["pgdn" if way == "next" else "pgup"]})
+
+    def day(self, number):
+        # the arrows move its cursor a day or a week, Enter picks the day under it
+        calendar = self._focus(lambda i: i["kind"] == "calendar")
+        wanted = datetime.date.fromisoformat(f"{calendar['month']}-{int(number):02d}")
+        days = (wanted - datetime.date.fromisoformat(calendar["cursor"])).days
+        weeks, rest = divmod(abs(days), 7)
+        keys = ["down"] * weeks + ["right"] * rest if days > 0 else ["up"] * weeks + ["left"] * rest
+        self.s.request({"op": "act", "tap": keys + ["enter"]})
+        picked = [i for i in self.window()["items"] if i["kind"] == "calendar" and i["focus"]][0]
+        assert picked["value"] == wanted.isoformat(), f"the calendar did not pick {wanted}: {picked}"
+
 
 def test_the_script_on_the_pixel_screen(url, tmp_path):
     # UI-7, UI-15
@@ -444,3 +486,48 @@ def test_every_tag_on_the_screen(url, tmp_path):
         assert {m.group(1) for m in NOT_DRAWN.finditer(texts)} == not_drawn("screen")
     finally:
         screen.end()
+
+
+# -- a page's ui:theme (UI-21): its colours in the browser, the console and the TUI ------------
+
+def test_a_page_s_theme_in_the_browser(url):
+    playwright = pytest.importorskip("playwright.sync_api", reason="Playwright is not installed")
+    with playwright.sync_playwright() as pw:
+        try:
+            chromium = pw.chromium.launch()
+        except Exception as exc:   # browser not downloaded
+            pytest.skip(f"Playwright's Chromium is not available: {exc}")
+        try:
+            page = chromium.new_page()
+            page.goto(url + "themed")
+            primary = page.evaluate(
+                "getComputedStyle(document.documentElement).getPropertyValue('--q-primary').trim()")
+            assert primary == "#ff00aa"
+        finally:
+            chromium.close()
+
+
+def test_a_page_s_theme_in_the_console(url):
+    from quantum.runtime.ui_console import ConsoleUI
+    from tests.console_pilot import page_loaded
+
+    async def main():
+        app = ConsoleUI(url, "/themed")
+        async with app.run_test(size=(100, 40)) as pilot:
+            await page_loaded(app, pilot)
+            return app.get_css_variables()["primary"]
+
+    assert asyncio.run(main()).lower() == "#ff00aa"
+
+
+def test_a_page_s_theme_in_the_tui(url):
+    from quantum.runtime.godot_bin import GodotNotFound, ensure_godot
+    from quantum.runtime.ui_tui import TuiSession
+    try:
+        ensure_godot()
+    except GodotNotFound as exc:
+        pytest.skip(str(exc))
+    with TuiSession(url, page="/themed", cols=80, rows=20) as tui:
+        assert tui.observe()["palette"]["primary"] == "#ff00aa"
+        tui.visit("/state")                                       # a page without a theme: the TUI's own
+        assert tui.observe()["palette"]["primary"] != "#ff00aa"

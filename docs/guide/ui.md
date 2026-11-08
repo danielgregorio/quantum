@@ -462,13 +462,42 @@ on the screen and in the TUI:
 | Forms | `form`, `formitem`, `input`, `checkbox`, `switch`, `radio`, `select` / `option`, `button` |
 | Data features | `pager` (pages of a query), `history` (a row's changes), `stream` (an AI answer as it is written) |
 | Beyond the layout | `breadcrumb` / `breadcrumb-item`, `menu`, `avatar`, `markdown`, `chart`, `tree`, `log`, `dividedbox`, `pagination`, `skeleton`, `loading`, `date-picker`, `animate` ([below](#beyond-the-layout)) |
-| With a state of their own | `accordion`, `modal`, `tooltip`, `dropdown`, `toast` / `toast-container`, `carousel` / `slide`, `stepper` / `step` ([below](#beyond-the-layout)) |
+| With a state of their own | `accordion`, `modal`, `tooltip`, `dropdown`, `toast` / `toast-container`, `carousel` / `slide`, `stepper` / `step`, `calendar` ([below](#beyond-the-layout)) |
+| Not elements of a page | `validator` (a rule of its form), `theme` / `color` (the page's colours) |
 
-`ui:calendar` works in the browser only and is **Experimental** (see the
-[UI tags reference](/reference/ui)): in the console, on the screen and in the
-TUI it shows `[ui:calendar is not drawn in the console]` instead of something
-else in its place. `ui:validator` and `ui:theme` apply to a standalone build
-only so far. [`UI_PARITY.md`](https://github.com/danielgregorio/quantum/blob/main/UI_PARITY.md)
+That is every `ui:*` tag. A kind a renderer does not know — a newer server's —
+shows `[ui:kind is not drawn in the console]` instead of something else in its
+place.
+
+A form's `ui:validator`s are checked by the server when it is sent, in every
+renderer the same — the error comes back by its field, as the action's own
+rules do:
+
+```xml
+<q:component name="Join">
+  <q:action name="join" method="POST">
+    <q:param name="code" required="true" />
+    <q:param name="again" required="true" />
+    <q:redirect url="/" flash="Joined with {code}" />
+  </q:action>
+
+  <ui:window title="Join">
+    <ui:form on-submit="join">
+      <ui:validator field="code" pattern="^[A-Z]{3}$" message="Three capital letters" />
+      <ui:validator field="again" match="code" message="The codes differ" />
+      <ui:input bind="code" />
+      <ui:input bind="again" />
+      <ui:button>Join</ui:button>
+    </ui:form>
+  </ui:window>
+</q:component>
+```
+
+**Shows:** `Join`
+
+A page's `ui:theme` gives its colours — `<ui:theme preset="dark"><ui:color
+name="primary" value="#ff00aa" /></ui:theme>` — to the browser, the console
+and the TUI; the Hive's screen keeps its palette. [`UI_PARITY.md`](https://github.com/danielgregorio/quantum/blob/main/UI_PARITY.md)
 is the map of every tag against every renderer, and a check keeps it true.
 
 Text directly inside a container is content: `<ui:card-header>Summary</ui:card-header>`.
@@ -566,6 +595,36 @@ Which slide or step is shown is the screen's, not the page's: `on-change`,
 `on-complete` and `bind`, which a standalone build's script calls, are an
 error in a page.
 
+A **calendar** is a date field of its form shown as a month: the user moves
+from month to month and picks a day, which the form sends under its `bind`
+(YYYY-MM-DD). `min-date`, `max-date`, `disabled-dates` and `disabled-days`
+(0 is Sunday) say the days that cannot be picked; `first-day-of-week` and
+`show-week-numbers` how the weeks are laid out. A day the action refuses comes
+back picked, with the error by the calendar:
+
+```xml
+<q:component name="Visit">
+  <q:action name="book" method="POST">
+    <q:param name="day" type="date" required="true" />
+    <q:redirect url="/" flash="Booked: {day}" />
+  </q:action>
+
+  <ui:window title="Visit">
+    <ui:form on-submit="book">
+      <ui:validator field="day" server-expression="{day != '2026-12-25'}" message="Closed on the 25th" />
+      <ui:calendar bind="day" value="2026-12-01" min-date="2026-12-01" disabled-days="0"
+                   first-day-of-week="1" show-week-numbers="true" />
+      <ui:button>Book</ui:button>
+    </ui:form>
+  </ui:window>
+</q:component>
+```
+
+**Shows:** `Book`
+
+`on-change`, `on-month-change` and a `mode` other than `single` call a
+standalone build's script, and are an error in a page.
+
 ## In the TUI
 
 `quantum run <app> --on tui` opens the pages on a text screen in a window of its own, drawn by
@@ -582,7 +641,7 @@ for each page's view tree and sends the same posts a browser sends, with the coo
 Tab between elements, Enter acts, Space marks, the arrows inside an element, F5 asks the page
 again, and Ctrl+Q closes the window; the last line says the keys that apply.
 
-An element outside the core set shows `[ui:chart is not drawn in the TUI]`. Headless, with
+A kind it does not know shows `[ui:kind is not drawn in the TUI]`. Headless, with
 `--play`, it is driven one JSON request at a time — click at a cell, type, wait for a text — and
 answers with what the screen shows: the parity script and the Kanban's script run in it in CI
 (`quantum/runtime/ui_tui.py`, `TuiSession`), and its layout is checked against reference frames of
@@ -604,20 +663,21 @@ There is no mouse, and no key to learn beyond the console's own:
 | Key | Does |
 |---|---|
 | Tab, Shift+Tab | the next, the previous element that reacts, in the page's order; the one with the focus shows in honey |
-| arrows | inside the element: the cursor in a field, the option of a `radio` or `select`, the row and the button of a `table`, the tab of a `tabpanel`; Up and Down go to the element before and after when what has the focus does not use them (a one-line field, a button, a box) |
-| Enter | acts: a button, a link, a row's button; in a field, sends its form |
+| arrows | inside the element: the cursor in a field, the option of a `radio` or `select`, the row and the button of a `table`, the tab of a `tabpanel`, the day of a `calendar` (a week with Up and Down); Up and Down go to the element before and after when what has the focus does not use them (a one-line field, a button, a box) |
+| Enter | acts: a button, a link, a row's button; in a field, sends its form; in a `calendar`, picks the day, which its form sends |
 | Space | marks: a `checkbox`, a `switch` |
 | Esc | closes the page |
 | Home, End | the first and the last element (in a field, the ends of its text) |
-| Page Up, Page Down | scroll; a bar at the right edge says where in a long page the screen is |
+| Page Up, Page Down | scroll; a bar at the right edge says where in a long page the screen is; in a `calendar`, the month before and after |
 | F5 | asks the page again |
 | F1 | the Hive's offers in a menu over the page (Enter approves, Del dismisses, Esc shuts it); the status bar says how many wait |
 
 The last line of the screen says the keys that apply to what has the
 focus. A search field (`search="true"`) asks the page again after its
 pause, as in the browser; a validation error puts the focus on the field
-it is about (UI-9). What the screen does not draw (`ui:chart`, a modal) it
-says so, as the console does.
+it is about (UI-9). It draws every `ui:*` tag — a chart in bars, a modal
+that takes the keys until Esc — and a kind it does not know it says so, as
+the console does.
 
 The keyboard is read by the machine's layout: US, or a Brazilian ABNT2
 (`XKBLAYOUT="br"` in `/etc/default/keyboard`), where `ç` is its own key

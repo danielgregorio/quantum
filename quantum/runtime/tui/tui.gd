@@ -62,6 +62,7 @@ var dialog: FileDialog = null
 var dialog_key := ""
 var colors := {}
 var palette := {}
+var base_tokens := {}             # the colours it was started with; a page's ui:theme goes over them (UI-21)
 var spinning := false             # a loading mark is on the screen: it is drawn again as it turns                 # the design tokens' colours, by name (a chart's bars use them)
 const SPINNER := "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
@@ -104,6 +105,7 @@ func _ready() -> void:
 				motion_on = v != "off"
 			"--shot":
 				shot = v
+	base_tokens = tokens
 	_theme(tokens)
 	var file := FontFile.new()
 	if file.load_dynamic_font("res://DejaVuSansMono.ttf") == OK:
@@ -157,6 +159,8 @@ func _theme(tokens: Dictionary) -> void:
 		"unsupported": Color(t["warning"]),
 		# UI-21: what is drawn over the page (a modal, a toast, a dropdown's options), and a tooltip's tip
 		"layer": Color("#1a2540"), "tip": Color("#e2e8f0"), "tip_fg": bg,
+		# a calendar's day that cannot be picked
+		"dim": Color(t["secondary"]).lerp(bg, 0.45),
 	}
 
 
@@ -342,6 +346,9 @@ func load_page(target: String, method: String = "GET", data: Dictionary = {}, fi
 	busy += 1
 	var answer := await fetch(method, target, data, files)
 	page = answer
+	# UI-21: a page's ui:theme gives its colours; the TUI's own (the browser's defaults) otherwise
+	var page_tokens: Dictionary = answer.get("tokens", {}) if answer.get("tokens") is Dictionary else {}
+	_theme(base_tokens.merged(page_tokens, true))
 	state = {}
 	tabs = {}
 	tabs_opened = {}
@@ -488,12 +495,15 @@ func relayout() -> void:
 
 
 static func _id_of(it: Dictionary) -> String:
-	# a radio's options share their key, and so do a carousel's or a stepper's controls (UI-21)
+	# a radio's options share their key, and so do a carousel's or a stepper's controls and a calendar's arrows
+	# and days (UI-21)
 	var kind := str(it.get("kind", ""))
 	var which := ""
 	if kind == "radio":
 		which = str(it.get("value", ""))
-	elif kind in ["carousel", "stepper", "step"]:
+	elif kind == "day":
+		which = str(it.get("date", ""))
+	elif kind in ["carousel", "stepper", "step", "month"]:
 		which = str(it.get("label", ""))
 	return "%s|%s|%s" % [it.get("key", ""), kind, which]
 
@@ -544,7 +554,8 @@ func _move_focus(step: int) -> void:
 	var i := focus
 	for _k in n:
 		i = (i + step + n) % n if i >= 0 else (0 if step > 0 else n - 1)
-		if _reacts(lay.items[i]):
+		# Tab reaches one of a calendar's days; the arrow keys move between them (UI-21)
+		if _reacts(lay.items[i]) and bool(lay.items[i].get("tab", true)):
 			_set_focus(i)
 			return
 
@@ -606,6 +617,8 @@ func submit(form: int) -> void:
 			"radio":
 				if it.get("checked", false):
 					data[bind] = str(it.get("value", ""))
+			"calendar":
+				data[bind] = _value(it)              # UI-21: the day picked, YYYY-MM-DD (empty: none)
 			"file":
 				var chosen := str(state.get(it["key"], {}).get("file", ""))
 				if chosen != "":
@@ -653,7 +666,11 @@ func activate(i: int) -> void:
 			_choose_file(it)
 		"input", "textarea":
 			caret = _value(it).length()
-		"fold", "dropdown", "close", "carousel", "stepper", "step":
+		"day":
+			# UI-21: a calendar's day picked is its field's value, which its form sends when its button is clicked
+			_set_value(it, str(it["date"]))
+			relayout()
+		"fold", "dropdown", "close", "carousel", "stepper", "step", "month":
 			_change_held(it)
 	queue_redraw()
 
@@ -675,6 +692,8 @@ func _change_held(it: Dictionary) -> void:
 		"stepper", "step":
 			_hold(key, "at", int(it["goto"]))
 			_hold(key, "done", it.get("done", []))
+		"month":
+			_hold(key, "month", str(it["goto"]))
 	relayout()
 
 
@@ -916,16 +935,22 @@ func _key(event: InputEventKey) -> void:
 		KEY_DOWN:
 			if kind == "select":
 				_step_select(it, 1)
+			elif kind == "day":
+				_step_day(it, 7)
 			else:
 				_move_focus(1)
 		KEY_UP:
 			if kind == "select":
 				_step_select(it, -1)
+			elif kind == "day":
+				_step_day(it, -7)
 			else:
 				_move_focus(-1)
 		KEY_RIGHT, KEY_LEFT:
 			if kind == "radio":
 				_step_radio(it, 1 if code == KEY_RIGHT else -1)
+			elif kind == "day":
+				_step_day(it, 1 if code == KEY_RIGHT else -1)
 			else:
 				_move_focus(1 if code == KEY_RIGHT else -1)
 		KEY_PAGEDOWN:
@@ -962,6 +987,31 @@ func _step_radio(it: Dictionary, step: int) -> void:
 	var next: int = group[clamp(at + step, 0, group.size() - 1)]
 	_set_focus(next)
 	activate(next)
+
+
+func _step_day(it: Dictionary, by: int) -> void:
+	# UI-21: in a calendar the arrow keys move the focus a day (←→) or a week (↑↓), into the month before or after
+	# past this one's ends; a day that cannot be picked is passed over. Enter picks the day.
+	var key := str(it["key"])
+	var rules := {}
+	for other in lay.items:
+		if str(other["key"]) == key and str(other["kind"]) == "calendar":
+			rules = other.get("rules", {})
+	var day := Layout.day_of(str(it["date"]))
+	for _k in 400:
+		day += by
+		var date := Layout.date_of(day)
+		if not Layout.day_open(rules, date):
+			continue
+		if date.substr(0, 7) != str(it["date"]).substr(0, 7):
+			_hold(key, "month", date.substr(0, 7))
+			relayout()
+		for i in lay.items.size():
+			var shown: Dictionary = lay.items[i]
+			if str(shown["key"]) == key and str(shown["kind"]) == "day" and str(shown.get("date", "")) == date:
+				_set_focus(i)
+				return
+		return
 
 
 func _choose_option(index: int) -> void:
@@ -1143,6 +1193,10 @@ func _style_colors(style: String) -> Array:
 			return [colors["accent"], null]
 		"tip":
 			return [colors["tip_fg"], colors["tip"]]
+		"today":
+			return [colors["accent"], null]
+		"dim":
+			return [colors["dim"], null]
 	if style.begins_with("fill:"):
 		# UI-21: a chart's bar, an avatar's status: a design token's colour, or the page's own
 		var name := style.substr(5)
@@ -1215,8 +1269,8 @@ func _draw() -> void:
 				if str(c[1]) == "spinner":            # UI-21: a loading mark turns
 					ch = SPINNER[int(now / 100) % SPINNER.length()]
 					spinning = true
-				draw_char(bold_font if str(c[1]) in ["bold", "title"] else font, Vector2(left, top + ascent), ch,
-						  font_size, fg)
+				var heavy := str(c[1]) in ["bold", "title", "today"]
+				draw_char(bold_font if heavy else font, Vector2(left, top + ascent), ch, font_size, fg)
 	# the page's images, over their cells
 	for image in lay.images:
 		if textures.has(image["src"]) and not image.get("covered", false):    # UI-21: not under a layer
@@ -1304,6 +1358,10 @@ func status_line() -> String:
 			return "Enter closes · Tab moves"
 		"carousel", "stepper", "step":
 			return "Enter moves to it · Tab moves"
+		"month":
+			return "Enter shows the month · Tab moves"
+		"day":
+			return "Enter picks the day · ←→↑↓ move · Tab moves"
 	if not _top_modal().is_empty() and bool(_top_modal().get("closable", false)):
 		return "Esc closes · Tab moves · click acts"
 	return "Tab moves · click acts · wheel scrolls · F5 reloads · Ctrl+Q quits"
@@ -1485,7 +1543,7 @@ func observation() -> Dictionary:
 		for k in ["bind", "to", "input_type", "search"]:
 			if it.has(k):
 				entry[k] = it[k]
-		if it["kind"] in ["input", "textarea", "select", "radio"]:
+		if it["kind"] in ["input", "textarea", "select", "radio", "calendar"]:
 			entry["value"] = _value(it) if it["kind"] != "radio" else str(it.get("value", ""))
 		if it["kind"] in ["checkbox", "switch", "radio"]:
 			entry["checked"] = bool(it.get("checked", false))
@@ -1496,6 +1554,11 @@ func observation() -> Dictionary:
 			entry["options"] = labels
 		if it["kind"] in ["tab", "fold", "dropdown"]:
 			entry["open"] = bool(it.get("open", false))
+		if it["kind"] == "calendar":           # UI-21: the month it shows; a day's date, and whether it is picked
+			entry["month"] = str(it.get("month", ""))
+		if it["kind"] == "day":
+			entry["date"] = str(it.get("date", ""))
+			entry["selected"] = bool(it.get("selected", false))
 		if it["kind"] == "file":
 			entry["file"] = str(state.get(it["key"], {}).get("file", ""))
 		if it.has("event"):
@@ -1512,6 +1575,7 @@ func observation() -> Dictionary:
 					   "w": image["w"], "h": image["h"]})
 	return {
 		"title": str(page.get("title", "")), "path": path, "pages": pages_loaded, "cols": cols, "rows": rows,
+		"palette": palette,
 		"hover": hover, "cursor": "pointing" if mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND else "arrow",
 		"height": lay.height, "scroll": scroll, "screen": lay.text_rows(), "items": shown, "motions": motions,
 		"moving": not running.is_empty(), "progress": lay.progress, "images": images,

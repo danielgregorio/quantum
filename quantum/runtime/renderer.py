@@ -151,6 +151,11 @@ class HTMLRenderer:
         elif isinstance(node, (SetNode, QueryNode)):
             return ''
 
+        elif type(node).__name__ == 'UIThemeNode':
+            # UI-21: a page's ui:theme sets its colours, the design tokens' CSS variables
+            from quantum.runtime.ui_more import theme_css, theme_tokens
+            return theme_css(theme_tokens(node))
+
         else:
             # Unknown node type - skip (includes QuantumReturn and others)
             return ''
@@ -423,8 +428,10 @@ class HTMLRenderer:
         # UI-21: a toast goes, a carousel's slides and a stepper's steps move — their scripts once, then what
         # starts each of them
         from quantum.runtime import ui_html_templates as templates
+        from quantum.runtime.ui_html_adapter import CALENDAR_WEEKS_JS
         for flag, script in (('_has_toast', templates.TOAST_JS), ('_has_carousel', templates.CAROUSEL_JS),
-                             ('_has_stepper', templates.STEPPER_JS)):
+                             ('_has_stepper', templates.STEPPER_JS), ('_has_calendar', templates.CALENDAR_JS),
+                             ('_has_calendar_weeks', CALENDAR_WEEKS_JS)):
             if getattr(ui, flag) and not getattr(self, f'_ui{flag}_done', False):
                 setattr(self, f'_ui{flag}_done', True)
                 drawn += script

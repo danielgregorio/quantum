@@ -10,12 +10,14 @@ application in each of its versions, UI-18). A step is a tuple: ("sees", [texts]
 motions the page ran (UI-19) —, ("api", method, path, json, status[, [texts]]) — another
 program calling the application's API (q:endpoint, API-1) beside the page, with a session of
 its own —, and the parity script's own (image, progress, values, check, choose, and UI-21's close, fold,
-tip, next, gone, pick).
+tip, next, gone, pick, month, day).
 """
 
 import asyncio
 import os
 import time
+
+import re
 
 import requests
 
@@ -154,6 +156,13 @@ class Browser:
     def pick(self, label, option):
         self.p.locator("summary", has_text=label).click()
         self._go(self.p.get_by_role("button", name=option, exact=True))
+
+    def month(self, way):
+        self.p.get_by_role("button", name="Next month" if way == "next" else "Previous month").click()
+
+    def day(self, number):
+        days = self.p.locator(".q-calendar-day:not(.other-month):not(.disabled)")
+        days.filter(has_text=re.compile(rf"^\s*{number}\s*$")).first.click()
 
 
 # -- console ------------------------------------------------------------------
@@ -322,6 +331,28 @@ class Console:
         await self._until(lambda: self._visible(boxes[0].menu), f"the dropdown {label!r} did not open")
         self._press(boxes[0].menu, option, link=True)
 
+    def _calendar(self):
+        from quantum.runtime.ui_console import PageCalendar
+        calendars = self._shown(PageCalendar)
+        assert calendars, "console: no calendar"
+        return calendars[0]
+
+    async def month(self, way):
+        calendar = self._calendar()
+        before = calendar.shown
+        self._press(calendar, "›" if way == "next" else "‹", link=True)
+        await self._until(lambda: calendar.shown != before, f"the calendar did not move to the {way} month")
+
+    async def day(self, number):
+        # the mouse on the day's cell in the grid, as a user picks it
+        calendar = self._calendar()
+        wanted = calendar.shown.replace(day=int(number))
+        cell = calendar.days.cell_of(wanted)
+        calendar.days.scroll_visible(animate=False)
+        await self.pilot.pause()
+        assert await self.pilot.click(calendar.days, offset=cell), f"console: the click on day {number} missed"
+        await self._until(lambda: calendar.value == wanted.isoformat(), f"the day {wanted} was not picked")
+
 
 def tui_godot():
     """Godot for the TUI's tests (UI-20): skipped without it, a failure where CI requires it."""
@@ -339,7 +370,8 @@ class Tui:
     """The TUI drawn by Godot (UI-20), headless, through its play protocol (quantum/runtime/ui_tui.py):
     a button, a link or a tab is clicked with the mouse on its cell, a field clicked and typed into, a
     box clicked, a select opened and its option clicked; a fold's header, a modal's close, a carousel's
-    arrow, a stepper's Next and a dropdown's button clicked, a tooltip's element hovered (UI-21)."""
+    arrow, a stepper's Next, a dropdown's button, a calendar's arrow and its day clicked, a tooltip's
+    element hovered (UI-21)."""
     name = "tui"
 
     def __init__(self, session):
@@ -446,6 +478,14 @@ class Tui:
         self._click(self.s.item("dropdown", label))        # its options open under it
         self._click(self.s.item("link", option, menu=label))
 
+    def month(self, way):
+        # a calendar's arrow, beside its month's title
+        self._click(self.s.item("month", "Next month" if way == "next" else "Previous month"))
+
+    def day(self, number):
+        # a day of the month shown that can be picked
+        self._click(self.s.item("day", str(number)))
+
 
 async def run_console_script(app, pilot, script):
     """The script in the console: a step that loads a page waits for THAT page (tests/console_pilot.py)."""
@@ -465,7 +505,7 @@ async def run_console_script(app, pilot, script):
         else:
             verb = getattr(driver, step[0], None)
             if asyncio.iscoroutinefunction(verb):
-                await verb(*step[1:])          # UI-21: close, fold, tip, next, gone, pick wait for what they did
+                await verb(*step[1:])          # UI-21: close, fold, tip, next, gone, pick, month, day wait for what they did
             else:
                 run_script(driver, [step])
             if step[0] in LOADS_A_PAGE:

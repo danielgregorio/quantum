@@ -9,10 +9,13 @@ page's logic is translated: the runtime that serves the browser serves this.
 """
 
 import asyncio
+import calendar
+import datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
 import requests
+from rich.style import Style
 from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult
@@ -22,6 +25,7 @@ from textual.screen import ModalScreen
 from textual.widgets import (Button, Checkbox, Collapsible, Input, ProgressBar, RadioButton, RadioSet,
                              Select, Static, Switch, TabbedContent, TabPane, TextArea)
 
+from quantum.runtime.ui_more import MONTHS
 from quantum.runtime.ui_motion import TerminalMotion, of_props, record
 
 VIEW = 'application/vnd.quantum.view+json'
@@ -407,6 +411,194 @@ class Stepper(Vertical):
         event.stop()
 
 
+WEEKDAYS = ('Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa')
+
+
+def _iso_date(text) -> Optional[datetime.date]:
+    try:
+        return datetime.date.fromisoformat(str(text or '').strip())
+    except ValueError:
+        return None
+
+
+class PageCalendar(Vertical):
+    """UI-21: a calendar is a date field shown as a month — its title ("November 2026") between the arrows to
+    the previous and the next month, which move it here, as the browser's do; the weekdays from `first_day`;
+    the days of the month, the one picked marked. A day before `min`, after `max`, in `disabled_dates` or on
+    a weekday of `disabled_days` is dimmed and cannot be picked. The day picked is the field's value: its form
+    sends it under `bind` (ConsoleUI._form_fields); outside a form, picking only marks it."""
+
+    def __init__(self, props: dict, id=None):
+        today = datetime.date.today()
+        self._quantum_name = props.get('bind') or None
+        picked = _iso_date(props.get('value'))
+        self.value = picked.isoformat() if picked else ''
+        month = _iso_date(f"{props.get('month') or ''}-01") or picked or today
+        self.shown = month.replace(day=1)
+        self.min_date, self.max_date = _iso_date(props.get('min')), _iso_date(props.get('max'))
+        self.disabled_dates = {d for d in map(_iso_date, props.get('disabled_dates') or []) if d}
+        self.disabled_days = {int(d) % 7 for d in props.get('disabled_days') or [] if str(d).lstrip('-').isdigit()}
+        self.first_day = int(_number(props.get('first_day'), 0)) % 7
+        self.week_numbers = _flag(props.get('week_numbers'), False)
+        # the keyboard's day, in the month shown: the one picked, else today, else the first
+        self.cursor = next(d for d in (picked, today, self.shown) if d and d.replace(day=1) == self.shown)
+        self.prev = Button('‹', classes='link calendar-nav calendar-prev')
+        self.next = Button('›', classes='link calendar-nav calendar-next')
+        self.prev.tooltip, self.next.tooltip = 'Previous month', 'Next month'
+        self.heading = Static('', classes='calendar-title')
+        self.days = CalendarDays(self)
+        header = Horizontal(self.prev, self.heading, self.next, classes='calendar-header')
+        header.styles.width = self.days.WIDTH + (3 if self.week_numbers else 0)
+        super().__init__(header, self.days, classes='calendar', id=id)
+        self._show()
+
+    def can_pick(self, day: datetime.date) -> bool:
+        weekday = (day.weekday() + 1) % 7                   # 0 = Sunday, as the view says
+        return not ((self.min_date and day < self.min_date) or (self.max_date and day > self.max_date)
+                    or day in self.disabled_dates or weekday in self.disabled_days)
+
+    def weeks(self) -> List[List[datetime.date]]:
+        """The month shown, a week a row from `first_day`, always six rows: the grid does not jump as it moves.
+        A day of another month is in its row (the row's week number is its first day's, as the browser's) and
+        drawn blank."""
+        # calendar.Calendar counts 0 = Monday; the view, 0 = Sunday
+        weeks = calendar.Calendar((self.first_day + 6) % 7).monthdatescalendar(self.shown.year, self.shown.month)
+        while len(weeks) < 6:
+            last = weeks[-1][-1]
+            weeks.append([last + datetime.timedelta(days=n) for n in range(1, 8)])
+        return weeks
+
+    def go_month(self, step: int) -> None:
+        months = self.shown.year * 12 + self.shown.month - 1 + step
+        self.shown = datetime.date(months // 12, months % 12 + 1, 1)
+        if (self.cursor.year, self.cursor.month) != (self.shown.year, self.shown.month):
+            # the keyboard's day keeps its number, within the new month's length
+            length = calendar.monthrange(self.shown.year, self.shown.month)[1]
+            self.cursor = self.shown.replace(day=min(self.cursor.day, length))
+        self._show()
+
+    def move_cursor(self, days: int) -> None:
+        self.cursor += datetime.timedelta(days=days)
+        if self.cursor.replace(day=1) != self.shown:
+            self.shown = self.cursor.replace(day=1)
+        self._show()
+
+    def pick(self, day: datetime.date) -> bool:
+        """Picks `day` (the field's value), unless it cannot be picked."""
+        self.cursor = day
+        if day.replace(day=1) == self.shown and self.can_pick(day):
+            self.value = day.isoformat()
+        self._show()
+        return self.value == day.isoformat()
+
+    def _show(self) -> None:
+        self.heading.update(Text(f'{MONTHS[self.shown.month - 1]} {self.shown.year}', style='bold'))
+        self.days.refresh(layout=True)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button is self.prev:
+            self.go_month(-1)
+        elif event.button is self.next:
+            self.go_month(1)
+        else:
+            return
+        event.stop()                # the month moves here, never through the server
+
+
+class CalendarDays(Static):
+    """UI-21: a calendar's grid — the weekdays, then six rows of days (`cal`'s layout: a day two columns, a
+    space between). A click picks the day under the mouse; with the focus, the arrows move a cursor (into the
+    next or the previous month), Page Up and Page Down move the month, Enter or Space picks."""
+
+    WIDTH = 7 * 3 - 1
+    can_focus = True
+    COMPONENT_CLASSES = {'calendar--weekday', 'calendar--week', 'calendar--today', 'calendar--selected',
+                         'calendar--disabled', 'calendar--cursor'}
+    BINDINGS = [
+        Binding('left', 'move(-1)', 'Previous day', show=False),
+        Binding('right', 'move(1)', 'Next day', show=False),
+        Binding('up', 'move(-7)', 'Previous week', show=False),
+        Binding('down', 'move(7)', 'Next week', show=False),
+        Binding('pageup', 'month(-1)', 'Previous month', show=False),
+        Binding('pagedown', 'month(1)', 'Next month', show=False),
+        Binding('enter,space', 'pick', 'Pick', show=False),
+    ]
+    DEFAULT_CSS = """
+    CalendarDays { width: auto; height: auto; }
+    CalendarDays > .calendar--weekday { color: $text-muted; text-style: bold; }
+    CalendarDays > .calendar--week { color: $text-muted; }
+    CalendarDays > .calendar--today { text-style: underline; }
+    CalendarDays > .calendar--selected { background: $primary; color: $text; text-style: bold; }
+    CalendarDays > .calendar--disabled { color: $text-disabled; text-style: dim; }
+    CalendarDays > .calendar--cursor { text-style: bold reverse; }
+    """
+
+    def __init__(self, owner: PageCalendar):
+        super().__init__('', classes='calendar-days')
+        self.owner = owner
+
+    def _left(self) -> int:
+        return 3 if self.owner.week_numbers else 0
+
+    def render(self):
+        owner, today = self.owner, datetime.date.today()
+        style = self.get_component_rich_style
+        out = Text('Wk ' if owner.week_numbers else '', style=style('calendar--week'))
+        out.append(' '.join(WEEKDAYS[(owner.first_day + n) % 7] for n in range(7)), style=style('calendar--weekday'))
+        for week in owner.weeks():
+            out.append('\n')
+            if all(day.replace(day=1) != owner.shown for day in week):
+                continue                    # a row that keeps the grid's height
+            if owner.week_numbers:
+                out.append(f'{week[0].isocalendar()[1]:>2} ', style=style('calendar--week'))
+            for n, day in enumerate(week):
+                if n:
+                    out.append(' ')
+                if day.replace(day=1) != owner.shown:
+                    out.append('  ')
+                    continue
+                looks = [name for name, on in (
+                    ('calendar--today', day == today),
+                    ('calendar--disabled', not owner.can_pick(day)),
+                    ('calendar--selected', day.isoformat() == owner.value),
+                    ('calendar--cursor', day == owner.cursor and self.has_focus)) if on]
+                out.append(f'{day.day:>2}', style=sum((style(name) for name in looks), Style()))
+        return out
+
+    def cell_of(self, day: datetime.date) -> Optional[tuple]:
+        """Where `day` is drawn in the grid (x, y), or None when the month shown is another."""
+        for row, week in enumerate(self.owner.weeks()):
+            if day in week and day.replace(day=1) == self.owner.shown:
+                return self._left() + week.index(day) * 3, row + 1
+        return None
+
+    def on_click(self, event: events.Click) -> None:
+        offset = event.get_content_offset(self)
+        if offset is None or offset.y < 1 or offset.x < self._left():
+            return
+        column, row = (offset.x - self._left()) // 3, offset.y - 1
+        weeks = self.owner.weeks()
+        if column < 7 and row < len(weeks):
+            day = weeks[row][column]
+            if day.replace(day=1) == self.owner.shown:
+                self.owner.pick(day)
+
+    def on_focus(self) -> None:
+        self.refresh()
+
+    def on_blur(self) -> None:
+        self.refresh()
+
+    def action_move(self, days: int) -> None:
+        self.owner.move_cursor(days)
+
+    def action_month(self, step: int) -> None:
+        self.owner.go_month(step)
+
+    def action_pick(self) -> None:
+        self.owner.pick(self.owner.cursor)
+
+
 class ConsoleUI(App):
     """Draws a page's view tree; buttons and forms post the page's actions."""
 
@@ -471,6 +663,10 @@ class ConsoleUI(App):
     .step { width: auto; height: auto; margin-right: 3; }
     .step > Static { width: auto; }
     .step-title { height: 1; }
+    .calendar { width: auto; height: auto; margin-bottom: 1; }
+    .calendar-header { height: 1; }
+    .calendar-header > .calendar-nav { text-style: bold; }
+    .calendar-title { width: 1fr; content-align: center middle; }
     """
 
     def __init__(self, base_url: str, path: str = '/'):
@@ -537,8 +733,24 @@ class ConsoleUI(App):
                 self.page_loading = False
                 self.pages_loaded += 1
 
+    # UI-21: a page's ui:theme gives Textual's colours (the console's own when it has none)
+    _TOKEN_VARIABLES = {'primary': 'primary', 'secondary': 'secondary', 'success': 'success',
+                        'danger': 'error', 'warning': 'warning', 'info': 'accent'}
+
+    def get_css_variables(self):
+        variables = super().get_css_variables()
+        for token, variable in self._TOKEN_VARIABLES.items():
+            value = (getattr(self, 'page_tokens', None) or {}).get(token)
+            if value:
+                variables[variable] = value
+        return variables
+
     async def _load_page(self, path: str, method: str, data: Optional[dict]) -> None:
         page = self._fetch(method, path, data)
+        tokens = page.get('tokens') or None
+        if tokens != getattr(self, 'page_tokens', None):
+            self.page_tokens = tokens
+            self.refresh_css(animate=False)
         self.motions = []
         self.motion_on = bool(page.get('motion', True))
         self._tabs_opened = set()
@@ -677,6 +889,8 @@ class ConsoleUI(App):
             return self._more(kind, node, props, ident)
         if kind in ('modal', 'toast', 'accordion', 'tooltip', 'dropdown', 'carousel', 'stepper'):
             return self._stateful(kind, children, form, props, ident)
+        if kind == 'calendar':
+            return PageCalendar(props, id=ident)        # UI-21: a date field shown as a month
         if kind == 'input' and props.get('input_type') == 'file':
             # UI-14: a terminal has no file picker; the form posts without the file.
             return Static(Text(f"{props.get('bind') or 'file'}: attach files from the browser"),
@@ -898,9 +1112,12 @@ class ConsoleUI(App):
     def _form_fields(self, form: dict) -> Dict[str, str]:
         """The fields a browser would post: a checked box posts 'on', an unchecked one nothing."""
         fields = {}
-        for w in form['box'].query('Input, TextArea, Select, Checkbox, Switch, RadioSet'):
+        for w in form['box'].query('Input, TextArea, Select, Checkbox, Switch, RadioSet, PageCalendar'):
             name = getattr(w, '_quantum_name', None)
             if not name:
+                continue
+            if isinstance(w, PageCalendar):
+                fields[name] = w.value          # UI-21: the day picked, as the browser's hidden field
                 continue
             if isinstance(w, (Checkbox, Switch)):
                 if w.value:

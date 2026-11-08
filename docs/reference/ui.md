@@ -562,6 +562,30 @@ Also takes the [layout attributes](#layout-attributes), its text.
 
 Specified by: [UI-7](./spec#UI-7)
 
+<a id="ui-validator"></a>
+
+## `ui:validator`
+
+Inside: [`ui:form`](#ui-form)
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `name` | string |  |  |  |
+| `field` | string |  |  |  |
+| `type` | string |  |  |  |
+| `pattern` | string |  |  |  |
+| `match` | string |  |  |  |
+| `min` | string |  |  |  |
+| `max` | string |  |  |  |
+| `expression` | string |  |  |  |
+| `server-expression` | string |  |  |  |
+| `minlength` | number |  |  |  |
+| `maxlength` | number |  |  |  |
+| `message` | string |  |  |  |
+| `trigger` | string |  | `submit` |  |
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-animate"></a>
 
 ## `ui:animate`
@@ -868,53 +892,6 @@ Also takes the [layout attributes](#layout-attributes), child elements.
 
 Specified by: [UI-7](./spec#UI-7)
 
-<a id="ui-date-picker"></a>
-
-## `ui:date-picker`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `value` | string |  |  |  |
-| `bind` | string |  |  |  |
-| `placeholder` | string |  | `Select date` |  |
-| `format` | string |  | `YYYY-MM-DD` |  |
-| `min-date` | string |  |  |  |
-| `max-date` | string |  |  |  |
-| `on-change` | string |  |  |  |
-| `clearable` | boolean |  | `true` |  |
-| `disabled` | boolean |  | `false` |  |
-| `required` | boolean |  | `false` |  |
-
-Also takes the [layout attributes](#layout-attributes).
-
-Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
-
-<h1 class="reference-group">Experimental</h1>
-
-Browser only, with no stability promise: the console says it does not draw them ([UI-7](./spec#UI-7)).
-
-<a id="ui-validator"></a>
-
-## `ui:validator`
-
-Inside: [`ui:form`](#ui-form)
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `name` | string |  |  |  |
-| `field` | string |  |  |  |
-| `type` | string |  |  |  |
-| `pattern` | string |  |  |  |
-| `match` | string |  |  |  |
-| `min` | string |  |  |  |
-| `max` | string |  |  |  |
-| `expression` | string |  |  |  |
-| `server-expression` | string |  |  |  |
-| `minlength` | number |  |  |  |
-| `maxlength` | number |  |  |  |
-| `message` | string |  |  |  |
-| `trigger` | string |  | `submit` |  |
-
 <a id="ui-calendar"></a>
 
 ## `ui:calendar`
@@ -937,6 +914,29 @@ Inside: [`ui:form`](#ui-form)
 
 Also takes the [layout attributes](#layout-attributes).
 
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-date-picker"></a>
+
+## `ui:date-picker`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `value` | string |  |  |  |
+| `bind` | string |  |  |  |
+| `placeholder` | string |  | `Select date` |  |
+| `format` | string |  | `YYYY-MM-DD` |  |
+| `min-date` | string |  |  |  |
+| `max-date` | string |  |  |  |
+| `on-change` | string |  |  |  |
+| `clearable` | boolean |  | `true` |  |
+| `disabled` | boolean |  | `false` |  |
+| `required` | boolean |  | `false` |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-theme"></a>
 
 ## `ui:theme`
@@ -949,6 +949,8 @@ Also takes the [layout attributes](#layout-attributes).
 
 Also takes [`ui:color`](#ui-color) children.
 
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-color"></a>
 
 ## `ui:color`
@@ -959,5 +961,11 @@ Inside: [`ui:theme`](#ui-theme)
 |---|---|---|---|---|
 | `name` | string |  |  |  |
 | `value` | string |  |  |  |
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<h1 class="reference-group">Experimental</h1>
+
+Browser only, with no stability promise: the console says it does not draw them ([UI-7](./spec#UI-7)).
 
 :::

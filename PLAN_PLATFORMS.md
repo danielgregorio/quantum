@@ -28,7 +28,7 @@ services it calls, and the AI tags (and, later, a REST API of its own). As faith
 | AI | `q:llm`, `q:knowledge`, `q:agent`, `ui:stream` | AI |
 | A REST API of its own | `q:endpoint` (API-1 to API-6) and its OpenAPI document, `/api/openapi.json` (API-7) | Core |
 | The versions | `quantum run <app> --on web\|desktop\|tui\|terminal` (UI-18): the browser, a pywebview window, the TUI drawn by Godot (UI-20) and the terminal (Textual, with a terminal's limits) | one parameter |
-| The same `ui:*` everywhere | 63 of 67 tags (the Core set, `UI_PARITY.md`); `calendar` only in the browser, `validator` and `theme` only in a standalone build | |
+| The same `ui:*` everywhere | 67 of 67 tags (the Core set, `UI_PARITY.md`) | Phase 4 done |
 
 ## Rules
 
@@ -179,6 +179,22 @@ the page, which take the clicks) and the Hive's screen (keyboard only: a modal t
 shows its tip while focused) draw them; a third script (`tests/apps/showcase/components/state.q`) runs in the
 four renderers. 63 of the 67 tags are drawn by every renderer. Left: `ui:calendar`, and `ui:validator` and
 `ui:theme`, which a page leaves out in every renderer.
+
+**4c done 2026-11-08: Phase 4 is done, every tag in every renderer.** A form's `ui:validator`s are checked by
+the server when it is sent, before its action, and the error comes back by its field as the action's own rules
+do (`quantum/runtime/ui_validators.py`); a page's `ui:theme` gives the browser its CSS variables and the
+console and the TUI their colours (the view's `tokens`), and the Hive's screen keeps its palette. A
+`ui:calendar` in a page is a date field of its form shown as a month: the server says its month, bounds and
+days that cannot be picked (`ui_more.calendar_of`), and each renderer moves it from month to month and picks
+a day with the mouse or the keys (the screen: arrows, PgUp and PgDn, Enter); the day sent comes back in it,
+with its error. The STATE script picks a day the validator refuses, sees the error by the calendar, then
+books another, in the four renderers. 67 of the 67 tags are drawn by every renderer and every tag is in the
+Core set; the "not drawn" tests now use a kind no renderer knows. On the way: the browser's calendar arrows
+sent its form (no `type="button"`), and its picked day never reached the form.
+
+What changed from the plan: the screen and the TUI leave the days of the months around the shown one blank
+(as `cal` does), where the browser and the console show them dim; the TUI still draws charts in characters,
+not pixels.
 
 ## Phase 5 — An installer
 

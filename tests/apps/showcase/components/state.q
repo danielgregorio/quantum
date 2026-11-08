@@ -8,6 +8,17 @@
     <q:redirect url="/state" flash="Picked: {value}" />
   </q:action>
 
+  <q:action name="join" method="POST">
+    <q:param name="code" required="true" />
+    <q:param name="again" required="true" />
+    <q:redirect url="/state" flash="Joined with {code}" />
+  </q:action>
+
+  <q:action name="book" method="POST">
+    <q:param name="day" type="date" required="true" />
+    <q:redirect url="/state" flash="Booked: {day}" />
+  </q:action>
+
   <q:set name="welcome" value="{query.welcome}" default="" />
 
   <ui:window title="State">
@@ -44,5 +55,22 @@
       <ui:step title="Account"><ui:text>Step one body</ui:text></ui:step>
       <ui:step title="Profile"><ui:text>Step two body</ui:text></ui:step>
     </ui:stepper>
+
+    <!-- the form's own rules, checked by the server when it is sent -->
+    <ui:form on-submit="join">
+      <ui:validator field="code" pattern="^[A-Z]{3}$" message="Three capital letters" />
+      <ui:validator field="again" match="code" message="The codes differ" />
+      <ui:input bind="code" />
+      <ui:input bind="again" />
+      <ui:button>Join</ui:button>
+    </ui:form>
+
+    <!-- a calendar is a date field shown as a month: the day picked goes with its form, and a day its
+         validator refuses comes back in it, with the error by it -->
+    <ui:form on-submit="book">
+      <ui:validator field="day" server-expression="{day != '2026-12-25'}" message="Closed on the 25th" />
+      <ui:calendar bind="day" value="2026-11-15" />
+      <ui:button>Book</ui:button>
+    </ui:form>
   </ui:window>
 </q:component>

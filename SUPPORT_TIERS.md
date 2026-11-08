@@ -83,7 +83,7 @@ example, a guide page and a line in the status.
 | Scripting | `q:python`, `q:pyclass`, `q:pyimport` — **off by default**, turned on with `security.python_scripting` (see SECURITY.md) |
 | Events | `q:dispatchEvent` |
 | Decorators | `q:decorator` / `q:pydecorator` — a parser and an AST node with no consumer in the runtime; either decorators get designed for `q:function` or the tags leave. Not documented until then |
-| UI / other targets | `ui:*` elements outside the Core set (browser only; the console, the screen and the TUI say they do not draw them, `UI_PARITY.md`); the standalone `q:application type="ui"` build (`--target html`/`textual`, layout only, UI-8); the terminal target (`qt:`), htmx, islands |
+| UI / other targets | The standalone `q:application type="ui"` build (`--target html`/`textual`, layout only, UI-8); the terminal target (`qt:`), htmx, islands |
 
 ### Laboratory — stays in the repository, outside the promise
 

@@ -19,7 +19,7 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 | `ui:breadcrumb` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:breadcrumb-item` (part of `ui:breadcrumb`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:button` | Core | ✓ | ✓ | ✓ | ✓ |
-| `ui:calendar` | Experimental | ✓ the month; it does not move or pick | — says so | — says so | — says so |
+| `ui:calendar` | Core | ✓ | ✓ | ✓ the days of the months around it left blank | ✓ the days of the months around it left blank |
 | `ui:card` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:card-body` (part of `ui:card`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:card-footer` (part of `ui:card`) | Core | ✓ | ✓ | ✓ | ✓ |
@@ -27,7 +27,7 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 | `ui:carousel` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:chart` | Core | ✓ | ✓ bars of characters | ✓ bars | ✓ bars of characters |
 | `ui:checkbox` | Core | ✓ | ✓ | ✓ | ✓ |
-| `ui:color` (part of `ui:theme`) | Experimental | standalone only | standalone only | standalone only | standalone only |
+| `ui:color` (part of `ui:theme`) | Core | ✓ its colours | ✓ its colours | ✓ the screen keeps its palette | ✓ its colours |
 | `ui:column` (part of `ui:table`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:date-picker` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:dividedbox` | Core | ✓ | ✓ | ✓ | ✓ |
@@ -70,19 +70,19 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 | `ui:table` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:tabpanel` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:text` | Core | ✓ | ✓ | ✓ | ✓ |
-| `ui:theme` | Experimental | standalone only | standalone only | standalone only | standalone only |
+| `ui:theme` | Core | ✓ its colours | ✓ its colours | ✓ the screen keeps its palette | ✓ its colours |
 | `ui:toast` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:toast-container` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:tooltip` | Core | ✓ | ✓ | ✓ its tip on the status line while it has the focus | ✓ |
 | `ui:tree` | Core | ✓ | ✓ | ✓ | ✓ |
-| `ui:validator` | Experimental | standalone only | standalone only | standalone only | standalone only |
+| `ui:validator` | Core | ✓ checked by the server | ✓ checked by the server | ✓ checked by the server | ✓ checked by the server |
 | `ui:vbox` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:window` | Core | ✓ | ✓ | ✓ | ✓ |
 
 ## Not elements of a page
 
-- `ui:validator`: a form's rules come from its action's q:params in a page (UI-9); it applies to a standalone `q:application type="ui"` build (UI-8).
-- `ui:theme`: a page's look is the design tokens' (ui_html_templates.CSS_THEME); it applies to a standalone `q:application type="ui"` build (UI-8).
-- `ui:color`: a page's look is the design tokens' (ui_html_templates.CSS_THEME); it applies to a standalone `q:application type="ui"` build (UI-8).
+- `ui:validator`: a rule of its form, checked by the server when the form is sent (the error comes back by its field, UI-9).
+- `ui:theme`: the page's colours: the browser's CSS variables, the console's and the TUI's colours; the Hive's screen keeps its palette.
+- `ui:color`: one of its ui:theme's colours.
 
-63 of 67 tags are drawn by every renderer.
+67 of 67 tags are drawn by every renderer.

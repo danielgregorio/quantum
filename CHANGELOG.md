@@ -34,6 +34,20 @@ alter the behaviour of an existing app is listed under **Breaking**.
   Before, a page drew them as markup that did not move — a carousel's arrows,
   a stepper's steps and a toast's going needed a script only a standalone
   build had — and a modal's `open="{...}"` never opened.
+- A form's `ui:validator`s work in a page: the server checks them when the
+  form is sent (`pattern`, `email`/`url`/`phone`, `match`, `min`/`max`,
+  `minlength`/`maxlength`, `server-expression`), and the error comes back by
+  its field in every renderer. Before, a page ignored them, the browser too.
+  A page's `ui:theme` gives its colours to the browser, the console and the
+  TUI; before, a page with a `ui:theme` was a 500.
+- `ui:calendar` in a page, in every renderer: a date field of its form shown
+  as a month (its `value`, `min-date`/`max-date`, `disabled-dates`,
+  `disabled-days`, `first-day-of-week`, `show-week-numbers`), moved from month
+  to month and a day picked with the mouse or the keyboard; the day sent comes
+  back in it with its field's error (SPEC.md UI-21). Before, a page drew a
+  month that did not move or pick and that its form did not send, and the
+  console, the screen and the TUI did not draw it. Every `ui:*` tag is now in
+  the Core set: 67 of 67 in `UI_PARITY.md`.
 - `UI_PARITY.md`: every `ui:*` tag against every renderer, written from
   `quantum/runtime/ui_parity.py` (`python -m quantum.runtime.ui_parity`). A
   page with every tag checks it in each renderer: each says "not drawn" for

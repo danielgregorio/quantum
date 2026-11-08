@@ -15,7 +15,7 @@ from __future__ import annotations
 import html
 import math
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # -- an avatar -----------------------------------------------------------------
 
@@ -623,3 +623,86 @@ def chart_html(chart_type: str, title: str, bars: List[Dict[str, Any]]) -> str:
         out.append('</div>')
     out.append('</div>')
     return ''.join(out)
+
+
+# -- a page's ui:theme -------------------------------------------------------------------
+
+def theme_tokens(node) -> Dict[str, str]:
+    """A ui:theme's colours: its preset's (light, dark), with its ui:color children over them."""
+    from quantum.core.features.theming.src.presets import THEME_LIGHT, get_theme_preset
+    tokens = dict(get_theme_preset(node.preset or 'light') or THEME_LIGHT)
+    for color in getattr(node, 'colors', None) or []:
+        if color.name and color.value:
+            tokens[color.name] = color.value
+    return tokens
+
+
+def page_theme(statements) -> Optional[Dict[str, str]]:
+    """UI-21: the colours of the page's ui:theme (the first one), or None when it has none."""
+    from quantum.core.features.theming.src.ast_node import UIThemeNode
+    for node in statements or []:
+        if isinstance(node, UIThemeNode):
+            return theme_tokens(node)
+    return None
+
+
+def theme_css(tokens: Dict[str, str]) -> str:
+    """The colours as the page's CSS variables, over the theme's defaults (`html:root` outranks `:root`)."""
+    safe = {k: v for k, v in tokens.items()
+            if re.fullmatch(r'[a-z][a-z0-9-]*', k) and re.fullmatch(r'[#\w(),.%\s-]+', str(v))}
+    body = ' '.join(f'--q-{k}: {v};' for k, v in safe.items())
+    return f'<style data-quantum-theme>html:root {{ {body} }}</style>'
+
+
+# -- a calendar ----------------------------------------------------------------------------
+
+MONTHS = ('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
+          'October', 'November', 'December')
+
+
+def calendar_field(node, ctx) -> Tuple[Any, Optional[str]]:
+    """UI-9, UI-21: a calendar in a form is one of its fields: the value sent comes back in it (or the row's, in an
+    edit form) and so does its field's error. A value sent that is not a date is not shown (its q:param says why)."""
+    import datetime
+    from quantum.runtime.ui_form_rules import prepare_field
+    field, error = prepare_field(node, ctx, escape=False)
+    if field is not node and field.value != node.value:
+        try:
+            field.value = datetime.date.fromisoformat(str(field.value or '').strip()[:10]).isoformat()
+        except ValueError:
+            field.value = None
+    return field, error
+
+
+def calendar_of(page, node) -> Dict[str, Any]:
+    """UI-21: a calendar in a page is a date field shown as a month: {bind, value, month, min, max,
+    disabled_dates, disabled_days, first_day, week_numbers}. The month shown first is the value's, else
+    today's; picking a day sets the field, which its form sends under `bind`."""
+    import datetime
+    page_only_attrs(node, 'ui:calendar', ('on_change',))
+    if getattr(node, 'on_month_change', None):
+        raise ValueError('<ui:calendar on-month-change=...> calls the standalone build\'s script (UI-8); in a '
+                         'page the month moves by itself in every renderer (UI-21)')
+    mode = _text(page, node.mode) or 'single'
+    if mode != 'single':
+        raise ValueError(f'<ui:calendar mode="{mode}">: a page\'s calendar picks one date (mode="single"); '
+                         f'a range or several dates are the standalone build\'s (UI-21)')
+
+    def iso(text) -> str:
+        text = _text(page, text).strip()
+        if not text:
+            return ''
+        try:
+            return datetime.date.fromisoformat(text).isoformat()
+        except ValueError:
+            raise ValueError(f'<ui:calendar>: "{text}" is not a date (YYYY-MM-DD) (UI-21)') from None
+
+    value = iso(node.value)
+    shown = datetime.date.fromisoformat(value) if value else datetime.date.today()
+    days = [int(d) for d in _list(_value(page, node.disabled_days)) if str(d).strip().lstrip('-').isdigit()]
+    return {'bind': _text(page, node.bind), 'value': value, 'month': shown.strftime('%Y-%m'),
+            'min': iso(node.min_date), 'max': iso(node.max_date),
+            'disabled_dates': [iso(d) for d in _list(_value(page, node.disabled_dates))],
+            'disabled_days': [d % 7 for d in days],
+            'first_day': int(_text(page, node.first_day_of_week) or 0) % 7,
+            'week_numbers': truthy(_value(page, node.show_week_numbers))}
