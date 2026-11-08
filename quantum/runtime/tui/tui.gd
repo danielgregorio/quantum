@@ -62,6 +62,7 @@ var dialog: FileDialog = null
 var dialog_key := ""
 var colors := {}
 var palette := {}
+var base_tokens := {}             # the colours it was started with; a page's ui:theme goes over them (UI-21)
 var spinning := false             # a loading mark is on the screen: it is drawn again as it turns                 # the design tokens' colours, by name (a chart's bars use them)
 const SPINNER := "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
@@ -104,6 +105,7 @@ func _ready() -> void:
 				motion_on = v != "off"
 			"--shot":
 				shot = v
+	base_tokens = tokens
 	_theme(tokens)
 	var file := FontFile.new()
 	if file.load_dynamic_font("res://DejaVuSansMono.ttf") == OK:
@@ -342,6 +344,9 @@ func load_page(target: String, method: String = "GET", data: Dictionary = {}, fi
 	busy += 1
 	var answer := await fetch(method, target, data, files)
 	page = answer
+	# UI-21: a page's ui:theme gives its colours; the TUI's own (the browser's defaults) otherwise
+	var page_tokens: Dictionary = answer.get("tokens", {}) if answer.get("tokens") is Dictionary else {}
+	_theme(base_tokens.merged(page_tokens, true))
 	state = {}
 	tabs = {}
 	tabs_opened = {}
@@ -1512,6 +1517,7 @@ func observation() -> Dictionary:
 					   "w": image["w"], "h": image["h"]})
 	return {
 		"title": str(page.get("title", "")), "path": path, "pages": pages_loaded, "cols": cols, "rows": rows,
+		"palette": palette,
 		"hover": hover, "cursor": "pointing" if mouse_default_cursor_shape == Control.CURSOR_POINTING_HAND else "arrow",
 		"height": lay.height, "scroll": scroll, "screen": lay.text_rows(), "items": shown, "motions": motions,
 		"moving": not running.is_empty(), "progress": lay.progress, "images": images,

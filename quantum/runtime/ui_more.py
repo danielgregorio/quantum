@@ -623,3 +623,32 @@ def chart_html(chart_type: str, title: str, bars: List[Dict[str, Any]]) -> str:
         out.append('</div>')
     out.append('</div>')
     return ''.join(out)
+
+
+# -- a page's ui:theme -------------------------------------------------------------------
+
+def theme_tokens(node) -> Dict[str, str]:
+    """A ui:theme's colours: its preset's (light, dark), with its ui:color children over them."""
+    from quantum.core.features.theming.src.presets import THEME_LIGHT, get_theme_preset
+    tokens = dict(get_theme_preset(node.preset or 'light') or THEME_LIGHT)
+    for color in getattr(node, 'colors', None) or []:
+        if color.name and color.value:
+            tokens[color.name] = color.value
+    return tokens
+
+
+def page_theme(statements) -> Optional[Dict[str, str]]:
+    """UI-21: the colours of the page's ui:theme (the first one), or None when it has none."""
+    from quantum.core.features.theming.src.ast_node import UIThemeNode
+    for node in statements or []:
+        if isinstance(node, UIThemeNode):
+            return theme_tokens(node)
+    return None
+
+
+def theme_css(tokens: Dict[str, str]) -> str:
+    """The colours as the page's CSS variables, over the theme's defaults (`html:root` outranks `:root`)."""
+    safe = {k: v for k, v in tokens.items()
+            if re.fullmatch(r'[a-z][a-z0-9-]*', k) and re.fullmatch(r'[#\w(),.%\s-]+', str(v))}
+    body = ' '.join(f'--q-{k}: {v};' for k, v in safe.items())
+    return f'<style data-quantum-theme>html:root {{ {body} }}</style>'

@@ -1189,7 +1189,16 @@ the next; a `ui:stepper` shows the steps' titles and the current step's
 content, and Back and Next move between them. What calls a standalone build's
 script — `on-change`, `on-complete` and `bind` on a carousel or a stepper,
 `on-close` on a toast — is an error in a page that says so
-(`tests/apps/showcase/components/state.q`).
+(`tests/apps/showcase/components/state.q`). A form's `ui:validator`s are
+checked by the server when it is sent, before its action runs: a `pattern`, a
+form (`email`, `url`, `phone`), `match` another field, `min`/`max`,
+`minlength`/`maxlength`, a `server-expression` that must be true; an empty
+field passes them (its q:param says whether it is required), and a failure
+brings the form back with the error by its field, as UI-9's do; `expression`,
+a check in a standalone build's script, is an error in a page. A page's
+`ui:theme` (a `preset`, its `ui:color`s over it) gives its colours: the
+browser's CSS variables, the console's and the TUI's colours (the view's
+`tokens`); the Hive's screen keeps its palette.
 
 ## 11. Development
 

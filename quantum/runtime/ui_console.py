@@ -537,8 +537,24 @@ class ConsoleUI(App):
                 self.page_loading = False
                 self.pages_loaded += 1
 
+    # UI-21: a page's ui:theme gives Textual's colours (the console's own when it has none)
+    _TOKEN_VARIABLES = {'primary': 'primary', 'secondary': 'secondary', 'success': 'success',
+                        'danger': 'error', 'warning': 'warning', 'info': 'accent'}
+
+    def get_css_variables(self):
+        variables = super().get_css_variables()
+        for token, variable in self._TOKEN_VARIABLES.items():
+            value = (getattr(self, 'page_tokens', None) or {}).get(token)
+            if value:
+                variables[variable] = value
+        return variables
+
     async def _load_page(self, path: str, method: str, data: Optional[dict]) -> None:
         page = self._fetch(method, path, data)
+        tokens = page.get('tokens') or None
+        if tokens != getattr(self, 'page_tokens', None):
+            self.page_tokens = tokens
+            self.refresh_css(animate=False)
         self.motions = []
         self.motion_on = bool(page.get('motion', True))
         self._tabs_opened = set()

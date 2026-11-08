@@ -562,6 +562,30 @@ Also takes the [layout attributes](#layout-attributes), its text.
 
 Specified by: [UI-7](./spec#UI-7)
 
+<a id="ui-validator"></a>
+
+## `ui:validator`
+
+Inside: [`ui:form`](#ui-form)
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `name` | string |  |  |  |
+| `field` | string |  |  |  |
+| `type` | string |  |  |  |
+| `pattern` | string |  |  |  |
+| `match` | string |  |  |  |
+| `min` | string |  |  |  |
+| `max` | string |  |  |  |
+| `expression` | string |  |  |  |
+| `server-expression` | string |  |  |  |
+| `minlength` | number |  |  |  |
+| `maxlength` | number |  |  |  |
+| `message` | string |  |  |  |
+| `trigger` | string |  | `submit` |  |
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-animate"></a>
 
 ## `ui:animate`
@@ -889,31 +913,36 @@ Also takes the [layout attributes](#layout-attributes).
 
 Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
 
-<h1 class="reference-group">Experimental</h1>
+<a id="ui-theme"></a>
 
-Browser only, with no stability promise: the console says it does not draw them ([UI-7](./spec#UI-7)).
-
-<a id="ui-validator"></a>
-
-## `ui:validator`
-
-Inside: [`ui:form`](#ui-form)
+## `ui:theme`
 
 | Attribute | Type | Required | Default | Values |
 |---|---|---|---|---|
 | `name` | string |  |  |  |
-| `field` | string |  |  |  |
-| `type` | string |  |  |  |
-| `pattern` | string |  |  |  |
-| `match` | string |  |  |  |
-| `min` | string |  |  |  |
-| `max` | string |  |  |  |
-| `expression` | string |  |  |  |
-| `server-expression` | string |  |  |  |
-| `minlength` | number |  |  |  |
-| `maxlength` | number |  |  |  |
-| `message` | string |  |  |  |
-| `trigger` | string |  | `submit` |  |
+| `preset` | string |  | `light` |  |
+| `auto-switch` | boolean |  | `false` |  |
+
+Also takes [`ui:color`](#ui-color) children.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-color"></a>
+
+## `ui:color`
+
+Inside: [`ui:theme`](#ui-theme)
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `name` | string |  |  |  |
+| `value` | string |  |  |  |
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<h1 class="reference-group">Experimental</h1>
+
+Browser only, with no stability promise: the console says it does not draw them ([UI-7](./spec#UI-7)).
 
 <a id="ui-calendar"></a>
 
@@ -936,28 +965,5 @@ Inside: [`ui:form`](#ui-form)
 | `inline` | boolean |  | `true` |  |
 
 Also takes the [layout attributes](#layout-attributes).
-
-<a id="ui-theme"></a>
-
-## `ui:theme`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `name` | string |  |  |  |
-| `preset` | string |  | `light` |  |
-| `auto-switch` | boolean |  | `false` |  |
-
-Also takes [`ui:color`](#ui-color) children.
-
-<a id="ui-color"></a>
-
-## `ui:color`
-
-Inside: [`ui:theme`](#ui-theme)
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `name` | string |  |  |  |
-| `value` | string |  |  |  |
 
 :::

@@ -151,6 +151,11 @@ class HTMLRenderer:
         elif isinstance(node, (SetNode, QueryNode)):
             return ''
 
+        elif type(node).__name__ == 'UIThemeNode':
+            # UI-21: a page's ui:theme sets its colours, the design tokens' CSS variables
+            from quantum.runtime.ui_more import theme_css, theme_tokens
+            return theme_css(theme_tokens(node))
+
         else:
             # Unknown node type - skip (includes QuantumReturn and others)
             return ''

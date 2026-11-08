@@ -467,8 +467,37 @@ on the screen and in the TUI:
 `ui:calendar` works in the browser only and is **Experimental** (see the
 [UI tags reference](/reference/ui)): in the console, on the screen and in the
 TUI it shows `[ui:calendar is not drawn in the console]` instead of something
-else in its place. `ui:validator` and `ui:theme` apply to a standalone build
-only so far. [`UI_PARITY.md`](https://github.com/danielgregorio/quantum/blob/main/UI_PARITY.md)
+else in its place.
+
+A form's `ui:validator`s are checked by the server when it is sent, in every
+renderer the same — the error comes back by its field, as the action's own
+rules do:
+
+```xml
+<q:component name="Join">
+  <q:action name="join" method="POST">
+    <q:param name="code" required="true" />
+    <q:param name="again" required="true" />
+    <q:redirect url="/" flash="Joined with {code}" />
+  </q:action>
+
+  <ui:window title="Join">
+    <ui:form on-submit="join">
+      <ui:validator field="code" pattern="^[A-Z]{3}$" message="Three capital letters" />
+      <ui:validator field="again" match="code" message="The codes differ" />
+      <ui:input bind="code" />
+      <ui:input bind="again" />
+      <ui:button>Join</ui:button>
+    </ui:form>
+  </ui:window>
+</q:component>
+```
+
+**Shows:** `Join`
+
+A page's `ui:theme` gives its colours — `<ui:theme preset="dark"><ui:color
+name="primary" value="#ff00aa" /></ui:theme>` — to the browser, the console
+and the TUI; the Hive's screen keeps its palette. [`UI_PARITY.md`](https://github.com/danielgregorio/quantum/blob/main/UI_PARITY.md)
 is the map of every tag against every renderer, and a check keeps it true.
 
 Text directly inside a container is content: `<ui:card-header>Summary</ui:card-header>`.

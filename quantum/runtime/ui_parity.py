@@ -23,12 +23,13 @@ PART_OF = {'tab': 'tabpanel', 'column': 'table', 'option': 'select', 'item': 'li
            'card-body': 'card', 'card-footer': 'card', 'breadcrumb-item': 'breadcrumb', 'slide': 'carousel',
            'step': 'stepper', 'color': 'theme'}
 
-# Tags that are not elements of a page: what they say applies only to a standalone `type="ui"` build (UI-8)
-# so far; in a page every renderer, the browser too, leaves them out.
-STANDALONE_ONLY = {
-    'validator': "a form's rules come from its action's q:params in a page (UI-9)",
-    'theme': "a page's look is the design tokens' (ui_html_templates.CSS_THEME)",
-    'color': "a page's look is the design tokens' (ui_html_templates.CSS_THEME)",
+# Tags that are not elements of a page: what they do, in every renderer the same (UI-21).
+NOT_ELEMENTS = {
+    'validator': 'a rule of its form, checked by the server when the form is sent (the error comes back by '
+                 'its field, UI-9)',
+    'theme': "the page's colours: the browser's CSS variables, the console's and the TUI's colours; the "
+             "Hive's screen keeps its palette",
+    'color': "one of its ui:theme's colours",
 }
 
 # What the browser's page does with a tag whose standalone build runs a script a page does not have.
@@ -59,9 +60,11 @@ def tier(tag: str) -> str:
 
 
 def status(tag: str, renderer: str) -> str:
-    """'drawn', 'not drawn', 'standalone only', or how it is drawn ('drawn: ...')."""
-    if tag in STANDALONE_ONLY:
-        return 'standalone only'
+    """'drawn', 'not drawn', or how it is drawn ('drawn: ...')."""
+    if tag in ('validator', 'theme', 'color'):
+        if tag == 'validator':
+            return 'drawn: checked by the server'
+        return 'drawn: the screen keeps its palette' if renderer == 'screen' else 'drawn: its colours'
     if tag in PART_OF:
         return status(PART_OF[tag], renderer)
     if renderer == 'browser':
@@ -84,8 +87,6 @@ def _cell(text: str) -> str:
         return '✓'
     if text == 'not drawn':
         return '— says so'
-    if text == 'standalone only':
-        return 'standalone only'
     return '✓ ' + text[len('drawn: '):]
 
 
@@ -110,8 +111,8 @@ def markdown() -> str:
         lines.append(f'| `ui:{tag}`{part} | {tier(tag)} | '
                      + ' | '.join(_cell(status(tag, r)) for r in RENDERERS) + ' |')
     lines += ['', '## Not elements of a page', '']
-    for tag, why in STANDALONE_ONLY.items():
-        lines.append(f'- `ui:{tag}`: {why}; it applies to a standalone `q:application type="ui"` build (UI-8).')
+    for tag, what in NOT_ELEMENTS.items():
+        lines.append(f'- `ui:{tag}`: {what}.')
     drawn_everywhere = sum(1 for t in all_tags() if all(status(t, r).startswith('drawn') for r in RENDERERS))
     lines += ['', f'{drawn_everywhere} of {len(all_tags())} tags are drawn by every renderer.', '']
     return '\n'.join(lines)
