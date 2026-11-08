@@ -137,10 +137,14 @@ STATE = [
     ("fill", "again", "ABC"),
     ("click", "Join"),
     ("sees", ["Joined with ABC"]),
-    # a calendar: a month, the next on its arrow, a day picked goes with the form
+    # a calendar: a month, the next on its arrow, a day picked goes with the form; one its validator refuses
+    # comes back in it (its month shown), with the error by it
     ("sees", ["November 2026"]),
     ("month", "next"),
     ("sees", ["December 2026"]),
+    ("day", "25"),
+    ("click", "Book"),
+    ("sees", ["Closed on the 25th", "December 2026"]),
     ("day", "24"),
     ("click", "Book"),
     ("sees", ["Booked: 2026-12-24"]),

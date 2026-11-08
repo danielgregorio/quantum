@@ -233,14 +233,15 @@ class TestCoreSet:
         assert 'Card' in html and '<details' not in html and 'Section' in html
 
     def test_the_console_says_what_it_does_not_draw(self):
-        # UI-7: outside the Core set, the console says so instead of drawing something else
+        # UI-7: a kind it does not know (every ui:* tag is drawn since Platforms Phase 4: a newer server's), the
+        # console says so instead of drawing something else
         import asyncio
         from quantum.runtime.ui_console import ConsoleUI
         from textual.widgets import Static
 
         class Fixed(ConsoleUI):
             def _fetch(self, method, path, data=None):
-                return {'title': 'T', 'view': [{'type': 'calendar', 'props': {}, 'children': []},
+                return {'title': 'T', 'view': [{'type': 'hologram', 'props': {}, 'children': []},
                                                {'type': 'text', 'props': {'text': 'ok'}, 'children': []}]}
 
         async def main():
@@ -250,7 +251,7 @@ class TestCoreSet:
                 return [str(w.render()) for w in app.query(Static)]
 
         texts = asyncio.run(main())
-        assert '[ui:calendar is not drawn in the console]' in texts and 'ok' in texts
+        assert '[ui:hologram is not drawn in the console]' in texts and 'ok' in texts
 
     def test_the_core_set_is_drawn_by_every_renderer(self):
         # UI-7, UI-21: a tag is in the Core set when every renderer draws it (UI_PARITY.md, whose map

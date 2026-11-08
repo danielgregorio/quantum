@@ -1,5 +1,6 @@
 """The TUI's tests (SPEC.md UI-20): a small application served on a local port, and the TUI headless on it."""
 
+import json
 import logging
 import shutil
 import sqlite3
@@ -35,7 +36,6 @@ INDEX = f'''<q:component name="Fruits" {NS}>
     <ui:form on-submit="send" submit="Send">
       <ui:input bind="doc" type="file" />
     </ui:form>
-    <ui:calendar />
   </ui:window>
 </q:component>'''
 
@@ -69,6 +69,21 @@ DATES = f'''<q:component name="Dates" {NS}>
 </q:component>'''
 
 
+def with_a_kind_none_draws(app):
+    """UI-7: /hologram is a page whose view names a kind no renderer knows (a newer server's; every ui:* tag is
+    drawn, UI_PARITY.md), for the test that the TUI says so instead of drawing something else in its place."""
+    def serve(environ, start_response):
+        if environ.get('PATH_INFO') != '/hologram':
+            return app(environ, start_response)
+        body = json.dumps({'title': 'Hologram', 'flash': '', 'flashType': '', 'flashShown': False, 'motion': False,
+                           'view': [{'type': 'hologram', 'props': {}, 'children': []},
+                                    {'type': 'text', 'props': {'text': 'Still drawn'}, 'children': []}]}).encode()
+        start_response('200 OK', [('Content-Type', 'application/vnd.quantum.view+json'),
+                                   ('Content-Length', str(len(body)))])
+        return [body]
+    return serve
+
+
 @pytest.fixture
 def godot():
     from tests.apps.ui_drivers import tui_godot
@@ -99,7 +114,8 @@ def app_url(tmp_path, monkeypatch):
     from werkzeug.serving import make_server
     from quantum.runtime.web_server import QuantumWebServer
     logging.disable(logging.WARNING)
-    server = make_server('127.0.0.1', 0, QuantumWebServer(str(project / 'quantum.config.yaml')).app, threaded=True)
+    app = with_a_kind_none_draws(QuantumWebServer(str(project / 'quantum.config.yaml')).app)
+    server = make_server('127.0.0.1', 0, app, threaded=True)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     yield f'http://127.0.0.1:{server.server_port}/', project
     server.shutdown()

@@ -462,12 +462,12 @@ on the screen and in the TUI:
 | Forms | `form`, `formitem`, `input`, `checkbox`, `switch`, `radio`, `select` / `option`, `button` |
 | Data features | `pager` (pages of a query), `history` (a row's changes), `stream` (an AI answer as it is written) |
 | Beyond the layout | `breadcrumb` / `breadcrumb-item`, `menu`, `avatar`, `markdown`, `chart`, `tree`, `log`, `dividedbox`, `pagination`, `skeleton`, `loading`, `date-picker`, `animate` ([below](#beyond-the-layout)) |
-| With a state of their own | `accordion`, `modal`, `tooltip`, `dropdown`, `toast` / `toast-container`, `carousel` / `slide`, `stepper` / `step` ([below](#beyond-the-layout)) |
+| With a state of their own | `accordion`, `modal`, `tooltip`, `dropdown`, `toast` / `toast-container`, `carousel` / `slide`, `stepper` / `step`, `calendar` ([below](#beyond-the-layout)) |
+| Not elements of a page | `validator` (a rule of its form), `theme` / `color` (the page's colours) |
 
-`ui:calendar` works in the browser only and is **Experimental** (see the
-[UI tags reference](/reference/ui)): in the console, on the screen and in the
-TUI it shows `[ui:calendar is not drawn in the console]` instead of something
-else in its place.
+That is every `ui:*` tag. A kind a renderer does not know — a newer server's —
+shows `[ui:kind is not drawn in the console]` instead of something else in its
+place.
 
 A form's `ui:validator`s are checked by the server when it is sent, in every
 renderer the same — the error comes back by its field, as the action's own
@@ -595,6 +595,36 @@ Which slide or step is shown is the screen's, not the page's: `on-change`,
 `on-complete` and `bind`, which a standalone build's script calls, are an
 error in a page.
 
+A **calendar** is a date field of its form shown as a month: the user moves
+from month to month and picks a day, which the form sends under its `bind`
+(YYYY-MM-DD). `min-date`, `max-date`, `disabled-dates` and `disabled-days`
+(0 is Sunday) say the days that cannot be picked; `first-day-of-week` and
+`show-week-numbers` how the weeks are laid out. A day the action refuses comes
+back picked, with the error by the calendar:
+
+```xml
+<q:component name="Visit">
+  <q:action name="book" method="POST">
+    <q:param name="day" type="date" required="true" />
+    <q:redirect url="/" flash="Booked: {day}" />
+  </q:action>
+
+  <ui:window title="Visit">
+    <ui:form on-submit="book">
+      <ui:validator field="day" server-expression="{day != '2026-12-25'}" message="Closed on the 25th" />
+      <ui:calendar bind="day" value="2026-12-01" min-date="2026-12-01" disabled-days="0"
+                   first-day-of-week="1" show-week-numbers="true" />
+      <ui:button>Book</ui:button>
+    </ui:form>
+  </ui:window>
+</q:component>
+```
+
+**Shows:** `Book`
+
+`on-change`, `on-month-change` and a `mode` other than `single` call a
+standalone build's script, and are an error in a page.
+
 ## In the TUI
 
 `quantum run <app> --on tui` opens the pages on a text screen in a window of its own, drawn by
@@ -611,7 +641,7 @@ for each page's view tree and sends the same posts a browser sends, with the coo
 Tab between elements, Enter acts, Space marks, the arrows inside an element, F5 asks the page
 again, and Ctrl+Q closes the window; the last line says the keys that apply.
 
-An element outside the core set shows `[ui:chart is not drawn in the TUI]`. Headless, with
+A kind it does not know shows `[ui:kind is not drawn in the TUI]`. Headless, with
 `--play`, it is driven one JSON request at a time — click at a cell, type, wait for a text — and
 answers with what the screen shows: the parity script and the Kanban's script run in it in CI
 (`quantum/runtime/ui_tui.py`, `TuiSession`), and its layout is checked against reference frames of
@@ -645,8 +675,9 @@ There is no mouse, and no key to learn beyond the console's own:
 The last line of the screen says the keys that apply to what has the
 focus. A search field (`search="true"`) asks the page again after its
 pause, as in the browser; a validation error puts the focus on the field
-it is about (UI-9). What the screen does not draw (`ui:chart`, a modal) it
-says so, as the console does.
+it is about (UI-9). It draws every `ui:*` tag — a chart in bars, a modal
+that takes the keys until Esc — and a kind it does not know it says so, as
+the console does.
 
 The keyboard is read by the machine's layout: US, or a Brazilian ABNT2
 (`XKBLAYOUT="br"` in `/etc/default/keyboard`), where `ç` is its own key

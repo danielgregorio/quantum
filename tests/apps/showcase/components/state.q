@@ -65,8 +65,10 @@
       <ui:button>Join</ui:button>
     </ui:form>
 
-    <!-- a calendar is a date field shown as a month: the day picked goes with its form -->
+    <!-- a calendar is a date field shown as a month: the day picked goes with its form, and a day its
+         validator refuses comes back in it, with the error by it -->
     <ui:form on-submit="book">
+      <ui:validator field="day" server-expression="{day != '2026-12-25'}" message="Closed on the 25th" />
       <ui:calendar bind="day" value="2026-11-15" />
       <ui:button>Book</ui:button>
     </ui:form>

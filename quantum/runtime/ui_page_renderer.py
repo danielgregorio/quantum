@@ -548,7 +548,9 @@ class UIPageRenderer(UIHtmlAdapter):
         b.close_tag('details')
 
     def _render_calendar_page(self, node, b: HtmlBuilder):
-        # UI-21: a date field shown as a month; the picked day goes with its form under `bind`
+        # UI-21: a date field shown as a month; the picked day goes with its form under `bind`, and comes back in
+        # it with its error (UI-9)
+        node, error = ui_more.calendar_field(node, getattr(self, '_form_ctx', None))
         shape = ui_more.calendar_of(self._page, node)
         inner = HtmlBuilder()
         self._render_node_ui(node, inner)
@@ -566,6 +568,10 @@ class UIPageRenderer(UIHtmlAdapter):
                     "var f=document.querySelector('input[data-calendar-for=\"'+c.id+'\"]');"
                     "if(f&&s[" + json.dumps(shape['bind']) + "])f.value=s[" + json.dumps(shape['bind']) + "];},0);},true);")
             b.raw(f'<script>{sync}</script>')
+        if error:
+            b.open_tag('span', {'class': 'q-field-error', 'role': 'alert'})
+            b.text(html.escape(error))
+            b.close_tag('span')
 
     def _render_modal_page(self, node, b: HtmlBuilder):
         # UI-21: open as the page is drawn (`open`, or an expression); its close button closes it

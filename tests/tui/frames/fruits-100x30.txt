@@ -11,4 +11,3 @@
 
  [ Choose a file… ]  no file chosen
  [ Send ]
- [ui:calendar is not drawn in the TUI]

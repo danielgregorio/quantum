@@ -10,7 +10,7 @@ application in each of its versions, UI-18). A step is a tuple: ("sees", [texts]
 motions the page ran (UI-19) —, ("api", method, path, json, status[, [texts]]) — another
 program calling the application's API (q:endpoint, API-1) beside the page, with a session of
 its own —, and the parity script's own (image, progress, values, check, choose, and UI-21's close, fold,
-tip, next, gone, pick).
+tip, next, gone, pick, month, day).
 """
 
 import asyncio
@@ -505,7 +505,7 @@ async def run_console_script(app, pilot, script):
         else:
             verb = getattr(driver, step[0], None)
             if asyncio.iscoroutinefunction(verb):
-                await verb(*step[1:])          # UI-21: close, fold, tip, next, gone, pick wait for what they did
+                await verb(*step[1:])          # UI-21: close, fold, tip, next, gone, pick, month, day wait for what they did
             else:
                 run_script(driver, [step])
             if step[0] in LOADS_A_PAGE:

@@ -432,7 +432,7 @@ func place(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 			motions.insert(first_motion, motions.pop_back())
 			regions.insert(first_motion, regions.pop_back())
 	var error := str(prop(node, "error", ""))
-	if error != "" and kind_of(node) in ["input", "select", "checkbox", "switch", "radio"]:
+	if error != "" and kind_of(node) in ["input", "select", "checkbox", "switch", "radio", "calendar"]:
 		for line in wrap_text(error, w):
 			put(x, y + h, line, "error", w)
 			h += 1

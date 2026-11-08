@@ -15,8 +15,9 @@ from typing import Dict, List, Optional
 RENDERERS = ('browser', 'console', 'screen', 'tui')
 TITLES = {'browser': 'Browser', 'console': 'Console', 'screen': "Hive's screen", 'tui': 'TUI'}
 
-# The tags the console, the screen and the TUI do not draw yet: they say "[ui:kind is not drawn ...]".
-NOT_DRAWN = frozenset({'calendar'})
+# The tags the console, the screen and the TUI do not draw yet: they say "[ui:kind is not drawn ...]". None since
+# Platforms Phase 4: a kind a renderer does not know (a newer server's) still says so (UI-7).
+NOT_DRAWN: frozenset = frozenset()
 
 # Tags that are a part of another and drawn by it.
 PART_OF = {'tab': 'tabpanel', 'column': 'table', 'option': 'select', 'item': 'list', 'card-header': 'card',
@@ -33,9 +34,7 @@ NOT_ELEMENTS = {
 }
 
 # What the browser's page does with a tag whose standalone build runs a script a page does not have.
-BROWSER_IN_A_PAGE = {
-    'calendar': 'the month; it does not move or pick',
-}
+BROWSER_IN_A_PAGE: Dict[str, str] = {}
 
 # How a renderer draws a tag in the form it can, where that is worth saying.
 NOTES: Dict[str, Dict[str, str]] = {
@@ -46,6 +45,8 @@ NOTES: Dict[str, Dict[str, str]] = {
     'image': {'console': '[its alt]', 'screen': '[its alt]'},
     'input': {'console': 'a file field says to attach from the browser (UI-14)'},
     'tooltip': {'screen': 'its tip on the status line while it has the focus'},
+    'calendar': {'screen': 'the days of the months around it left blank',
+                 'tui': 'the days of the months around it left blank'},
 }
 
 

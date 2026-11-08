@@ -892,6 +892,30 @@ Also takes the [layout attributes](#layout-attributes), child elements.
 
 Specified by: [UI-7](./spec#UI-7)
 
+<a id="ui-calendar"></a>
+
+## `ui:calendar`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `mode` | string |  | `single` |  |
+| `value` | string |  |  |  |
+| `bind` | string |  |  |  |
+| `min-date` | string |  |  |  |
+| `max-date` | string |  |  |  |
+| `disabled-dates` | string |  |  |  |
+| `disabled-days` | string |  |  |  |
+| `locale` | string |  | `en` |  |
+| `on-change` | string |  |  |  |
+| `on-month-change` | string |  |  |  |
+| `show-week-numbers` | boolean |  | `false` |  |
+| `first-day-of-week` | number |  | `0` |  |
+| `inline` | boolean |  | `true` |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-date-picker"></a>
 
 ## `ui:date-picker`
@@ -943,27 +967,5 @@ Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
 <h1 class="reference-group">Experimental</h1>
 
 Browser only, with no stability promise: the console says it does not draw them ([UI-7](./spec#UI-7)).
-
-<a id="ui-calendar"></a>
-
-## `ui:calendar`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `mode` | string |  | `single` |  |
-| `value` | string |  |  |  |
-| `bind` | string |  |  |  |
-| `min-date` | string |  |  |  |
-| `max-date` | string |  |  |  |
-| `disabled-dates` | string |  |  |  |
-| `disabled-days` | string |  |  |  |
-| `locale` | string |  | `en` |  |
-| `on-change` | string |  |  |  |
-| `on-month-change` | string |  |  |  |
-| `show-week-numbers` | boolean |  | `false` |  |
-| `first-day-of-week` | number |  | `0` |  |
-| `inline` | boolean |  | `true` |  |
-
-Also takes the [layout attributes](#layout-attributes).
 
 :::

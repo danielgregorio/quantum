@@ -15,7 +15,7 @@ from __future__ import annotations
 import html
 import math
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # -- an avatar -----------------------------------------------------------------
 
@@ -658,6 +658,20 @@ def theme_css(tokens: Dict[str, str]) -> str:
 
 MONTHS = ('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
           'October', 'November', 'December')
+
+
+def calendar_field(node, ctx) -> Tuple[Any, Optional[str]]:
+    """UI-9, UI-21: a calendar in a form is one of its fields: the value sent comes back in it (or the row's, in an
+    edit form) and so does its field's error. A value sent that is not a date is not shown (its q:param says why)."""
+    import datetime
+    from quantum.runtime.ui_form_rules import prepare_field
+    field, error = prepare_field(node, ctx, escape=False)
+    if field is not node and field.value != node.value:
+        try:
+            field.value = datetime.date.fromisoformat(str(field.value or '').strip()[:10]).isoformat()
+        except ValueError:
+            field.value = None
+    return field, error
 
 
 def calendar_of(page, node) -> Dict[str, Any]:

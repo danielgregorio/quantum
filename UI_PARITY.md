@@ -19,7 +19,7 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 | `ui:breadcrumb` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:breadcrumb-item` (part of `ui:breadcrumb`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:button` | Core | ✓ | ✓ | ✓ | ✓ |
-| `ui:calendar` | Experimental | ✓ the month; it does not move or pick | — says so | — says so | — says so |
+| `ui:calendar` | Core | ✓ | ✓ | ✓ the days of the months around it left blank | ✓ the days of the months around it left blank |
 | `ui:card` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:card-body` (part of `ui:card`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:card-footer` (part of `ui:card`) | Core | ✓ | ✓ | ✓ | ✓ |
@@ -85,4 +85,4 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 - `ui:theme`: the page's colours: the browser's CSS variables, the console's and the TUI's colours; the Hive's screen keeps its palette.
 - `ui:color`: one of its ui:theme's colours.
 
-66 of 67 tags are drawn by every renderer.
+67 of 67 tags are drawn by every renderer.

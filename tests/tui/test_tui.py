@@ -2,7 +2,7 @@
 
 What the parity script (tests/apps/test_ui_parity_script.py) and the Kanban's (tests/apps/test_kanban_everywhere.py)
 do not reach: search as you type, an editable table, a file field with a dialog of its own, an image, wide
-characters, the mouse and the wheel, the motions, a resize, a tag it does not draw, and of the tags with a state
+characters, the mouse and the wheel, the motions, a resize, a kind it does not draw, and of the tags with a state
 of their own (UI-21) Esc, a modal that takes the clicks, a tip on the focus, a toast that stays on the screen,
 a carousel that plays and a calendar's weeks, its days that cannot be picked and its keys. And the layout check:
 each page laid out at a size is the same cells as its reference frame in tests/tui/frames/
@@ -117,10 +117,11 @@ class TestTheScreen:
         assert tui.visit('/long')['motions'] == [{'kind': 'slide', 'speed': 'normal', 'what': 'page'},
                                                  {'kind': 'fade', 'speed': 'normal', 'what': 'input'}]
 
-    def test_a_tag_it_does_not_draw_says_so(self, tui):
-        # UI-7: never something else in its place
-        assert tui.observe()['unsupported'] == ['calendar']
-        assert '[ui:calendar is not drawn in the TUI]' in tui.text()
+    def test_a_kind_it_does_not_draw_says_so(self, tui):
+        # UI-7: never something else in its place (every ui:* tag is drawn: a newer server's kind)
+        assert tui.observe()['unsupported'] == []
+        assert tui.visit('/hologram')['unsupported'] == ['hologram']
+        assert '[ui:hologram is not drawn in the TUI]' in tui.text() and 'Still drawn' in tui.text()
 
     def test_a_resize_lays_the_page_out_again(self, tui):
         seen = tui.resize(60, 20)
