@@ -18,6 +18,7 @@
 //! {"op":"act","type":"Ann","tap":["enter"]}          text typed, then keys by name (window.rs says which keys do what)
 //! {"op":"until","pixel":"submit"}                    until the window sent that event (click, submit, change, navigate, close)
 //! {"op":"until","text":"Saved"} / {"op":"until","shown":2}   until the page shows that text / the page was shown so many times
+//! {"op":"until","gone":"Saved"}                      until the page no longer shows that text (a toast that went, UI-21)
 //! {"op":"until","still":true}                        until no transition runs (the observation's `motion` is null, the F1 menu where it is going)
 //! {"op":"until","menu":true}                         until the F1 menu is out (false: shut), and still
 //! {"op":"end"}
@@ -116,6 +117,12 @@ fn holds(runtime: &Runtime, req: &Value, events: &[Value]) -> bool {
         return world
             .window()
             .is_some_and(|w| w.texts().iter().any(|t| t.contains(text)));
+    }
+    if let Some(text) = s("gone") {
+        // UI-21: a toast that goes, a modal closed: the page no longer shows it
+        return world
+            .window()
+            .is_some_and(|w| !w.texts().iter().any(|t| t.contains(text)));
     }
     if let Some(n) = req.get("shown").and_then(Value::as_u64) {
         return world.window().is_some_and(|w| w.shown >= n);

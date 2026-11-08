@@ -24,7 +24,7 @@ from pathlib import Path
 import pytest
 import requests
 
-from tests.apps.ui_drivers import Browser, Tui, run_console_script, run_script
+from tests.apps.ui_drivers import WAIT, Browser, Tui, run_console_script, run_script
 
 SHOWCASE = Path(__file__).resolve().parent / "showcase"
 OS_DIR = Path(__file__).resolve().parents[2] / "os"
@@ -325,6 +325,39 @@ class Pixel:
         if steps:
             self.s.request({"op": "act", "tap": ["right"] * steps if steps > 0 else ["left"] * -steps})
 
+    # UI-21: what a tag with a state of its own does, from the keyboard
+
+    def close(self, title):
+        # an open modal has the keyboard: its close control, Enter
+        self._focus(lambda i: i["kind"] == "modal" and i.get("label") == title)
+        self.s.request({"op": "act", "tap": ["enter"]})
+
+    def fold(self, title):
+        self._focus(lambda i: i["kind"] == "section" and i.get("label") == title)
+        self.s.request({"op": "act", "tap": ["enter"]})
+
+    def tip(self, label, text):
+        # the tip shows while its element has the focus
+        self._focus(lambda i: i.get("label") == label)
+        assert text in self.text(), f"the tip {text!r} does not show"
+
+    def next(self, kind):
+        if kind == "carousel":
+            self._focus(lambda i: i["kind"] == "carousel")
+            self.s.request({"op": "act", "tap": ["right"]})
+        else:
+            self._focus(lambda i: i.get("moves") == kind and i.get("label") == "Next")
+            self.s.request({"op": "act", "tap": ["enter"]})
+
+    def gone(self, text):
+        obs = self.s.request({"op": "until", "gone": text, "max_ticks": WAIT * 60})
+        assert obs["stopped"] == "condition", f"{text!r} did not go"
+
+    def pick(self, label, option):
+        self._focus(lambda i: i["kind"] == "dropdown" and i.get("label") == label)
+        self.s.request({"op": "act", "tap": ["enter"]})
+        self.click(option)
+
 
 def test_the_script_on_the_pixel_screen(url, tmp_path):
     # UI-7, UI-15
@@ -343,6 +376,7 @@ def test_the_script_on_the_pixel_screen(url, tmp_path):
         assert first["stopped"] == "condition", "quantum pixel did not bring the page"
         run_script(Pixel(screen, client), SCRIPT)
         run_script(Pixel(screen, client), MORE)
+        run_script(Pixel(screen, client), STATE)
         # Esc closes the page; the page's runtime ends with it
         screen.request({"op": "act", "tap": ["escape"]})
         runtime.join(10)

@@ -13,9 +13,17 @@
 //! Space marks, Esc closes); the last line says the keys that apply to
 //! what has the focus; Esc closes the innermost thing, and with nothing
 //! open, the page.
+//!
+//! The tags with a state of their own (UI-21) keep it here, from the view
+//! the page was shown with until it is shown again: an open modal is a box
+//! over the page that has the keyboard; a toast is drawn over the page for
+//! its `duration` (counted in ticks); an accordion's folds open and close
+//! on their headers, the first open; a tooltip's tip shows while it has the
+//! focus; a dropdown's button opens its options; a carousel shows one
+//! slide, a stepper one step, with their controls.
 
 use crate::canvas::{Band, Font};
-use crate::world::Key;
+use crate::world::{Key, TICK_RATE};
 use serde_json::{json, Map, Value};
 
 /// The frame around the content, in pixels: the outer line, the bevel and
@@ -35,6 +43,12 @@ const MIN_ROWS: usize = 4;
 /// columns, a phone's width; at the fine level, drawn on the canvas of two
 /// pixels to the scene's one, it has 106.
 const SM_COLS: usize = 80;
+/// UI-21: the rows of the modal shown over the page are counted from here,
+/// so that its content is laid out as the page's is and drawn in a box of
+/// its own over it (`row_y`).
+const OVERLAY: usize = 1 << 20;
+/// The page under a modal, dimmed.
+const DIM: u32 = 0xA000_0000;
 
 // The look of a window manager in pixel art: a 1-px bevel (light above and
 // left, dark below and right) on what is raised, the reverse on what is
@@ -93,7 +107,17 @@ struct Node {
     cursor: usize,
     checked: bool,
     choice: usize,
+    /// A tabpanel's open tab; a carousel's slide, a stepper's step (UI-21).
     tab: usize,
+    /// UI-21: what a tag with a state of its own keeps: a fold, a dropdown
+    /// or a modal open, a toast still shown.
+    open: bool,
+    /// A toast's ticks left (0: it stays until dismissed); a carousel's
+    /// ticks since its slide moved (`auto_play`).
+    ticks: u64,
+    /// A stepper's Back and Next: buttons of the screen's own, outside the
+    /// view tree.
+    controls: Vec<usize>,
     /// A table's active row (-1: the header) and the action in it.
     row: isize,
     col: usize,
@@ -131,6 +155,13 @@ pub struct Window {
     in_table: bool,
     /// How many pages were shown: a test waits for the next.
     pub shown: u64,
+    /// UI-21: the modal shown over the page, which has the keyboard while
+    /// it is open; the rows of its box; the focusables that are its own.
+    overlay: Option<usize>,
+    overlay_rows: usize,
+    overlay_focus: (usize, usize),
+    /// The toasts laid out, drawn over the page.
+    toasts: Vec<usize>,
 }
 
 fn text_of(v: Option<&Value>) -> String {
@@ -138,6 +169,23 @@ fn text_of(v: Option<&Value>) -> String {
         Some(Value::String(s)) => s.clone(),
         Some(Value::Null) | None => String::new(),
         Some(other) => other.to_string(),
+    }
+}
+
+/// A number in the view: a JSON number, or a text that reads as one.
+fn number(v: Option<&Value>) -> Option<f64> {
+    match v {
+        Some(Value::Number(n)) => n.as_f64(),
+        Some(Value::String(s)) => s.trim().parse().ok(),
+        _ => None,
+    }
+}
+
+/// A yes or no the view may leave out: `default` when it does.
+fn truthy_or(v: Option<&Value>, default: bool) -> bool {
+    match v {
+        None | Some(Value::Null) => default,
+        some => truthy(some),
     }
 }
 
@@ -237,6 +285,15 @@ const DRAWN: &[&str] = &[
     "skeleton",
     "loading",
     "treeitem",
+    // UI-21: the tags with a state of their own
+    "accordion",
+    "modal",
+    "toast",
+    "tooltip",
+    "dropdown",
+    "carousel",
+    "stepper",
+    "step",
 ];
 
 fn not_drawn(kind: &str) -> Option<String> {
@@ -333,6 +390,10 @@ impl Window {
             search_due: None,
             in_table: false,
             shown: 1,
+            overlay: None,
+            overlay_rows: 0,
+            overlay_focus: (0, 0),
+            toasts: Vec::new(),
         };
         let root = Value::Object(Map::new());
         w.add(&root, None);
@@ -436,7 +497,138 @@ impl Window {
                 .position(|t| !wanted.is_empty() && t.trim() == wanted)
                 .unwrap_or(0);
         }
+        self.start_state(n);
         n
+    }
+
+    /// UI-21: what a tag with a state of its own starts with, as the page
+    /// is shown: an accordion's first fold open, a modal as `open` says, a
+    /// toast shown for its `duration`, a carousel's and a stepper's
+    /// `current`, a stepper's steps done before it and its Back and Next.
+    fn start_state(&mut self, n: usize) {
+        let kind = self.nodes[n].kind.clone();
+        match kind.as_str() {
+            "accordion" => {
+                let first = self.nodes[n]
+                    .children
+                    .iter()
+                    .copied()
+                    .find(|&c| self.nodes[c].kind == "section");
+                if let Some(first) = first {
+                    self.nodes[first].open = true;
+                }
+            }
+            "modal" => self.nodes[n].open = truthy(self.nodes[n].props.get("open")),
+            "toast" => {
+                let ms = number(self.nodes[n].props.get("duration")).unwrap_or(3000.0);
+                self.nodes[n].open = true;
+                self.nodes[n].ticks = if ms > 0.0 {
+                    ((ms * TICK_RATE as f64 / 1000.0).round() as u64).max(1)
+                } else {
+                    0
+                };
+            }
+            "carousel" | "stepper" => {
+                let parts = self.moving_parts(n);
+                let current = number(self.nodes[n].props.get("current"))
+                    .unwrap_or(0.0)
+                    .max(0.0) as usize;
+                let current = current.min(parts.len().saturating_sub(1));
+                self.nodes[n].tab = current;
+                if kind == "stepper" {
+                    // a step is done when it says so, else when it is behind the current one
+                    for (i, &s) in parts.iter().enumerate() {
+                        let said = self.nodes[s]
+                            .props
+                            .get("completed")
+                            .filter(|v| !v.is_null());
+                        self.nodes[s].checked = said.map_or(i < current, |v| truthy(Some(v)));
+                    }
+                    for (text, step) in [("Back", -1), ("Next", 1)] {
+                        let c = self.nodes.len();
+                        let mut props = Map::new();
+                        props.insert("text".into(), json!(text));
+                        props.insert("moves".into(), json!(step));
+                        self.nodes.push(Node {
+                            kind: "button".into(),
+                            props,
+                            parent: Some(n),
+                            ..Node::default()
+                        });
+                        self.nodes[n].controls.push(c);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// A carousel's slides (each child is one), a stepper's steps.
+    fn moving_parts(&self, n: usize) -> Vec<usize> {
+        let node = &self.nodes[n];
+        if node.kind == "stepper" {
+            node.children
+                .iter()
+                .copied()
+                .filter(|&c| self.nodes[c].kind == "step")
+                .collect()
+        } else {
+            node.children.clone()
+        }
+    }
+
+    /// Whether `n` is a fold: a section of an accordion (UI-21).
+    fn is_fold(&self, n: usize) -> bool {
+        let node = &self.nodes[n];
+        node.kind == "section"
+            && node
+                .parent
+                .is_some_and(|p| self.nodes[p].kind == "accordion")
+    }
+
+    /// The children that are shown, and laid out: a closed fold's, a
+    /// closed dropdown's, a modal's that is not over the page and a
+    /// toast's are not; a carousel shows its slide, a stepper its step and
+    /// its Back and Next (UI-21).
+    fn shown_children(&self, n: usize) -> Vec<usize> {
+        let node = &self.nodes[n];
+        match node.kind.as_str() {
+            "section" if self.is_fold(n) && !node.open => Vec::new(),
+            "modal" if self.overlay != Some(n) => Vec::new(),
+            "dropdown" if !node.open => Vec::new(),
+            "toast" => Vec::new(),
+            "carousel" => node.children.get(node.tab).copied().into_iter().collect(),
+            "stepper" => self
+                .moving_parts(n)
+                .get(node.tab)
+                .copied()
+                .into_iter()
+                .chain(node.controls.iter().copied())
+                .collect(),
+            _ => node.children.clone(),
+        }
+    }
+
+    /// The tooltip whose tip shows: the one that has the focus, or what
+    /// has it inside (UI-21).
+    fn tooltip_of_focus(&self) -> Option<usize> {
+        let mut cur = self.focused();
+        while let Some(n) = cur {
+            if self.nodes[n].kind == "tooltip" {
+                return Some(n);
+            }
+            cur = self.nodes[n].parent;
+        }
+        None
+    }
+
+    /// What a tooltip holds, as text: the label a driver finds it by.
+    fn content_text(&self, n: usize) -> String {
+        let mut texts = Vec::new();
+        for &c in &self.nodes[n].children {
+            self.collect_texts(c, &mut texts);
+        }
+        texts.join(" ")
     }
 
     /// A tabpanel's tab titles, in order.
@@ -501,12 +693,20 @@ impl Window {
         let width = (self.canvas.0 as usize).saturating_sub(2 * margin);
         self.cols = (width.saturating_sub(2 * SIDE as usize) / cw).max(12);
         self.focusables.clear();
+        self.toasts.clear();
+        self.overlay = None;
+        self.overlay_rows = 0;
         let h = self.place(0, 0, 0, self.cols);
         self.content_height = h;
+        if self.overlay.is_some() {
+            // UI-21: an open modal has the keyboard
+            let (from, to) = self.overlay_focus;
+            self.focusables = self.focusables[from..to].to_vec();
+        }
         let max_rows = ((self.canvas.1 as usize).saturating_sub(2 * margin + CHROME_H as usize)
             / ch)
             .max(MIN_ROWS);
-        self.rows = (h + self.content_top()).clamp(MIN_ROWS, max_rows);
+        self.rows = (h.max(self.overlay_rows) + self.content_top()).clamp(MIN_ROWS, max_rows);
         let height = self.rows * ch + CHROME_H as usize;
         let y = (self.canvas.1 as usize).saturating_sub(height) / 2;
         self.frame = Rect {
@@ -588,9 +788,58 @@ impl Window {
             "avatar" => text_of(p.get("initials")).chars().count() + 4,
             "loading" => text.chars().count() + 4,
             "treeitem" => 3 * depth_of(p) + text.chars().count(),
+            // UI-21: a dropdown is its button, and its menu when open; a
+            // tooltip what it holds; a modal and a toast are over the page
+            "dropdown" => {
+                let options = if node.open {
+                    node.children
+                        .iter()
+                        .map(|&c| self.natural_width(c, w) + 2)
+                        .max()
+                        .unwrap_or(0)
+                } else {
+                    0
+                };
+                (self.dropdown_label(n).chars().count() + 4).max(options)
+            }
+            "tooltip" => self.content_width(n, w),
+            "modal" | "toast" => 1,
             _ => w,
         };
         width.min(w).max(1)
+    }
+
+    /// The widest of what `n` holds, beside others, at most `w`.
+    fn content_width(&self, n: usize, w: usize) -> usize {
+        self.nodes[n]
+            .children
+            .iter()
+            .map(|&c| self.natural_width(c, w))
+            .max()
+            .unwrap_or(1)
+            .min(w)
+    }
+
+    fn dropdown_label(&self, n: usize) -> String {
+        let label = text_of(self.nodes[n].props.get("label"));
+        if label.is_empty() {
+            "Menu".into()
+        } else {
+            label
+        }
+    }
+
+    /// What reacts among the tags with a state of their own (UI-21): a
+    /// fold's header, a dropdown's button, a carousel, a dismissible toast
+    /// (a modal's close control and a tooltip are placed with their own).
+    fn reacts(&self, n: usize) -> bool {
+        let node = &self.nodes[n];
+        match node.kind.as_str() {
+            "dropdown" | "carousel" => true,
+            "section" => self.is_fold(n),
+            "toast" => node.open && truthy_or(node.props.get("dismissible"), true),
+            _ => false,
+        }
     }
 
     /// Lays `n` out at (x, y) in `w` cells; its height in rows.
@@ -600,11 +849,57 @@ impl Window {
         let children = self.nodes[n].children.clone();
         let goes = kind == "treeitem"
             && (self.nodes[n].event.is_some() || !text_of(props.get("to")).is_empty());
-        if !self.in_table && (Self::is_focusable(&kind, &props) || goes) {
+        if !self.in_table && (Self::is_focusable(&kind, &props) || goes || self.reacts(n)) {
             self.focusables.push(n);
         }
         let h = match kind.as_str() {
             "page" => self.stack(&children, x + 1, y, w.saturating_sub(2), 0),
+            // UI-21: the tags with a state of their own
+            "accordion" | "step" => self.stack(&children, x, y, w, 0),
+            "section" if self.is_fold(n) => {
+                // a header that opens and closes the fold; its content under it when open
+                self.nodes[n].lines = vec![cut(&text_of(props.get("title")), w.saturating_sub(3))];
+                if self.nodes[n].open {
+                    1 + self.stack(&children, x + 2, y + 1, w.saturating_sub(2), 0)
+                } else {
+                    1
+                }
+            }
+            "modal" => {
+                if self.nodes[n].open && self.overlay.is_none() {
+                    self.place_modal(n);
+                    return 0;
+                }
+                0
+            }
+            "toast" => {
+                if self.nodes[n].open {
+                    self.place_toast(n);
+                }
+                0
+            }
+            "tooltip" => {
+                let before = self.focusables.len();
+                let h = self.stack(&children, x, y, w, 0);
+                if self.focusables.len() == before && !self.in_table {
+                    // nothing inside reacts: the tooltip takes the focus itself
+                    self.focusables.push(n);
+                }
+                h
+            }
+            "dropdown" => {
+                if self.nodes[n].open {
+                    1 + self.stack(&children, x + 1, y + 1, w.saturating_sub(2), 0)
+                } else {
+                    1
+                }
+            }
+            "carousel" => {
+                // the slide shown, then its controls: the arrows and where it is
+                let slide = children.get(self.nodes[n].tab).copied();
+                1 + slide.map_or(0, |s| self.place(s, x, y, w))
+            }
+            "stepper" => self.place_stepper(n, x, y, w),
             "item" if props.contains_key("marker") => {
                 // an ordered list's number before the item (UI-21)
                 let m = text_of(props.get("marker")).chars().count() + 1;
@@ -824,11 +1119,132 @@ impl Window {
         cy - y
     }
 
+    /// UI-21: an open modal is laid out in a box of its own over the page,
+    /// in the window's middle columns (a dialog's width at most), from the
+    /// rows of the overlay: a title bar (its close control in it, first in
+    /// the focus when it is `closable`), its content, a row below.
+    fn place_modal(&mut self, n: usize) {
+        let children = self.nodes[n].children.clone();
+        let w = self.cols.saturating_sub(6).clamp(12, 64).min(self.cols);
+        let x = (self.cols - w) / 2;
+        self.overlay = Some(n);
+        let from = self.focusables.len();
+        if truthy_or(self.nodes[n].props.get("closable"), true) {
+            self.focusables.push(n);
+        }
+        let inner = self.stack(&children, x + 1, OVERLAY + 1, w.saturating_sub(2), 0);
+        self.overlay_focus = (from, self.focusables.len());
+        self.overlay_rows = inner + 2;
+        self.nodes[n].rect = Rect {
+            x,
+            y: OVERLAY,
+            w,
+            h: inner + 2,
+        };
+    }
+
+    /// UI-21: a toast takes no room in the page: its title and its message
+    /// (wrapped to a small box) are drawn over it, where `position` says.
+    fn place_toast(&mut self, n: usize) {
+        let p = &self.nodes[n].props;
+        let (title, message) = (text_of(p.get("title")), text_of(p.get("message")));
+        let close = if truthy_or(p.get("dismissible"), true) {
+            2
+        } else {
+            0
+        };
+        let room = self.cols.saturating_sub(4).clamp(8, 36) - close;
+        let mut lines = Vec::new();
+        if !title.is_empty() {
+            lines.push(cut(&title, room));
+        }
+        if !message.is_empty() {
+            lines.extend(wrap(&message, room));
+        }
+        self.nodes[n].lines = lines;
+        self.toasts.push(n);
+    }
+
+    /// UI-21: a stepper is its steps' titles in a row (one a row when
+    /// `vertical`), the current step's description, error and whether it
+    /// is optional, its content, and Back and Next on a row of their own.
+    fn place_stepper(&mut self, n: usize, x: usize, y: usize, w: usize) -> usize {
+        let steps = self.moving_parts(n);
+        let current = self.nodes[n].tab.min(steps.len().saturating_sub(1));
+        self.nodes[n].tab = current;
+        let header = self.step_places(n, w);
+        let mut cy = y + header.iter().map(|&(row, _)| row + 1).max().unwrap_or(0);
+        if let Some(&s) = steps.get(current) {
+            cy += self.step_notes(s, w).len();
+            cy += self.place(s, x, cy, w);
+        }
+        let mut cx = x;
+        // Back is muted on the first step, where it goes nowhere
+        let controls = self.nodes[n].controls.clone();
+        if let Some(&back) = controls.first() {
+            let variant = if current == 0 { "muted" } else { "" };
+            self.nodes[back]
+                .props
+                .insert("variant".into(), json!(variant));
+        }
+        if let Some(&next) = controls.get(1) {
+            self.nodes[next]
+                .props
+                .insert("variant".into(), json!("primary"));
+        }
+        for c in controls {
+            let width = self.natural_width(c, w);
+            self.place(c, cx, cy, width);
+            cx += width + 1;
+        }
+        cy + 1 - y
+    }
+
+    /// Where each step's title is in a stepper's header: (row, column).
+    /// A step takes its number's box, a cell, its title; a line of two
+    /// cells goes to the next, a cell on each side.
+    fn step_places(&self, n: usize, w: usize) -> Vec<(usize, usize)> {
+        let vertical = text_of(self.nodes[n].props.get("orientation")) == "vertical";
+        let (mut row, mut col) = (0, 0);
+        let mut out = Vec::new();
+        for (i, s) in self.moving_parts(n).into_iter().enumerate() {
+            let width = 3 + text_of(self.nodes[s].props.get("title")).chars().count();
+            if i > 0 && (vertical || col + width > w) {
+                row += 1;
+                col = 0;
+            }
+            out.push((row, col));
+            col += width + 4;
+        }
+        out
+    }
+
+    /// What the current step says under the header: its description, its
+    /// error, and that it is optional; each with whether it is the error.
+    fn step_notes(&self, s: usize, w: usize) -> Vec<(String, bool)> {
+        let p = &self.nodes[s].props;
+        let mut out: Vec<(String, bool)> = Vec::new();
+        for (key, error) in [("description", false), ("error", true)] {
+            let t = text_of(p.get(key));
+            if !t.trim().is_empty() {
+                out.extend(wrap(&t, w).into_iter().map(|l| (l, error)));
+            }
+        }
+        if truthy(p.get("optional")) {
+            out.push(("Optional".into(), false));
+        }
+        out
+    }
+
     // ---------------------------------------------------------------- focus
 
     fn focus_first(&mut self) {
-        self.focus = 0;
-        // the first field, else the first focusable
+        // the first field, else the first focusable that stays (a toast goes, UI-21)
+        self.focus = self
+            .focusables
+            .iter()
+            .position(|&n| self.nodes[n].kind != "toast")
+            .unwrap_or(0);
         if let Some(i) = self.focusables.iter().position(|&n| {
             matches!(
                 self.nodes[n].kind.as_str(),
@@ -868,6 +1284,7 @@ impl Window {
                 .or(p.get("text"))
                 .or(p.get("label"))
                 .or(p.get("to"))
+                .or(p.get("title"))
                 .or(p.get("ui_id")),
         )
     }
@@ -902,6 +1319,9 @@ impl Window {
             return;
         };
         let r = self.nodes[n].rect;
+        if r.y >= OVERLAY || self.nodes[n].kind == "toast" {
+            return; // over the page: always in view (UI-21)
+        }
         let (top, bottom) = (r.y, r.y + r.h.max(1));
         let rows = self.content_rows();
         // in view, with a row of what is around it when there is room
@@ -922,7 +1342,8 @@ impl Window {
         match self.focused() {
             None => true,
             Some(n) => match self.nodes[n].kind.as_str() {
-                "button" | "link" | "treeitem" | "checkbox" | "switch" | "tabpanel" => true,
+                "button" | "link" | "treeitem" | "checkbox" | "switch" | "tabpanel" | "section"
+                | "modal" | "toast" | "tooltip" | "dropdown" | "carousel" => true,
                 "input" => {
                     matches!(key, Key::Up | Key::Down)
                         && text_of(self.nodes[n].props.get("rows")).is_empty()
@@ -1037,6 +1458,13 @@ impl Window {
                 self.events
                     .push(json!({"event": "navigate", "id": node.id, "to": to}));
             }
+            "button" if node.props.contains_key("moves") => {
+                // UI-21: a stepper's Back and Next move it, here
+                if let Some(stepper) = node.parent {
+                    let forward = number(node.props.get("moves")).unwrap_or(0.0) > 0.0;
+                    self.move_stepper(stepper, forward);
+                }
+            }
             "button" => {
                 if let Some(event) = &node.event {
                     let action = text_of(event.get("action"));
@@ -1111,7 +1539,10 @@ impl Window {
                 return true;
             }
             Key::Escape => {
-                self.events.push(json!({"event": "close"}));
+                // Esc closes the innermost thing open (UI-21), and with nothing open, the page
+                if !self.close_innermost() {
+                    self.events.push(json!({"event": "close"}));
+                }
                 return true;
             }
             Key::F5 => {
@@ -1175,6 +1606,47 @@ impl Window {
             "button" | "link" | "treeitem" => match key {
                 Key::Enter | Key::Space => {
                     self.activate(n);
+                    // an option of a dropdown: the menu shuts on it
+                    if let Some(d) = self.nodes[n]
+                        .parent
+                        .filter(|&d| self.nodes[d].kind == "dropdown" && self.nodes[d].open)
+                    {
+                        self.nodes[d].open = false;
+                        self.relayout();
+                        self.refocus(d);
+                    }
+                    true
+                }
+                _ => false,
+            },
+            // UI-21: a fold's header and a dropdown's button open and close
+            "section" | "dropdown" => match key {
+                Key::Enter | Key::Space => {
+                    self.nodes[n].open = !self.nodes[n].open;
+                    self.relayout();
+                    true
+                }
+                _ => false,
+            },
+            "carousel" => match key {
+                Key::Left | Key::Right => {
+                    self.move_carousel(n, key == Key::Right);
+                    self.relayout();
+                    true
+                }
+                _ => false,
+            },
+            "modal" => match key {
+                Key::Enter | Key::Space => {
+                    self.close_modal(n);
+                    true
+                }
+                _ => false,
+            },
+            "toast" => match key {
+                Key::Enter | Key::Space => {
+                    self.nodes[n].open = false;
+                    self.relayout();
                     true
                 }
                 _ => false,
@@ -1212,6 +1684,102 @@ impl Window {
             self.focus = i;
         }
         self.reveal();
+    }
+
+    /// The page flows again after something opened, closed or moved
+    /// (UI-21): the focus stays on what had it, or, when that is gone (a
+    /// toast), on what came after it.
+    fn relayout(&mut self) {
+        let before = self.focused();
+        let index = self.focus;
+        self.layout();
+        self.focus = match before.and_then(|n| self.focusables.iter().position(|&m| m == n)) {
+            Some(i) => i,
+            None => index.min(self.focusables.len().saturating_sub(1)),
+        };
+        self.reveal();
+    }
+
+    /// Esc on what is open (UI-21): the dropdown the focus is in, then the
+    /// modal over the page (when it can be closed), then any dropdown open.
+    /// Whether something closed.
+    fn close_innermost(&mut self) -> bool {
+        let mut cur = self.focused();
+        while let Some(n) = cur {
+            if self.nodes[n].kind == "dropdown" && self.nodes[n].open {
+                self.nodes[n].open = false;
+                self.relayout();
+                self.refocus(n);
+                return true;
+            }
+            cur = self.nodes[n].parent;
+        }
+        if let Some(m) = self.overlay {
+            if truthy_or(self.nodes[m].props.get("closable"), true) {
+                self.close_modal(m);
+                return true;
+            }
+        }
+        let open: Vec<usize> = (0..self.nodes.len())
+            .filter(|&n| self.nodes[n].kind == "dropdown" && self.nodes[n].open)
+            .collect();
+        for &d in &open {
+            self.nodes[d].open = false;
+        }
+        if !open.is_empty() {
+            self.relayout();
+        }
+        !open.is_empty()
+    }
+
+    /// A modal closed: its content is not shown until the page is shown
+    /// again, and the page has the keyboard back (UI-21).
+    fn close_modal(&mut self, m: usize) {
+        self.nodes[m].open = false;
+        self.layout();
+        self.focus_first();
+    }
+
+    /// The carousel's next slide or the one before, round when it loops
+    /// (the page is to flow again).
+    fn move_carousel(&mut self, n: usize, forward: bool) {
+        let count = self.moving_parts(n).len();
+        let current = self.nodes[n].tab;
+        let loops = truthy_or(self.nodes[n].props.get("loop"), true);
+        let next = if forward {
+            if current + 1 < count {
+                current + 1
+            } else if loops {
+                0
+            } else {
+                current
+            }
+        } else if current > 0 {
+            current - 1
+        } else if loops {
+            count.saturating_sub(1)
+        } else {
+            current
+        };
+        self.nodes[n].tab = next;
+        self.nodes[n].ticks = 0;
+    }
+
+    /// Next: this step done, the one after shown; Back: the one before.
+    fn move_stepper(&mut self, n: usize, forward: bool) {
+        let steps = self.moving_parts(n);
+        let current = self.nodes[n].tab;
+        if forward {
+            if let Some(&s) = steps.get(current) {
+                self.nodes[s].checked = true;
+            }
+            if current + 1 < steps.len() {
+                self.nodes[n].tab = current + 1;
+            }
+        } else {
+            self.nodes[n].tab = current.saturating_sub(1);
+        }
+        self.relayout();
     }
 
     fn key_in_field(&mut self, n: usize, key: Key, tick: u64) -> bool {
@@ -1345,10 +1913,47 @@ impl Window {
                     "bind": text_of(node.props.get("bind")), "value": node.value}));
             }
         }
+        if self.tick_states() {
+            return true;
+        }
         tick % 30 == 0
             && self
                 .focused()
                 .is_some_and(|n| self.nodes[n].kind == "input")
+    }
+
+    /// UI-21: a toast goes when its duration has passed; a carousel that
+    /// plays by itself moves every `interval` (not while it has the focus).
+    /// Whether the page changed.
+    fn tick_states(&mut self) -> bool {
+        let focused = self.focused();
+        let mut changed = false;
+        for n in 0..self.nodes.len() {
+            let node = &mut self.nodes[n];
+            match node.kind.as_str() {
+                "toast" if node.open && node.ticks > 0 => {
+                    node.ticks -= 1;
+                    if node.ticks == 0 {
+                        node.open = false;
+                        changed = true;
+                    }
+                }
+                "carousel" if truthy(node.props.get("auto_play")) && focused != Some(n) => {
+                    let ms = number(node.props.get("interval")).unwrap_or(5000.0);
+                    let every = ((ms * TICK_RATE as f64 / 1000.0).round() as u64).max(1);
+                    node.ticks += 1;
+                    if node.ticks >= every {
+                        self.move_carousel(n, true);
+                        changed = true;
+                    }
+                }
+                _ => {}
+            }
+        }
+        if changed {
+            self.relayout();
+        }
+        changed
     }
 
     /// The events since the last take.
@@ -1371,6 +1976,15 @@ impl Window {
             "link" => "Enter opens · Tab moves · Esc closes".into(),
             "table" => "arrows: row, action · Enter presses · Tab leaves".into(),
             "tabpanel" => "arrows change the tab · Tab enters · Esc closes".into(),
+            // UI-21
+            "section" if self.nodes[n].open => "Enter folds · Tab moves · Esc closes".into(),
+            "section" => "Enter unfolds · Tab moves · Esc closes".into(),
+            "dropdown" if self.nodes[n].open => "Down: the options · Enter or Esc shuts".into(),
+            "dropdown" => "Enter opens · Tab moves · Esc closes".into(),
+            "carousel" => "arrows change the slide · Tab moves · Esc closes".into(),
+            "modal" => "Enter or Esc closes it · Tab moves".into(),
+            "toast" => "Enter dismisses · Tab moves · Esc closes".into(),
+            "tooltip" => "Tab moves · Esc closes".into(),
             _ => "Tab moves · Enter chooses · Esc closes".into(),
         }
     }
@@ -1426,6 +2040,34 @@ impl Window {
                 }
             }
             "radio" | "select" => out.extend(self.options(n).into_iter().map(|(l, _)| l)),
+            // UI-21: what shows of a tag with a state of its own, as it is now
+            "modal" if self.overlay == Some(n) => {
+                let t = text_of(p.get("title"));
+                if !t.is_empty() {
+                    out.push(t);
+                }
+            }
+            "toast" if node.open => out.extend(node.lines.iter().cloned()),
+            "tooltip" if self.tooltip_of_focus() == Some(n) => out.push(text_of(p.get("text"))),
+            "dropdown" => out.push(self.dropdown_label(n)),
+            "carousel" => out.push(format!(
+                "{}/{}",
+                node.tab + 1,
+                self.moving_parts(n).len().max(1)
+            )),
+            "stepper" => {
+                let steps = self.moving_parts(n);
+                for &s in &steps {
+                    out.push(text_of(self.nodes[s].props.get("title")));
+                }
+                if let Some(&s) = steps.get(node.tab) {
+                    out.extend(
+                        self.step_notes(s, node.rect.w.max(1))
+                            .into_iter()
+                            .map(|(l, _)| l),
+                    );
+                }
+            }
             "image" => out.push(format!("[{}]", text_of(p.get("alt")))),
             "table" => {
                 for c in &node.columns {
@@ -1459,7 +2101,7 @@ impl Window {
             }
             return;
         }
-        for &c in &node.children {
+        for c in self.shown_children(n) {
             self.collect_texts(c, out);
         }
         for row in &node.rows {
@@ -1519,7 +2161,26 @@ impl Window {
                         v["tabs"] = json!(self.tab_titles(n));
                     }
                     "link" => v["to"] = json!(text_of(p.get("to"))),
+                    // UI-21: what a driver needs of a tag with a state of its own
+                    "section" | "dropdown" | "modal" | "toast" => v["open"] = json!(node.open),
+                    "tooltip" => {
+                        v["label"] = json!(self.content_text(n));
+                        v["tip"] = json!(text_of(p.get("text")));
+                    }
+                    "carousel" => {
+                        v["slide"] = json!(node.tab);
+                        v["slides"] = json!(self.moving_parts(n).len());
+                    }
+                    "button" if p.contains_key("moves") => {
+                        let stepper = node.parent.unwrap_or(0);
+                        v["moves"] = json!("stepper");
+                        v["step"] = json!(self.nodes[stepper].tab);
+                        v["steps"] = json!(self.moving_parts(stepper).len());
+                    }
                     _ => {}
+                }
+                if node.kind == "toast" && v["label"].is_null() {
+                    v["label"] = json!(text_of(p.get("message")));
                 }
                 if let Some(e) = p.get("error") {
                     v["error"] = e.clone();
@@ -1618,6 +2279,13 @@ impl Window {
             let at = y0 + ((track - thumb) as f32 * self.scroll as f32 / room).round() as i32;
             bevel_out(b, sx, at, 4, thumb as u32, MID, LIGHT, BLACK);
         }
+        // UI-21: over the content, the modal open, the toasts, the tip of
+        // what has the focus
+        if let Some(m) = self.overlay {
+            self.draw_modal(m, b, font, focused, blink);
+        }
+        self.draw_toasts(b, font, focused);
+        self.draw_tip(b, font);
         // the status bar: the keys that apply, raised; at its right, the
         // offers that wait for F1
         let sy = y + h as i32 - 1 - STATUS_H;
@@ -1641,6 +2309,15 @@ impl Window {
 
     /// A row of the content on the screen, or None when scrolled out.
     fn row_y(&self, row: usize, ch: i32) -> Option<i32> {
+        if row >= OVERLAY {
+            // UI-21: the modal's rows, in its box in the middle of the content
+            let (at, rows) = (row - OVERLAY, self.content_rows());
+            if at >= rows {
+                return None;
+            }
+            let top = rows.saturating_sub(self.overlay_rows) / 2;
+            return Some(self.oy + (self.content_top() + top + at) as i32 * ch);
+        }
         if row < self.scroll || row - self.scroll >= self.content_rows() {
             return None;
         }
@@ -1663,7 +2340,29 @@ impl Window {
                 }
             }
             "page" | "window" | "vbox" | "scrollbox" | "form" | "cardbody" | "cardfooter"
-            | "tab" | "list" | "item" | "hbox" | "grid" => {}
+            | "tab" | "list" | "item" | "hbox" | "grid" | "accordion" | "step" => {}
+            // UI-21: the tags with a state of their own
+            "section" if self.is_fold(n) => self.draw_fold(n, b, font, is_focus),
+            "modal" | "toast" => return, // over the page, after it
+            "tooltip" => {
+                for c in self.shown_children(n) {
+                    self.draw_node(c, b, font, focused, blink);
+                }
+                if is_focus {
+                    // what has no box of its own takes a dotted frame for the focus, over it
+                    let wpx = self.content_width(n, r.w) as i32 * cw;
+                    let rows: Vec<i32> = (r.y..r.y + r.h.max(1))
+                        .filter_map(|row| self.row_y(row, ch))
+                        .collect();
+                    if let (Some(&top), Some(&bottom)) = (rows.first(), rows.last()) {
+                        dotted(b, x - 2, top, wpx + 4, bottom + ch - top, HONEY);
+                    }
+                }
+                return;
+            }
+            "dropdown" => self.draw_dropdown(n, b, font, focused, is_focus),
+            "carousel" => self.draw_carousel(n, b, font, is_focus),
+            "stepper" => self.draw_stepper(n, b, font),
             "section" | "header" | "cardheader" | "formitem" => {
                 if let (Some(line), Some(y)) = (node.lines.first(), self.row_y(r.y, ch)) {
                     if !line.trim().is_empty() {
@@ -1827,6 +2526,9 @@ impl Window {
                         (MID, LIGHT, BLACK, HONEY)
                     } else if variant == "danger" {
                         (DANGER_BG, ERR_LIGHT, ERR_DARK, TEXT)
+                    } else if variant == "muted" {
+                        // a stepper's Back on its first step (UI-21)
+                        (MID, LIGHT, BLACK, MUTED)
                     } else {
                         (MID, LIGHT, BLACK, TEXT)
                     };
@@ -2103,7 +2805,7 @@ impl Window {
                 }
             }
         }
-        for &c in &node.children {
+        for c in self.shown_children(n) {
             if kind == "tabpanel"
                 && self.nodes[c].kind == "tab"
                 && self.nodes[c].rect == Rect::default()
@@ -2112,6 +2814,357 @@ impl Window {
             }
             self.draw_node(c, b, font, focused, blink);
         }
+    }
+
+    /// UI-21: a fold's header, raised across the fold, an arrow that says
+    /// whether it is open, its title.
+    fn draw_fold(&self, n: usize, b: &mut Band, font: &Font, is_focus: bool) {
+        let node = &self.nodes[n];
+        let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+        let r = node.rect;
+        let Some(y) = self.row_y(r.y, ch) else {
+            return;
+        };
+        let x = self.ox + r.x as i32 * cw;
+        let (light, dark, color) = if is_focus {
+            (HONEY, HONEY, HONEY)
+        } else {
+            (LIGHT, BLACK, TEXT)
+        };
+        bevel_out(b, x, y, r.w as u32 * cw as u32, ch as u32, MID, light, dark);
+        if node.open {
+            arrow(b, x + 4, y + 4, Toward::Down, HONEY);
+        } else {
+            arrow(b, x + 5, y + 3, Toward::Right, HONEY);
+        }
+        if let Some(title) = node.lines.first() {
+            b.text(font, title, x + 2 * cw, y, color);
+        }
+    }
+
+    /// UI-21: a dropdown's button (its label and an arrow, down when shut,
+    /// up when open), and its menu under it when open: a raised box, the
+    /// option with the focus on a dark strip.
+    fn draw_dropdown(
+        &self,
+        n: usize,
+        b: &mut Band,
+        font: &Font,
+        focused: Option<usize>,
+        is_focus: bool,
+    ) {
+        let node = &self.nodes[n];
+        let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+        let r = node.rect;
+        let x = self.ox + r.x as i32 * cw;
+        let label = cut(&self.dropdown_label(n), r.w.saturating_sub(4));
+        let bw = font.width_of(&label) + 4 * font.cell.0;
+        if let Some(y) = self.row_y(r.y, ch) {
+            let (light, dark, color) = if is_focus {
+                (HONEY, HONEY, HONEY)
+            } else {
+                (LIGHT, BLACK, TEXT)
+            };
+            bevel_out(b, x, y, bw, ch as u32, MID, light, dark);
+            b.text(font, &label, x + cw / 2 + 1, y, color);
+            let to = if node.open { Toward::Up } else { Toward::Down };
+            arrow(b, x + bw as i32 - 9, y + 3, to, HONEY);
+        }
+        if !node.open || r.h < 2 {
+            return;
+        }
+        let mw = (self.natural_width(n, r.w) as i32 * cw).max(bw as i32);
+        let (first, last) = (r.y + 1, r.y + r.h - 1);
+        for row in first..=last {
+            let Some(y) = self.row_y(row, ch) else {
+                continue;
+            };
+            b.fill_rect(x, y, mw as u32, ch as u32, MID);
+            b.fill_rect(x, y, 1, ch as u32, LIGHT);
+            b.fill_rect(x + mw - 1, y, 1, ch as u32, BLACK);
+            if row == last {
+                b.fill_rect(x, y + ch - 1, mw as u32, 1, BLACK);
+            }
+        }
+        for &c in &node.children {
+            if focused == Some(c) {
+                if let Some(y) = self.row_y(self.nodes[c].rect.y, ch) {
+                    b.fill_rect(x + 1, y, (mw - 2) as u32, ch as u32, FIELD_BG);
+                }
+            }
+        }
+    }
+
+    /// UI-21: a carousel's controls under its slide: the key before, where
+    /// it is ("1/2"), the key after (muted at an end it does not go round),
+    /// a dot a slide.
+    fn draw_carousel(&self, n: usize, b: &mut Band, font: &Font, is_focus: bool) {
+        let node = &self.nodes[n];
+        let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+        let (r, p) = (node.rect, &node.props);
+        let Some(y) = self.row_y(r.y + r.h.saturating_sub(1), ch) else {
+            return;
+        };
+        let count = self.moving_parts(n).len().max(1);
+        let current = node.tab;
+        let loops = truthy_or(p.get("loop"), true);
+        let (light, dark, color) = if is_focus {
+            (HONEY, HONEY, HONEY)
+        } else {
+            (LIGHT, BLACK, TEXT)
+        };
+        let mut cx = self.ox + r.x as i32 * cw;
+        let key = |b: &mut Band, cx: i32, to: Toward, goes: bool| {
+            bevel_out(b, cx, y, 2 * cw as u32, ch as u32, MID, light, dark);
+            let ink = if goes { color } else { MUTED };
+            let (ax, ay) = (cx + cw - 2, y + 2);
+            arrow(b, ax, ay, to, ink);
+        };
+        let arrows = truthy_or(p.get("show_arrows"), true);
+        if arrows {
+            key(b, cx, Toward::Left, loops || current > 0);
+            cx += 3 * cw;
+        }
+        let at = format!("{}/{}", current + 1, count);
+        b.text(font, &at, cx, y, color);
+        cx += (at.chars().count() as i32 + 1) * cw;
+        if arrows {
+            key(b, cx, Toward::Right, loops || current + 1 < count);
+            cx += 3 * cw;
+        }
+        if truthy_or(p.get("show_indicators"), true) && count > 1 {
+            for i in 0..count {
+                let dot = if i == current { HONEY } else { LIGHT };
+                b.fill_rect(cx + i as i32 * 6, y + 3, 4, 4, dot);
+            }
+        }
+    }
+
+    /// UI-21: a stepper's header, a box a step with its number (a check
+    /// when it is done; honey when it is the current one, red when it has
+    /// an error), its title, a line to the next; then what the current
+    /// step says.
+    fn draw_stepper(&self, n: usize, b: &mut Band, font: &Font) {
+        let node = &self.nodes[n];
+        let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+        let r = node.rect;
+        let x = self.ox + r.x as i32 * cw;
+        let steps = self.moving_parts(n);
+        let places = self.step_places(n, r.w);
+        for (i, (&s, &(row, col))) in steps.iter().zip(places.iter()).enumerate() {
+            let Some(y) = self.row_y(r.y + row, ch) else {
+                continue;
+            };
+            let step = &self.nodes[s];
+            let sx = x + col as i32 * cw;
+            let current = i == node.tab;
+            let error = !text_of(step.props.get("error")).trim().is_empty();
+            let (bg, light, dark, ink) = if current {
+                (TITLE_BG2, TITLE_BG, TITLE_DARK, INK)
+            } else if error {
+                (ERR_BG, ERR_LIGHT, ERR_DARK, ERR_TEXT)
+            } else if step.checked {
+                (OK_BG, OK_LIGHT, OK_DARK, OK_TEXT)
+            } else {
+                (MID, LIGHT, BLACK, MUTED)
+            };
+            bevel_out(b, sx, y, 2 * cw as u32, ch as u32, bg, light, dark);
+            if step.checked && !current && !error {
+                check_mark(b, sx + 2, y + 1, ink);
+            } else {
+                let number = (i + 1).to_string();
+                let nw = font.width_of(&number) as i32;
+                b.text(font, &number, sx + cw - nw / 2, y, ink);
+            }
+            let title = text_of(step.props.get("title"));
+            let room = r.w.saturating_sub(col + 3);
+            let color = if current {
+                HONEY
+            } else if error {
+                ERR_TEXT
+            } else if step.checked {
+                TEXT
+            } else {
+                MUTED
+            };
+            b.text(font, &cut(&title, room), sx + 3 * cw, y, color);
+            // the line to the next step, when it is on the same row
+            let len = title.chars().count() as i32;
+            if places.get(i + 1).is_some_and(|&(next, _)| next == row) {
+                b.fill_rect(
+                    sx + (3 + len) * cw + cw / 2,
+                    y + ch / 2,
+                    3 * cw as u32,
+                    1,
+                    LINE,
+                );
+            }
+        }
+        let below = places.iter().map(|&(row, _)| row + 1).max().unwrap_or(0);
+        if let Some(&s) = steps.get(node.tab) {
+            for (i, (line, error)) in self.step_notes(s, r.w).iter().enumerate() {
+                if let Some(y) = self.row_y(r.y + below + i, ch) {
+                    b.text(font, line, x, y + 1, if *error { ERR_TEXT } else { MUTED });
+                }
+            }
+        }
+    }
+
+    /// UI-21: the modal open, over the page dimmed under it: a frame with
+    /// its shadow, a honey title bar with the title and the close control
+    /// (an x on a key, lit when it has the focus), its content.
+    fn draw_modal(&self, m: usize, b: &mut Band, font: &Font, focused: Option<usize>, blink: bool) {
+        let node = &self.nodes[m];
+        let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+        let f = self.frame;
+        b.fill_rect(
+            f.x as i32 + 1,
+            self.oy - 1,
+            f.w as u32 - 2,
+            (self.rows as i32 * ch + 2) as u32,
+            DIM,
+        );
+        let Some(ty) = self.row_y(OVERLAY, ch) else {
+            return;
+        };
+        let r = node.rect;
+        let rows = self.overlay_rows.min(self.content_rows()) as i32;
+        // the bar takes its row and the frame's 3 px above it, as a window's
+        let (mx, my) = (self.ox + r.x as i32 * cw - 3, ty - 3);
+        let (mw, mh) = (r.w as u32 * cw as u32 + 6, (rows * ch + 4) as u32);
+        b.fill_rect(mx + 3, my + 3, mw, mh, SHADOW);
+        bevel_out(b, mx, my, mw, mh, BG, LIGHT, BLACK);
+        b.fill_rect(mx + 1, my + 1, mw - 2, 5, TITLE_BG);
+        b.fill_rect(mx + 1, my + 6, mw - 2, 6, TITLE_BG2);
+        b.fill_rect(mx + 1, my + 12, mw - 2, 1, DARK);
+        let title = cut(&text_of(node.props.get("title")), r.w.saturating_sub(4));
+        b.text(font, &title, mx + 4, my + 2, INK);
+        if truthy_or(node.props.get("closable"), true) {
+            let kx = mx + mw as i32 - 14;
+            if focused == Some(m) {
+                bevel_out(b, kx, my + 3, 11, 8, MID, HONEY, HONEY);
+                cross(b, kx + 3, my + 4, HONEY);
+            } else {
+                bevel_out(b, kx, my + 3, 11, 8, TITLE_BG2, TITLE_BG, TITLE_DARK);
+                cross(b, kx + 3, my + 4, INK);
+            }
+        }
+        for c in self.shown_children(m) {
+            self.draw_node(c, b, font, focused, blink);
+        }
+    }
+
+    /// UI-21: the toasts shown, each a small raised box over the page in
+    /// the corner `position` names (top right unless it says otherwise),
+    /// one under the other: a stripe of its variant's colour, the title in
+    /// it, the message, an x to dismiss it when it can be (lit when it has
+    /// the focus).
+    fn draw_toasts(&self, b: &mut Band, font: &Font, focused: Option<usize>) {
+        let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+        let area = (
+            self.oy + self.content_top() as i32 * ch,
+            self.oy + (self.content_top() + self.content_rows()) as i32 * ch,
+        );
+        let mut used: Vec<(String, i32)> = Vec::new();
+        for &n in &self.toasts {
+            let node = &self.nodes[n];
+            if !node.open || node.lines.is_empty() {
+                continue;
+            }
+            let p = &node.props;
+            let close = truthy_or(p.get("dismissible"), true);
+            let cells = node
+                .lines
+                .iter()
+                .map(|l| l.chars().count())
+                .max()
+                .unwrap_or(0)
+                + 2
+                + if close { 2 } else { 0 };
+            let (w, h) = (cells as i32 * cw + 4, node.lines.len() as i32 * ch + 4);
+            let position = text_of(p.get("position"));
+            let x = if position.contains("left") {
+                self.ox + 2
+            } else if position.contains("center") {
+                self.ox + (self.cols as i32 * cw - w) / 2
+            } else {
+                self.ox + self.cols as i32 * cw - w - 2
+            };
+            // the toasts of one corner one under the other (over the other, at the bottom)
+            let offset = used
+                .iter()
+                .find(|(k, _)| *k == position)
+                .map_or(0, |(_, o)| *o);
+            let y = if position.contains("bottom") {
+                area.1 - h - 2 - offset
+            } else {
+                area.0 + 2 + offset
+            };
+            match used.iter_mut().find(|(k, _)| *k == position) {
+                Some(entry) => entry.1 += h + 2,
+                None => used.push((position, h + 2)),
+            }
+            let is_focus = focused == Some(n);
+            let (bg, accent, ink) = match text_of(p.get("variant")).as_str() {
+                "success" => (OK_BG, OK_TEXT, OK_TEXT),
+                "danger" | "error" => (ERR_BG, ERR_TEXT, ERR_TEXT),
+                "warning" => (MID, HONEY, HONEY),
+                _ => (MID, LINK, HONEY),
+            };
+            let (light, dark) = if is_focus {
+                (HONEY, HONEY)
+            } else {
+                (LIGHT, BLACK)
+            };
+            b.fill_rect(x + 3, y + 3, w as u32, h as u32, SHADOW);
+            bevel_out(b, x, y, w as u32, h as u32, bg, light, dark);
+            b.fill_rect(x + 2, y + 2, 2, (h - 4) as u32, accent);
+            let titled = !text_of(p.get("title")).is_empty();
+            for (i, line) in node.lines.iter().enumerate() {
+                let color = if i == 0 && titled { ink } else { TEXT };
+                b.text(font, line, x + 2 + cw, y + 2 + i as i32 * ch, color);
+            }
+            if close {
+                cross(
+                    b,
+                    x + w - cw - 3,
+                    y + 4,
+                    if is_focus { HONEY } else { MUTED },
+                );
+            }
+        }
+    }
+
+    /// UI-21: the tip of the tooltip that has the focus, in a small honey
+    /// box above what it is about (below when there is no room, or when
+    /// `position` says so).
+    fn draw_tip(&self, b: &mut Band, font: &Font) {
+        let Some(t) = self.tooltip_of_focus() else {
+            return;
+        };
+        let (cw, ch) = (font.cell.0 as i32, font.cell.1 as i32);
+        let node = &self.nodes[t];
+        let r = node.rect;
+        let tip = cut(
+            &text_of(node.props.get("text")),
+            self.cols.saturating_sub(2),
+        );
+        if tip.is_empty() {
+            return;
+        }
+        let above = (text_of(node.props.get("position")) != "bottom" && r.y > 0)
+            .then(|| self.row_y(r.y - 1, ch))
+            .flatten()
+            .filter(|_| r.y != OVERLAY);
+        let Some(y) = above.or_else(|| self.row_y(r.y + r.h.max(1), ch)) else {
+            return;
+        };
+        let w = font.width_of(&tip) as i32 + 2 * cw;
+        let right = self.ox + self.cols as i32 * cw;
+        let x = (self.ox + r.x as i32 * cw).min(right - w).max(self.ox);
+        b.fill_rect(x + 2, y + 2, w as u32, ch as u32, SHADOW);
+        bevel_out(b, x, y, w as u32, ch as u32, TITLE_BG, TITLE_BG, TITLE_DARK);
+        b.text(font, &tip, x + cw, y, INK);
     }
 
     /// UI-21: the kinds that are not a composition of the layout set, drawn
@@ -2403,6 +3456,51 @@ fn check_mark(b: &mut Band, x: i32, y: i32, color: u32) {
     }
 }
 
+/// Where an arrow points.
+#[derive(Clone, Copy)]
+enum Toward {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+/// A small arrow in three steps (5, 3 and 1 px), pointing `to`: 5 px
+/// across and 3 down (3 across and 5 down when it points left or right),
+/// its corner at (x, y). The font has no arrows (UI-21).
+fn arrow(b: &mut Band, x: i32, y: i32, to: Toward, color: u32) {
+    for i in 0..3 {
+        let len = 5 - 2 * i as u32;
+        match to {
+            Toward::Down => b.fill_rect(x + i, y + i, len, 1, color),
+            Toward::Up => b.fill_rect(x + i, y + 2 - i, len, 1, color),
+            Toward::Right => b.fill_rect(x + i, y + i, 1, len, color),
+            Toward::Left => b.fill_rect(x + 2 - i, y + i, 1, len, color),
+        }
+    }
+}
+
+/// An x of 5 by 5 px at (x, y): what closes.
+fn cross(b: &mut Band, x: i32, y: i32, color: u32) {
+    for i in 0..5 {
+        b.fill_rect(x + i, y + i, 1, 1, color);
+        b.fill_rect(x + 4 - i, y + i, 1, 1, color);
+    }
+}
+
+/// A dotted frame, every other pixel: the focus of what has no box of its
+/// own (a tooltip, UI-21).
+fn dotted(b: &mut Band, x: i32, y: i32, w: i32, h: i32, color: u32) {
+    for i in (0..w).step_by(2) {
+        b.fill_rect(x + i, y, 1, 1, color);
+        b.fill_rect(x + i, y + h - 1, 1, 1, color);
+    }
+    for j in (0..h).step_by(2) {
+        b.fill_rect(x, y + j, 1, 1, color);
+        b.fill_rect(x + w - 1, y + j, 1, 1, color);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2596,6 +3694,219 @@ mod tests {
         assert!(Window::new(&tabs("Ninth"), 320, 180)
             .texts()
             .contains(&"one".to_string()));
+    }
+
+    /// UI-21: the tags with a state of their own, as the view sends them
+    /// (tests/apps/showcase/components/state.q).
+    fn state() -> Value {
+        json!({"title": "State", "view": [{"type": "window", "props": {"title": "State"}, "children": [
+            {"type": "modal", "props": {"title": "Welcome", "open": true, "closable": true}, "children": [
+                {"type": "text", "props": {"text": "Read this first"}}]},
+            {"type": "toast", "props": {"title": "Saved", "message": "All changes kept", "duration": 1500,
+                                        "dismissible": true, "position": "top-right"}},
+            {"type": "accordion", "props": {}, "children": [
+                {"type": "section", "props": {"title": "First fold"}, "children": [
+                    {"type": "text", "props": {"text": "Inside the first"}}]},
+                {"type": "section", "props": {"title": "Second fold"}, "children": [
+                    {"type": "text", "props": {"text": "Inside the second"}}]}]},
+            {"type": "tooltip", "props": {"text": "A tip for the badge"}, "children": [
+                {"type": "badge", "props": {"text": "Hover me"}}]},
+            {"type": "dropdown", "props": {"label": "Actions"}, "children": [
+                {"type": "option", "as": "link", "props": {"text": "Copy"},
+                 "event": {"action": "pick", "fields": {"value": "copy"}}},
+                {"type": "option", "as": "link", "props": {"text": "Move"},
+                 "event": {"action": "pick", "fields": {"value": "move"}}}]},
+            {"type": "carousel", "props": {"current": 0, "loop": false}, "children": [
+                {"type": "slide", "as": "vbox", "props": {}, "children": [
+                    {"type": "text", "props": {"text": "Slide one"}}]},
+                {"type": "slide", "as": "vbox", "props": {}, "children": [
+                    {"type": "text", "props": {"text": "Slide two"}}]}]},
+            {"type": "stepper", "props": {"current": 0}, "children": [
+                {"type": "step", "props": {"title": "Account"}, "children": [
+                    {"type": "text", "props": {"text": "Step one body"}}]},
+                {"type": "step", "props": {"title": "Profile", "description": "Who you are"}, "children": [
+                    {"type": "text", "props": {"text": "Step two body"}}]}]}]}]})
+    }
+
+    fn shows(w: &Window, text: &str) -> bool {
+        w.texts().iter().any(|t| t.contains(text))
+    }
+
+    /// Tab until the element of that kind (and label, when given) has the focus.
+    fn focus(w: &mut Window, kind: &str, label: &str) {
+        for _ in 0..=w.focusables.len() {
+            let item = w.observe()["items"][w.focus].clone();
+            if item["kind"] == kind && (label.is_empty() || item["label"] == label) {
+                return;
+            }
+            w.key(Key::Tab, 0);
+        }
+        panic!("no {} {:?} to focus", kind, label);
+    }
+
+    /// The state page with its modal closed.
+    fn state_page() -> Window {
+        let mut w = Window::new(&state(), 320, 180);
+        w.key(Key::Enter, 0);
+        w
+    }
+
+    #[test]
+    fn an_open_modal_is_over_the_page_and_has_the_keyboard_until_it_closes() {
+        let mut w = Window::new(&state(), 320, 180);
+        assert!(shows(&w, "Welcome") && shows(&w, "Read this first"));
+        let items = w.observe()["items"].clone();
+        assert_eq!(
+            items.as_array().unwrap().len(),
+            1,
+            "its close control alone"
+        );
+        assert_eq!(
+            (items[0]["kind"].clone(), items[0]["label"].clone()),
+            (json!("modal"), json!("Welcome"))
+        );
+        // Esc closes the modal before it would close the page
+        w.key(Key::Escape, 0);
+        assert!(w.take_events().is_empty());
+        assert!(!shows(&w, "Read this first") && !shows(&w, "Welcome"));
+        assert!(w.observe()["items"].as_array().unwrap().len() > 1);
+        w.key(Key::Escape, 0);
+        assert_eq!(w.take_events()[0]["event"], "close");
+        // not closable: Esc is the page's
+        let mut fixed = state();
+        fixed["view"][0]["children"][0]["props"]["closable"] = json!(false);
+        let mut w = Window::new(&fixed, 320, 180);
+        assert!(w.observe()["items"].as_array().unwrap().is_empty());
+        w.key(Key::Escape, 0);
+        assert_eq!(w.take_events()[0]["event"], "close");
+        // closed: nothing of it shows
+        fixed["view"][0]["children"][0]["props"]["open"] = json!(false);
+        assert!(!shows(&Window::new(&fixed, 320, 180), "Read this first"));
+    }
+
+    #[test]
+    fn an_accordion_opens_its_first_fold_and_enter_opens_and_closes_the_others() {
+        let mut w = state_page();
+        assert!(shows(&w, "First fold") && shows(&w, "Inside the first"));
+        assert!(shows(&w, "Second fold") && !shows(&w, "Inside the second"));
+        focus(&mut w, "section", "Second fold");
+        assert_eq!(w.observe()["items"][w.focus]["open"], false);
+        w.key(Key::Enter, 0);
+        assert!(shows(&w, "Inside the second"));
+        assert_eq!(
+            w.observe()["items"][w.focus]["label"],
+            "Second fold",
+            "the focus stays on the fold"
+        );
+        w.key(Key::Enter, 0);
+        assert!(!shows(&w, "Inside the second"));
+    }
+
+    #[test]
+    fn a_toast_goes_after_its_duration_or_when_dismissed() {
+        let mut w = state_page();
+        assert!(shows(&w, "Saved") && shows(&w, "All changes kept"));
+        assert_ne!(
+            w.observe()["items"][w.focus]["kind"],
+            "toast",
+            "the focus does not start on what goes"
+        );
+        for t in 1..90 {
+            w.tick(t);
+        }
+        assert!(shows(&w, "All changes kept"), "1500 ms are 90 ticks");
+        assert!(w.tick(90));
+        assert!(!shows(&w, "All changes kept"));
+        assert!(w.observe()["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|i| i["kind"] != "toast"));
+        // dismissed: the focus goes to what came after it
+        let mut w = state_page();
+        focus(&mut w, "toast", "Saved");
+        w.key(Key::Enter, 0);
+        assert!(!shows(&w, "All changes kept"));
+        assert_eq!(w.observe()["items"][w.focus]["label"], "First fold");
+    }
+
+    #[test]
+    fn a_tooltip_says_its_tip_only_while_it_has_the_focus() {
+        let mut w = state_page();
+        assert!(shows(&w, "Hover me") && !shows(&w, "A tip for the badge"));
+        focus(&mut w, "tooltip", "Hover me");
+        assert_eq!(w.observe()["items"][w.focus]["tip"], "A tip for the badge");
+        assert!(shows(&w, "A tip for the badge"));
+        w.key(Key::Tab, 0);
+        assert!(!shows(&w, "A tip for the badge"));
+    }
+
+    #[test]
+    fn a_dropdown_opens_its_options_and_one_posts_its_action() {
+        let mut w = state_page();
+        assert!(shows(&w, "Actions") && !shows(&w, "Copy") && !shows(&w, "Move"));
+        focus(&mut w, "dropdown", "Actions");
+        w.key(Key::Enter, 0);
+        assert!(shows(&w, "Copy") && shows(&w, "Move"));
+        // Esc shuts the menu, not the page
+        w.key(Key::Escape, 0);
+        assert!(w.take_events().is_empty() && !shows(&w, "Move"));
+        w.key(Key::Enter, 0);
+        keys(&mut w, &[Key::Down, Key::Down, Key::Enter]);
+        let events = w.take_events();
+        assert_eq!(events[0]["event"], "click");
+        assert_eq!(events[0]["action"], "pick");
+        assert_eq!(events[0]["fields"]["value"], "move");
+        assert!(!shows(&w, "Move"), "the menu shuts on its option");
+        assert_eq!(w.observe()["items"][w.focus]["kind"], "dropdown");
+    }
+
+    #[test]
+    fn a_carousel_shows_one_slide_and_a_stepper_one_step() {
+        let mut w = state_page();
+        assert!(shows(&w, "Slide one") && !shows(&w, "Slide two") && shows(&w, "1/2"));
+        focus(&mut w, "carousel", "");
+        w.key(Key::Right, 0);
+        assert!(shows(&w, "Slide two") && !shows(&w, "Slide one") && shows(&w, "2/2"));
+        w.key(Key::Right, 0);
+        assert!(shows(&w, "Slide two"), "it does not go round without loop");
+        w.key(Key::Left, 0);
+        assert!(shows(&w, "Slide one"));
+        // the stepper: the titles, the current step's content, Back and Next
+        assert!(shows(&w, "Account") && shows(&w, "Profile") && shows(&w, "Step one body"));
+        assert!(!shows(&w, "Step two body") && !shows(&w, "Who you are"));
+        focus(&mut w, "button", "Next");
+        assert_eq!(w.observe()["items"][w.focus]["moves"], "stepper");
+        w.key(Key::Enter, 0);
+        assert!(w.take_events().is_empty(), "Next moves the stepper here");
+        assert!(shows(&w, "Step two body") && shows(&w, "Who you are"));
+        assert!(!shows(&w, "Step one body"));
+        let parts = w.moving_parts(w.nodes[w.focused().unwrap()].parent.unwrap());
+        assert!(w.nodes[parts[0]].checked, "the step left behind is done");
+        focus(&mut w, "button", "Back");
+        w.key(Key::Enter, 0);
+        assert!(shows(&w, "Step one body"));
+    }
+
+    #[test]
+    fn a_carousel_that_plays_moves_every_interval() {
+        let page = json!({"title": "C", "view": [{"type": "carousel",
+            "props": {"auto_play": true, "interval": 1000}, "children": [
+                {"type": "vbox", "props": {}, "children": [{"type": "text", "props": {"text": "one"}}]},
+                {"type": "vbox", "props": {}, "children": [{"type": "text", "props": {"text": "two"}}]}]},
+            {"type": "button", "props": {"text": "Elsewhere"}}]});
+        let mut w = Window::new(&page, 320, 180);
+        focus(&mut w, "button", "Elsewhere");
+        for t in 1..60 {
+            w.tick(t);
+        }
+        assert!(shows(&w, "one"));
+        w.tick(60);
+        assert!(shows(&w, "two"));
+        for t in 61..=120 {
+            w.tick(t);
+        }
+        assert!(shows(&w, "one"), "round again");
     }
 
     #[test]
