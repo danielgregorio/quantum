@@ -419,6 +419,37 @@ def page_count(total: Any, page_size: Any, where: str = '<ui:pagination>') -> in
 #
 # The view tree and the browser's page both start here, so what one draws the other draws.
 
+def truthy(value: Any) -> bool:
+    """A page's yes: true, 1, on, yes (and a value Python takes as true)."""
+    if isinstance(value, str):
+        return value.strip().lower() in ('true', '1', 'on', 'yes', 'checked')
+    return bool(value)
+
+
+# What a standalone build (UI-8) runs in its own script and a page cannot: in a page the state is the
+# renderer's own (which slide, which step), and an action is posted by a button or a form.
+_STANDALONE = {
+    'on_change': 'on-change', 'on_complete': 'on-complete', 'on_close': 'on-close', 'bind': 'bind',
+}
+
+
+def modal_open(page, node) -> bool:
+    """Whether a modal is open as the page is drawn: `open`, true or an expression that is."""
+    value = node.open
+    if isinstance(value, str):
+        value = page._apply_databinding(value) if '{' in value else value
+    return truthy(value)
+
+
+def page_only_attrs(node, where: str, names) -> None:
+    """UI-21: an attribute that calls the standalone build's script is an error in a page, named."""
+    for name in names:
+        if getattr(node, name, None):
+            raise ValueError(f'<{where} {_STANDALONE[name]}=...> calls the standalone build\'s script (UI-8); '
+                             f'in a page it moves by itself in every renderer, and an action is a button\'s '
+                             f'or a form\'s (UI-21)')
+
+
 def _value(page, text: Any) -> Any:
     """An attribute with its `{expression}`s resolved: the value itself when it is one expression (a list
     stays a list), else the text."""
@@ -521,6 +552,15 @@ MORE_CSS = """
 .q-pager .q-pager-total { border: none; color: var(--q-secondary); }
 .q-pager form { display: inline-flex; }
 .q-pager input { width: 64px; }
+.q-accordion-item { border: 1px solid var(--q-border); border-radius: var(--q-radius); margin-bottom: 4px; }
+.q-accordion-title { cursor: pointer; padding: 8px 12px; font-weight: 600; }
+.q-accordion-body { padding: 0 12px 8px; }
+details.q-dropdown > summary { list-style: none; }
+details.q-dropdown > summary::-webkit-details-marker { display: none; }
+details.q-dropdown[open] .q-dropdown-menu { display: block; }
+.q-dropdown-menu form { display: block; }
+.q-tooltip-wrapper:focus-within .q-tooltip-text { visibility: visible; opacity: 1; }
+.q-carousel-slide:not(.active) { visibility: hidden; }
 """
 
 

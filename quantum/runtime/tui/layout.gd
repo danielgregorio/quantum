@@ -25,10 +25,24 @@ var right_edge := 1000000      # the column a node being laid out may not write 
 
 var state: Dictionary         # what the user changed, by key: {value, checked}; kept across layouts
 var tabs: Dictionary          # the open tab of each tab panel, by key
+# UI-21: what a tag with a state of its own holds now, by key, kept across layouts: {open} a fold or a
+# dropdown, {closed} a modal, {gone} a toast, {at} the slide or the step shown, {done} a stepper's steps done
+var held: Dictionary
 var motion_on := true
-var focus_key := ""           # the item with the focus: its field shows its value as typed
+var focus_key := ""           # the key of the item with the focus: a tooltip's tip shows while it is inside it
+var pointer := Vector2i(-1, -1)   # the cell under the mouse: a tooltip's tip shows while it is over its element
+var view_top := 0             # the first row on the screen, and how many it shows: a modal and a toast stay
+var view_rows := 40           # on the screen as the page scrolls under them
 var streams: Dictionary       # IA-7: a stream's text so far, by its url
 var textures: Dictionary      # an image's size in cells once it has loaded, by its src
+
+# UI-21: what is drawn over the page, once it is laid out
+var overlays: Array = []      # what asked to be drawn over it, as it was met: {kind, node, key, ctx, ...}
+var layers: Array = []        # the boxes drawn over it, bottom first: {kind, key, x, y, w, h, closable}
+var follows_view := false     # a layer stays on the screen: laid out again when the page scrolls
+var toasts: Array = []        # {key, ms}: the toasts shown, each gone after its duration (tui.gd)
+var tips: Array = []          # {key, x, y, w, h, shown}: the elements of the tooltips
+var autoplay: Array = []      # {key, ms, next, x, y, w, h}: the carousels that move on by themselves
 
 
 # -- characters -------------------------------------------------------------
@@ -201,6 +215,12 @@ func run(view: Array, width: int, flash: String = "", flash_error := false) -> v
 	forms = []
 	motions = []
 	unsupported = []
+	overlays = []
+	layers = []
+	follows_view = false
+	toasts = []
+	tips = []
+	autoplay = []
 	var y := 0
 	if flash != "":
 		for line in wrap_text(flash, cols - 4):
@@ -212,6 +232,9 @@ func run(view: Array, width: int, flash: String = "", flash_error := false) -> v
 	var ctx := {"form": -1, "card": "", "key": "v"}
 	y += stack(view, 1, y, cols - 2, ctx, 0)
 	height = y
+	_layers()
+	for layer in layers:
+		height = max(height, int(layer["y"]) + int(layer["h"]))
 	_row(max(0, height - 1))
 
 
@@ -283,6 +306,30 @@ func natural(node: Dictionary) -> int:
 			return text_width(str(prop(node, "text", ""))) + 2
 		"treeitem":
 			return text_width(tree_guides(node)) + text_width(label_of(node))
+		"modal", "toast":
+			return 0                       # drawn over the page, they take no room in it (UI-21)
+		"dropdown":
+			return text_width(_dropdown_label(node)) + 6
+		"accordion":
+			var widest := 0
+			for c in children:
+				if c is Dictionary:
+					widest = max(widest, max(text_width(str(prop(c, "title", ""))), natural(c)) + 2)
+			return widest
+		"carousel":
+			var widest := 4 * children.size() + 6
+			for c in children:
+				if c is Dictionary:
+					widest = max(widest, natural(c))
+			return widest
+		"stepper":
+			var row := 0
+			var body := 16
+			for c in children:
+				if c is Dictionary:
+					row += text_width(str(prop(c, "title", ""))) + 8
+					body = max(body, natural(c))
+			return max(row, body)
 		"rule":
 			return 1 if truthy(prop(node, "vertical", false)) else 4
 		"hbox":
@@ -473,6 +520,8 @@ func _place(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
 			return 1
 		"avatar", "chart", "skeleton", "loading", "treeitem":
 			return _more(node, kind, x, y, w, ctx)
+		"accordion", "modal", "toast", "tooltip", "dropdown", "carousel", "stepper":
+			return _stateful(node, kind, x, y, w, ctx)
 		"spacer":
 			return 1
 		"progress":
@@ -884,6 +933,560 @@ static func _shown(bar: Dictionary, share: bool) -> String:
 		var percent := float(bar["percent"])
 		return ("%d%%" % int(percent)) if percent == floor(percent) else ("%.1f%%" % percent)
 	return str(bar["shown"])
+
+
+# -- the tags with a state of their own (UI-21) ---------------------------------
+#
+# What the user changes of them is kept in `held`, by key: tui.gd changes it when one of their items is
+# activated (it carries what it changes to), and on the clock (a toast's duration, a carousel's interval).
+# A modal, a toast, a tooltip's tip and an open dropdown's options take no room in the page: they are
+# drawn over it once it is laid out (`_layers`).
+
+const TOAST_ICONS := {"info": "i", "success": "✓", "warning": "⚠", "danger": "✗"}
+const MODAL_WIDTHS := {"sm": 38, "md": 62, "lg": 100, "xl": 137}
+
+
+func _held(key: String, field: String, fallback: Variant) -> Variant:
+	var kept: Dictionary = held.get(key, {})
+	return kept.get(field, fallback)
+
+
+static func _dropdown_label(node: Dictionary) -> String:
+	var label := str(prop(node, "label", ""))
+	return label if label != "" else "Menu"
+
+
+static func _reacting(it: Dictionary) -> bool:
+	return str(it.get("kind", "")) != "stream" and bool(it.get("react", true))
+
+
+func _stateful(node: Dictionary, kind: String, x: int, y: int, w: int, ctx: Dictionary) -> int:
+	var key: String = ctx["key"]
+	match kind:
+		"accordion":
+			return _accordion(node, x, y, w, ctx)
+		"modal":
+			# open as the page is drawn (`open`), until it is closed
+			if truthy(prop(node, "open", false)) and not bool(_held(key, "closed", false)):
+				overlays.append({"kind": "modal", "node": node, "key": key, "ctx": ctx.duplicate()})
+			return 0
+		"toast":
+			if not bool(_held(key, "gone", false)):
+				overlays.append({"kind": "toast", "node": node, "key": key, "ctx": ctx.duplicate()})
+			return 0
+		"tooltip":
+			return _tooltip(node, x, y, w, ctx)
+		"dropdown":
+			# a button with its label; open, its options under it, each posting its action
+			var label := _dropdown_label(node)
+			var open := bool(_held(key, "open", false))
+			var used := put(x, y, cut("[ " + label + (" ▴ ]" if open else " ▾ ]"), w), "button")
+			_item({"kind": "dropdown", "x": x, "y": y, "w": used, "h": 1, "key": key, "label": label, "open": open,
+				   "card": ctx["card"]})
+			if open:
+				overlays.append({"kind": "menu", "node": node, "key": key, "ctx": ctx.duplicate(), "label": label,
+								 "x": x, "y": y, "w": used})
+			return 1
+		"carousel":
+			return _carousel(node, x, y, w, ctx)
+		"stepper":
+			return _stepper(node, x, y, w, ctx)
+	return 0
+
+
+func _accordion(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
+	# each section a fold, its title a header that opens and closes it by itself; the first open
+	var children: Array = node.get("children", [])
+	var used := 0
+	var first := true
+	for i in children.size():
+		var c = children[i]
+		if not (c is Dictionary):
+			continue
+		var inner := ctx.duplicate()
+		inner["key"] = "%s/%d" % [ctx["key"], i]
+		if str(c.get("type", "")) != "section":
+			used += place(c, x, y + used, w, inner)
+			continue
+		var open := bool(_held(inner["key"], "open", first))
+		first = false
+		var title := str(prop(c, "title", ""))
+		var n := put(x, y + used, cut(("▾ " if open else "▸ ") + title, w), "bold")
+		_item({"kind": "fold", "x": x, "y": y + used, "w": n, "h": 1, "key": inner["key"], "label": title,
+			   "open": open, "card": ctx["card"]})
+		used += 1
+		if open:
+			used += stack(c.get("children", []), x + 2, y + used, w - 2, inner, gap_rows(c))
+	return used
+
+
+func _tooltip(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
+	# its element is drawn; the tip shows next to it while the mouse is over it or the focus is in it
+	var key: String = ctx["key"]
+	var first := items.size()
+	var h := stack(node.get("children", []), x, y, w, ctx, 0)
+	if h == 0:
+		return 0
+	var drawn: int = max(1, _drawn_width(x, y, w, h))
+	var reacts := false
+	for i in range(first, items.size()):
+		if _reacting(items[i]):
+			reacts = true
+	if not reacts:
+		# an element that does not react takes the focus for its tip
+		_item({"kind": "tooltip", "x": x, "y": y, "w": drawn, "h": h, "key": key, "label": _grid_text(x, y, drawn, h),
+			   "card": ctx["card"]})
+	var tip := {"key": key, "x": x, "y": y, "w": drawn, "h": h}
+	tip["shown"] = _tip_wanted(tip)
+	tips.append(tip)
+	var text := str(prop(node, "text", ""))
+	if bool(tip["shown"]) and text != "":
+		overlays.append({"kind": "tip", "key": key, "text": text, "position": str(prop(node, "position", "top")),
+						 "x": x, "y": y, "w": drawn, "h": h})
+	return h
+
+
+func _tip_wanted(tip: Dictionary) -> bool:
+	var key: String = tip["key"]
+	if focus_key != "" and (focus_key == key or focus_key.begins_with(key + "/")):
+		return true
+	return pointer.x >= int(tip["x"]) and pointer.x < int(tip["x"]) + int(tip["w"]) \
+		and pointer.y >= int(tip["y"]) and pointer.y < int(tip["y"]) + int(tip["h"])
+
+
+func tips_changed() -> bool:
+	# whether a tooltip's tip is to show or go now that the mouse or the focus moved (tui.gd lays out again)
+	for tip in tips:
+		if _tip_wanted(tip) != bool(tip["shown"]):
+			return true
+	return false
+
+
+func _mover(kind: String, x: int, y: int, text: String, label: String, key: String, goto: int, ctx: Dictionary,
+		style: String = "button", done: Array = []) -> int:
+	# a control that moves a carousel or a stepper to `goto`; drawn dim when it cannot (-1)
+	if goto < 0:
+		return put(x, y, text, "button_disabled")
+	var used := put(x, y, text, style)
+	_item({"kind": kind, "x": x, "y": y, "w": used, "h": 1, "key": key, "label": label, "goto": goto, "done": done,
+		   "card": ctx["card"]})
+	return used
+
+
+func _carousel(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
+	# one slide at a time (`current`), the arrows to the one before and after (around when `loop`), a dot a slide
+	var key: String = ctx["key"]
+	var children: Array = node.get("children", [])
+	var slides: Array = []                 # the slides' places among the children
+	for i in children.size():
+		if children[i] is Dictionary and str(children[i].get("type", "")) == "slide":
+			slides.append(i)
+	if slides.is_empty():                  # without ui:slide, each child is a slide
+		for i in children.size():
+			if children[i] is Dictionary:
+				slides.append(i)
+	var total := slides.size()
+	if total == 0:
+		return 0
+	var at: int = clamp(int(_held(key, "at", num(node, "current", 0))), 0, total - 1)
+	var loop := truthy(prop(node, "loop", true))
+	var inner := ctx.duplicate()
+	inner["key"] = "%s/%d" % [key, slides[at]]
+	var used := place(children[slides[at]], x, y, w, inner)
+	var arrows := truthy(prop(node, "show_arrows", true))
+	var dots := truthy(prop(node, "show_indicators", true))
+	if total > 1 and (arrows or dots):
+		var row := y + used
+		var at_x := x
+		var before: int = (at - 1 + total) % total if loop else at - 1
+		var after: int = (at + 1) % total if loop else (at + 1 if at + 1 < total else -1)
+		if arrows:
+			at_x += _mover("carousel", at_x, row, " ‹ ", "Previous slide", key, before, ctx) + 1
+		if dots:
+			for k in total:
+				if k == at:
+					put(at_x, row, "●", "accent")
+				else:
+					put(at_x, row, "○", "muted")
+					_item({"kind": "carousel", "x": at_x, "y": row, "w": 1, "h": 1, "key": key,
+						   "label": "Go to slide %d" % (k + 1), "goto": k, "card": ctx["card"]})
+				at_x += 2
+		else:
+			at_x += put(at_x, row, "%d/%d" % [at + 1, total], "muted") + 1
+		if arrows:
+			_mover("carousel", at_x, row, " › ", "Next slide", key, after, ctx)
+		used += 1
+	if truthy(prop(node, "auto_play", false)) and total > 1:
+		var next: int = (at + 1) % total if loop else at + 1
+		if next < total:
+			autoplay.append({"key": key, "ms": max(500, num(node, "interval", 5000)), "next": next,
+							 "x": x, "y": y, "w": w, "h": used})
+	return used
+
+
+func _stepper(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:
+	# the steps' titles in a row (one under the other when vertical), the current one marked, a step done
+	# ticked; only the current step's content; Back and Next. Done, as the browser counts it: what the step
+	# says (`completed`), else a step before the current one (ui_html_adapter.completed_step_indices).
+	var key: String = ctx["key"]
+	var children: Array = node.get("children", [])
+	var steps: Array = []                  # the steps' places among the children
+	for i in children.size():
+		if children[i] is Dictionary and str(children[i].get("type", "")) == "step":
+			steps.append(i)
+	var total := steps.size()
+	if total == 0:
+		return 0
+	var first: int = clamp(num(node, "current", 0), 0, total - 1)
+	var at: int = clamp(int(_held(key, "at", first)), 0, total - 1)
+	var done: Array = []
+	var kept: Dictionary = held.get(key, {})
+	if kept.has("done"):
+		done = kept["done"]
+	else:
+		for k in total:
+			var said = prop(children[steps[k]], "completed", null)
+			if (truthy(said) if said != null else k < first):
+				done.append(k)
+	var linear := truthy(prop(node, "linear", true))
+	var clickable := truthy(prop(node, "clickable", false))
+	var vertical := str(prop(node, "orientation", "horizontal")) == "vertical"
+	var notes := false
+	for k in total:
+		if _step_note(children[steps[k]]) != "":
+			notes = true
+	var row := y
+	var at_x := x
+	for k in total:
+		var step: Dictionary = children[steps[k]]
+		var title := str(prop(step, "title", ""))
+		if title == "":
+			title = "Step %d" % (k + 1)
+		var error := str(prop(step, "error", "")) != ""
+		var mark := "!" if error else ("✓" if k in done and k != at else str(k + 1))
+		var mark_style := "tab_open" if k == at else ("flash_error" if error else ("flash" if k in done else "tab"))
+		var title_style := "bold" if k == at else ("error" if error else ("" if k in done else "muted"))
+		var note := _step_note(step)
+		var seg: int = min(w, 4 + max(text_width(title), text_width(note)))
+		if vertical:
+			at_x = x
+		elif k > 0:
+			if at_x + 4 + seg > x + w:
+				row += 2 if notes else 1
+				at_x = x
+			else:
+				at_x += put(at_x, row, " ── ", "border")
+		var start := at_x
+		put(start, row, " " + mark + " ", mark_style)
+		var used := put(start + 4, row, cut(title, x + w - start - 4), title_style)
+		if clickable and k != at and (not linear or k < at or (k == at + 1 and at in done)):
+			_item({"kind": "step", "x": start, "y": row, "w": 4 + used, "h": 1, "key": key, "label": title, "goto": k,
+				   "done": done, "card": ctx["card"]})
+		if note != "":
+			put(start + 4, row + 1, cut(note, seg - 4), "error" if error else "muted")
+		at_x = start + seg
+		if vertical:
+			row += 2 if note != "" else 1
+			if k == at:
+				var inner := ctx.duplicate()
+				inner["key"] = "%s/%d" % [key, steps[k]]
+				row += stack(step.get("children", []), x + 4, row, w - 4, inner, gap_rows(step))
+	var used_rows := row - y
+	if not vertical:
+		used_rows += 2 if notes else 1
+		var inner := ctx.duplicate()
+		inner["key"] = "%s/%d" % [key, steps[at]]
+		var step: Dictionary = children[steps[at]]
+		used_rows += stack(step.get("children", []), x, y + used_rows, w, inner, gap_rows(step))
+	# Next marks the step done and goes to the one after it
+	var after := done.duplicate()
+	if not (at in after):
+		after.append(at)
+	var nav_x := x + _mover("stepper", x, y + used_rows, "[ Back ]", "Back", key, at - 1, ctx, "button", done) + 2
+	_mover("stepper", nav_x, y + used_rows, "[ Next ]", "Next", key, at + 1 if at + 1 < total else -1, ctx,
+		   "button_primary", after)
+	return used_rows + 1
+
+
+static func _step_note(step: Dictionary) -> String:
+	# what is said under a step's title: its error, its description, or that it is optional
+	var error := str(prop(step, "error", ""))
+	if error != "":
+		return error
+	var description := str(prop(step, "description", ""))
+	if description != "":
+		return description
+	return "Optional" if truthy(prop(step, "optional", false)) else ""
+
+
+func _drawn_width(x: int, y: int, w: int, h: int) -> int:
+	# how far to the right what was drawn in the rows from `y` goes
+	var right := x
+	for r in range(max(0, y), min(grid.size(), y + h)):
+		var row: Array = grid[r]
+		for c in range(max(0, x), min(cols, x + w)):
+			if str(row[c][0]) != " " or str(row[c][1]) != "":
+				right = max(right, c + 1)
+	return right - x
+
+
+func _grid_text(x: int, y: int, w: int, h: int) -> String:
+	var parts: Array = []
+	for r in range(max(0, y), min(grid.size(), y + h)):
+		var line := ""
+		for c in range(max(0, x), min(cols, x + w)):
+			line += str(grid[r][c][0])
+		if line.strip_edges() != "":
+			parts.append(line.strip_edges())
+	return " ".join(parts)
+
+
+func _measure(nodes: Array, w: int, ctx: Dictionary) -> int:
+	# the rows the nodes take `w` cells wide, laid out aside: nothing of it is kept
+	var kept := [grid, items, regions, tab_regions, progress, images, forms, motions, unsupported, overlays, tips,
+				 toasts, autoplay]
+	grid = []
+	items = items.duplicate()
+	regions = []
+	tab_regions = []
+	progress = []
+	images = []
+	forms = forms.duplicate(true)
+	motions = []
+	unsupported = []
+	overlays = []
+	tips = []
+	toasts = []
+	autoplay = []
+	var outer_edge := right_edge
+	right_edge = cols
+	var h := stack(nodes, 0, 0, w, ctx, 0)
+	right_edge = outer_edge
+	grid = kept[0]
+	items = kept[1]
+	regions = kept[2]
+	tab_regions = kept[3]
+	progress = kept[4]
+	images = kept[5]
+	forms = kept[6]
+	motions = kept[7]
+	unsupported = kept[8]
+	overlays = kept[9]
+	tips = kept[10]
+	toasts = kept[11]
+	autoplay = kept[12]
+	return h
+
+
+func _layers() -> void:
+	# what is drawn over the page once it is laid out: an open dropdown's options and a tooltip's tip next to
+	# their element, an open modal over them, the toasts at their corner of the screen over it all (as in the
+	# browser, where they stay clickable); what a layer opens in turn (a dropdown in a modal) goes over it
+	var modal := false
+	for o in overlays:
+		modal = modal or str(o["kind"]) == "modal"
+	var queue: Array = []
+	for kind in ["menu", "tip", "modal", "toast"]:
+		for o in overlays:
+			# an open modal takes the mouse: the page's tooltips under it do not show their tips
+			if str(o["kind"]) == kind and not (modal and kind == "tip"):
+				queue.append(o)
+	overlays = []
+	right_edge = cols
+	var corners := {}                      # the rows the toasts at each corner take so far
+	var i := 0
+	while i < queue.size():
+		var o: Dictionary = queue[i]
+		match str(o["kind"]):
+			"menu":
+				_menu_layer(o)
+			"tip":
+				_tip_layer(o)
+			"toast":
+				_toast_layer(o, corners)
+			"modal":
+				_modal_layer(o)
+		queue.append_array(overlays)
+		overlays = []
+		i += 1
+
+
+func _layer(kind: String, key: String, x: int, y: int, w: int, h: int) -> Dictionary:
+	# a box over the page: what was drawn under it is hidden, and what reacted there cannot be reached
+	for it in items:
+		if int(it["x"]) < x + w and int(it["x"]) + max(1, int(it["w"])) > x \
+				and int(it["y"]) < y + h and int(it["y"]) + max(1, int(it["h"])) > y:
+			it["react"] = false
+			it["covered"] = true
+	for image in images:
+		if int(image["x"]) < x + w and int(image["x"]) + int(image["w"]) > x \
+				and int(image["y"]) < y + h and int(image["y"]) + int(image["h"]) > y:
+			image["covered"] = true
+	for r in h:
+		fill(x, y + r, w, "")
+	var layer := {"kind": kind, "key": key, "x": x, "y": y, "w": w, "h": h}
+	layers.append(layer)
+	return layer
+
+
+func _modal_layer(o: Dictionary) -> void:
+	# a box over the page, in the middle of the screen: its title, a close control when `closable`, its
+	# content; while it is open it takes the clicks, and what is under it does not react
+	var node: Dictionary = o["node"]
+	var key: String = o["key"]
+	var title := str(prop(node, "title", ""))
+	var closable := truthy(prop(node, "closable", true))
+	for it in items:
+		it["react"] = false
+		it["covered"] = true
+	var size := str(prop(node, "size", ""))
+	var mw: int = cols - 4 if size == "full" else int(MODAL_WIDTHS.get(size, 62))
+	mw = min(mw, max(16, cols * 9 / 10), cols)
+	var inner: Dictionary = (o["ctx"] as Dictionary).duplicate()
+	inner["key"] = key
+	inner["card"] = title
+	var children: Array = node.get("children", [])
+	var mh := _measure(children, mw - 4, inner) + 4
+	var mx: int = (cols - mw) / 2
+	var my := 0
+	if mh <= view_rows:
+		my = view_top + (view_rows - mh) / 2
+		follows_view = true
+	var layer := _layer("modal", key, mx, my, mw, mh)
+	layer["closable"] = closable
+	box(mx, my, mw, mh, "", "border")
+	if title != "":
+		put(mx + 2, my, " " + cut(title, mw - 10) + " ", "title")
+	if closable:
+		var used := put(mx + mw - 5, my, " × ", "bold")
+		_item({"kind": "close", "x": mx + mw - 5, "y": my, "w": used, "h": 1, "key": key,
+			   "label": title if title != "" else "Close", "of": "modal", "card": title})
+	stack(children, mx + 2, my + 2, mw - 4, inner, gap_rows(node))
+
+
+func _toast_layer(o: Dictionary, corners: Dictionary) -> void:
+	# a small box at its corner of the screen (`position`), the toasts at one corner one under the other: its
+	# icon and title in its variant's colour, its message, a close control when `dismissible`; it goes after
+	# `duration` ms (tui.gd)
+	var node: Dictionary = o["node"]
+	var key: String = o["key"]
+	var variant := str(prop(node, "variant", "info"))
+	if variant == "error":
+		variant = "danger"
+	if not TOAST_ICONS.has(variant):
+		variant = "info"
+	var icon := cut(str(prop(node, "icon", "")), 2)
+	if icon == "":
+		icon = TOAST_ICONS[variant]
+	var title := str(prop(node, "title", ""))
+	var message := str(prop(node, "message", ""))
+	if message == "":
+		message = str(prop(node, "text", ""))
+	var dismissible := truthy(prop(node, "dismissible", true))
+	var room: int = min(44, cols - 2)
+	var lines := wrap_text(message, room - 4) if message != "" else []
+	var widest := text_width(icon) + text_width(title) + 8 + (4 if dismissible else 0)
+	for line in lines:
+		widest = max(widest, text_width(line) + 4)
+	var tw: int = min(room, max(widest, 24))
+	var th: int = lines.size() + 2
+	var position := str(prop(node, "position", "top-right"))
+	var taken: int = corners.get(position, 0)
+	corners[position] = taken + th
+	var ty: int = view_top + taken
+	if position.begins_with("bottom"):
+		ty = view_top + view_rows - th - taken
+	ty = max(0, ty)
+	var tx: int = cols - tw - 1
+	if position.ends_with("left"):
+		tx = 1
+	elif position.ends_with("center"):
+		tx = (cols - tw) / 2
+	follows_view = true
+	_layer("toast", key, tx, ty, tw, th)
+	box(tx, ty, tw, th, "", "fill:" + variant)
+	var at := tx + 2 + put(tx + 2, ty, " " + icon, "fill:" + variant)
+	if title != "":
+		at += put(at, ty, " " + cut(title, tw - 12), "bold")
+	put(at, ty, " ", "")
+	for k in lines.size():
+		put(tx + 2, ty + 1 + k, lines[k], "")
+	if dismissible:
+		var used := put(tx + tw - 5, ty, " × ", "muted")
+		_item({"kind": "close", "x": tx + tw - 5, "y": ty, "w": used, "h": 1, "key": key,
+			   "label": title if title != "" else message, "of": "toast", "card": ""})
+	var ms := num(node, "duration", 3000)
+	if ms > 0:
+		toasts.append({"key": key, "ms": ms})
+
+
+func _tip_layer(o: Dictionary) -> void:
+	# the tip in a small box next to its element (`position`: top, bottom, left, right), turned to the other
+	# side when there is no room on the screen
+	var lines := wrap_text(str(o["text"]), min(40, cols - 4))
+	var widest := 0
+	for line in lines:
+		widest = max(widest, text_width(line))
+	var tw: int = min(cols, widest + 2)
+	var th := lines.size()
+	var ex: int = o["x"]
+	var ey: int = o["y"]
+	var ew: int = o["w"]
+	var eh: int = o["h"]
+	var position := str(o["position"])
+	var tx: int = ex + ew / 2 - tw / 2
+	var ty: int = ey - th
+	match position:
+		"bottom":
+			ty = ey + eh
+		"left":
+			tx = ex - tw - 1
+			ty = ey
+			if tx < 0:
+				tx = ex + ew + 1
+		"right":
+			tx = ex + ew + 1
+			ty = ey
+			if tx + tw > cols:
+				tx = ex - tw - 1
+		_:
+			if ty < view_top:
+				ty = ey + eh
+	tx = clamp(tx, 0, max(0, cols - tw))
+	ty = max(0, ty)
+	_layer("tip", str(o["key"]), tx, ty, tw, th)
+	for k in th:
+		fill(tx, ty + k, tw, "tip")
+		put(tx + 1, ty + k, lines[k], "tip")
+
+
+func _menu_layer(o: Dictionary) -> void:
+	# an open dropdown's options in a box under its button (over it when the screen has no room under it),
+	# each option a link that posts its action, as a menu's
+	var node: Dictionary = o["node"]
+	var key: String = o["key"]
+	var options: Array = node.get("children", [])
+	var widest := 8
+	for c in options:
+		if c is Dictionary:
+			widest = max(widest, natural(c))
+	var mw: int = min(cols, max(int(o["w"]), widest + 4))
+	var inner: Dictionary = (o["ctx"] as Dictionary).duplicate()
+	inner["key"] = key
+	var mh: int = max(1, _measure(options, mw - 4, inner)) + 2
+	var mx: int = int(o["x"])
+	if str(prop(node, "dropdown_align", "left")) == "right":
+		mx = int(o["x"]) + int(o["w"]) - mw
+	mx = clamp(mx, 0, max(0, cols - mw))
+	var my: int = int(o["y"]) + 1
+	if my + mh > view_top + view_rows and int(o["y"]) - mh >= view_top:
+		my = int(o["y"]) - mh
+	_layer("menu", key, mx, my, mw, mh)
+	box(mx, my, mw, mh, "", "border")
+	var first := items.size()
+	stack(options, mx + 2, my + 1, mw - 4, inner, 0)
+	for k in range(first, items.size()):
+		items[k]["menu"] = str(o["label"])
 
 
 func _grid(node: Dictionary, x: int, y: int, w: int, ctx: Dictionary) -> int:

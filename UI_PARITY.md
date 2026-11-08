@@ -11,7 +11,7 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 
 | Tag | Tier | Browser | Console | Hive's screen | TUI |
 |---|---|---|---|---|---|
-| `ui:accordion` | Experimental | ✓ drawn, its sections always open | — says so | — says so | — says so |
+| `ui:accordion` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:alert` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:animate` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:avatar` | Core | ✓ | ✓ | ✓ | ✓ |
@@ -24,14 +24,14 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 | `ui:card-body` (part of `ui:card`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:card-footer` (part of `ui:card`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:card-header` (part of `ui:card`) | Core | ✓ | ✓ | ✓ | ✓ |
-| `ui:carousel` | Experimental | ✓ the first slide; the arrows do nothing | — says so | — says so | — says so |
+| `ui:carousel` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:chart` | Core | ✓ | ✓ bars of characters | ✓ bars | ✓ bars of characters |
 | `ui:checkbox` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:color` (part of `ui:theme`) | Experimental | standalone only | standalone only | standalone only | standalone only |
 | `ui:column` (part of `ui:table`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:date-picker` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:dividedbox` | Core | ✓ | ✓ | ✓ | ✓ |
-| `ui:dropdown` | Experimental | ✓ | — says so | — says so | — says so |
+| `ui:dropdown` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:footer` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:form` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:formitem` | Core | ✓ | ✓ | ✓ | ✓ |
@@ -48,7 +48,7 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 | `ui:log` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:markdown` | Core | ✓ | ✓ | ✓ its emphasis as plain text (the font has one face) | ✓ |
 | `ui:menu` | Core | ✓ | ✓ | ✓ | ✓ |
-| `ui:modal` | Experimental | ✓ drawn when `open`; nothing opens it | — says so | — says so | — says so |
+| `ui:modal` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:option` (part of `ui:select`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:pager` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:pagination` | Core | ✓ | ✓ | ✓ | ✓ |
@@ -60,10 +60,10 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 | `ui:section` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:select` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:skeleton` | Core | ✓ | ✓ shaded lines | ✓ | ✓ shaded lines |
-| `ui:slide` (part of `ui:carousel`) | Experimental | ✓ the first slide; the arrows do nothing | — says so | — says so | — says so |
+| `ui:slide` (part of `ui:carousel`) | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:spacer` | Core | ✓ | ✓ | ✓ | ✓ |
-| `ui:step` (part of `ui:stepper`) | Experimental | ✓ the current step; the steps do not move | — says so | — says so | — says so |
-| `ui:stepper` | Experimental | ✓ the current step; the steps do not move | — says so | — says so | — says so |
+| `ui:step` (part of `ui:stepper`) | Core | ✓ | ✓ | ✓ | ✓ |
+| `ui:stepper` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:stream` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:switch` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:tab` (part of `ui:tabpanel`) | Core | ✓ | ✓ | ✓ | ✓ |
@@ -71,9 +71,9 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 | `ui:tabpanel` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:text` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:theme` | Experimental | standalone only | standalone only | standalone only | standalone only |
-| `ui:toast` | Experimental | ✓ drawn; it does not go away | — says so | — says so | — says so |
-| `ui:toast-container` | Experimental | ✓ an empty box | — says so | — says so | — says so |
-| `ui:tooltip` | Experimental | ✓ | — says so | — says so | — says so |
+| `ui:toast` | Core | ✓ | ✓ | ✓ | ✓ |
+| `ui:toast-container` | Core | ✓ | ✓ | ✓ | ✓ |
+| `ui:tooltip` | Core | ✓ | ✓ | ✓ its tip on the status line while it has the focus | ✓ |
 | `ui:tree` | Core | ✓ | ✓ | ✓ | ✓ |
 | `ui:validator` | Experimental | standalone only | standalone only | standalone only | standalone only |
 | `ui:vbox` | Core | ✓ | ✓ | ✓ | ✓ |
@@ -85,4 +85,4 @@ a window of its own (UI-4). A tag enters the Core set when every renderer draws 
 - `ui:theme`: a page's look is the design tokens' (ui_html_templates.CSS_THEME); it applies to a standalone `q:application type="ui"` build (UI-8).
 - `ui:color`: a page's look is the design tokens' (ui_html_templates.CSS_THEME); it applies to a standalone `q:application type="ui"` build (UI-8).
 
-53 of 67 tags are drawn by every renderer.
+63 of 67 tags are drawn by every renderer.

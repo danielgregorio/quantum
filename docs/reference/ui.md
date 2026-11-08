@@ -121,6 +121,14 @@ Also takes the [layout attributes](#layout-attributes), child elements.
 
 Specified by: [UI-2](./spec#UI-2) · [UI-7](./spec#UI-7)
 
+<a id="ui-accordion"></a>
+
+## `ui:accordion`
+
+Takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-section"></a>
 
 ## `ui:section`
@@ -613,6 +621,23 @@ Takes the [layout attributes](#layout-attributes), child elements.
 
 Specified by: [UI-7](./spec#UI-7)
 
+<a id="ui-modal"></a>
+
+## `ui:modal`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `title` | string |  |  |  |
+| `open` | string |  |  |  |
+| `size` | string |  |  |  |
+| `modal-id` | string |  |  |  |
+| `id` | string |  |  |  |
+| `closable` | boolean |  | `true` |  |
+
+Also takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
 <a id="ui-chart"></a>
 
 ## `ui:chart`
@@ -643,6 +668,33 @@ Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
 | `status` | string |  |  |  |
 
 Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-tooltip"></a>
+
+## `ui:tooltip`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `position` | string |  | `top` |  |
+| `content` | string |  |  |  |
+
+Also takes the [layout attributes](#layout-attributes), its text, child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-dropdown"></a>
+
+## `ui:dropdown`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `label` | string |  |  |  |
+| `trigger` | string |  | `click` |  |
+| `align` | string |  | `left` |  |
+
+Also takes the [layout attributes](#layout-attributes), child elements.
 
 Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
 
@@ -719,6 +771,103 @@ Also takes the [layout attributes](#layout-attributes).
 
 Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
 
+<a id="ui-toast"></a>
+
+## `ui:toast`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `variant` | string |  | `info` |  |
+| `position` | string |  | `top-right` |  |
+| `icon` | string |  |  |  |
+| `title` | string |  |  |  |
+| `show` | string |  |  |  |
+| `on-close` | string |  |  |  |
+| `duration` | number |  | `3000` |  |
+| `dismissible` | boolean |  | `true` |  |
+| `message` | string |  |  |  |
+
+Also takes the [layout attributes](#layout-attributes), its text.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-toast-container"></a>
+
+## `ui:toast-container`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `position` | string |  | `top-right` |  |
+| `max-toasts` | number |  | `5` |  |
+
+Also takes the [layout attributes](#layout-attributes).
+
+Specified by: [UI-7](./spec#UI-7)
+
+<a id="ui-carousel"></a>
+
+## `ui:carousel`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `animation` | string |  | `slide` |  |
+| `bind` | string |  |  |  |
+| `on-change` | string |  |  |  |
+| `auto-play` | boolean |  | `false` |  |
+| `interval` | number |  | `5000` |  |
+| `show-indicators` | boolean |  | `true` |  |
+| `show-arrows` | boolean |  | `true` |  |
+| `loop` | boolean |  | `true` |  |
+| `current` | number |  | `0` |  |
+
+Also takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-slide"></a>
+
+## `ui:slide`
+
+Takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7)
+
+<a id="ui-stepper"></a>
+
+## `ui:stepper`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `orientation` | string |  | `horizontal` |  |
+| `bind` | string |  |  |  |
+| `on-change` | string |  |  |  |
+| `on-complete` | string |  |  |  |
+| `current` | number |  | `0` |  |
+| `linear` | boolean |  | `true` |  |
+| `show-labels` | boolean |  | `true` |  |
+| `clickable` | boolean |  | `false` |  |
+
+Also takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
+
+<a id="ui-step"></a>
+
+## `ui:step`
+
+| Attribute | Type | Required | Default | Values |
+|---|---|---|---|---|
+| `title` | string |  |  |  |
+| `description` | string |  |  |  |
+| `icon` | string |  |  |  |
+| `completed` | string |  |  |  |
+| `error` | string |  |  |  |
+| `optional` | boolean |  | `false` |  |
+
+Also takes the [layout attributes](#layout-attributes), child elements.
+
+Specified by: [UI-7](./spec#UI-7)
+
 <a id="ui-date-picker"></a>
 
 ## `ui:date-picker`
@@ -744,12 +893,6 @@ Specified by: [UI-7](./spec#UI-7) · [UI-21](./spec#UI-21)
 
 Browser only, with no stability promise: the console says it does not draw them ([UI-7](./spec#UI-7)).
 
-<a id="ui-accordion"></a>
-
-## `ui:accordion`
-
-Takes the [layout attributes](#layout-attributes), child elements.
-
 <a id="ui-validator"></a>
 
 ## `ui:validator`
@@ -771,129 +914,6 @@ Inside: [`ui:form`](#ui-form)
 | `maxlength` | number |  |  |  |
 | `message` | string |  |  |  |
 | `trigger` | string |  | `submit` |  |
-
-<a id="ui-modal"></a>
-
-## `ui:modal`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `title` | string |  |  |  |
-| `size` | string |  |  |  |
-| `modal-id` | string |  |  |  |
-| `id` | string |  |  |  |
-| `open` | boolean |  | `false` |  |
-| `closable` | boolean |  | `true` |  |
-
-Also takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-tooltip"></a>
-
-## `ui:tooltip`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `position` | string |  | `top` |  |
-| `content` | string |  |  |  |
-
-Also takes the [layout attributes](#layout-attributes), its text, child elements.
-
-<a id="ui-dropdown"></a>
-
-## `ui:dropdown`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `label` | string |  |  |  |
-| `trigger` | string |  | `click` |  |
-| `align` | string |  | `left` |  |
-
-Also takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-toast"></a>
-
-## `ui:toast`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `variant` | string |  | `info` |  |
-| `position` | string |  | `top-right` |  |
-| `icon` | string |  |  |  |
-| `title` | string |  |  |  |
-| `show` | string |  |  |  |
-| `on-close` | string |  |  |  |
-| `duration` | number |  | `3000` |  |
-| `dismissible` | boolean |  | `true` |  |
-| `message` | string |  |  |  |
-
-Also takes the [layout attributes](#layout-attributes), its text.
-
-<a id="ui-toast-container"></a>
-
-## `ui:toast-container`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `position` | string |  | `top-right` |  |
-| `max-toasts` | number |  | `5` |  |
-
-Also takes the [layout attributes](#layout-attributes).
-
-<a id="ui-carousel"></a>
-
-## `ui:carousel`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `animation` | string |  | `slide` |  |
-| `bind` | string |  |  |  |
-| `on-change` | string |  |  |  |
-| `auto-play` | boolean |  | `false` |  |
-| `interval` | number |  | `5000` |  |
-| `show-indicators` | boolean |  | `true` |  |
-| `show-arrows` | boolean |  | `true` |  |
-| `loop` | boolean |  | `true` |  |
-| `current` | number |  | `0` |  |
-
-Also takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-slide"></a>
-
-## `ui:slide`
-
-Takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-stepper"></a>
-
-## `ui:stepper`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `orientation` | string |  | `horizontal` |  |
-| `bind` | string |  |  |  |
-| `on-change` | string |  |  |  |
-| `on-complete` | string |  |  |  |
-| `current` | number |  | `0` |  |
-| `linear` | boolean |  | `true` |  |
-| `show-labels` | boolean |  | `true` |  |
-| `clickable` | boolean |  | `false` |  |
-
-Also takes the [layout attributes](#layout-attributes), child elements.
-
-<a id="ui-step"></a>
-
-## `ui:step`
-
-| Attribute | Type | Required | Default | Values |
-|---|---|---|---|---|
-| `title` | string |  |  |  |
-| `description` | string |  |  |  |
-| `icon` | string |  |  |  |
-| `completed` | string |  |  |  |
-| `error` | string |  |  |  |
-| `optional` | boolean |  | `false` |  |
-
-Also takes the [layout attributes](#layout-attributes), child elements.
 
 <a id="ui-calendar"></a>
 

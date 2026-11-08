@@ -531,3 +531,78 @@ fn the_f1_menu_lists_the_offers_over_the_page_and_the_bar_has_the_windows_button
     let obs = s.request(json!({"op": "act", "tap": ["f1"], "ticks": 0}));
     assert_eq!(obs["menu"], json!({"open": true, "t": 8, "ticks": 8}));
 }
+
+/// UI-21: the tags with a state of their own, as the view of
+/// tests/apps/showcase/components/state.q sends them.
+fn state() -> Value {
+    json!({"title": "State", "view": [{"type": "window", "props": {"title": "State"}, "children": [
+        {"type": "modal", "props": {"title": "Welcome", "open": true, "closable": true}, "children": [
+            {"type": "text", "props": {"text": "Read this first"}}]},
+        {"type": "toast", "props": {"title": "Saved", "message": "All changes kept", "duration": 1500,
+                                    "dismissible": true, "position": "top-right", "variant": "info"}},
+        {"type": "accordion", "props": {}, "children": [
+            {"type": "section", "props": {"title": "First fold"}, "children": [
+                {"type": "text", "props": {"text": "Inside the first"}}]},
+            {"type": "section", "props": {"title": "Second fold"}, "children": [
+                {"type": "text", "props": {"text": "Inside the second"}}]}]},
+        {"type": "tooltip", "props": {"text": "A tip for the badge", "position": "top"}, "children": [
+            {"type": "badge", "props": {"text": "Hover me"}}]},
+        {"type": "dropdown", "props": {"label": "Actions"}, "children": [
+            {"type": "option", "as": "link", "props": {"text": "Copy"},
+             "event": {"action": "pick", "fields": {"value": "copy"}}},
+            {"type": "option", "as": "link", "props": {"text": "Move"},
+             "event": {"action": "pick", "fields": {"value": "move"}}}]},
+        {"type": "carousel", "props": {"current": 0, "loop": true, "show_arrows": true,
+                                       "show_indicators": true}, "children": [
+            {"type": "slide", "as": "vbox", "props": {}, "children": [
+                {"type": "text", "props": {"text": "Slide one"}}]},
+            {"type": "slide", "as": "vbox", "props": {}, "children": [
+                {"type": "text", "props": {"text": "Slide two"}}]}]},
+        {"type": "stepper", "props": {"current": 0}, "children": [
+            {"type": "step", "props": {"title": "Account"}, "children": [
+                {"type": "text", "props": {"text": "Step one body"}}]},
+            {"type": "step", "props": {"title": "Profile", "description": "Who you are"}, "children": [
+                {"type": "text", "props": {"text": "Step two body"}}]}]}]}]})
+}
+
+fn shows(obs: &Value, text: &str) -> bool {
+    obs["window"]["texts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|t| t.as_str().unwrap().contains(text))
+}
+
+#[test]
+fn the_tags_with_a_state_of_their_own_open_close_move_and_go() {
+    let mut s = Screen::start();
+    s.request(json!({"op": "show", "page": state()}));
+    let obs = s.request(json!({"op": "until", "still": true, "max_ticks": 30}));
+    // the modal over the page has the keyboard; the toast is over both
+    assert!(shows(&obs, "Read this first") && shows(&obs, "All changes kept"));
+    assert_eq!(obs["window"]["items"][0]["kind"], "modal");
+    s.frame("window-modal");
+    // Esc closes the modal, not the page; then the folds, the dropdown, the
+    // carousel and the stepper by the keyboard, and the tooltip's tip
+    let obs = s.request(json!({"op": "act", "tap": ["escape"], "ticks": 1}));
+    assert!(find(&obs, "close").is_none() && !shows(&obs, "Read this first"));
+    assert!(!shows(&obs, "Inside the second") && !shows(&obs, "Move"));
+    s.request(json!({"op": "act", "tap": ["tab", "enter", "tab", "tab", "enter"], "ticks": 1}));
+    s.request(json!({"op": "act", "tap": ["tab", "tab", "tab", "right", "tab", "tab", "enter"], "ticks": 1}));
+    let obs = s.request(json!({"op": "level", "level": 2}));
+    assert!(shows(&obs, "Inside the second") && shows(&obs, "Move"));
+    assert!(shows(&obs, "Slide two") && !shows(&obs, "Slide one"));
+    assert!(shows(&obs, "Step two body") && !shows(&obs, "Step one body"));
+    assert!(!shows(&obs, "A tip for the badge"));
+    let obs = s.request(json!({"op": "act", "tap": vec!["shift-tab"; 6], "ticks": 1}));
+    assert!(shows(&obs, "A tip for the badge"));
+    s.frame("window-state");
+    // the toast goes after its 1500 ms
+    let obs = s.request(json!({"op": "until", "gone": "All changes kept", "max_ticks": 120}));
+    assert_eq!(obs["stopped"], "condition");
+    assert!(obs["window"]["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|i| i["kind"] != "toast"));
+}

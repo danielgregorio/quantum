@@ -2,7 +2,9 @@
 
 What the parity script (tests/apps/test_ui_parity_script.py) and the Kanban's (tests/apps/test_kanban_everywhere.py)
 do not reach: search as you type, an editable table, a file field with a dialog of its own, an image, wide
-characters, the mouse and the wheel, the motions, a resize, a tag it does not draw. And the layout check:
+characters, the mouse and the wheel, the motions, a resize, a tag it does not draw, and of the tags with a state
+of their own (UI-21) Esc, a modal that takes the clicks, a tip on the focus, a toast that stays on the screen
+and a carousel that plays. And the layout check:
 each page laid out at a size is the same cells as its reference frame in tests/tui/frames/
 (UPDATE_FRAMES=1 writes them again), and no element sits on another or past the right edge.
 """
@@ -117,13 +119,41 @@ class TestTheScreen:
 
     def test_a_tag_it_does_not_draw_says_so(self, tui):
         # UI-7: never something else in its place
-        assert tui.observe()['unsupported'] == ['accordion']
-        assert '[ui:accordion is not drawn in the TUI]' in tui.text()
+        assert tui.observe()['unsupported'] == ['calendar']
+        assert '[ui:calendar is not drawn in the TUI]' in tui.text()
 
     def test_a_resize_lays_the_page_out_again(self, tui):
         seen = tui.resize(60, 20)
         assert seen['cols'] == 60 and max(len(r) for r in seen['screen']) <= 60
         no_overlaps(seen)
+
+
+class TestTheTagsWithAState:
+    """UI-21: what the parity script's STATE does not reach: Esc, a modal that takes the clicks, a tooltip's tip
+    on the focus, a toast that stays on the screen as the page scrolls, a carousel that plays."""
+
+    def test_a_modal_takes_the_clicks_until_esc_closes_it(self, tui):
+        tui.visit('/layers')
+        field = tui.item('input', bind='name')
+        assert field['covered']
+        tui.click(field['x'], field['y'])                      # under the modal: nothing takes the click
+        assert not tui.item('input', bind='name')['focus'] and 'Type a name' not in tui.text()
+        seen = tui.key('escape')
+        assert 'In the modal' not in tui.text()
+        assert [layer['kind'] for layer in seen['layers']] == ['tip', 'toast']    # the mouse is over the field
+        tui.hover(0, 10)
+        assert 'Type a name' not in tui.text()
+        tui.key('tab')                                         # the tip shows on the focus too
+        assert tui.item('input', bind='name')['focus'] and 'Type a name' in tui.text()
+
+    def test_a_toast_stays_on_the_screen_and_a_carousel_plays(self, tui):
+        tui.visit('/layers')
+        tui.key('escape')
+        seen = tui.wheel(5)
+        toast, = [layer for layer in seen['layers'] if layer['kind'] == 'toast']
+        assert seen['scroll'] == 15 and toast['y'] + toast['h'] == seen['scroll'] + seen['rows']
+        assert 'Kept' in tui.text()
+        tui.wait('Two')                                        # its interval past, the next slide
 
 
 class TestTheLayout:

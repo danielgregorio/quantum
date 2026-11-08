@@ -24,7 +24,7 @@ from pathlib import Path
 import pytest
 import requests
 
-from tests.apps.ui_drivers import Browser, Tui, run_console_script, run_script
+from tests.apps.ui_drivers import WAIT, Browser, Tui, run_console_script, run_script
 
 SHOWCASE = Path(__file__).resolve().parent / "showcase"
 OS_DIR = Path(__file__).resolve().parents[2] / "os"
@@ -91,6 +91,41 @@ MORE = [
     ("sees", ["Showcase header"]),
 ]
 
+# UI-21: the tags with a state of their own (tests/apps/showcase/components/state.q)
+STATE = [
+    ("visit", "/state?welcome=1"),
+    ("sees", ["All changes kept", "Welcome", "Read this first"]),
+    # a modal that is open shows over the page until it is closed
+    ("close", "Welcome"),
+    ("does_not_see", ["Read this first"]),
+    # an accordion: its first fold open, the others closed until opened
+    ("sees", ["First fold", "Inside the first", "Second fold"]),
+    ("does_not_see", ["Inside the second"]),
+    ("fold", "Second fold"),
+    ("sees", ["Inside the second"]),
+    # a tooltip says its tip when its element is pointed at, or has the focus
+    ("sees", ["Hover me"]),
+    ("does_not_see", ["A tip for the badge"]),
+    ("tip", "Hover me", "A tip for the badge"),
+    # a carousel shows one slide, the next on its arrow
+    ("sees", ["Slide one"]),
+    ("does_not_see", ["Slide two"]),
+    ("next", "carousel"),
+    ("sees", ["Slide two"]),
+    # a stepper shows one step's content, the next on Next
+    ("sees", ["Account", "Profile", "Step one body"]),
+    ("does_not_see", ["Step two body"]),
+    ("next", "stepper"),
+    ("sees", ["Step two body"]),
+    # a toast goes after its duration
+    ("gone", "All changes kept"),
+    # a dropdown opens on its button, and its option posts the action
+    ("sees", ["Actions"]),
+    ("does_not_see", ["Move"]),
+    ("pick", "Actions", "Move"),
+    ("sees", ["Picked: move"]),
+]
+
 
 @pytest.fixture
 def url(tmp_path, monkeypatch):
@@ -125,6 +160,7 @@ def test_the_script_in_the_browser(url):
             page.goto(url)
             run_script(Browser(page, url), SCRIPT)
             run_script(Browser(page, url), MORE)
+            run_script(Browser(page, url), STATE)
             assert errors == []
         finally:
             chromium.close()
@@ -143,6 +179,7 @@ def test_the_script_in_the_console(url):
             await page_loaded(app, pilot)
             await run_console_script(app, pilot, SCRIPT)
             await run_console_script(app, pilot, MORE)
+            await run_console_script(app, pilot, STATE)
 
     asyncio.run(main())
 
@@ -161,6 +198,7 @@ def test_the_script_in_the_tui(url):
         run_script(Tui(tui), SCRIPT)
         assert tui.observe()["unsupported"] == []          # the whole Core set is drawn
         run_script(Tui(tui), MORE)
+        run_script(Tui(tui), STATE)
 
 
 # -- the Hive's screen (quantum pixel) -------------------------------------------
@@ -289,6 +327,39 @@ class Pixel:
         if steps:
             self.s.request({"op": "act", "tap": ["right"] * steps if steps > 0 else ["left"] * -steps})
 
+    # UI-21: what a tag with a state of its own does, from the keyboard
+
+    def close(self, title):
+        # an open modal has the keyboard: its close control, Enter
+        self._focus(lambda i: i["kind"] == "modal" and i.get("label") == title)
+        self.s.request({"op": "act", "tap": ["enter"]})
+
+    def fold(self, title):
+        self._focus(lambda i: i["kind"] == "section" and i.get("label") == title)
+        self.s.request({"op": "act", "tap": ["enter"]})
+
+    def tip(self, label, text):
+        # the tip shows while its element has the focus
+        self._focus(lambda i: i.get("label") == label)
+        assert text in self.text(), f"the tip {text!r} does not show"
+
+    def next(self, kind):
+        if kind == "carousel":
+            self._focus(lambda i: i["kind"] == "carousel")
+            self.s.request({"op": "act", "tap": ["right"]})
+        else:
+            self._focus(lambda i: i.get("moves") == kind and i.get("label") == "Next")
+            self.s.request({"op": "act", "tap": ["enter"]})
+
+    def gone(self, text):
+        obs = self.s.request({"op": "until", "gone": text, "max_ticks": WAIT * 60})
+        assert obs["stopped"] == "condition", f"{text!r} did not go"
+
+    def pick(self, label, option):
+        self._focus(lambda i: i["kind"] == "dropdown" and i.get("label") == label)
+        self.s.request({"op": "act", "tap": ["enter"]})
+        self.click(option)
+
 
 def test_the_script_on_the_pixel_screen(url, tmp_path):
     # UI-7, UI-15
@@ -307,6 +378,7 @@ def test_the_script_on_the_pixel_screen(url, tmp_path):
         assert first["stopped"] == "condition", "quantum pixel did not bring the page"
         run_script(Pixel(screen, client), SCRIPT)
         run_script(Pixel(screen, client), MORE)
+        run_script(Pixel(screen, client), STATE)
         # Esc closes the page; the page's runtime ends with it
         screen.request({"op": "act", "tap": ["escape"]})
         runtime.join(10)

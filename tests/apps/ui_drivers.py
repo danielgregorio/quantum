@@ -9,7 +9,8 @@ application in each of its versions, UI-18). A step is a tuple: ("sees", [texts]
 ("tab", title), ("waits_for", text), ("motions", [(kind, speed, what), ...]) — the
 motions the page ran (UI-19) —, ("api", method, path, json, status[, [texts]]) — another
 program calling the application's API (q:endpoint, API-1) beside the page, with a session of
-its own —, and the parity script's own (image, progress, values, check, choose).
+its own —, and the parity script's own (image, progress, values, check, choose, and UI-21's close, fold,
+tip, next, gone, pick).
 """
 
 import asyncio
@@ -19,7 +20,7 @@ import time
 import requests
 
 # The steps that load a page: the driver waits for it before the next step.
-LOADS_A_PAGE = {"click", "follow", "click_in", "follow_in"}
+LOADS_A_PAGE = {"click", "follow", "click_in", "follow_in", "pick"}
 WAIT = 15          # seconds: a guard for waits_for, never a pause
 
 
@@ -131,6 +132,29 @@ class Browser:
     def waits_for(self, text):
         self.p.wait_for_function("t => document.body.innerText.includes(t)", arg=text, timeout=WAIT * 1000)
 
+    # UI-21: what a tag with a state of its own does as the user does it
+
+    def close(self, title):
+        modal = self.p.locator(".q-modal-open", has=self.p.locator(".q-modal-title", has_text=title))
+        modal.locator(".q-modal-close").click()
+
+    def fold(self, title):
+        self.p.locator("summary", has_text=title).click()
+
+    def tip(self, label, text):
+        self.p.get_by_text(label, exact=True).hover()
+        self.p.wait_for_function("t => document.body.innerText.includes(t)", arg=text, timeout=WAIT * 1000)
+
+    def next(self, kind):
+        self.p.locator(".q-carousel-next" if kind == "carousel" else ".q-stepper-next").first.click()
+
+    def gone(self, text):
+        self.p.wait_for_function("t => !document.body.innerText.includes(t)", arg=text, timeout=WAIT * 1000)
+
+    def pick(self, label, option):
+        self.p.locator("summary", has_text=label).click()
+        self._go(self.p.get_by_role("button", name=option, exact=True))
+
 
 # -- console ------------------------------------------------------------------
 
@@ -147,25 +171,39 @@ class Console:
         return all(getattr(n, "display", True) for n in [w, *w.ancestors])
 
     def _field(self, name, types):
-        return [w for w in self.app.query(types)
+        return [w for w in self.app.screen.query(types)
                 if getattr(w, "_quantum_name", None) == name and self._visible(w)][0]
 
-    def text(self):
+    def _screens(self):
+        """What is on the terminal: the top screen and, under a modal one (UI-21), what it is drawn over."""
+        from textual.screen import ModalScreen
+        shown = [self.app.screen_stack[-1]]
+        for screen in reversed(self.app.screen_stack[:-1]):
+            if not isinstance(shown[0], ModalScreen):
+                break
+            shown.insert(0, screen)
+        return shown
+
+    @staticmethod
+    def _says(w):
         from textual.widgets import Button, Checkbox, RadioButton, Static, Tab
+        if isinstance(w, (Checkbox, RadioButton, Button, Tab)):
+            return str(w.label)
+        if isinstance(w, Static):
+            return str(w.render())
+        return None
+
+    def text(self):
         parts = []
-        for w in self.app.query("*"):
-            if not self._visible(w):
-                continue
-            if isinstance(w, (Checkbox, RadioButton)):
-                parts.append(str(w.label))
-            elif isinstance(w, Button):
-                parts.append(str(w.label))
-            elif isinstance(w, Tab):
-                parts.append(str(w.label))
-            elif isinstance(w, Static):
-                parts.append(str(w.render()))
-            if getattr(w, "border_title", None):
-                parts.append(str(w.border_title))
+        for screen in self._screens():
+            for w in screen.query("*"):
+                if not self._visible(w):
+                    continue
+                says = self._says(w)
+                if says is not None:
+                    parts.append(says)
+                if getattr(w, "border_title", None):
+                    parts.append(str(w.border_title))
         return " | ".join(parts)
 
     def motions(self):
@@ -209,13 +247,13 @@ class Console:
         buttons[0].press()
 
     def click(self, label):
-        self._press(self.app, label, link=False)
+        self._press(self.app.screen, label, link=False)
 
     def follow(self, label):
-        self._press(self.app, label, link=True)
+        self._press(self.app.screen, label, link=True)
 
     def _card(self, title):
-        cards = [w for w in self.app.query(".panel") if str(getattr(w, "border_title", "")) == title]
+        cards = [w for w in self.app.screen.query(".panel") if str(getattr(w, "border_title", "")) == title]
         assert cards, f"console: no card {title!r}"
         return cards[0]
 
@@ -229,6 +267,60 @@ class Console:
         from textual.widgets import TabbedContent, TabPane
         tabs = self.app.query_one(TabbedContent)
         tabs.active = [p for p in tabs.query(TabPane) if str(p._title) == title][0].id
+
+    # UI-21: what a tag with a state of its own does as the user does it; each waits for what it asked for
+    # (run_console_script awaits them)
+
+    async def _until(self, done, what):
+        deadline = time.monotonic() + WAIT
+        while not done():
+            assert time.monotonic() < deadline, f"console: {what} in {WAIT}s"
+            await self.pilot.pause(0.02)
+
+    def _shown(self, kind):
+        return [w for w in self.app.screen.query(kind) if self._visible(w)]
+
+    async def close(self, title):
+        from textual.widgets import Button
+        from quantum.runtime.ui_console import PageModal
+        modals = [s for s in self.app.screen_stack if isinstance(s, PageModal) and s.modal_title == title]
+        assert modals and modals[-1] is self.app.screen, f"console: no open modal {title!r} on top"
+        modals[-1].query_one(".modal-close", Button).press()
+        await self._until(lambda: modals[-1] not in self.app.screen_stack, f"the modal {title!r} did not close")
+
+    async def fold(self, title):
+        from textual.widgets import Collapsible
+        folds = [f for f in self._shown(Collapsible) if str(f.title) == title]
+        assert folds, f"console: no fold {title!r}"
+        contents = folds[0].query_one(Collapsible.Contents)
+        was_open = self._visible(contents)
+        folds[0].query_one("CollapsibleTitle").action_toggle_collapsible()      # Enter on its title
+        await self._until(lambda: self._visible(contents) != was_open, f"the fold {title!r} did not move")
+
+    async def tip(self, label, text):
+        target = [w for w in self.app.screen.query("*") if self._visible(w) and self._says(w) == label]
+        assert target, f"console: nothing says {label!r}"
+        await self.pilot.hover(target[0])
+        await self._until(lambda: text in self.text(), f"the tip {text!r} did not show over {label!r}")
+
+    async def next(self, kind):
+        from quantum.runtime.ui_console import Carousel, Stepper
+        boxes = self._shown(Carousel if kind == "carousel" else Stepper)
+        assert boxes, f"console: no {kind}"
+        before = boxes[0].current
+        self._press(boxes[0], "›" if kind == "carousel" else "Next", link=kind == "carousel")
+        await self._until(lambda: boxes[0].current != before, f"the {kind} did not move")
+
+    async def gone(self, text):
+        await self._until(lambda: text not in self.text(), f"{text!r} is still shown")
+
+    async def pick(self, label, option):
+        from quantum.runtime.ui_console import Dropdown
+        boxes = [d for d in self._shown(Dropdown) if d.label == label]
+        assert boxes, f"console: no dropdown {label!r}"
+        boxes[0].trigger.press()
+        await self._until(lambda: self._visible(boxes[0].menu), f"the dropdown {label!r} did not open")
+        self._press(boxes[0].menu, option, link=True)
 
 
 def tui_godot():
@@ -246,7 +338,8 @@ def tui_godot():
 class Tui:
     """The TUI drawn by Godot (UI-20), headless, through its play protocol (quantum/runtime/ui_tui.py):
     a button, a link or a tab is clicked with the mouse on its cell, a field clicked and typed into, a
-    box clicked, a select opened and its option clicked."""
+    box clicked, a select opened and its option clicked; a fold's header, a modal's close, a carousel's
+    arrow, a stepper's Next and a dropdown's button clicked, a tooltip's element hovered (UI-21)."""
     name = "tui"
 
     def __init__(self, session):
@@ -327,6 +420,32 @@ class Tui:
     def progress(self, ident, value):
         assert any(p["id"] == ident and p["value"] == value for p in self.s.observe()["progress"])
 
+    # UI-21: what a tag with a state of its own does as the user does it, with the mouse
+
+    def close(self, title):
+        # a modal's or a toast's close control, on its top edge
+        self._click(self.s.item("close", title))
+
+    def fold(self, title):
+        self._click(self.s.item("fold", title))
+
+    def tip(self, label, text):
+        # the mouse over the element; its tip is drawn next to it
+        found = sorted(self.s.items(where=lambda i: i.get("label") == label), key=lambda i: i["kind"] != "tooltip")
+        assert found, f"tui: nothing labelled {label!r}"
+        self.s.hover(found[0]["x"], found[0]["y"])
+        self.s.wait(text, timeout=WAIT)
+
+    def next(self, kind):
+        self._click(self.s.item(kind, "Next slide" if kind == "carousel" else "Next"))
+
+    def gone(self, text):
+        self.s.wait(text, timeout=WAIT, gone=True)
+
+    def pick(self, label, option):
+        self._click(self.s.item("dropdown", label))        # its options open under it
+        self._click(self.s.item("link", option, menu=label))
+
 
 async def run_console_script(app, pilot, script):
     """The script in the console: a step that loads a page waits for THAT page (tests/console_pilot.py)."""
@@ -344,7 +463,11 @@ async def run_console_script(app, pilot, script):
                 await asyncio.sleep(0.05)
                 await pilot.pause()
         else:
-            run_script(driver, [step])
+            verb = getattr(driver, step[0], None)
+            if asyncio.iscoroutinefunction(verb):
+                await verb(*step[1:])          # UI-21: close, fold, tip, next, gone, pick wait for what they did
+            else:
+                run_script(driver, [step])
             if step[0] in LOADS_A_PAGE:
                 await page_loaded(app, pilot, before)
             else:

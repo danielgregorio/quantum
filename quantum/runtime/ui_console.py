@@ -14,9 +14,12 @@ from urllib.parse import urljoin
 
 import requests
 from rich.text import Text
+from textual import events
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
-from textual.widgets import (Button, Checkbox, Input, ProgressBar, RadioButton, RadioSet,
+from textual.screen import ModalScreen
+from textual.widgets import (Button, Checkbox, Collapsible, Input, ProgressBar, RadioButton, RadioSet,
                              Select, Static, Switch, TabbedContent, TabPane, TextArea)
 
 from quantum.runtime.ui_motion import TerminalMotion, of_props, record
@@ -37,6 +40,16 @@ def _number(value, default: float) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _flag(value, default: bool) -> bool:
+    """A yes or a no of the view (a bool, or the text of an expression); not given, the default."""
+    return default if value is None or value == '' else _checked(value)
+
+
+def _index(value, total: int) -> int:
+    """Which of `total` is shown first (a carousel's slide, a stepper's step): `current`, kept in range."""
+    return max(0, min(int(_number(value, 0)), total - 1)) if total else 0
 
 
 def styled_text(text: str, props: dict) -> Text:
@@ -122,11 +135,283 @@ class Loading(Static):
         self.update(f'{self.FRAMES[self._frame]} {self._text}')
 
 
+# -- the tags with a state of their own (UI-21): the state is the console's, as it is the browser's ----------
+
+class PageModal(ModalScreen):
+    """UI-21: an open ui:modal, above the page, which it takes the focus from: its title, its content and,
+    when `closable`, a close control (Esc too). Closed, it is gone until the page is loaded again."""
+
+    BINDINGS = [Binding('escape', 'close', 'Close', show=False)]
+    WIDTHS = {'sm': 40, 'md': 60, 'lg': 80, 'xl': 100, 'full': '100%'}
+
+    def __init__(self, props: dict, content: List):
+        super().__init__()
+        self.modal_title = str(props.get('title') or '')
+        self.closable = _flag(props.get('closable'), True)
+        self._content, self._props = content, props
+
+    def compose(self) -> ComposeResult:
+        header = [Static(Text(self.modal_title, style='bold'), classes='modal-title')] if self.modal_title else []
+        if self.closable:
+            header.append(Button('✕', classes='link modal-close'))
+        dialog = Vertical(*([Horizontal(*header, classes='modal-header')] if header else []),
+                          Vertical(*self._content, classes='vbox modal-body'),
+                          classes='modal', id=self._props.get('ui_id'))
+        dialog.styles.width = self.WIDTHS.get(str(self._props.get('size') or ''), 60)
+        yield dialog
+
+    def check_action(self, action: str, parameters) -> bool:
+        return self.closable if action == 'close' else True
+
+    def action_close(self) -> None:
+        self.dismiss()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.has_class('modal-close'):
+            event.stop()
+            self.dismiss()
+
+
+TOAST_ICONS = {'info': 'ⓘ', 'success': '✓', 'warning': '⚠', 'danger': '✗'}
+
+
+class PageToast(Vertical):
+    """UI-21: a toast — its title and message for `duration` ms (0: until the page is loaded again), then
+    gone; `dismissible` gives it a close control."""
+
+    def __init__(self, props: dict):
+        variant = str(props.get('variant') or 'info')
+        title, message = str(props.get('title') or ''), str(props.get('message') or '')
+        # its icon and title on the first line, its message under them; without a title, the message there
+        first = Text(f"{props.get('icon') or TOAST_ICONS.get(variant, TOAST_ICONS['info'])} ", style='bold')
+        first.append(title or message, style='bold' if title else '')
+        header = [Static(first, classes='toast-title')]
+        if _flag(props.get('dismissible'), True):
+            header.append(Button('✕', classes='link toast-close'))
+        super().__init__(Horizontal(*header, classes='toast-header'),
+                         *([Static(Text(message), classes='toast-message')] if title and message else []),
+                         classes=f'toast toast-{variant}', id=props.get('ui_id'))
+        self._ms = _number(props.get('duration'), 3000)
+
+    def on_mount(self) -> None:
+        if self._ms > 0:
+            self.set_timer(self._ms / 1000, self.go)
+
+    def go(self) -> None:
+        (self.parent if self.parent is not None and self.parent.has_class('toast-holder') else self).remove()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.has_class('toast-close'):
+            event.stop()
+            self.go()
+
+
+class TipBox(Vertical):
+    """UI-21: a tooltip — its children drawn; its tip shown under them only while they are pointed at or
+    have the focus."""
+
+    def __init__(self, tip: str, children: List, id=None):
+        self.tip = Static(Text(tip), classes='tip')
+        self.tip.display = False
+        super().__init__(*children, self.tip, classes='tipbox', id=id)
+
+    def _update(self) -> None:
+        self.tip.display = self.is_mouse_over or self.has_focus_within
+
+    def on_enter(self, event: events.Enter) -> None:
+        self._update()
+
+    def on_leave(self, event: events.Leave) -> None:
+        self.call_after_refresh(self._update)
+
+    def on_descendant_focus(self, event: events.DescendantFocus) -> None:
+        self._update()
+
+    def on_descendant_blur(self, event: events.DescendantBlur) -> None:
+        self.call_after_refresh(self._update)
+
+
+class Dropdown(Vertical):
+    """UI-21: a dropdown — a button with its label that opens its options; an option posts its action (a
+    link with an event, as a menu's); Esc, or the focus going elsewhere, closes them."""
+
+    BINDINGS = [Binding('escape', 'close', 'Close', show=False)]
+
+    def __init__(self, label: str, options: List, id=None):
+        self.label = label
+        self.trigger = Button(f'{label} ▾', classes='dropdown-trigger')
+        self.menu = Vertical(*options, classes='dropdown-menu')
+        self.menu.display = False
+        super().__init__(self.trigger, self.menu, classes='dropdown', id=id)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button is not self.trigger:
+            return                  # an option: its action goes on to the app
+        event.stop()
+        self.menu.display = not self.menu.display
+        options = [b for b in self.menu.query(Button) if b.focusable]
+        if self.menu.display and options:
+            options[0].focus()
+
+    def check_action(self, action: str, parameters) -> bool:
+        return self.menu.display if action == 'close' else True
+
+    def action_close(self) -> None:
+        self.menu.display = False
+        self.trigger.focus()
+
+    def on_descendant_blur(self, event: events.DescendantBlur) -> None:
+        self.call_after_refresh(self._close_when_left)
+
+    def _close_when_left(self) -> None:
+        if not self.has_focus_within:
+            self.menu.display = False
+
+
+class Carousel(Vertical):
+    """UI-21: a carousel — one slide at a time (`current`), the arrows for the previous and the next (looping
+    when `loop`), a dot for each slide that goes to it; `auto-play` moves it every `interval` ms, not while
+    the mouse is over it."""
+
+    def __init__(self, slides: List, props: dict, id=None):
+        self.slides = slides
+        self.current = _index(props.get('current'), len(slides))
+        self.loop = _flag(props.get('loop'), True)
+        self._auto = _flag(props.get('auto_play'), False) and len(slides) > 1
+        self._interval = max(0.1, _number(props.get('interval'), 5000) / 1000)
+        self.prev = self.next = None
+        self.dots: List[Button] = []
+        if len(slides) > 1 and _flag(props.get('show_arrows'), True):
+            self.prev, self.next = Button('‹', classes='link carousel-prev'), Button('›', classes='link carousel-next')
+        if len(slides) > 1 and _flag(props.get('show_indicators'), True):
+            self.dots = [Button('○', classes='link carousel-dot') for _ in slides]
+        controls = [w for w in [self.prev, *self.dots, self.next] if w is not None]
+        super().__init__(*slides, *([Horizontal(*controls, classes='hbox carousel-controls')] if controls else []),
+                         classes='vbox carousel', id=id)
+        self._show()
+
+    def on_mount(self) -> None:
+        if self._auto:
+            self.set_interval(self._interval, self._tick)
+
+    def _tick(self) -> None:
+        if not self.is_mouse_over:
+            self.go(self.current + 1)
+
+    def go(self, index: int) -> None:
+        total = len(self.slides)
+        if index < 0:
+            index = total - 1 if self.loop else 0
+        elif index >= total:
+            index = 0 if self.loop else total - 1
+        self.current = index
+        self._show()
+
+    def _show(self) -> None:
+        for n, slide in enumerate(self.slides):
+            slide.display = n == self.current
+        for n, dot in enumerate(self.dots):
+            dot.label = '●' if n == self.current else '○'
+        if self.prev is not None and not self.loop:
+            self.prev.disabled = self.current == 0
+            self.next.disabled = self.current == len(self.slides) - 1
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        button = event.button
+        if button is self.prev:
+            self.go(self.current - 1)
+        elif button is self.next:
+            self.go(self.current + 1)
+        elif button in self.dots:
+            self.go(self.dots.index(button))
+        else:
+            return                  # a button in a slide: its action goes on to the app
+        event.stop()
+
+
+class Stepper(Vertical):
+    """UI-21: a stepper — the steps' titles in a row (a column when `orientation="vertical"`), the current one
+    marked, a done one checked; only the current step's content; Back and Next move between them, Next marking
+    the step done, as the browser's do. In a `linear` stepper a step after the current one opens only when the
+    current one is done; `clickable` makes the titles go to their step."""
+
+    def __init__(self, steps: List[dict], contents: List, props: dict, id=None):
+        self.steps, self.contents = steps, contents
+        self.current = _index(props.get('current'), len(steps))
+        self.linear = _flag(props.get('linear'), True)
+        clickable = _flag(props.get('clickable'), False)
+        # the explicit `completed` wins; without it, a step behind the current one is done (completed_step_indices)
+        self.done = {n for n, step in enumerate(steps)
+                     if (_checked(step.get('completed')) if step.get('completed') is not None else n < self.current)}
+        self.titles = [Button('', classes='link step-title') if clickable else Static('', classes='step-title')
+                       for _ in steps]
+        cells = []
+        for title, step in zip(self.titles, steps):
+            notes = [Static(Text(str(step['description']), style='dim'))] if step.get('description') else []
+            if _checked(step.get('optional')):
+                notes.append(Static(Text('Optional', style='dim italic')))
+            if step.get('error'):
+                notes.append(Static(Text(str(step['error'])), classes='field-error'))
+            cells.append(Vertical(title, *notes, classes='step'))
+        header = (Vertical if props.get('orientation') == 'vertical' else Horizontal)(*cells, classes='stepper-header')
+        self.back = Button('Back', classes='stepper-back')
+        self.forward = Button('Next', variant='primary', classes='stepper-next')
+        super().__init__(header, *contents, Horizontal(self.back, self.forward, classes='hbox stepper-nav'),
+                         classes='vbox stepper', id=id)
+        self._show()
+
+    def _can_go(self, index: int) -> bool:
+        if not 0 <= index < len(self.steps):
+            return False
+        if not self.linear or index <= self.current:
+            return True
+        return index == self.current + 1 and self.current in self.done
+
+    def go(self, index: int) -> None:
+        if self._can_go(index):
+            self.current = index
+        self._show()
+
+    def _title(self, n: int) -> Text:
+        step, current = self.steps[n], n == self.current
+        if step.get('error'):
+            mark, style = '✗', 'bold red'
+        elif n in self.done and not current:
+            mark, style = '✓', 'bold green'
+        else:
+            mark, style = str(step.get('icon') or n + 1), 'bold' if current else 'dim'
+        out = Text(f' {mark} ', style=style + (' reverse' if current else ''))
+        out.append(' ' + str(step.get('title') or ''), style='bold' if current else '')
+        return out
+
+    def _show(self) -> None:
+        for n, (title, content) in enumerate(zip(self.titles, self.contents)):
+            if isinstance(title, Button):
+                title.label = self._title(n)
+            else:
+                title.update(self._title(n))
+            content.display = n == self.current
+        self.back.disabled = self.current == 0
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        button = event.button
+        if button is self.back:
+            self.go(self.current - 1)
+        elif button is self.forward:
+            self.done.add(self.current)
+            self.go(self.current + 1)
+        elif button in self.titles:
+            self.go(self.titles.index(button))
+        else:
+            return                  # a button in a step: its action goes on to the app
+        event.stop()
+
+
 class ConsoleUI(App):
     """Draws a page's view tree; buttons and forms post the page's actions."""
 
     CSS = """
-    Screen { background: $surface; }
+    Screen { background: $surface; layers: default toasts; }
     #page { padding: 1 2; }
     .window { height: auto; }
     .hbox { height: auto; }
@@ -154,6 +439,38 @@ class ConsoleUI(App):
     .invalid { border: tall $error; }
     TabbedContent { height: auto; }
     TabPane { height: auto; }
+    /* UI-21: the tags with a state of their own; a page's toasts on the layer over it */
+    PageModal { align: center middle; background: $background 60%; }
+    .modal { height: auto; max-width: 100%; max-height: 90%; overflow-y: auto; border: round $primary;
+             background: $surface; padding: 0 1; }
+    .modal-header, .toast-header { height: auto; }
+    .modal-title, .toast-title { width: 1fr; }
+    .modal-close, .toast-close { text-style: bold; }
+    .toasts { layer: toasts; width: 1fr; height: auto; visibility: hidden; }
+    .toasts-top { dock: top; }
+    .toasts-bottom { dock: bottom; }
+    .toast-holder { width: 1fr; height: auto; visibility: hidden; align-horizontal: right; }
+    .toast-holder-left { align-horizontal: left; }
+    .toast-holder-center { align-horizontal: center; }
+    .toast { visibility: visible; width: 44; max-width: 100%; height: auto; margin: 1 1 0 1; padding: 0 1;
+             background: $panel; border-left: outer $primary; }
+    .toast-success { border-left: outer $success; }
+    .toast-warning { border-left: outer $warning; }
+    .toast-danger { border-left: outer $error; }
+    .toast .link { background: $panel; }
+    Collapsible { height: auto; }
+    .tipbox { height: auto; }
+    .tip { overlay: screen; constrain: inside inflect; width: auto; background: $panel; color: $text;
+           padding: 0 1; }
+    .dropdown { height: auto; width: auto; }
+    .dropdown-menu { overlay: screen; constrain: inside inflect; width: auto; min-width: 16; height: auto;
+                     border: round $primary; background: $panel; padding: 0 1; }
+    .dropdown-menu .link { background: $panel; }
+    .carousel-controls > Button { margin-right: 1; text-style: bold; }
+    .stepper-header { height: auto; margin-bottom: 1; }
+    .step { width: auto; height: auto; margin-right: 3; }
+    .step > Static { width: auto; }
+    .step-title { height: 1; }
     """
 
     def __init__(self, base_url: str, path: str = '/'):
@@ -180,9 +497,14 @@ class ConsoleUI(App):
         self.motions: List[Dict[str, str]] = []
         self.motion_on = True
         self._tabs_opened: set = set()
+        # UI-21: what the page being drawn shows above itself once it is drawn — its open modals, its toasts
+        self._modals: List[PageModal] = []
+        self._toasts: List[dict] = []
 
     def compose(self) -> ComposeResult:
         yield VerticalScroll(id='page')
+        for side in ('top', 'bottom'):           # UI-21: where a page's toasts show, over it
+            yield Vertical(classes=f'toasts toasts-{side}', id=f'toasts-{side}')
 
     async def on_mount(self) -> None:
         await self.load_page(self.path)
@@ -222,6 +544,12 @@ class ConsoleUI(App):
         self._tabs_opened = set()
         self.page_title = page.get('title', '')
         self.title = self.page_title
+        # UI-21: what the last page left open goes with it — its modals, its toasts
+        while isinstance(self.screen, PageModal):
+            await self.pop_screen()
+        for rack in self.query('.toasts'):
+            await rack.remove_children()
+        self._modals, self._toasts = [], []
         body = self.query_one('#page', VerticalScroll)
         await body.remove_children()
         self._actions.clear()
@@ -231,6 +559,14 @@ class ConsoleUI(App):
             widgets.append(Static(Text(str(page['flash'])), classes=classes, id='flash'))
         widgets.extend(self._build_widgets(page.get('view', [])))
         await body.mount_all(widgets)
+        for props in self._toasts:
+            position = str(props.get('position') or 'top-right')
+            side = 'bottom' if position.startswith('bottom') else 'top'
+            where = 'left' if position.endswith('left') else 'center' if position.endswith('center') else 'right'
+            await self.query_one(f'#toasts-{side}').mount(
+                Horizontal(PageToast(props), classes=f'toast-holder toast-holder-{where}'))
+        for modal in self._modals:
+            await self.push_screen(modal)
 
     # -- drawing --------------------------------------------------------------
 
@@ -339,6 +675,8 @@ class ConsoleUI(App):
             return link
         if kind in ('avatar', 'chart', 'skeleton', 'loading', 'treeitem'):
             return self._more(kind, node, props, ident)
+        if kind in ('modal', 'toast', 'accordion', 'tooltip', 'dropdown', 'carousel', 'stepper'):
+            return self._stateful(kind, children, form, props, ident)
         if kind == 'input' and props.get('input_type') == 'file':
             # UI-14: a terminal has no file picker; the form posts without the file.
             return Static(Text(f"{props.get('bind') or 'file'}: attach files from the browser"),
@@ -457,6 +795,43 @@ class ConsoleUI(App):
         else:
             row = Static(Text(label), classes='text')
         return Horizontal(guides, row, classes='hbox', id=ident)
+
+    def _stateful(self, kind: str, children: List[dict], form: Optional[dict], props: dict, ident):
+        """UI-21: the tags with a state of their own — what is open, which slide, which step, a toast that
+        goes. The state is the console's, as it is the browser's: it starts again with the page."""
+        if kind == 'modal':
+            if _checked(props.get('open')):
+                self._modals.append(PageModal(props, self._build_widgets(children, form)))
+            return None                     # open, above the page once it is drawn; closed, nothing
+        if kind == 'toast':
+            self._toasts.append(props)
+            return None                     # over the page once it is drawn
+        if kind == 'accordion':
+            folds: List = []
+            for child in children:
+                if child.get('type') != 'section':
+                    folds.extend(self._build_widgets([child], form))
+                    continue
+                section = child.get('props') or {}
+                # each fold opens and closes by itself; the first is open
+                folds.append(Collapsible(*self._build_widgets(child.get('children', []), form),
+                                         title=Text(str(section.get('title') or '')),
+                                         collapsed=any(isinstance(f, Collapsible) for f in folds),
+                                         id=section.get('ui_id')))
+            return Vertical(*folds, classes='vbox accordion', id=ident)
+        if kind == 'tooltip':
+            return TipBox(str(props.get('text') or ''), self._build_widgets(children, form), id=ident)
+        if kind == 'dropdown':
+            return Dropdown(str(props.get('label') or 'Menu'), self._build_widgets(children, form), id=ident)
+        if kind == 'carousel':
+            # its ui:slides; without them, each child is a slide
+            slides = [c for c in children if c.get('type') == 'slide'] or children
+            return Carousel(self._build_widgets(slides, form), props, id=ident)
+        steps = [c for c in children if c.get('type') == 'step']
+        contents = [Vertical(*self._build_widgets(s.get('children', []), form), classes='vbox step-content',
+                             id=(s.get('props') or {}).get('ui_id'))
+                    for s in steps]
+        return Stepper([s.get('props') or {} for s in steps], contents, props, id=ident)
 
     def _read_stream(self, box: Static, url: str) -> None:
         """Read /_stream/<token> in a thread and show each piece as it arrives."""

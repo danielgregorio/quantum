@@ -28,7 +28,7 @@ services it calls, and the AI tags (and, later, a REST API of its own). As faith
 | AI | `q:llm`, `q:knowledge`, `q:agent`, `ui:stream` | AI |
 | A REST API of its own | `q:endpoint` (API-1 to API-6) and its OpenAPI document, `/api/openapi.json` (API-7) | Core |
 | The versions | `quantum run <app> --on web\|desktop\|tui\|terminal` (UI-18): the browser, a pywebview window, the TUI drawn by Godot (UI-20) and the terminal (Textual, with a terminal's limits) | one parameter |
-| The same `ui:*` everywhere | 53 of 67 tags (the Core set, `UI_PARITY.md`); the other 14 only in the browser | |
+| The same `ui:*` everywhere | 63 of 67 tags (the Core set, `UI_PARITY.md`); `calendar` only in the browser, `validator` and `theme` only in a standalone build | |
 
 ## Rules
 
@@ -165,6 +165,20 @@ What changed from the plan: "charts drawn natively" is the browser's SVG and CSS
 others; the TUI could draw them in pixels and does not yet. Left for 4b, the tags with state of their own:
 accordion, modal, tooltip, dropdown, toast, carousel, stepper, calendar — and `ui:validator` and `ui:theme`,
 which a page leaves out today in every renderer, the browser too (UI_PARITY.md says so).
+
+**4b done 2026-11-08: the tags with a state of their own.** Accordion, modal, tooltip, dropdown, toast (and
+its container), carousel (and its slides) and stepper (and its steps) keep their state in the renderer, the
+same way in each (SPEC.md UI-21): a fold open or closed, a modal closed, a toast gone after its duration, a tip
+while pointed at or focused, a dropdown's options open, which slide, which step. The browser's page gets
+the scripts only a standalone build had (a carousel's arrows, a stepper's steps and a toast's going did
+nothing in a page), an accordion and a dropdown as `<details>`, a stepper's Back and Next, and a modal that
+opens by an expression (`open="{...}"` was read as a boolean when parsed and never opened); `on-change`,
+`on-complete`, `bind` and a toast's `on-close`, which call a standalone build's script, are errors in a page.
+The console (Textual: a ModalScreen, Collapsibles, layers for toasts and tips), the TUI (layers drawn over
+the page, which take the clicks) and the Hive's screen (keyboard only: a modal takes the keys, a tooltip
+shows its tip while focused) draw them; a third script (`tests/apps/showcase/components/state.q`) runs in the
+four renderers. 63 of the 67 tags are drawn by every renderer. Left: `ui:calendar`, and `ui:validator` and
+`ui:theme`, which a page leaves out in every renderer.
 
 ## Phase 5 — An installer
 

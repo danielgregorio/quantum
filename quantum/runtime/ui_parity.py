@@ -16,8 +16,7 @@ RENDERERS = ('browser', 'console', 'screen', 'tui')
 TITLES = {'browser': 'Browser', 'console': 'Console', 'screen': "Hive's screen", 'tui': 'TUI'}
 
 # The tags the console, the screen and the TUI do not draw yet: they say "[ui:kind is not drawn ...]".
-NOT_DRAWN = frozenset({'accordion', 'modal', 'tooltip', 'dropdown', 'toast', 'toast-container', 'carousel',
-                       'stepper', 'calendar'})
+NOT_DRAWN = frozenset({'calendar'})
 
 # Tags that are a part of another and drawn by it.
 PART_OF = {'tab': 'tabpanel', 'column': 'table', 'option': 'select', 'item': 'list', 'card-header': 'card',
@@ -34,12 +33,6 @@ STANDALONE_ONLY = {
 
 # What the browser's page does with a tag whose standalone build runs a script a page does not have.
 BROWSER_IN_A_PAGE = {
-    'accordion': 'drawn, its sections always open',
-    'modal': 'drawn when `open`; nothing opens it',
-    'toast': 'drawn; it does not go away',
-    'toast-container': 'an empty box',
-    'carousel': 'the first slide; the arrows do nothing',
-    'stepper': 'the current step; the steps do not move',
     'calendar': 'the month; it does not move or pick',
 }
 
@@ -51,6 +44,7 @@ NOTES: Dict[str, Dict[str, str]] = {
     'skeleton': {'console': 'shaded lines', 'tui': 'shaded lines'},
     'image': {'console': '[its alt]', 'screen': '[its alt]'},
     'input': {'console': 'a file field says to attach from the browser (UI-14)'},
+    'tooltip': {'screen': 'its tip on the status line while it has the focus'},
 }
 
 

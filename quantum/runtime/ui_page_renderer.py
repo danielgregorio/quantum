@@ -21,6 +21,7 @@ What changes from the standalone adapter:
 
 import copy
 import html
+import json
 import re
 from typing import Any, Iterator, List, Optional
 
@@ -336,7 +337,12 @@ class UIPageRenderer(UIHtmlAdapter):
                    ui_nodes.UITreeNode: self._render_tree_page, ui_nodes.UILogNode: self._render_log_page,
                    ui_nodes.UIPaginationNode: self._render_pagination_page,
                    ui_nodes.UIMenuNode: self._render_menu_page, ui_nodes.UIDatePickerNode: self._render_date_page,
-                   ui_nodes.UIAvatarNode: self._render_avatar_page}
+                   ui_nodes.UIAvatarNode: self._render_avatar_page,
+                   ui_nodes.UIAccordionNode: self._render_accordion_page,
+                   ui_nodes.UIModalNode: self._render_modal_page,
+                   ui_nodes.UIDropdownNode: self._render_dropdown_page,
+                   ui_nodes.UIToastNode: self._render_toast_page,
+                   ui_nodes.UICarouselNode: self._render_moving_page, ui_nodes.UIStepperNode: self._render_moving_page}
         draw = special.get(type(node))
         if draw is not None:
             try:
@@ -489,13 +495,18 @@ class UIPageRenderer(UIHtmlAdapter):
 
     def _render_menu_page(self, node, b: HtmlBuilder):
         self._open(node, b, 'nav', 'q-menu')
+        self._options_html(node, b, 'q-menu-item')
+        b.close_tag('nav')
+
+    def _options_html(self, node, b: HtmlBuilder, css_class: str):
+        """A menu's or a dropdown's options: each with an action is a button posting it, its value as `value`."""
         for option in node.children or []:
             if not isinstance(option, ui_nodes.UIOptionNode):
                 self._render_node(option, b)
                 continue
             label = html.escape(ui_more._text(self._page, option.label) or ui_more._text(self._page, option.value))
             if not option.on_click:
-                b.raw(f'<span class="q-menu-item">{label}</span>')
+                b.raw(f'<span class="{css_class}">{label}</span>')
                 continue
             action = self._action(option.on_click, '<ui:option on-click')
             b.open_tag('form', {'method': 'post', 'class': 'q-action'})
@@ -504,9 +515,74 @@ class UIPageRenderer(UIHtmlAdapter):
             if value:
                 b.open_tag('input', {'type': 'hidden', 'name': 'value', 'value': html.escape(value, quote=True)},
                            self_closing=True)
-            b.raw(f'<button type="submit" class="q-menu-item q-link-action">{label}</button>')
+            b.raw(f'<button type="submit" class="{css_class} q-link-action">{label}</button>')
             b.close_tag('form')
-        b.close_tag('nav')
+
+    def _render_accordion_page(self, node, b: HtmlBuilder):
+        # UI-21: each section opens and closes by itself (<details>); the first is open
+        self._open(node, b, 'div', 'q-accordion')
+        first = True
+        for child in node.children or []:
+            if not isinstance(child, ui_nodes.UISectionNode):
+                self._render_node(child, b)
+                continue
+            title = html.escape(ui_more._text(self._page, child.title))
+            b.raw(f'<details class="q-accordion-item"{" open" if first else ""}>'
+                  f'<summary class="q-accordion-title">{title}</summary>')
+            b.open_tag('div', {'class': 'q-accordion-body'})
+            self._render_children(child.children, b)
+            b.close_tag('div')
+            b.raw('</details>')
+            first = False
+        b.close_tag('div')
+
+    def _render_dropdown_page(self, node, b: HtmlBuilder):
+        # UI-21: a button that opens its options (<details>), each option a button posting its action
+        label = html.escape(ui_more._text(self._page, node.label) or 'Menu')
+        self._open(node, b, 'details', 'q-dropdown')
+        b.raw(f'<summary class="q-dropdown-trigger">{label} <span class="q-dropdown-arrow">▾</span></summary>')
+        b.open_tag('div', {'class': 'q-dropdown-menu', 'role': 'menu'})
+        self._options_html(node, b, 'q-menu-item')
+        b.close_tag('div')
+        b.close_tag('details')
+
+    def _render_modal_page(self, node, b: HtmlBuilder):
+        # UI-21: open as the page is drawn (`open`, or an expression); its close button closes it
+        shown = copy.copy(node)
+        shown.open = ui_more.modal_open(self._page, node)
+        self._render_node_ui(shown, b)
+
+    def _render_toast_page(self, node, b: HtmlBuilder):
+        # UI-21: shown while `show` is true; it goes after `duration` (ui:toast's own script)
+        ui_more.page_only_attrs(node, 'ui:toast', ('on_close',))
+        if node.show and not ui_more.truthy(self._page._apply_databinding(node.show)):
+            return
+        shown = copy.copy(node)
+        shown.show = None
+        self._render_node_ui(shown, b)
+
+    def _render_moving_page(self, node, b: HtmlBuilder):
+        # UI-21: a carousel's slides and a stepper's steps move by themselves (their own script)
+        where = 'ui:carousel' if isinstance(node, ui_nodes.UICarouselNode) else 'ui:stepper'
+        ui_more.page_only_attrs(node, where, ('on_change', 'on_complete', 'bind'))
+        if isinstance(node, ui_nodes.UICarouselNode):
+            return self._render_node_ui(node, b)
+        # a stepper's Back and Next: this step done, the one after (its script keeps which is shown)
+        inner = HtmlBuilder()
+        self._render_node_ui(node, inner)
+        markup = inner.build()
+        found = re.search(r'<div[^>]*\bclass="q-stepper\b[^"]*"[^>]*\bid="([^"]+)"', markup) or \
+            re.search(r'<div[^>]*\bid="([^"]+)"[^>]*\bclass="q-stepper\b', markup)
+        b.raw(markup)
+        if found:
+            ident = json.dumps(html.unescape(found.group(1)))
+            move = ("var a=window.__quantumStepper&&__quantumStepper.get(" + ident + ");"
+                    "if(a){{{step}}}")
+            back = html.escape(move.format(step='a.prev();'), quote=True)
+            forward = html.escape(move.format(step='a.complete();a.next();'), quote=True)
+            b.raw(f'<div class="q-stepper-nav"><button type="button" class="q-btn q-stepper-back" onclick="{back}">'
+                  f'Back</button> <button type="button" class="q-btn q-btn-primary q-stepper-next" '
+                  f'onclick="{forward}">Next</button></div>')
 
     def _render_date_page(self, node, b: HtmlBuilder):
         from quantum.runtime.ui_view import date_field

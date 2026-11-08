@@ -135,8 +135,10 @@ class TuiSession:
     def resize(self, cols: int, rows: int) -> dict:
         return self.request({'op': 'resize', 'cols': cols, 'rows': rows})
 
-    def wait(self, text: str, timeout: float = 15) -> dict:
-        return self.request({'op': 'wait', 'text': text, 'timeout': timeout})
+    def wait(self, text: str, timeout: float = 15, gone: bool = False) -> dict:
+        """Answered once `text` is on the screen, or with `gone` once it is not (a toast after its duration,
+        UI-21); an error after `timeout` seconds."""
+        return self.request({'op': 'wait', 'text': text, 'timeout': timeout, 'gone': gone})
 
     def shot(self, file: str) -> str:
         """The window's picture, saved as PNG once the page has settled (a session opened with window=True)."""
@@ -154,8 +156,11 @@ class TuiSession:
                 if (kind is None or i['kind'] == kind) and (where is None or where(i))]
 
     def item(self, kind: str, label: Optional[str] = None, **match) -> dict:
+        """The first item of that kind (and label, and fields) on the screen, one that is not under what is
+        drawn over the page (a modal, a toast, UI-21) before one that is."""
         found = self.items(kind, where=lambda i: (label is None or i.get('label') == label)
                            and all(i.get(k) == v for k, v in match.items()))
+        found.sort(key=lambda i: bool(i.get('covered')))
         if not found:
             raise TuiError(f'no {kind} {label or match!r} on the screen: '
                            + ', '.join(f"{i['kind']} {i.get('label')!r}" for i in self.items()))

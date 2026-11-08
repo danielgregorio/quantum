@@ -1582,12 +1582,11 @@ window.__quantumCarousel = (function() {
 
             if (state.animation === 'slide') {
                 track.style.transform = 'translateX(-' + (index * 100) + '%)';
-            } else {
-                // Fade animation
-                slides.forEach(function(s, i) {
-                    s.classList.toggle('active', i === index);
-                });
             }
+            // the slide shown is the active one, whatever the animation: a page hides the others
+            slides.forEach(function(s, i) {
+                s.classList.toggle('active', i === index);
+            });
 
             // Update indicators
             indicators.forEach(function(ind, i) {
