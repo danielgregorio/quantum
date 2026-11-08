@@ -12,6 +12,7 @@ Each step is data; each renderer has a driver that knows how to do it.
 """
 
 import asyncio
+import datetime
 import json
 import logging
 import os
@@ -255,7 +256,9 @@ class Screen:
 class Pixel:
     """The screen is keyboard-only: a field is reached with Tab, typed into,
     a box marked with Space, an option chosen with the arrows, a button
-    pressed with Enter (a row's button through its table: a row, a column)."""
+    pressed with Enter (a row's button through its table: a row, a column),
+    a calendar's month moved with PgUp and PgDn and its day picked with the
+    arrows and Enter (UI-21)."""
     name = "pixel"
 
     def __init__(self, screen, client=None):
@@ -378,6 +381,22 @@ class Pixel:
         self._focus(lambda i: i["kind"] == "dropdown" and i.get("label") == label)
         self.s.request({"op": "act", "tap": ["enter"]})
         self.click(option)
+
+    def month(self, way):
+        # a calendar with the focus shows the next month on PgDn, the one before on PgUp
+        self._focus(lambda i: i["kind"] == "calendar")
+        self.s.request({"op": "act", "tap": ["pgdn" if way == "next" else "pgup"]})
+
+    def day(self, number):
+        # the arrows move its cursor a day or a week, Enter picks the day under it
+        calendar = self._focus(lambda i: i["kind"] == "calendar")
+        wanted = datetime.date.fromisoformat(f"{calendar['month']}-{int(number):02d}")
+        days = (wanted - datetime.date.fromisoformat(calendar["cursor"])).days
+        weeks, rest = divmod(abs(days), 7)
+        keys = ["down"] * weeks + ["right"] * rest if days > 0 else ["up"] * weeks + ["left"] * rest
+        self.s.request({"op": "act", "tap": keys + ["enter"]})
+        picked = [i for i in self.window()["items"] if i["kind"] == "calendar" and i["focus"]][0]
+        assert picked["value"] == wanted.isoformat(), f"the calendar did not pick {wanted}: {picked}"
 
 
 def test_the_script_on_the_pixel_screen(url, tmp_path):
