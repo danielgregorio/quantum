@@ -72,6 +72,7 @@ class ProjectChecker:
         self.notes: List[str] = []
         self.queries_checked = 0
         self.files = 0
+        self.endpoints: List[str] = []         # "POST /api/cards", each endpoint found (API-7)
 
     # -- the database ---------------------------------------------------------
 
@@ -100,6 +101,65 @@ class ProjectChecker:
         columns: Dict[str, List[str]] = {}
         self._queries(ast, rel, columns)
         self._fields(ast, rel, columns, {name: name for name in columns}, None)
+        self._endpoints(ast, rel, path)
+
+    def _endpoints(self, ast, rel: str, path: Path) -> None:
+        """API-1, API-2, ROUTE-2: what an endpoint's caller would meet that the parser lets through."""
+        from quantum.core.ast_nodes import EndpointNode, RespondNode
+        from quantum.runtime.openapi import _statements, routes
+        found = [s for s in getattr(ast, 'statements', None) or [] if isinstance(s, EndpointNode)]
+        if not found:
+            return
+        folder = self._components_folder()
+        route, segments = next(((r, seg) for r, f, seg in routes(folder) if f == path), (None, []))
+        if route is None:
+            self.problems.append(Problem(rel, getattr(found[0], 'source_line', None),
+                                         'q:endpoint in a file that is never served (ROUTE-3, ROUTE-4)'))
+            return
+        for endpoint in found:
+            line = getattr(endpoint, 'source_line', None)
+            where = f'<q:endpoint method="{endpoint.method}">'
+            self.endpoints.append(f'{endpoint.method} {route}')
+            for param in endpoint.params:
+                if param.name in segments:
+                    self.problems.append(Problem(
+                        rel, line, f'{where} <q:param name="{param.name}">: the route\'s segment '
+                                   f'[{param.name}] is set last and replaces it (ROUTE-2); rename one'))
+            for node in _statements(endpoint.body):
+                if isinstance(node, RespondNode) and node.json_expr is not None \
+                        and (node.status < 200 or node.status in (204, 304)):
+                    self.problems.append(Problem(
+                        rel, getattr(node, 'source_line', None) or line,
+                        f'<q:respond status="{node.status}" json=...>: a {node.status} answer has no body '
+                        f'(API-2); drop json= or answer 200'))
+
+    def _components_folder(self) -> Path:
+        return (self.project / (self.config.get('paths', {}) or {}).get('components', 'components')).resolve()
+
+    def _routes(self) -> None:
+        """ROUTE-1: two files at one path: only the first is ever served."""
+        import re as _re
+        from quantum.runtime.openapi import routes
+        folder = self._components_folder()
+        seen: Dict[str, Path] = {}
+        for route, file, _segments in routes(folder):
+            shape = _re.sub(r'\{\w+\}', '{}', route)
+            first = seen.get(shape)
+            if first is None:
+                seen[shape] = file
+                continue
+            # an exact file wins over a folder's index.q (ROUTE-1); two [name]s of one folder are ambiguous
+            if _rank(first) != _rank(file):
+                served, shadowed = (first, file) if _rank(first) < _rank(file) else (file, first)
+                message = f'never served: {served.relative_to(folder).as_posix()} answers {route} first (ROUTE-1)'
+            else:
+                served, shadowed = sorted([first, file])
+                message = (f'the same path as {served.relative_to(folder).as_posix()} ({route}): which one '
+                           f'answers is not defined (ROUTE-1); rename one')
+            seen[shape] = served
+            rel = shadowed.relative_to(self.project).as_posix() if shadowed.is_relative_to(self.project) \
+                else str(shadowed)
+            self.problems.append(Problem(rel, None, message))
 
     def check_test_file(self, path: Path) -> None:
         """A *.test.q next to the pages: it parses as a test suite (TEST-4), not as a page."""
@@ -202,15 +262,22 @@ class ProjectChecker:
         if not folder.exists():
             self.notes.append(f'no components folder at {folder}')
             return self.problems
+        folder = folder.resolve()
         for path in sorted(folder.rglob('*.q')):
             if path.name.endswith('.test.q'):
                 self.check_test_file(path)       # a test suite next to its page (TEST-1)
                 continue
             self.check_file(path)
+        self._routes()
         for conn in self._connections.values():
             if conn is not None:
                 conn.close()
         return self.problems
+
+
+def _rank(file: Path) -> int:
+    """ROUTE-1: at one path, a file is served before a folder's index.q."""
+    return 1 if file.name == 'index.q' else 0
 
 
 def _single_name(expr: Optional[str]) -> Optional[str]:
@@ -219,8 +286,25 @@ def _single_name(expr: Optional[str]) -> Optional[str]:
     return m.group(1) if m else None
 
 
-def run_check(config_path: str = 'quantum.config.yaml') -> int:
-    """`quantum check`: print each problem as file:line: message; exit 1 if there is any."""
+def write_openapi(checker: 'ProjectChecker', target: str) -> Optional[str]:
+    """API-7: the document /api/openapi.json serves, written to a file; None, or why it was not."""
+    import json
+    from quantum.core.parser import QuantumParser
+    from quantum.runtime import openapi
+    api = checker.config.get('api') or {}
+    folder = checker._components_folder()
+    parser = QuantumParser(use_cache=False)
+    doc = openapi.document(folder, lambda f: parser.parse_file(str(f)),
+                           title=str(api.get('title') or checker.project.name), version=str(api.get('version') or '1'))
+    if doc is None:
+        return 'no q:endpoint: there is no API to describe'
+    Path(target).write_text(json.dumps(doc, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    return None
+
+
+def run_check(config_path: str = 'quantum.config.yaml', openapi_file: Optional[str] = None) -> int:
+    """`quantum check`: print each problem as file:line: message; exit 1 if there is any.
+    With --openapi FILE, also write the API's OpenAPI document there (API-7)."""
     path = Path(config_path).resolve()
     checker = ProjectChecker(path.parent, path)
     problems = checker.run()
@@ -228,7 +312,12 @@ def run_check(config_path: str = 'quantum.config.yaml') -> int:
         print(f'[NOTE] {note}')
     for problem in problems:
         print(problem)
+    if openapi_file:
+        why = write_openapi(checker, openapi_file)
+        print(f'[NOTE] {openapi_file} not written: {why}' if why else f'OpenAPI document written to {openapi_file}.')
     summary = (f'{checker.files} file(s), {checker.queries_checked} query(ies) checked against the database')
+    if checker.endpoints:
+        summary += f', {len(checker.endpoints)} endpoint(s): {", ".join(checker.endpoints)}'
     if problems:
         print(f'\n{len(problems)} problem(s) — {summary}.')
         return 1

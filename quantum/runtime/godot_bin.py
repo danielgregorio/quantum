@@ -16,12 +16,13 @@ did not load (``script_errors``), since the process exits 0 either way.
 
 from __future__ import annotations
 
-import io
 import os
 import platform
 import shutil
 import stat
 import subprocess
+import time
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -31,6 +32,14 @@ GODOT_VERSION = '4.4.1'
 
 _RELEASE_URL = ('https://github.com/godotengine/godot/releases/download/'
                 '{version}-stable/Godot_v{version}-stable_{platform}.zip')
+# The same release from Godot's own download service (what godotengine.org's buttons link to), asked when
+# GitHub's release CDN keeps failing; its `platform` names, by the release's.
+_GODOT_DOWNLOADS_URL = ('https://downloads.godotengine.org/?version={version}&flavor=stable'
+                        '&slug={platform}.zip&platform={service}')
+_SERVICE_PLATFORMS = {'linux.x86_64': 'linux.64', 'linux.arm64': 'linux.arm64', 'win64.exe': 'windows.64'}
+# The client every download names. That service is behind Cloudflare, which turned away a request that
+# named Python's urllib as its client (403, from CI's runners on 2026-11-08) before asking where it went.
+USER_AGENT = 'quantum-framework (Godot download)'
 
 # The official release names, by (system, machine).
 _PLATFORMS = {
@@ -97,24 +106,95 @@ def find_godot() -> Optional[Path]:
     return _cached_binary()
 
 
+# A release asset is served through GitHub's CDN, which now and then answers 502/503/504, for a moment or
+# for a while (on 2026-11-08, for an hour, every try from CI's runners): each source is tried again after
+# these many seconds before the next source is asked.
+RETRY_WAITS = (5, 15, 30, 60)
+
+
+def _fetch_to(url: str, target: Path, progress=None, sleep=None, waits=None) -> None:
+    """The bytes at `url`, written to `target` a chunk at a time; a server's failure (5xx) or a dropped
+    connection is tried again (RETRY_WAITS). `target` is whole or absent: a part is written beside it first."""
+    part = target.with_name(target.name + '.part')
+    for wait in (*(RETRY_WAITS if waits is None else waits), None):
+        try:
+            request = urllib.request.Request(url, headers={'User-Agent': USER_AGENT})
+            with urllib.request.urlopen(request, timeout=300) as resp, open(part, 'wb') as out:
+                shutil.copyfileobj(resp, out, 1 << 20)
+            part.replace(target)
+            return
+        except urllib.error.HTTPError as exc:
+            part.unlink(missing_ok=True)
+            if exc.code < 500 or wait is None:
+                raise
+            why = f'HTTP {exc.code}'
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            part.unlink(missing_ok=True)
+            if wait is None:
+                raise
+            why = str(getattr(exc, 'reason', exc))
+        if progress:
+            progress(f'{why}; trying again in {wait}s')
+        (sleep or time.sleep)(wait)
+
+
+def fetch_release(urls: Sequence[str], target: Path, progress=None, check=None) -> Path:
+    """The first of `urls` that answers, in `target` (each tried again on a 5xx before the next is asked).
+    `check(target)` raises when what came is not the file (an error page): the next source is asked."""
+    last: Exception = GodotNotFound('no source')
+    for url in urls:
+        if progress:
+            progress(f'downloading {url}')
+        try:
+            _fetch_to(url, target, progress)
+            if check:
+                check(target)
+            return target
+        except (urllib.error.URLError, TimeoutError, ConnectionError, zipfile.BadZipFile, GodotNotFound) as exc:
+            last = exc
+            target.unlink(missing_ok=True)
+            if progress:
+                progress(f'{url} failed: {exc}')
+    raise last
+
+
+def release_urls(plat: str) -> List[str]:
+    """Where the pinned release is fetched from, in order: GitHub, then Godot's own download service."""
+    urls = [_RELEASE_URL.format(version=GODOT_VERSION, platform=plat)]
+    if plat in _SERVICE_PLATFORMS:
+        urls.append(_GODOT_DOWNLOADS_URL.format(version=GODOT_VERSION, platform=plat,
+                                                service=_SERVICE_PLATFORMS[plat]))
+    return urls
+
+
+def templates_urls() -> List[str]:
+    """Where the export templates of the pinned release are fetched from (about 1.2 GB), in order."""
+    return [f'https://github.com/godotengine/godot/releases/download/{GODOT_VERSION}-stable/'
+            f'Godot_v{GODOT_VERSION}-stable_export_templates.tpz',
+            f'https://downloads.godotengine.org/?version={GODOT_VERSION}&flavor=stable'
+            f'&slug=export_templates.tpz&platform=templates']
+
+
 def download_godot(progress=None) -> Path:
     """Download the pinned release into the cache and return the binary."""
     plat = release_platform()
     if plat.startswith('macos'):
         raise GodotNotFound('the macOS release is an .app bundle; set QUANTUM_GODOT to its '
                             'Contents/MacOS/Godot')
-    url = _RELEASE_URL.format(version=GODOT_VERSION, platform=plat)
     d = cache_dir()
     d.mkdir(parents=True, exist_ok=True)
-    if progress:
-        progress(f'downloading {url}')
-    with urllib.request.urlopen(url, timeout=300) as resp:
-        data = resp.read()
-    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+    archive = d / f'Godot_v{GODOT_VERSION}-stable_{plat}.zip'
+
+    def has_binary(path: Path) -> None:
+        with zipfile.ZipFile(path) as zf:
+            if not any(n.startswith('Godot_v') for n in zf.namelist()):
+                raise GodotNotFound(f'{path.name} holds no Godot binary')
+
+    fetch_release(release_urls(plat), archive, progress, check=has_binary)
+    with zipfile.ZipFile(archive) as zf:
         names = [n for n in zf.namelist() if n.startswith('Godot_v')]
-        if not names:
-            raise GodotNotFound(f'{url} holds no Godot binary')
         zf.extract(names[0], d)
+    archive.unlink(missing_ok=True)
     binary = d / names[0]
     binary.chmod(binary.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     if progress:

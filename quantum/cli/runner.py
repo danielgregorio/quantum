@@ -411,6 +411,8 @@ Examples:
     # Check: pages parse, queries compile, fields exist (M8, DEV-3)
     check_parser = subparsers.add_parser('check', help='Check pages, SQL and query fields against the database')
     check_parser.add_argument('--config', default='quantum.config.yaml', help='Config file')
+    check_parser.add_argument('--openapi', metavar='FILE',
+                              help="Also write the API's OpenAPI document (what /api/openapi.json serves) to FILE")
 
     # Test command (TEST-1)
     test_parser = subparsers.add_parser('test', help="Run the app's *.test.q tests")
@@ -536,7 +538,7 @@ def main():
 
     elif args.command == 'check':
         from quantum.cli.check import run_check
-        sys.exit(run_check(args.config))
+        sys.exit(run_check(args.config, getattr(args, 'openapi', None)))
 
     elif args.command == 'test':
         from quantum.runtime.app_testing import run_tests

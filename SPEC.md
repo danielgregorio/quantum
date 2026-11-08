@@ -336,6 +336,24 @@ proxy, `server.proxies` makes the address the caller's (CFG-4).
 `{"error": "server"}`, never a page; the message is in the answer only with
 `server.debug`, and always in the log, with its traceback (DEV-1).
 
+**API-7** — `/api/openapi.json` describes the application's endpoints as an
+OpenAPI 3.1 document, read from the components as they are: each component with
+`q:endpoint` is a path at its route (a `[name]` segment as `{name}`, a path
+parameter), each endpoint an operation, its `description=` the summary. The
+`q:param`s are there with their type and rules (`minlength`/`maxlength`,
+`min`/`max` and `range`, `pattern`, `enum`, the default; a `date`, `email` or
+`url` a string of that format): query parameters for `GET` and `DELETE`, a JSON
+(or form) body otherwise. The answers are the statuses of its `q:respond`s — an
+object with its keys when `json=` writes a dictionary (EXPR-17) —, `204` when it
+may end without one, and the refusals it may give (`400` and `415` for a body,
+`401` and `403` for who may call it, `413`, `422`, `429` with `Retry-After`,
+`500`), each with the error's shape. Who may call it is the security of the
+session's cookie, with the roles of `require_role`; `origins=`, `limit=` and
+`maxsize=` are `x-origins`, `x-limit` and `x-maxsize`. `api.title` and
+`api.version` are its title and version (the project's folder and `1` by
+default). Any site may read it. With no endpoint, or with `api.openapi: false`,
+it is `404`. `quantum check --openapi FILE` writes the same document (DEV-3).
+
 ## 4. Authentication
 
 **AUTH-1** — A component with `require_auth="true"` is only served to a session
@@ -836,7 +854,8 @@ warned about in the log when the configuration is loaded, with the key's name.
 
 **CFG-3** — The keys of `server` (`port`, `host`, `debug`, `reload`, `proxies`), `paths`
 (`components`, `static`, `logs`, `uploads`, `migrations`), `logging` (`level`,
-`format`, `console`, `file`, `filename`) and `mail` (MAIL-1) have effect:
+`format`, `console`, `file`, `filename`), `mail` (MAIL-1) and `api` (`title`,
+`version`, `openapi`: API-7) have effect:
 `logging.format` is the format of log lines, and `paths.migrations` is the
 folder `quantum migrate` uses. A key outside these lists is warned about when
 the configuration is loaded, as in CFG-2.
@@ -946,14 +965,14 @@ unchecked one does not go, as in the browser — use `<q:param default="off">`
 in the action.
 
 **UI-7** — The Core set of `ui:*` is drawn with the same meaning by every
-renderer (browser, console, desktop, the Hive's screen): `window`, `hbox`, `vbox`, `grid`,
+renderer (browser, console, desktop, the Hive's screen, the TUI): `window`, `hbox`, `vbox`, `grid`,
 `panel`, `section`, `scrollbox`, `spacer`, `rule`, `header`, `footer`, `card`
 (`card-header`, `card-body`, `card-footer`), `tabpanel`/`tab`, `text`, `badge`,
 `alert`, `link`, `image`, `progress`, `table`/`column`, `list`/`item`, `form`,
 `formitem`, `input`, `checkbox`, `switch`, `radio`, `select`/`option`,
 `button`, `pager` (UI-11), `history` (DB-11) and `stream` (IA-7). The same
 script (look, fill in, check, choose, click) passes the same in the browser,
-in the console and on the screen. `ui:section` is a titled group, always open; the title of a
+in the console, on the screen and in the TUI. `ui:section` is a titled group, always open; the title of a
 `ui:card` shows even next to a `ui:card-header`; a `ui:alert` is as tall as what it says; a tab
 opens on a click in the browser as on the arrows in the console and on the screen. The other `ui:*` tags work
 only in the browser (Experimental), and the console shows that it does not draw
@@ -1077,10 +1096,10 @@ that lists the tabs.
 application in that folder (its `quantum.config.yaml`, its paths relative to
 it) in one of its versions: `web` is `quantum start` (`--port` overrides the
 port), `desktop` is `quantum desktop` (UI-4) and `terminal` is `quantum console`
-(UI-3), on the page `--page` names (`/` by default). The versions are one
-application served by one runtime; only the renderer changes. `tui` exits with
-an error that says it is not built yet; a folder that is not an application is
-an error that says so.
+(UI-3), on the page `--page` names (`/` by default), and `tui` is the TUI
+drawn by Godot (UI-20). The versions are one application served by one
+runtime; only the renderer changes. A folder that is not an application is an
+error that says so.
 
 **UI-19** — Motion has three kinds — `fade`, `slide`, `expand` — and two
 speeds — `fast` (150 ms) and `normal` (250 ms, the default) — eased out, the
@@ -1098,6 +1117,30 @@ same steps give the same list and leave every element in place, fully shown.
 `ui.motion: off` in `quantum.config.yaml` turns every motion off; the browser
 also stops them for the system's reduced-motion setting. `ui:animate`'s other
 types are the browser's; the other renderers draw the content without them.
+
+**UI-20** — `quantum run <app> --on tui` opens the application's pages in the
+TUI: a text screen in a window of its own, drawn by Godot (the pinned version,
+fetched once into the user's cache when it is missing). It is a renderer as
+the console is (UI-3): it serves the application on a local port, asks each
+page for its view tree and sends what the user did as the same posts a browser
+sends, with the cookies the server set, following its redirects. It lays the
+tree out in cells of one font — boxes with borders, rows of fields, tables in
+columns; an `hbox` stacks and a `grid` takes its columns by the breakpoints in
+columns (UI-2: `sm` 80, `md` 96, `lg` 128); a wide character (CJK, most emoji)
+takes two cells — and draws it with the browser's design tokens for its
+colours. It draws the Core set (UI-7), and an element outside it as `[ui:kind
+is not drawn in the TUI]`. Where a terminal stops, it does not: the mouse (a
+click acts, a hover marks, the wheel scrolls), scrolling that glides, the
+motions of UI-19, the page's images, and a file field that opens a dialog of
+its own and sends the file in the form's `multipart/form-data` (UI-14). The
+keyboard is the Hive's screen's (UI-15) and Ctrl+Q closes it. Search as you
+type (UI-12) asks the page again after the pause and keeps the field's focus;
+an editable cell (UI-13) is sent with Enter, or when a box or an option in it
+changes. With `--play`, headless, it is driven by JSON requests on its stdin,
+each answered with what the screen shows (`quantum.runtime.ui_tui.TuiSession`:
+`observe`, `click` at a cell, `hover`, `wheel`, `key`, `type`, `attach` a file,
+`visit`, `resize`, `wait` for a text); its layout is checked against reference
+frames of cells and no element over another.
 
 ## 11. Development
 
@@ -1130,7 +1173,14 @@ query, through `ui:table`/`ui:list` with `source`, or `<ui:column key>` — that
 the query does not return. Nothing runs: the SQL is compiled (`EXPLAIN`), the
 columns of a SELECT come from it with `LIMIT 0`, and the database is opened
 read-only. A datasource that does not open (missing file, unsupported driver)
-is a note, not a silent OK. The command exits with 1 if there is a problem.
+is a note, not a silent OK. Of each `q:endpoint` it points out a `q:param` with
+the name of a route segment, which the segment replaces (ROUTE-2), a
+`q:respond` with `json=` and a status that has no body (`1xx`, `204`, `304`),
+and an endpoint in a file that is never served (ROUTE-3); and two files at one
+path (`shop.q` and `shop/index.q`, or `item/[id].q` and `item/[slug].q`), of
+which only one ever answers (ROUTE-1). Its summary lists the endpoints it
+found, and `--openapi FILE` writes their OpenAPI document there (API-7). The
+command exits with 1 if there is a problem.
 
 **DEV-4** — `quantum start --hot-reload` watches the `paths.components` and
 `paths.static` folders, and every page it serves opens a WebSocket to it

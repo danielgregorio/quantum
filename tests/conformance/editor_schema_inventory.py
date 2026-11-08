@@ -23,6 +23,9 @@ CORPUS = [
     # structure
     '<q:param name="p" type="integer" required="true" default="1"/><q:return value="{p}"/>',
     '<q:script>console.log(1)</q:script>',
+    # a component's API (API-1 to API-7)
+    '<q:endpoint method="POST" require_role="member" origins="https://a.example" limit="10/minute" maxsize="1kb" '
+    'description="d"><q:param name="t" required="true"/><q:respond status="201" json="{ {\'t\': t} }"/></q:endpoint>',
     # control flow
     '<q:set name="a" value="1" type="number"/><q:set name="a" operation="increment" step="2"/>'
     '<q:set name="l" operation="append" value="x"/><q:set name="l" operation="removeAt" index="0"/>'

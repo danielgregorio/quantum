@@ -9,6 +9,9 @@
 #
 # Sign in as ana@example.com (admin), bruno@example.com (member) or carla@example.com
 # (viewer), password kanban-demo. The AI asks the model server of llm: below.
+#
+# Its API (components/api/, q:endpoint) is what a script or another program uses: POST /api/session
+# signs in, GET /api/boards and GET/POST /api/boards/{id}/cards; /api/openapi.json describes it.
 
 server:
   port: 8090
@@ -32,6 +35,9 @@ llm:
 
 security:
   login_url: /login
+
+api:
+  title: Kanban            # /api/openapi.json's title (API-7)
 
 logging:
   level: INFO

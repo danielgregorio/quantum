@@ -1,0 +1,24 @@
+ Showcase header
+ ┌─ Panel ────────────────────────────────────────────────┐  Name           │           Age │ Actions
+ │ Bold text                                              │  ───────────────┼───────────────┼─────────────────────────
+ │  Badge                                                 │  Ana            │            30 │ [ Remove Ana ]
+ │ Go to about                                            │  Bia            │            25 │ [ Remove Bia ]
+ │ [Logo]                                                 │  Name
+ │ ██████████████░░░░░░░░░░░░░░░░░░░░ 40%                 │   Ana
+ └────────────────────────────────────────────────────────┘  [x] Active
+ Section                                                     [OFF] Get notifications
+ Section text                                                (•) free  ( ) pro
+ ──────────────────────────────────────────────────────────   green ▾
+                                                             [ Save ]
+ Cell A                        Cell B
+ ┌─ Card ─────────────────────────────────────────────────┐
+ │ Card top                                               │
+ │ Card body                                              │
+ │ Card footer                                            │
+ └────────────────────────────────────────────────────────┘
+  First tab   Second tab
+ ──────────────────────────────────────────────────────────
+ Content of the first
+ • Fruit: piña
+ • Fruit: grape
+ Showcase footer

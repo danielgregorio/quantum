@@ -11,6 +11,7 @@ once, on the server, and each renderer only **draws** the result.
 | `quantum console` | the same page in the terminal (Textual) |
 | `quantum desktop` | the same page in a native window (pywebview) |
 | `quantum pixel` | the same page on the Hive's screen, the console of a Quantum OS machine (keyboard only) |
+| `quantum run <app> --on tui` | the same page on a text screen drawn by Godot: a terminal's look, with the mouse, colours and motion |
 
 Nothing of the page's logic is translated to another language, so a rule you
 write once — a validation, a login, a query — behaves the same on every screen.
@@ -63,13 +64,14 @@ The whole application, in the version you ask for — give it the application's 
 ```bash
 quantum run projects/kanban --on web        # the browser (quantum start)
 quantum run projects/kanban --on desktop    # a window of its own (quantum desktop)
+quantum run projects/kanban --on tui        # a text screen drawn by Godot (below)
 quantum run projects/kanban --on terminal   # the terminal (quantum console)
 ```
 
-`--page /board/1` opens on another page, `--port` sets the web's port. `--on tui`, a text screen
-drawn by Godot, is on its way (`PLAN_PLATFORMS.md`) and says so until then. The repository's
-Kanban runs one script — sign in, cards moved, the AI's subtasks, issues imported, a viewer who
-changes nothing — in every version, in CI (`tests/apps/test_kanban_everywhere.py`).
+`--page /board/1` opens on another page, `--port` sets the web's port. The repository's
+Kanban runs one script — sign in, cards moved, a card another program adds through its API, the
+AI's subtasks, issues imported, a viewer who changes nothing — in every version, in CI
+(`tests/apps/test_kanban_everywhere.py`).
 
 ## Events are actions
 
@@ -448,9 +450,9 @@ browser), so a test can check that every version moved the same way. `ui:animate
 ## The core set
 
 These elements are drawn with the same meaning by the browser, the console,
-the desktop window and the Hive's screen, and one test script — see, fill,
-check, choose, click — runs unchanged in a real browser, in the console and on
-the screen:
+the desktop window, the Hive's screen and the TUI, and one test script — see,
+fill, check, choose, click — runs unchanged in a real browser, in the console,
+on the screen and in the TUI:
 
 | Kind | Elements |
 |---|---|
@@ -479,6 +481,28 @@ The flash shows where the page draws it, once: the console and the Hive's
 screen give it a line of their own only on a page that does not show it.
 `variant="{flashType == 'error' and 'danger' or 'success'}"` on its `ui:alert`
 draws a refused action's message in red.
+
+## In the TUI
+
+`quantum run <app> --on tui` opens the pages on a text screen in a window of its own, drawn by
+Godot: a grid of characters in one font, boxes with borders, a terminal's look — without a
+terminal's limits. It uses the browser's colours (the same design tokens), takes the mouse (a click
+acts, a hover marks, the wheel scrolls, and the scrolling glides), runs the motions of the page
+(`transition=`, `enter=`, a tab that opens), draws the page's images and wide characters (CJK and
+emoji take two cells), and a file field opens a dialog of its own and sends the file with its form.
+The first time, the pinned Godot is fetched into your cache.
+
+It is a renderer like the browser: the application's server runs on a local port, the TUI asks it
+for each page's view tree and sends the same posts a browser sends, with the cookies the server set
+— login, validation, flash and redirects are the web's. The keys are the Hive's screen's (below):
+Tab between elements, Enter acts, Space marks, the arrows inside an element, F5 asks the page
+again, and Ctrl+Q closes the window; the last line says the keys that apply.
+
+An element outside the core set shows `[ui:chart is not drawn in the TUI]`. Headless, with
+`--play`, it is driven one JSON request at a time — click at a cell, type, wait for a text — and
+answers with what the screen shows: the parity script and the Kanban's script run in it in CI
+(`quantum/runtime/ui_tui.py`, `TuiSession`), and its layout is checked against reference frames of
+cells (`tests/tui/frames/`).
 
 ## On the Hive's screen
 

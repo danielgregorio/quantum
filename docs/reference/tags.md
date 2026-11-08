@@ -44,7 +44,7 @@ Specified by: [AUTH-1](./spec#AUTH-1) · [AUTH-2](./spec#AUTH-2) · [AUTH-4](./s
 
 A parameter of a component, function, action, query or tool, converted to `type` and checked against its rules ([FN-1](./spec#FN-1), [ACT-2](./spec#ACT-2), [DB-1](./spec#DB-1))
 
-Inside: [`q:function`](#q-function), [`q:query`](#q-query), [`q:invoke`](#q-invoke), [`q:action`](#q-action), [`q:tool`](#q-tool)
+Inside: [`q:function`](#q-function), [`q:query`](#q-query), [`q:invoke`](#q-invoke), [`q:action`](#q-action), [`q:endpoint`](#q-endpoint), [`q:tool`](#q-tool)
 
 | Attribute | Type | Required | Default | Values | Description |
 |---|---|---|---|---|---|
@@ -73,7 +73,7 @@ Inside: [`q:function`](#q-function), [`q:query`](#q-query), [`q:invoke`](#q-invo
 <q:param name="age" type="integer" required="true" min="18" />
 ```
 
-Specified by: [ACT-2](./spec#ACT-2) · [ACT-6](./spec#ACT-6) · [ACT-11](./spec#ACT-11) · [API-1](./spec#API-1) · [DB-1](./spec#DB-1) · [ERR-1](./spec#ERR-1) · [FILE-1](./spec#FILE-1) · [FN-1](./spec#FN-1) · [FN-2](./spec#FN-2) · [IA-4](./spec#IA-4) · [IA-10](./spec#IA-10) · [INV-1](./spec#INV-1) · [PARSE-3](./spec#PARSE-3) · [PARSE-5](./spec#PARSE-5) · [SVC-3](./spec#SVC-3) · [TEST-3](./spec#TEST-3) · [UI-6](./spec#UI-6) · [UI-9](./spec#UI-9) · [UI-10](./spec#UI-10) · [UI-14](./spec#UI-14)
+Specified by: [ACT-2](./spec#ACT-2) · [ACT-6](./spec#ACT-6) · [ACT-11](./spec#ACT-11) · [API-1](./spec#API-1) · [API-7](./spec#API-7) · [DB-1](./spec#DB-1) · [DEV-3](./spec#DEV-3) · [ERR-1](./spec#ERR-1) · [FILE-1](./spec#FILE-1) · [FN-1](./spec#FN-1) · [FN-2](./spec#FN-2) · [IA-4](./spec#IA-4) · [IA-10](./spec#IA-10) · [INV-1](./spec#INV-1) · [PARSE-3](./spec#PARSE-3) · [PARSE-5](./spec#PARSE-5) · [SVC-3](./spec#SVC-3) · [TEST-3](./spec#TEST-3) · [UI-6](./spec#UI-6) · [UI-9](./spec#UI-9) · [UI-10](./spec#UI-10) · [UI-14](./spec#UI-14)
 
 <a id="q-return"></a>
 
@@ -98,7 +98,7 @@ Specified by: [LOOP-1](./spec#LOOP-1) · [LOOP-2](./spec#LOOP-2) · [LOOP-3](./s
 
 Stores a variable, converted to `type`, checked and changed by `operation` ([ERR-1](./spec#ERR-1), [SET-1](./spec#SET-1), [SET-3](./spec#SET-3), [SET-4](./spec#SET-4))
 
-Inside: [`q:action`](#q-action)
+Inside: [`q:action`](#q-action), [`q:endpoint`](#q-endpoint)
 
 | Attribute | Type | Required | Default | Values | Description |
 |---|---|---|---|---|---|
@@ -135,7 +135,7 @@ Specified by: [ACT-8](./spec#ACT-8) · [ERR-1](./spec#ERR-1) · [EXEC-1](./spec#
 
 Runs its body when the condition is true ([IF-1](./spec#IF-1)..[IF-4](./spec#IF-4))
 
-Inside: [`q:action`](#q-action)
+Inside: [`q:action`](#q-action), [`q:endpoint`](#q-endpoint)
 
 | Attribute | Type | Required | Default | Values | Description |
 |---|---|---|---|---|---|
@@ -151,7 +151,7 @@ Specified by: [API-2](./spec#API-2) · [AUTH-6](./spec#AUTH-6) · [DATA-3](./spe
 
 Repeats its body ([LOOP-1](./spec#LOOP-1)..[LOOP-5](./spec#LOOP-5))
 
-Inside: [`q:action`](#q-action)
+Inside: [`q:action`](#q-action), [`q:endpoint`](#q-endpoint)
 
 | Attribute | Type | Required | Default | Values | Description |
 |---|---|---|---|---|---|
@@ -192,7 +192,7 @@ Specified by: [ACT-7](./spec#ACT-7) · [ACT-10](./spec#ACT-10) · [EXEC-1](./spe
 
 Runs SQL on a declared datasource, binding `:name` to q:param ([DB-1](./spec#DB-1)..[DB-5](./spec#DB-5), [DB-9](./spec#DB-9), [UI-13](./spec#UI-13))
 
-Inside: [`q:transaction`](#q-transaction), [`q:action`](#q-action)
+Inside: [`q:transaction`](#q-transaction), [`q:action`](#q-action), [`q:endpoint`](#q-endpoint)
 
 | Attribute | Type | Required | Default | Values | Description |
 |---|---|---|---|---|---|
@@ -232,6 +232,8 @@ Specified by: [DB-4](./spec#DB-4)
 ## `q:invoke`
 
 Calls a URL, a declared service or a function ([INV-1](./spec#INV-1), [INV-2](./spec#INV-2), [SVC-3](./spec#SVC-3))
+
+Inside: [`q:endpoint`](#q-endpoint)
 
 | Attribute | Type | Required | Default | Values | Description |
 |---|---|---|---|---|---|
@@ -306,6 +308,47 @@ Contains: `q:param`, `q:set`, `q:query`, `q:if`, `q:loop`, `q:file`, `q:mail`, `
 
 Specified by: [ACT-1](./spec#ACT-1) · [ACT-3](./spec#ACT-3) · [ACT-4](./spec#ACT-4) · [ACT-5](./spec#ACT-5) · [ACT-6](./spec#ACT-6) · [ACT-7](./spec#ACT-7) · [ACT-8](./spec#ACT-8) · [ACT-9](./spec#ACT-9) · [ACT-10](./spec#ACT-10) · [ACT-11](./spec#ACT-11) · [API-1](./spec#API-1) · [AUTH-6](./spec#AUTH-6) · [AUTH-7](./spec#AUTH-7) · [AUTH-8](./spec#AUTH-8) · [DB-11](./spec#DB-11) · [DEV-1](./spec#DEV-1) · [EXEC-2](./spec#EXEC-2) · [EXEC-3](./spec#EXEC-3) · [FN-1](./spec#FN-1) · [IF-1](./spec#IF-1) · [PARSE-2](./spec#PARSE-2) · [ROUTE-2](./spec#ROUTE-2) · [TEST-3](./spec#TEST-3) · [UI-1](./spec#UI-1) · [UI-10](./spec#UI-10)
 
+<a id="q-endpoint"></a>
+
+## `q:endpoint`
+
+A component's REST API: what one HTTP method answers, in JSON ([API-1](./spec#API-1)..[API-7](./spec#API-7))
+
+| Attribute | Type | Required | Default | Values | Description |
+|---|---|---|---|---|---|
+| `method` | enum | yes |  | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | HTTP method |
+| `require_role` | string |  |  |  | Only these roles (comma-separated) may call it; others get 403 ([API-3](./spec#API-3)) |
+| `origins` | string |  |  |  | Sites whose pages may call it from a browser, comma-separated, or * ([API-4](./spec#API-4)) |
+| `limit` | string |  |  |  | Calls from one address: `10/minute` (second, minute, hour, day); one more is 429 ([API-5](./spec#API-5)) |
+| `maxsize` | string |  |  |  | Largest body: `64kb`, `2mb`; a larger one is 413 ([API-5](./spec#API-5)) |
+| `description` | string |  |  |  | What it does: the operation's summary in /api/openapi.json ([API-7](./spec#API-7)) |
+
+Contains: `q:param`, `q:set`, `q:query`, `q:if`, `q:loop`, `q:invoke`, `q:file`, `q:mail`, `q:respond`
+
+```xml
+<q:endpoint method="POST" require_role="member" limit="10/minute">
+  <q:param name="title" required="true" maxlength="120" />
+  <q:respond status="201" json="{ {'title': title} }" />
+</q:endpoint>
+```
+
+Specified by: [API-1](./spec#API-1) · [API-3](./spec#API-3) · [API-4](./spec#API-4) · [API-5](./spec#API-5) · [API-7](./spec#API-7) · [DEV-3](./spec#DEV-3)
+
+<a id="q-respond"></a>
+
+## `q:respond`
+
+What a q:endpoint answers; it ends the endpoint ([API-2](./spec#API-2))
+
+Inside: [`q:endpoint`](#q-endpoint)
+
+| Attribute | Type | Required | Default | Values | Description |
+|---|---|---|---|---|---|
+| `json` | expression |  |  |  | The answer, as JSON: one expression (a dictionary may be written in place, [EXPR-17](./spec#EXPR-17)) |
+| `status` | integer |  | `200` |  | HTTP status |
+
+Specified by: [API-2](./spec#API-2) · [API-7](./spec#API-7) · [DEV-3](./spec#DEV-3) · [EXPR-17](./spec#EXPR-17)
+
 <a id="q-redirect"></a>
 
 ## `q:redirect`
@@ -344,7 +387,7 @@ Specified by: [ACT-3](./spec#ACT-3) · [API-2](./spec#API-2)
 
 Saves an upload, sends a stored file or deletes one ([FILE-1](./spec#FILE-1), [FILE-2](./spec#FILE-2))
 
-Inside: [`q:action`](#q-action)
+Inside: [`q:action`](#q-action), [`q:endpoint`](#q-endpoint)
 
 | Attribute | Type | Required | Default | Values | Description |
 |---|---|---|---|---|---|
@@ -363,7 +406,7 @@ Specified by: [FILE-1](./spec#FILE-1) · [FILE-2](./spec#FILE-2)
 
 Sends a message through `mail:` in quantum.config.yaml ([MAIL-1](./spec#MAIL-1), [MAIL-2](./spec#MAIL-2))
 
-Inside: [`q:action`](#q-action)
+Inside: [`q:action`](#q-action), [`q:endpoint`](#q-endpoint)
 
 | Attribute | Type | Required | Default | Values | Description |
 |---|---|---|---|---|---|

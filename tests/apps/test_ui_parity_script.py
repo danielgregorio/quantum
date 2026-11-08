@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.apps.ui_drivers import Browser, run_console_script, run_script
+from tests.apps.ui_drivers import Browser, Tui, run_console_script, run_script
 
 SHOWCASE = Path(__file__).resolve().parent / "showcase"
 OS_DIR = Path(__file__).resolve().parents[2] / "os"
@@ -118,6 +118,21 @@ def test_the_script_in_the_console(url):
             await run_console_script(app, pilot, SCRIPT)
 
     asyncio.run(main())
+
+
+# -- the TUI drawn by Godot ------------------------------------------------------
+
+def test_the_script_in_the_tui(url):
+    # UI-7, UI-20: the same script, the TUI headless through its play protocol
+    from quantum.runtime.godot_bin import GodotNotFound, ensure_godot
+    from quantum.runtime.ui_tui import TuiSession
+    try:
+        ensure_godot()
+    except GodotNotFound as exc:
+        pytest.skip(str(exc))
+    with TuiSession(url, cols=160, rows=60) as tui:
+        run_script(Tui(tui), SCRIPT)
+        assert tui.observe()["unsupported"] == []          # the whole Core set is drawn
 
 
 # -- the Hive's screen (quantum pixel) -------------------------------------------

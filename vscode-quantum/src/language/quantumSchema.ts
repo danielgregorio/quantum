@@ -368,6 +368,32 @@ export const quantumTags: TagSchema[] = [
         ]
     },
     {
+        name: 'endpoint',
+        namespace: 'q',
+        description: 'A component\'s REST API: what one HTTP method answers, in JSON (API-1..API-7)',
+        category: 'Core',
+        allowedChildren: ['q:param', 'q:set', 'q:query', 'q:if', 'q:loop', 'q:invoke', 'q:file', 'q:mail', 'q:respond'],
+        attributes: [
+            { name: 'method', description: 'HTTP method', required: true, type: 'enum', values: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] },
+            { name: 'require_role', description: 'Only these roles (comma-separated) may call it; others get 403 (API-3)', type: 'string' },
+            { name: 'origins', description: 'Sites whose pages may call it from a browser, comma-separated, or * (API-4)', type: 'string' },
+            { name: 'limit', description: 'Calls from one address: `10/minute` (second, minute, hour, day); one more is 429 (API-5)', type: 'string' },
+            { name: 'maxsize', description: 'Largest body: `64kb`, `2mb`; a larger one is 413 (API-5)', type: 'string' },
+            { name: 'description', description: 'What it does: the operation\'s summary in /api/openapi.json (API-7)', type: 'string' },
+        ]
+    },
+    {
+        name: 'respond',
+        namespace: 'q',
+        description: 'What a q:endpoint answers; it ends the endpoint (API-2)',
+        category: 'Core',
+        selfClosing: true,
+        attributes: [
+            { name: 'json', description: 'The answer, as JSON: one expression (a dictionary may be written in place, EXPR-17)', type: 'expression' },
+            { name: 'status', description: 'HTTP status', type: 'number', default: '200' },
+        ]
+    },
+    {
         name: 'redirect',
         namespace: 'q',
         description: 'Ends the action or page with a redirect (ACT-3, ACT-7)',
