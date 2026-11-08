@@ -22,6 +22,8 @@ import platform
 import shutil
 import stat
 import subprocess
+import time
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -97,6 +99,31 @@ def find_godot() -> Optional[Path]:
     return _cached_binary()
 
 
+# A release asset is served through GitHub's CDN, which now and then answers 502/503/504 for a while:
+# the download is tried again after these many seconds before it gives up.
+RETRY_WAITS = (5, 15, 45)
+
+
+def _fetch(url: str, progress=None, sleep=time.sleep) -> bytes:
+    """The bytes at `url`; a server's failure (5xx) or a dropped connection is tried again (RETRY_WAITS)."""
+    for attempt, wait in enumerate((*RETRY_WAITS, None)):
+        try:
+            with urllib.request.urlopen(url, timeout=300) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            if exc.code < 500 or wait is None:
+                raise
+            why = f'HTTP {exc.code}'
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            if wait is None:
+                raise
+            why = str(getattr(exc, 'reason', exc))
+        if progress:
+            progress(f'{why}; trying again in {wait}s')
+        sleep(wait)
+    raise AssertionError('unreachable')
+
+
 def download_godot(progress=None) -> Path:
     """Download the pinned release into the cache and return the binary."""
     plat = release_platform()
@@ -108,8 +135,7 @@ def download_godot(progress=None) -> Path:
     d.mkdir(parents=True, exist_ok=True)
     if progress:
         progress(f'downloading {url}')
-    with urllib.request.urlopen(url, timeout=300) as resp:
-        data = resp.read()
+    data = _fetch(url, progress)
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
         names = [n for n in zf.namelist() if n.startswith('Godot_v')]
         if not names:
