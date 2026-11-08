@@ -2,7 +2,8 @@
 
 The page saves `components/api/notes.q` and shows, in a table, each request and its answer. This test serves
 that file with a SQLite datasource `db` holding the page's table, sends each request in order and compares
-the status and the JSON with the table's.
+the status and the JSON with the table's; and the operation the page shows is what /api/openapi.json says
+of its POST (API-7).
 """
 
 import json
@@ -52,3 +53,13 @@ def test_each_request_answers_what_the_table_says(tmp_path):
     for method, path, body, status, answer in exchanges():
         response = client.open(path, method=method, json=body)
         assert (response.status_code, response.get_json()) == (status, answer), (method, path, body)
+
+    # API-7: what the page shows of the document is the document's, key for key
+    shown = json.loads(re.search(r'## Described for whoever calls it.*?' + F + r'json\n(.*?)' + F, TEXT, re.S)[1])
+    post = client.get('/api/openapi.json').get_json()['paths']['/api/notes']['post']
+    assert {key: post[key] for key in shown if key != 'requestBody' and key != 'responses'} == \
+        {key: value for key, value in shown.items() if key not in ('requestBody', 'responses')}
+    shown_body = shown['requestBody']['content']['application/json']
+    assert post['requestBody']['content']['application/json'] == shown_body
+    assert post['requestBody']['required'] is shown['requestBody']['required']
+    assert post['responses']['201'] == shown['responses']['201']

@@ -44,6 +44,8 @@ dev = [
     "pytest-xdist>=3.5",
     # tests/godot read the pictures of rendered frames (lights, frames, fonts); scripts/art draws with it
     "pillow>=10",
+    # tests/conformance/test_openapi.py: /api/openapi.json is a valid OpenAPI 3.1 document (API-7)
+    "openapi-spec-validator>=0.7",
     # Pinned to a minor version: `ruff check` blocks CI, and a new release
     # that adds checks must not turn main red with no change to the code.
     "ruff>=0.16,<0.18",

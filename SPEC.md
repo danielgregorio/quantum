@@ -336,6 +336,24 @@ proxy, `server.proxies` makes the address the caller's (CFG-4).
 `{"error": "server"}`, never a page; the message is in the answer only with
 `server.debug`, and always in the log, with its traceback (DEV-1).
 
+**API-7** — `/api/openapi.json` describes the application's endpoints as an
+OpenAPI 3.1 document, read from the components as they are: each component with
+`q:endpoint` is a path at its route (a `[name]` segment as `{name}`, a path
+parameter), each endpoint an operation, its `description=` the summary. The
+`q:param`s are there with their type and rules (`minlength`/`maxlength`,
+`min`/`max` and `range`, `pattern`, `enum`, the default; a `date`, `email` or
+`url` a string of that format): query parameters for `GET` and `DELETE`, a JSON
+(or form) body otherwise. The answers are the statuses of its `q:respond`s — an
+object with its keys when `json=` writes a dictionary (EXPR-17) —, `204` when it
+may end without one, and the refusals it may give (`400` and `415` for a body,
+`401` and `403` for who may call it, `413`, `422`, `429` with `Retry-After`,
+`500`), each with the error's shape. Who may call it is the security of the
+session's cookie, with the roles of `require_role`; `origins=`, `limit=` and
+`maxsize=` are `x-origins`, `x-limit` and `x-maxsize`. `api.title` and
+`api.version` are its title and version (the project's folder and `1` by
+default). Any site may read it. With no endpoint, or with `api.openapi: false`,
+it is `404`. `quantum check --openapi FILE` writes the same document (DEV-3).
+
 ## 4. Authentication
 
 **AUTH-1** — A component with `require_auth="true"` is only served to a session
@@ -836,7 +854,8 @@ warned about in the log when the configuration is loaded, with the key's name.
 
 **CFG-3** — The keys of `server` (`port`, `host`, `debug`, `reload`, `proxies`), `paths`
 (`components`, `static`, `logs`, `uploads`, `migrations`), `logging` (`level`,
-`format`, `console`, `file`, `filename`) and `mail` (MAIL-1) have effect:
+`format`, `console`, `file`, `filename`), `mail` (MAIL-1) and `api` (`title`,
+`version`, `openapi`: API-7) have effect:
 `logging.format` is the format of log lines, and `paths.migrations` is the
 folder `quantum migrate` uses. A key outside these lists is warned about when
 the configuration is loaded, as in CFG-2.
@@ -1130,7 +1149,14 @@ query, through `ui:table`/`ui:list` with `source`, or `<ui:column key>` — that
 the query does not return. Nothing runs: the SQL is compiled (`EXPLAIN`), the
 columns of a SELECT come from it with `LIMIT 0`, and the database is opened
 read-only. A datasource that does not open (missing file, unsupported driver)
-is a note, not a silent OK. The command exits with 1 if there is a problem.
+is a note, not a silent OK. Of each `q:endpoint` it points out a `q:param` with
+the name of a route segment, which the segment replaces (ROUTE-2), a
+`q:respond` with `json=` and a status that has no body (`1xx`, `204`, `304`),
+and an endpoint in a file that is never served (ROUTE-3); and two files at one
+path (`shop.q` and `shop/index.q`, or `item/[id].q` and `item/[slug].q`), of
+which only one ever answers (ROUTE-1). Its summary lists the endpoints it
+found, and `--openapi FILE` writes their OpenAPI document there (API-7). The
+command exits with 1 if there is a problem.
 
 **DEV-4** — `quantum start --hot-reload` watches the `paths.components` and
 `paths.static` folders, and every page it serves opens a WebSocket to it

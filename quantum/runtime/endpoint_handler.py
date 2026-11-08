@@ -118,6 +118,12 @@ def _json(status: int, payload: Any = _NO_BODY, headers: Optional[Dict[str, str]
     return response
 
 
+def _roles(roles: str) -> str:
+    """'admin,member' as a person says it: 'admin or member'."""
+    names = [r.strip() for r in roles.split(',') if r.strip()]
+    return ' or '.join(names) if len(names) < 3 else ', '.join(names[:-1]) + ' or ' + names[-1]
+
+
 def _error(status: int, error: str, message: str, **more) -> Response:
     return _json(status, {'error': error, 'message': message, **more})
 
@@ -206,11 +212,11 @@ def serve_endpoint(server, ast, route_params: Dict[str, str]) -> Response:
         return _cors(_error(401, 'unauthenticated', 'Sign in first.'), endpoint, origin)
     if getattr(ast, 'require_auth', False):
         if ast.require_role and not AuthService.has_role(session_data, ast.require_role):
-            return _cors(_error(403, 'forbidden', f'Only {ast.require_role}.'), endpoint, origin)
+            return _cors(_error(403, 'forbidden', f'Only {_roles(ast.require_role)}.'), endpoint, origin)
         if ast.require_permission and not AuthService.has_permission(session_data, ast.require_permission):
             return _cors(_error(403, 'forbidden', f'Only with {ast.require_permission}.'), endpoint, origin)
     if endpoint.require_role and not AuthService.has_role(session_data, endpoint.require_role):
-        return _cors(_error(403, 'forbidden', f'Only {endpoint.require_role}.'), endpoint, origin)
+        return _cors(_error(403, 'forbidden', f'Only {_roles(endpoint.require_role)}.'), endpoint, origin)
 
     from quantum.runtime.executors.control_flow.redirect_executor import PageRedirect
     runtime = ComponentRuntime(config=server.config)

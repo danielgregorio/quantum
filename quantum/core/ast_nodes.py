@@ -1184,6 +1184,8 @@ class EndpointNode(QuantumNode):
         self.limit: Optional[Tuple[int, int]] = None
         # API-5: the largest body it accepts, in bytes; None: the server's (security.max_content_length)
         self.max_size: Optional[int] = None
+        # API-7: what it does, in a sentence, for whoever reads /api/openapi.json
+        self.description: Optional[str] = None
 
     def add_param(self, param: QuantumParam):
         self.params.append(param)
@@ -1194,7 +1196,8 @@ class EndpointNode(QuantumNode):
     def to_dict(self) -> Dict[str, Any]:
         return {"type": "endpoint", "method": self.method, "params": [p.name for p in self.params],
                 "body_statements": len(self.body), "require_role": self.require_role,
-                "origins": self.origins, "limit": self.limit, "max_size": self.max_size}
+                "origins": self.origins, "limit": self.limit, "max_size": self.max_size,
+                "description": self.description}
 
     def validate(self) -> List[str]:
         errors = []

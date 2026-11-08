@@ -435,6 +435,26 @@ proxy, `server.proxies` makes the address the caller's ([CFG-4](#CFG-4)).
 
 <p class="spec-cited">Referenced by: <a href="./config#cfg-server"><code>server:</code></a> · <a href="./config#cfg-server"><code>server.debug</code></a></p>
 
+<a id="API-7"></a>**[API-7](#API-7)** — `/api/openapi.json` describes the application's endpoints as an
+OpenAPI 3.1 document, read from the components as they are: each component with
+`q:endpoint` is a path at its route (a `[name]` segment as `{name}`, a path
+parameter), each endpoint an operation, its `description=` the summary. The
+`q:param`s are there with their type and rules (`minlength`/`maxlength`,
+`min`/`max` and `range`, `pattern`, `enum`, the default; a `date`, `email` or
+`url` a string of that format): query parameters for `GET` and `DELETE`, a JSON
+(or form) body otherwise. The answers are the statuses of its `q:respond`s — an
+object with its keys when `json=` writes a dictionary ([EXPR-17](#EXPR-17)) —, `204` when it
+may end without one, and the refusals it may give (`400` and `415` for a body,
+`401` and `403` for who may call it, `413`, `422`, `429` with `Retry-After`,
+`500`), each with the error's shape. Who may call it is the security of the
+session's cookie, with the roles of `require_role`; `origins=`, `limit=` and
+`maxsize=` are `x-origins`, `x-limit` and `x-maxsize`. `api.title` and
+`api.version` are its title and version (the project's folder and `1` by
+default). Any site may read it. With no endpoint, or with `api.openapi: false`,
+it is `404`. `quantum check --openapi FILE` writes the same document ([DEV-3](#DEV-3)).
+
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-api"><code>api:</code></a> · <a href="./config#cfg-api"><code>api.title</code></a> · <a href="./config#cfg-api"><code>api.version</code></a></p>
+
 ## 4. Authentication
 
 <a id="AUTH-1"></a>**[AUTH-1](#AUTH-1)** — A component with `require_auth="true"` is only served to a session
@@ -1051,12 +1071,13 @@ warned about in the log when the configuration is loaded, with the key's name.
 
 <a id="CFG-3"></a>**[CFG-3](#CFG-3)** — The keys of `server` (`port`, `host`, `debug`, `reload`, `proxies`), `paths`
 (`components`, `static`, `logs`, `uploads`, `migrations`), `logging` (`level`,
-`format`, `console`, `file`, `filename`) and `mail` ([MAIL-1](#MAIL-1)) have effect:
+`format`, `console`, `file`, `filename`), `mail` ([MAIL-1](#MAIL-1)) and `api` (`title`,
+`version`, `openapi`: [API-7](#API-7)) have effect:
 `logging.format` is the format of log lines, and `paths.migrations` is the
 folder `quantum migrate` uses. A key outside these lists is warned about when
 the configuration is loaded, as in [CFG-2](#CFG-2).
 
-<p class="spec-cited">Referenced by: <a href="./cli#cli-migrate"><code>quantum migrate</code></a> · <a href="./config#cfg-components"><code>components:</code></a> · <a href="./config#cfg-logging"><code>logging:</code></a> · <a href="./config#cfg-logging"><code>logging.console</code></a> · <a href="./config#cfg-logging"><code>logging.file</code></a> · <a href="./config#cfg-logging"><code>logging.filename</code></a> · <a href="./config#cfg-logging"><code>logging.format</code></a> · <a href="./config#cfg-logging"><code>logging.level</code></a> · <a href="./config#cfg-mail"><code>mail:</code></a> · <a href="./config#cfg-mail"><code>mail.host</code></a> · <a href="./config#cfg-mail"><code>mail.port</code></a> · <a href="./config#cfg-paths"><code>paths:</code></a> · <a href="./config#cfg-paths"><code>paths.components</code></a> · <a href="./config#cfg-paths"><code>paths.logs</code></a> · <a href="./config#cfg-paths"><code>paths.migrations</code></a> · <a href="./config#cfg-paths"><code>paths.static</code></a> · <a href="./config#cfg-paths"><code>paths.uploads</code></a> · <a href="./config#cfg-server"><code>server:</code></a> · <a href="./config#cfg-server"><code>server.debug</code></a> · <a href="./config#cfg-server"><code>server.host</code></a> · <a href="./config#cfg-server"><code>server.port</code></a> · <a href="./config#cfg-server"><code>server.proxies</code></a> · <a href="./config#cfg-server"><code>server.reload</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./cli#cli-migrate"><code>quantum migrate</code></a> · <a href="./config#cfg-api"><code>api:</code></a> · <a href="./config#cfg-api"><code>api.openapi</code></a> · <a href="./config#cfg-api"><code>api.title</code></a> · <a href="./config#cfg-api"><code>api.version</code></a> · <a href="./config#cfg-components"><code>components:</code></a> · <a href="./config#cfg-logging"><code>logging:</code></a> · <a href="./config#cfg-logging"><code>logging.console</code></a> · <a href="./config#cfg-logging"><code>logging.file</code></a> · <a href="./config#cfg-logging"><code>logging.filename</code></a> · <a href="./config#cfg-logging"><code>logging.format</code></a> · <a href="./config#cfg-logging"><code>logging.level</code></a> · <a href="./config#cfg-mail"><code>mail:</code></a> · <a href="./config#cfg-mail"><code>mail.host</code></a> · <a href="./config#cfg-mail"><code>mail.port</code></a> · <a href="./config#cfg-paths"><code>paths:</code></a> · <a href="./config#cfg-paths"><code>paths.components</code></a> · <a href="./config#cfg-paths"><code>paths.logs</code></a> · <a href="./config#cfg-paths"><code>paths.migrations</code></a> · <a href="./config#cfg-paths"><code>paths.static</code></a> · <a href="./config#cfg-paths"><code>paths.uploads</code></a> · <a href="./config#cfg-server"><code>server:</code></a> · <a href="./config#cfg-server"><code>server.debug</code></a> · <a href="./config#cfg-server"><code>server.host</code></a> · <a href="./config#cfg-server"><code>server.port</code></a> · <a href="./config#cfg-server"><code>server.proxies</code></a> · <a href="./config#cfg-server"><code>server.reload</code></a></p>
 
 <a id="CFG-4"></a>**[CFG-4](#CFG-4)** — `server.proxies: 1` says a reverse proxy stands in front (`2`, two):
 a request's address, scheme and host are then the ones the proxy received
@@ -1126,7 +1147,7 @@ error with a suggestion. A statement inside `ui:*` is an error, as inside HTML
 ([PARSE-2](#PARSE-2)). The direct text of a `ui:*` container is content
 (`<ui:card-header>Summary</ui:card-header>`).
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-card-header"><code>&lt;ui:card-header&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-if"><code>&lt;q:if&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./config#cfg-api"><code>api.title</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a> · <a href="./ui#ui-button"><code>&lt;ui:button&gt;</code></a> · <a href="./ui#ui-input"><code>&lt;ui:input&gt;</code></a> · <a href="./ui#ui-card-header"><code>&lt;ui:card-header&gt;</code></a></p>
 
 <a id="UI-2"></a>**[UI-2](#UI-2)** — The responsive layout is declared on the `ui:*` elements, with three
 breakpoints: `sm` (below 640 px), `md` (768 px) and `lg` (1024 px).
@@ -1161,7 +1182,7 @@ pywebview installed, the command exits with an error that says what to install.
 A page's title is the same in every renderer: the `title` of the page's first
 `ui:window` (with its expressions resolved), else the component's name.
 
-<p class="spec-cited">Referenced by: <a href="./cli#cli-desktop"><code>quantum desktop</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-window"><code>&lt;ui:window&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./cli#cli-desktop"><code>quantum desktop</code></a> · <a href="./config#cfg-api"><code>api.title</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-window"><code>&lt;ui:window&gt;</code></a></p>
 
 <a id="UI-5"></a>**[UI-5](#UI-5)** — `<ui:table source="{rows}">` draws one row per item of the list (a
 `q:query` or an array), with the row variable set as `q:loop` sets it (`as=`,
@@ -1244,7 +1265,7 @@ values of a row (a one-row query works). `table` without `datasource`, and a
 table or column that does not exist, are errors; `quantum check` ([DEV-3](#DEV-3))
 checks the table and the columns.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-action"><code>&lt;q:action&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-api"><code>api.title</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-form"><code>&lt;ui:form&gt;</code></a></p>
 
 <a id="UI-11"></a>**[UI-11](#UI-11)** — `<ui:pager for="query">` draws, over a paginated query ([DB-2](#DB-2)), the
 previous page, the numbers around the current page (`window`, 2 by default, on
@@ -1401,9 +1422,16 @@ query, through `ui:table`/`ui:list` with `source`, or `<ui:column key>` — that
 the query does not return. Nothing runs: the SQL is compiled (`EXPLAIN`), the
 columns of a SELECT come from it with `LIMIT 0`, and the database is opened
 read-only. A datasource that does not open (missing file, unsupported driver)
-is a note, not a silent OK. The command exits with 1 if there is a problem.
+is a note, not a silent OK. Of each `q:endpoint` it points out a `q:param` with
+the name of a route segment, which the segment replaces ([ROUTE-2](#ROUTE-2)), a
+`q:respond` with `json=` and a status that has no body (`1xx`, `204`, `304`),
+and an endpoint in a file that is never served ([ROUTE-3](#ROUTE-3)); and two files at one
+path (`shop.q` and `shop/index.q`, or `item/[id].q` and `item/[slug].q`), of
+which only one ever answers ([ROUTE-1](#ROUTE-1)). Its summary lists the endpoints it
+found, and `--openapi FILE` writes their OpenAPI document there ([API-7](#API-7)). The
+command exits with 1 if there is a problem.
 
-<p class="spec-cited">Referenced by: <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-agent"><code>&lt;q:agent&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a></p>
+<p class="spec-cited">Referenced by: <a href="./tags#q-param"><code>&lt;q:param&gt;</code></a> · <a href="./tags#q-loop"><code>&lt;q:loop&gt;</code></a> · <a href="./tags#q-query"><code>&lt;q:query&gt;</code></a> · <a href="./tags#q-agent"><code>&lt;q:agent&gt;</code></a> · <a href="./cli#cli-check"><code>quantum check</code></a> · <a href="./config#cfg-ui"><code>ui:</code></a> · <a href="./ui#ui-table"><code>&lt;ui:table&gt;</code></a> · <a href="./ui#ui-column"><code>&lt;ui:column&gt;</code></a> · <a href="./ui#ui-list"><code>&lt;ui:list&gt;</code></a></p>
 
 <a id="DEV-4"></a>**[DEV-4](#DEV-4)** — `quantum start --hot-reload` watches the `paths.components` and
 `paths.static` folders, and every page it serves opens a WebSocket to it

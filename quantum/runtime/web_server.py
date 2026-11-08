@@ -221,6 +221,17 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
                             mimetype='text/plain; charset=utf-8',
                             headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
+        @self.app.route('/api/openapi.json')
+        def openapi_document():
+            """API-7: the application's endpoints described for whoever calls them (404 when it has none)."""
+            document = self.openapi_document()
+            if document is None:
+                abort(404)
+            import json
+            response = Response(json.dumps(document, ensure_ascii=False, indent=2), mimetype='application/json')
+            response.headers['Access-Control-Allow-Origin'] = '*'    # a description, readable from any site
+            return response
+
         @self.app.route('/health')
         def health_check():
             """Health check endpoint for container orchestration."""
@@ -922,6 +933,23 @@ class QuantumWebServer(ConfigLoading, HtmlPostProcessing, ErrorPages, ServerLife
             return False
         # Python 3.9+: is_relative_to. The candidate must sit under the root.
         return target == root or root in target.parents
+
+    def openapi_document(self):
+        """API-7: the OpenAPI document of the application's q:endpoints, from the components as they are;
+        None when it has none or `api.openapi: false` hides it."""
+        from quantum.runtime import openapi
+        api = self.config.get('api') or {}
+        if api.get('openapi') is False:
+            return None
+        components = Path(self.config['paths']['components']).resolve()
+
+        def parse(file):
+            return self.parser.parse_file(str(file))
+        return openapi.document(
+            components, parse,
+            title=str(api.get('title') or components.parent.name),
+            version=str(api.get('version') or '1'),
+            cookie=self.app.config.get('SESSION_COOKIE_NAME') or 'session')
 
     def _login_url(self) -> str:
         """AUTH-4: where require_auth sends a visitor (security.login_url, default /login)."""

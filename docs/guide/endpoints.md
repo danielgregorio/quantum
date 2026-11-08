@@ -4,7 +4,7 @@ A page answers a browser with HTML; a `q:endpoint` answers anyone with JSON: a g
 script, another site's page. A component with `q:endpoint` is an API: each HTTP method it has an endpoint for
 runs that endpoint, its `q:param`s come from the JSON body and are checked as an
 [action's](/guide/actions) are, and `q:respond` says what it answers. Everything it answers is JSON, its
-refusals and its failures included (API-1 to API-6).
+refusals and its failures included (API-1 to API-6), and `/api/openapi.json` describes them (API-7).
 
 The examples on this page run in CI (`tests/docs/test_guide_endpoints.py`).
 
@@ -98,6 +98,57 @@ page can show it. A variable that is not set is an error that names it, never an
 </q:invoke>
 ```
 
+## Described for whoever calls it
+
+`/api/openapi.json` describes the application's endpoints as an [OpenAPI 3.1](https://spec.openapis.org/oas/v3.1.0)
+document, read from the components as they are, so it is never out of date (API-7). A client generator, an API
+browser or the person writing the game reads it there. For the notes above, the operation of the `POST`:
+
+```json
+{
+  "operationId": "postApiNotes",
+  "requestBody": {
+    "required": true,
+    "content": {
+      "application/json": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "text": {"type": "string", "maxLength": 200},
+            "stars": {"type": "integer", "minimum": 1, "maximum": 5, "default": 3}
+          },
+          "required": ["text"]
+        }
+      }
+    }
+  },
+  "responses": {
+    "201": {"description": "Created", "content": {"application/json": {"schema": {
+      "type": "object", "properties": {"id": {}, "text": {}, "stars": {}}, "required": ["id", "text", "stars"]}}}}
+  },
+  "x-origins": ["https://game.example"],
+  "x-limit": "10/minute",
+  "x-maxsize": 16384
+}
+```
+
+- Each component with `q:endpoint` is a path, at its route: `components/api/boards/[id]/cards.q` is
+  `/api/boards/{id}/cards`, with `id` a path parameter. `description="..."` on a `q:endpoint` is the
+  operation's summary.
+- The `q:param`s keep their rules: `minlength` is `minLength`, `min` and `range` are `minimum` and `maximum`,
+  `pattern`, `enum` and the default stay; `type="date"`, `email` and `url` are strings with their format. For
+  `GET` and `DELETE` they are query parameters; for the others, a JSON (or form) body.
+- The answers are the `q:respond`s' statuses — an object with its keys when `json=` writes a dictionary —,
+  `204` when the endpoint may end without one, and the refusals it may give: `400` and `415` for a body,
+  `401` and `403` for who may call it, `413` with `maxsize=`, `422` for its parameters, `429` with `limit=`,
+  `500`. Who may call it is the security of the session's cookie, with the roles of `require_role`.
+- `api.title` and `api.version` in `quantum.config.yaml` are the document's title and version (the project's
+  folder and `1` by default); `api.openapi: false` takes it away. Without an endpoint it is `404`.
+- `quantum check --openapi openapi.json` writes the same document without a server, for a pipeline or a
+  repository; `quantum check` itself lists the endpoints it found, and says when a `q:param` has the name of a
+  route segment (the segment replaces it, ROUTE-2), when a `q:respond` sends a body with a status that has none
+  (`204`), and when two files are at one path and only one can ever answer (DEV-3).
+
 ## When it fails
 
 A failure in an endpoint's statements is `500` with `{"error": "server"}`: never a page. The message is in
@@ -113,4 +164,6 @@ the answer only with `server.debug`, and always in the server's log with its tra
 | [API-4](/reference/spec#API-4) | `origins=` and the browser's preflight |
 | [API-5](/reference/spec#API-5) | `limit=` and `maxsize=`; `server.proxies` (CFG-4) |
 | [API-6](/reference/spec#API-6) | a failure is JSON |
+| [API-7](/reference/spec#API-7) | `/api/openapi.json`; `api.title`, `api.version`, `api.openapi` |
+| [DEV-3](/reference/spec#DEV-3) | `quantum check` and the endpoints; `--openapi FILE` |
 | [INV-3](/reference/spec#INV-3) | `${NAME}` in a credential |

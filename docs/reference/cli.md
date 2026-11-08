@@ -97,8 +97,9 @@ Check pages, SQL and query fields against the database.
 | Argument | Meaning | Default | Values |
 |---|---|---|---|
 | `--config` | Config file | `quantum.config.yaml` |  |
+| `--openapi` | Also write the API's OpenAPI document (what /api/openapi.json serves) to FILE |  |  |
 
-Specified by: [ROUTE-4](./spec#ROUTE-4) · [UI-10](./spec#UI-10) · [DEV-3](./spec#DEV-3)
+Specified by: [ROUTE-4](./spec#ROUTE-4) · [API-7](./spec#API-7) · [UI-10](./spec#UI-10) · [DEV-3](./spec#DEV-3)
 
 <a id="cli-test"></a>
 

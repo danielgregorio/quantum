@@ -25,7 +25,7 @@ services it calls, and the AI tags (and, later, a REST API of its own). As faith
 | A database | `q:query`, `q:transaction`, `q:action table=` | Core |
 | To call REST services | `q:invoke url=` (bearer, apikey, basic) | Core |
 | AI | `q:llm`, `q:knowledge`, `q:agent`, `ui:stream` | AI |
-| A REST API of its own | none but the page's view for the renderers (UI-3) and `/health`: "JSON API route: not available" (the routes documented before 0.11 never ran and were removed) | later (below) |
+| A REST API of its own | `q:endpoint` (API-1 to API-6) and its OpenAPI document, `/api/openapi.json` (API-7) | Core |
 | The versions | `quantum start`, `quantum desktop` (a pywebview over the browser), `quantum console` (Textual, in the terminal, with a terminal's limits: its colours, its cells, no mouse to speak of, nothing that moves) | three commands, no TUI |
 | The same `ui:*` everywhere | about 40 of ~70 tags (the Core set); the other ~30 only in the browser | |
 
@@ -139,7 +139,19 @@ Native target can then leave.
 > Brought forward on 2026-10-23 for PandaFoot's beta reports (`PLAN_PANDAFOOT.md`) and built as designed below,
 > with what that first API needed: the sites whose pages may call it (`origins=`), `limit=` and `maxsize=`,
 > JSON refusals, a credential from the environment (INV-3) and `server.proxies` (SPEC.md API-1 to API-6, CFG-4,
-> EXPR-17). Still to come: `/api/openapi.json` and `quantum check` knowing the endpoints; the Kanban's API.
+> EXPR-17).
+>
+> **Done 2026-11-08**: `/api/openapi.json` (API-7), an OpenAPI 3.1 document read from the components as they are
+> (`quantum/runtime/openapi.py`): the routes, each endpoint's `description=`, its parameters with their rules,
+> the statuses of its `q:respond`s (an object with its keys when `json=` writes a dictionary), the refusals it
+> may give and the roles that may call it; `api.title`, `api.version`, `api.openapi: false`; validated by
+> `openapi-spec-validator` in `tests/conformance/test_openapi.py`. `quantum check` knows the endpoints (DEV-3):
+> it lists them, points out a parameter a route segment replaces, a body with a `204`, an endpoint never served
+> and two files at one path, and `--openapi FILE` writes the document. The Kanban's API
+> (`projects/kanban/components/api/`): `POST/GET/DELETE /api/session`, `GET /api/boards`, `GET` and `POST
+> /api/boards/{id}/cards`, tested in `tests/apps/test_kanban.py`; the Kanban's script, in each version, signs
+> another program in through it, adds a card and sees it on the board (`tests/apps/test_kanban_everywhere.py`,
+> the step `("api", ...)` of `tests/apps/ui_drivers.py`). A REST API of its own is in the table above now.
 
 ```xml
 <!-- components/api/cards.q: GET and POST /api/cards -->

@@ -6,12 +6,15 @@ application in each of its versions, UI-18). A step is a tuple: ("sees", [texts]
 [texts]), ("visit", path), ("fill", field, value), ("click", button),
 ("follow", link), ("click_in", card, button), ("follow_in", card, link),
 ("tab", title), ("waits_for", text), ("motions", [(kind, speed, what), ...]) — the
-motions the page ran (UI-19) —, and the parity script's own (image, progress,
-values, check, choose).
+motions the page ran (UI-19) —, ("api", method, path, json, status[, [texts]]) — another
+program calling the application's API (q:endpoint, API-1) beside the page, with a session of
+its own —, and the parity script's own (image, progress, values, check, choose).
 """
 
 import asyncio
 import time
+
+import requests
 
 # The steps that load a page: the driver waits for it before the next step.
 LOADS_A_PAGE = {"click", "follow", "click_in", "follow_in"}
@@ -31,6 +34,15 @@ def run_script(driver, script):
             # UI-19: the motions the page ran since it was shown, the same list in every renderer
             ran = [(m["kind"], m["speed"], m["what"]) for m in driver.motions()]
             assert ran == args[0], f"{driver.name}: ran {ran}"
+        elif step == "api":
+            # API-1: another program calls the application's API while the page is open; its own cookies
+            method, path, body, status, *shows = args
+            client = driver.__dict__.setdefault("api_client", requests.Session())
+            response = client.request(method, driver.base_url() + path, json=body, timeout=30)
+            assert response.status_code == status, \
+                f"{driver.name}: {method} {path} answered {response.status_code}: {response.text[:300]}"
+            missing = [t for t in (shows[0] if shows else []) if t not in response.text]
+            assert not missing, f"{driver.name}: {method} {path} does not answer {missing}"
         else:
             getattr(driver, step)(*args)
 
@@ -45,6 +57,9 @@ class Browser:
 
     def text(self):
         return self.p.inner_text("body")
+
+    def base_url(self):
+        return self.base
 
     def visit(self, path):
         self.p.goto(self.base + path)
@@ -120,6 +135,9 @@ class Console:
 
     def __init__(self, app, pilot):
         self.app, self.pilot = app, pilot
+
+    def base_url(self):
+        return self.app.base_url.rstrip("/")
 
     def _visible(self, w):
         return all(getattr(n, "display", True) for n in [w, *w.ancestors])

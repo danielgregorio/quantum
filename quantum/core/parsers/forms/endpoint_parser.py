@@ -69,6 +69,10 @@ class EndpointParser(BaseTagParser):
                              f'from one address, as "10/minute" (API-5)')
             node.limit = (int(match.group(1)), _UNITS[match.group(2)])
 
+        description = (element.get('description') or '').strip()
+        if description:
+            node.description = description             # API-7: the operation's summary in the OpenAPI
+
         size = element.get('maxsize')
         if size is not None:
             match = re.fullmatch(r'\s*(\d+)\s*(b|kb|mb|gb)\s*', size.lower())

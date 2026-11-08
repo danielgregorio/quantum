@@ -10,6 +10,25 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Added
 
+- `/api/openapi.json`: the application's API described as an OpenAPI 3.1
+  document, read from its `q:endpoint`s as they are (SPEC.md API-7): each
+  component a path at its route (`[id]` as `{id}`), each endpoint an
+  operation with its `description=`, its `q:param`s with their types and
+  rules (a query string for GET and DELETE, a JSON body otherwise), the
+  statuses its `q:respond`s answer, the refusals it may give and who may
+  call it. `api.title`, `api.version` and `api.openapi: false` in
+  `quantum.config.yaml`. `quantum check --openapi FILE` writes the same
+  document without a server.
+- `quantum check` knows the endpoints (DEV-3): its summary lists them, and
+  it points out a `q:param` the route's segment of the same name replaces
+  (ROUTE-2), a `q:respond` with a body and a status that has none (`204`),
+  an endpoint in a file never served, and two files at one path, of which
+  only one ever answers (`shop.q` and `shop/index.q`).
+- The Kanban (`projects/kanban`) has its API: `POST /api/session` signs a
+  script or another program in, `GET /api/boards`, and `GET` and `POST
+  /api/boards/{id}/cards`; its script, in every version, adds a card through
+  the API and sees it on the board (`PLAN_PLATFORMS.md`).
+
 - Laboratory: the world engine's E3d, third part (`PLAN_WORLD_ENGINE.md`),
   which ends E3. Where the Rust engine is built (`pip install
   ./native/world`), `quantum gameserver run` serves a world on it by
@@ -1367,6 +1386,8 @@ alter the behaviour of an existing app is listed under **Breaking**.
 
 ### Changed
 
+- An endpoint's refusal for a role says the roles as a person would:
+  "Only admin or member." (it said "Only admin,member.").
 - Laboratory: a scene's `q:set` whose value is computed (it calls a
   function, reads the game's state or draws at random) is set as the scene
   is entered, after its random source is seeded and before what the scene

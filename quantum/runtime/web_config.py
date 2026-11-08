@@ -20,7 +20,7 @@ class ConfigError(Exception):
 _KNOWN_SECTIONS = {
     'server', 'paths', 'defaults', 'datasources', 'database', 'llm',
     'performance', 'security', 'logging', 'development', 'deploy',
-    'components', 'jobs', 'messaging', 'services', 'mail', 'ui',
+    'components', 'jobs', 'messaging', 'services', 'mail', 'ui', 'api',
 }
 
 # The keys each of these sections actually has; anything else is a warning.
@@ -33,6 +33,7 @@ _KNOWN_KEYS = {
     'logging': {'level', 'format', 'console', 'file', 'filename'},
     'mail': {'host', 'port', 'username', 'password', 'tls', 'from', 'timeout'},
     'ui': {'motion'},
+    'api': {'title', 'version', 'openapi'},        # API-7: what /api/openapi.json says of the API
 }
 
 _DATASOURCE_KEYS = {'driver', 'type', 'database', 'host', 'port', 'username', 'user', 'password', 'history'}
@@ -48,6 +49,7 @@ _TYPED = {
     ('security', 'max_content_length'): int,
     ('llm', 'timeout'): int,
     ('llm', 'base_url'): str,
+    ('api', 'openapi'): bool,
 }
 
 

@@ -356,3 +356,79 @@ def test_a_member_cannot_edit_the_columns_the_page_shows_only_to_an_admin(app):
                                              "__key": str(doing), "value": "99"})
     assert response.status_code == 403
     assert rows(project, "SELECT wip_limit FROM columns WHERE id = ?", doing) == [(3,)]
+
+
+# -- the Kanban's API (q:endpoint, API-1 to API-7) ------------------------------
+
+def api_client(app, who):
+    """Another program: it signs in through the API and keeps the session's cookie."""
+    client = app[0].test_client()
+    response = client.post("/api/session", json={"email": f"{who}@example.com", "password": "kanban-demo"})
+    assert response.status_code == 200, response.get_data(as_text=True)
+    return client
+
+
+def test_the_api_signs_in_and_out_with_the_same_answer_for_a_wrong_password(app):
+    client = app[0].test_client()
+    assert client.get("/api/boards").status_code == 401
+    for email in ("bruno@example.com", "nobody@example.com"):
+        refused = client.post("/api/session", json={"email": email, "password": "wrong"})
+        assert refused.status_code == 401 and refused.get_json()["message"] == "Wrong e-mail or password."
+    client = api_client(app, "bruno")
+    assert client.get("/api/session").get_json() == {"name": "Bruno", "role": "member"}
+    assert client.delete("/api/session").status_code == 204
+    assert client.get("/api/boards").status_code == 401
+
+
+def test_the_api_lists_the_boards_and_their_cards(app):
+    client = api_client(app, "bruno")
+    assert client.get("/api/boards").get_json() == {"boards": [
+        {"id": 1, "name": "Website launch", "description": "Everything the new site needs before it goes live.",
+         "cards": 6}]}
+    doing = client.get("/api/boards/1/cards?column=Doing").get_json()
+    assert doing["board"] == "Website launch"
+    assert [(c["title"], c["column_name"], c["assignee"]) for c in doing["cards"]] == [
+        ("Set up the domain", "Doing", "Ana"), ("Contact form", "Doing", "Bruno")]
+
+
+def test_a_card_added_through_the_api_is_on_the_board_and_in_its_history(app):
+    project = app[1]
+    client = api_client(app, "bruno")
+    added = client.post("/api/boards/1/cards", json={"title": "Write the API page", "labels": "docs",
+                                                     "due_on": "2026-12-01"})
+    assert added.status_code == 201
+    faq = card(project, "Write the API page")
+    assert added.get_json() == {"id": faq["id"], "title": "Write the API page", "column": "To do"}
+    assert faq["column"] == column(project, "To do")
+    page = page_text(signed_in(app, "ana").get("/board/1"))
+    assert "Write the API page" in page and "To do 3" in page
+    assert "Write the API page" in page_text(signed_in(app, "ana").get(f"/card/{faq['id']}"))
+
+
+def test_the_api_refuses_a_viewer_a_board_not_ones_own_and_bad_fields(app):
+    project = app[1]
+    viewer = api_client(app, "carla")
+    refused = viewer.post("/api/boards/1/cards", json={"title": "Write"})
+    assert refused.status_code == 403 and refused.get_json()["message"] == "Only admin or member."
+    assert viewer.get("/api/boards/1/cards").status_code == 200              # a viewer reads
+    sqlite3.connect(project / "data" / "kanban.db").execute(
+        "INSERT INTO boards (name) VALUES ('Private')").connection.commit()
+    member = api_client(app, "bruno")
+    assert member.get("/api/boards/2/cards").status_code == 404              # not one of Bruno's
+    assert member.post("/api/boards/2/cards", json={"title": "Write"}).status_code == 404
+    bad = member.post("/api/boards/1/cards", json={"title": "x", "due_on": "2026-13-01"})
+    assert bad.status_code == 422 and set(bad.get_json()["fields"]) == {"title", "due_on"}
+    assert api_client(app, "ana").get("/api/boards/2/cards").status_code == 200    # an admin sees them all
+
+
+def test_the_kanbans_api_is_described(app):
+    validator = pytest.importorskip("openapi_spec_validator")
+    doc = app[0].test_client().get("/api/openapi.json").get_json()
+    validator.validate(doc)
+    assert doc["info"]["title"] == "Kanban"
+    assert {path: sorted(ops) for path, ops in doc["paths"].items()} == {
+        "/api/boards": ["get"], "/api/boards/{id}/cards": ["get", "post"],
+        "/api/session": ["delete", "get", "post"]}
+    post = doc["paths"]["/api/boards/{id}/cards"]["post"]
+    assert post["security"] == [{"session": ["admin", "member"]}]
+    assert post["requestBody"]["content"]["application/json"]["schema"]["required"] == ["title"]

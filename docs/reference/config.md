@@ -11,6 +11,20 @@ outline: [2, 3]
 
 ::: v-pre
 
+<a id="cfg-api"></a>
+
+## `api`
+
+| Key | Type | Default | Rules |
+|---|---|---|---|
+| `openapi` | bool |  | [CFG-3](./spec#CFG-3) |
+| `title` |  |  | [API-7](./spec#API-7) · [CFG-3](./spec#CFG-3) · [UI-1](./spec#UI-1) · [UI-4](./spec#UI-4) · [UI-10](./spec#UI-10) |
+| `version` |  |  | [API-7](./spec#API-7) · [CFG-3](./spec#CFG-3) |
+
+Another key in this section is warned about when the configuration is loaded ([CFG-2](./spec#CFG-2), [CFG-3](./spec#CFG-3)).
+
+Specified by: [API-7](./spec#API-7) · [CFG-3](./spec#CFG-3)
+
 <a id="cfg-components"></a>
 
 ## `components`

@@ -1,7 +1,8 @@
 """The Kanban in each of its versions, by one parameter (UI-18, PLAN_PLATFORMS.md Phase 2).
 
 `quantum run <app> --on web|desktop|terminal` runs projects/kanban; the same SCRIPT — sign in, a card
-added, moved and done (the webhook told), the AI's subtasks, its agent and its streamed summary, issues
+added, moved and done (the webhook told), a card another program adds through the API (API-1), the
+AI's subtasks, its agent and its streamed summary, issues
 imported from a forge, a viewer who changes nothing — runs in each, through the drivers of
 tests/apps/ui_drivers.py. A feature that fails in one version fails its test. The forge and the model
 are real HTTP servers in the test (tests/apps/test_kanban.py, tests/fake_ollama.py).
@@ -51,6 +52,12 @@ SCRIPT = sign_in("bruno") + [
     ("click_in", "Write the FAQ", "▶"),
     ("click_in", "Write the FAQ", "▶"),
     ("sees", ["Done 2"]),
+    # another program adds a card through the API (q:endpoint, API-1): the board shows it
+    ("api", "POST", "/api/session", {"email": "ana@example.com", "password": "kanban-demo"}, 200),
+    ("api", "POST", "/api/boards/1/cards", {"title": "Write the API page", "labels": "docs"}, 201),
+    ("api", "GET", "/api/boards/1/cards?column=To%20do", None, 200, ["Write the API page"]),
+    ("visit", "/board/1"),
+    ("sees", ["Write the API page", "To do 3"]),
     # the AI splits a card into subtasks
     ("follow_in", "Write the about page", "Open"),
     ("sees", ["#1 Write the about page", "History"]),
@@ -137,6 +144,7 @@ def the_script_held(app, forge):
     assert rows("SELECT count(*) FROM cards WHERE source IS NOT NULL").fetchone() == (2,)
     assert rows("SELECT done_on IS NOT NULL FROM cards WHERE title = 'Write the FAQ'").fetchone() == (1,)
     assert [h["title"] for h in forge.hooks()] == ["Write the FAQ"]
+    assert rows("SELECT labels FROM cards WHERE title = 'Write the API page'").fetchone() == ("docs",)
 
 
 def browser_script(url):
