@@ -228,7 +228,7 @@ jobs:
 
       # the phone's .apk: the runner has the Android SDK (ANDROID_HOME); Godot signs with its build tools, run by
       # a JDK 17 (tests/package/test_package_phone.py)
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
