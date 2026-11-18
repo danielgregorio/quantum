@@ -45,12 +45,17 @@ def design_tokens() -> dict:
                                                       r'(#[0-9a-fA-F]{6})', CSS_THEME)}
 
 
+# The files of the TUI's Godot project. pyproject.toml's package-data carries each of them in the wheel
+# (tests/unit/test_wheel_contents.py).
+PROJECT_SUFFIXES = ('.gd', '.tscn', '.godot', '.ttf', '.txt', '.png')
+
+
 def project_copy() -> Path:
     """The TUI's Godot project in a folder of its own: Godot may write next to a project it runs, and the
     installed package's folder may not be writable."""
     target = Path(tempfile.mkdtemp(prefix='quantum-tui-'))
     for item in TUI_DIR.iterdir():
-        if item.is_file() and item.suffix in ('.gd', '.tscn', '.godot', '.ttf', '.txt', '.png'):
+        if item.is_file() and item.suffix in PROJECT_SUFFIXES:
             shutil.copy2(item, target / item.name)
     return target
 

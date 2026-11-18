@@ -12,10 +12,13 @@ entry says so.
 Each item shows its status: **planned** (approved, not started), **in design**
 (being written down before any code) or **in progress** (being built now).
 
-## 1.0 — today
+## 1.1 — today
 
-Quantum 1.0 is declarative web applications in XML, with AI and RAG built into
-the language. What 1.0 promises is set by its tiers:
+Quantum is declarative applications in XML, with AI and RAG built into the
+language. 1.1 takes one application to every place it can be read: a browser,
+a window of its own, a text screen drawn by Godot, a terminal, an installer for
+Linux, Windows and macOS, and a phone, with a REST API of its own
+([what changed](../changelog/v1-1-0)). What it promises is set by its tiers:
 
 - **Core** (components, queries and transactions, actions and forms, files, mail,
   authentication, the Core set of `ui:*`) and **AI** (`q:llm`, `q:knowledge`,
@@ -64,7 +67,7 @@ rule is in the [Reference](../reference/).
 |---|---|
 | Cookbook: short recipes, each one tested in CI | in progress |
 | The site in more languages | in progress |
-| A [playground](/playground/): write Quantum and run it in the browser | in progress |
+| A [playground](/playground/): write Quantum and run it in the browser | done |
 | Benchmarks that anyone can run again | planned |
 
 ## Laboratory
@@ -72,5 +75,8 @@ rule is in the [Reference](../reference/).
 | Item | Status |
 |---|---|
 | Games 2: games as a deterministic declarative simulation, where the same inputs always give the same game, so a game can be tested and replayed — a compiler to Godot 4, eight games ([Hopper, Keep, Drift, Godot's Pong and Dodge the Creeps demos, a tower defense, a fighting game and chess](/targets/games)), each replayed in CI and [playable on the site](/targets/play), and lockstep multiplayer from the same determinism (`PLAN_MULTIPLAYER.md`) | done |
+| Games 3: what the game language takes from Godot and Unity — game logic, aiming, puzzles and adventure, options and saves, touch, seats and split screen, lights, hex maps (`PLAN_GAMES_3.md`) — with seventeen games [playable on the site](/targets/play) | done |
+| PandaFoot: a football manager after Elifoot 2, on a text screen, in a public beta whose players report from inside the game (`PLAN_PANDAFOOT.md`) | in progress |
+| A game server (`q:gameserver`): a world for five hundred players written in tags — views, beasts, a ledger, chat, parties, quests, characters with AI — with its engine in Rust (`PLAN_GAME_SERVER.md`, `PLAN_WORLD_ENGINE.md`) | in progress |
 
 Laboratory work carries no promise: it can change or stop at any point.

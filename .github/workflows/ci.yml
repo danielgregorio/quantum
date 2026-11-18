@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # The release's gate (release.yml) is this workflow, every job of it, on the tagged commit.
+  workflow_call:
 
 jobs:
   test:
