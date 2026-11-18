@@ -6,7 +6,35 @@ Experimental and Laboratory may change in any release (`SUPPORT_TIERS.md`).
 Before 1.0, minor versions could break compatibility. Every change that can
 alter the behaviour of an existing app is listed under **Breaking**.
 
-## Unreleased
+## 1.1.0
+
+Quantum 1.1: **one application, in every place it can be read** — a browser, a
+window of its own, a text screen, a terminal, a file to hand someone, a phone —
+**and an API of its own.**
+
+- **One application, four places** (UI-18). `quantum run <app> --on
+  web|desktop|tui|terminal` runs the same pages, actions and transitions. The
+  TUI is a text screen drawn by Godot (UI-20), with a mouse, colours and
+  smooth scrolling. All 67 `ui:*` tags are in the Core set and drawn by every
+  renderer (`UI_PARITY.md`, checked in CI).
+- **A file to hand someone** (UI-22). `quantum package <app>` makes the
+  application's installer: the TUI, or a desktop window, with the
+  application's server inside, for Linux, Windows and macOS; the TUI in a
+  browser tab; a client of a hosted application (`--server`); and a phone's
+  app (`--target android|ios`). The React Native target is gone (below).
+- **An API of its own** (API-1 to API-6). `q:endpoint` serves a component as
+  JSON REST, with CORS origins, size and rate limits, described at
+  `/api/openapi.json`; `quantum check` lists the endpoints.
+- **Holes closed.** `require_role` on `q:action` is enforced, `{…}` in a
+  query's SQL is refused, and an editable table's cells are signed for the
+  session that saw them. They are under **Breaking** with the Core's other
+  corrections: each closes behaviour that contradicted `SPEC.md` or let a
+  request do what it should not. Read them before upgrading.
+- **Laboratory.** The game language (`qg:`, compiled to Godot 4) grew through
+  `PLAN_GAMES_3.md`, with seventeen games on the site, PandaFoot (a football
+  manager in a public beta) among them; a game server (`q:gameserver`) holds
+  a world for many players, with its engine in Rust (`native/world`, built
+  from source, not in the wheel).
 
 ### Added
 
@@ -1228,6 +1256,213 @@ alter the behaviour of an existing app is listed under **Breaking**.
   world. A scene entered again and again with the same seed draws the same
   each time; PandaFoot's round is seeded by the world, the season and the
   round, so each round has its own luck and a replay the same.
+- Laboratory: the games on the site — `docs/targets/play.md` lists the
+  eight games with a browser build, Linux and Windows downloads, controls
+  and the network commands. `scripts/export-games.py` exports every
+  `projects/<name>/<name>.q` with Godot's templates (the web build without
+  threads, so it runs on a static host) and installs the templates itself
+  (`--install-templates`); the Deploy Docs workflow runs it, with the
+  templates cached, before the site is built. Nothing exported is committed.
+- Laboratory: an eighth game, `projects/chess/chess.q` — chess, its rules
+  written in `q:function`s over an array of 64 squares (the rules of
+  github.com/Prashanna135/chess, MIT; `projects/chess/README.md` maps it),
+  white and black over the network. What it made the language grow:
+  **local variables** — a `q:set` of an undeclared name inside a
+  `q:function` or a handler is the call's own (the first recursion the
+  language met); `<q:set name="board" index="{i}" />` for one element of
+  an array; `qg:put target= x= y=`; `qg:destroy`, `qg:swap`, `qg:put` on
+  any name holding a thing, and a named `qg:instance` as a name in its
+  scene; `qg:hud position="bottom-center"`.
+- Laboratory: a seventh game, `projects/arena/arena.q` — a one-on-one
+  fighting game (`projects/arena/README.md`), two players over the network.
+  What it made the language grow: `controller="fighter"` (walk, jump,
+  crouch, block by holding away, hit stun and push back, KO) with
+  `health=` and `facing=`; `qg:move` — an attack on an action with frame
+  data: `frames`, `active`, `reach`, `at`, `damage`, `stun`, `push`;
+  `qg:on-ko`; `qg:bar` in the HUD bound to a q:set or a fighter's
+  `id.health`; a character's id as a name in its scene's expressions
+  (`p1.health`) and as an action target (`qg:respawn target="p1"`).
+- Laboratory: a sixth game, `projects/towers/towers.q` — the MIT "Godot 4
+  Tower Defense Template" transcribed (`projects/towers/README.md` maps it),
+  playable by two over the network. What it made the language grow: named
+  actions (`qg:input action="buy-gatling"`, `qg:on-input` on any declared
+  action), `MouseLeft`/`MouseRight` keys and the default `select`/`cancel`
+  actions; `qg:cursor` (the mouse, or a player's directions, snapped to
+  `grid=`) and `qg:on-select` with `cursor` and `other` — under
+  `qg:multiplayer` the cursor travels in the input frame; `count(tag)` and
+  `thing_at(tag, x, y)` in expressions; `qg:path points=` with `ai="path"`
+  and `qg:spawn at="path"`; `ai="turret" targets= range= attack= damage=`
+  firing `fire-prefab` at the nearest target, `fire-prefab`/`range` on a
+  `qg:state`, `qg:become target="other"`, `qg:spawn at="cursor"`. The
+  replay tape takes `cursor` events (`cursor_at()`).
+- Laboratory: declarative multiplayer. `<qg:multiplayer players="2" />` in
+  a game: every peer runs the whole game in lockstep — a tick runs when
+  every player's input for it has arrived, `delay=` ticks after the press;
+  the peers compare a hash of the whole state every `check-every=` ticks
+  and a difference is a reported, fatal desync. One peer hosts
+  (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`);
+  `player=` on the characters says whose is whose, as it did on one
+  keyboard. Nothing else in the game knows. `replay_peers()` runs N
+  headless Godots on localhost under tapes; `tests/godot/test_godot_multiplayer.py`
+  plays Pong on two and checks they agree with each other and with one
+  Godot replaying both tapes. Design and what is left: `PLAN_MULTIPLAYER.md`.
+- Laboratory: a fifth game, `projects/creeps/creeps.q` — Godot's "Dodge the
+  Creeps" tutorial game transcribed (`projects/creeps/README.md` maps it).
+  What it made the language grow: `qg:spawner along="edges" heading="inward"
+  spread=`, several prefabs drawn at random and `count="0"`; `speed="150..250"`
+  and `rotate=` on a prefab; `bounds="scene"`, `walk-up`/`walk-down` and
+  analog strength on the top-down controller; `qg:hud position="center"`,
+  `font=`, `size=`; `loop=` on `qg:sound`, `qg:stop`, and `qg:play`/`qg:stop`
+  directly in a scene; `from=` on `qg:timer every=`; a `q:set` of a
+  game-wide name in a scene sets it as the scene is entered.
+  `tests/godot/test_godot_creeps.py` replays it. `scripts/pack-sprites.py`
+  packs separate frames into a sheet.
+- Laboratory: joypads. `qg:input keys=` takes `JoyA`, `JoyUp`, `JoyLeftStickUp`
+  and the rest (the reference lists them); player n reads joypad n-1; the
+  defaults include the pad and the left stick; the ship and top-down
+  controllers read the stick's strength.
+- Laboratory: a scene state named like any member of Godot's `Node2D`
+  (`ready`, `draw`, `show`…) is a compile error, from the same generated
+  reference `gd:` attributes use; it was a GDScript error at run time.
+- Laboratory: a fourth game, `projects/pong/pong.q` — Godot's own "Pong
+  with GDScript" demo (godotengine/godot-demo-projects, MIT) transcribed
+  tag for node; `projects/pong/README.md` maps each piece of the original
+  to its tag. What it made the language grow, each a tag or an attribute:
+  `player=` on `qg:input` and `qg:character` (a second player's keys, as
+  `p2_up`…); `axis=` on the ship controller; `qg:zone` (an invisible
+  tagged rectangle, touched like a prefab); `heading="x,y"` and `accel=`
+  on a flying prefab, `qg:deflect` (reflect one axis, or set `dx`/`dy`),
+  `qg:respawn target="other"`; `tile="8x32"` on `qg:spritesheet` for frames
+  that are not square; `qg:sprite` (a picture with no behaviour); and
+  `random(a, b)` in expressions, from the scene's seeded source.
+  `tests/godot/test_godot_pong.py` replays it.
+- Laboratory: `gd:` attributes on game tags — `<qg:camera gd:zoom="2,2" />`
+  sets `Camera2D.zoom`. A pure forward: the compiler checks the name and the
+  type against Godot's own class reference (`godot_properties.json`,
+  generated from `godot --doctool` by `scripts/generate-godot-properties.py`),
+  and the runtime calls `node.set()` once as the scene is built. Properties
+  only (float, int, bool, String, Vector2, Vector2i, Color); methods, signals
+  and what the runtime sets itself (`position`, `velocity`, the collision
+  layers) are not forwarded. A wrong name is a compile error naming the
+  properties the class has. `tests/godot/test_godot_gd.py` reads back, in
+  Godot, the class and the values of every kind of node.
+- Laboratory: a new game compiler and runtime (`quantum/runtime/godot/`),
+  rebuilt from scratch on the "thin compiler, fat runtime" design of
+  `PLAN_GAMES_2.md`. The `.q` compiles to `game.json` (everything
+  declarative), one GDScript per scene (its `q:set`s as properties, its
+  `q:function`s and handlers as methods, Quantum expressions compiled to
+  GDScript), and a fixed runtime, `addons/quantum/`, that builds the scene
+  tree from the JSON. The schema (`schema.py`) is the language: an unknown
+  tag or attribute, a name no `q:set` declared, text where statements go
+  (the old backend's JavaScript) — each is a compile error with its line.
+  Tags so far: `qg:tileset`, `qg:spritesheet`, `qg:prefab`, `qg:scene`,
+  `qg:tilemap` (CSV), `qg:character controller="platformer"` (kinematic,
+  with `run-speed`, `jump-height` to the pixel, variable jump, coyote
+  frames), `qg:on-collision with=`, `qg:destroy`, `qg:instance`,
+  `qg:camera`, `qg:hud` with `qg:counter`; and `q:set`, `q:if`/`q:else`/
+  `q:elseif`, `q:loop`, `q:function`, `q:return` inside handlers. Then, for
+  the platformer: `qg:sound` and `qg:play`; `qg:animation` (frames cycled
+  by physics ticks — a character plays idle/walk/jump by what it does);
+  `qg:prefab ai="patrol"` (walks, turns at walls or edges, under gravity);
+  `qg:on-collision side="top"` (a stomp) with `cooldown=` ticks; `qg:bounce`,
+  `qg:respawn`; `qg:on-fall` below the tilemap; `jump-sound=`. Things
+  collide with the tiles, not with the characters: touching is the areas'
+  job, so a walker hurts instead of blocking. Then: `qg:state` (a form of
+  the character — hitbox, frame, animations; `me.state` reads it) and
+  `qg:become`; `qg:prefab solid="true"` (a block to stand on and bump) with
+  `qg:on-collision side="bottom"`; `qg:spawn`, `qg:swap`, `qg:checkpoint`;
+  `qg:text` in the HUD. Then: a `q:set` in `<q:application>` is the game's
+  state, kept across scenes (an autoload `G`); `qg:goto-scene`; a world
+  map (`qg:character controller="map"`, `qg:map-node`, `qg:map-path
+  requires=`); `qg:on-input` in a scene; `q:call` of a `q:function`. And
+  `qg:tilemap src="level.tmx"`: a level drawn in Tiled — its tile layers
+  (a `collision` property makes one solid) and its object layers, whose
+  objects place prefabs by their class. For the top-down game:
+  `qg:character controller="topdown"` (eight directions, `speed=`, a swing
+  on `attack-action=` with `attack-reach=`/`attack-frames=`), `qg:on-hit`
+  for what the swing reaches, `qg:exit` (a rectangle that leads to another
+  scene, arriving at the exit named there — disarmed until left),
+  `qg:prefab ai="wander"` (headings from the scene's seed) and
+  `ai="chase" sight=`, `qg:instance name=` (`other.name` in a handler) and
+  `if=` (placed only when true as the scene is built). For the shooter:
+  `qg:character controller="ship"` (eight directions, kept in the scene,
+  shoots `fire-prefab=` every `fire-every=` ticks while `fire-action=` is
+  held); `qg:prefab ai="fly" heading= lifetime=` and `ai="sway"`;
+  `health=` with `qg:damage`, `qg:on-damage` and `qg:on-death` (in the
+  prefab, or in the scene with `of=` a tag); `qg:on-collision` in a
+  prefab (a shot that hits); `qg:state` on a prefab (frame, speed,
+  fire-every); `qg:spawner` (so many of a prefab, every so many ticks,
+  `x="random"` from the scene's seed); `qg:burst` and `qg:shake`
+  (cosmetic); a `q:set` in `<q:application>` with `saved="true"` is kept
+  between runs (a file in `user://`; the replay harness gives each run its
+  own); `q:if`/`q:loop`/`q:call` directly in a scene run as it is entered.
+- `projects/drift/drift.q`, the vertical shooter: three waves of drones
+  and tanks that come down and shoot, then a boss with two phases; lives,
+  score and a high score kept between runs — zero lines of script.
+  `tests/godot/test_godot_drift.py` replays it: the waves come from the
+  seed the same way every run, shots kill drones and the score counts,
+  drones and their shots cost lives, the boss turns angry below half
+  health and its death wins, the high score survives into the next run,
+  three lives lost are game over and jump starts again.
+- `projects/keep/keep.q`, the top-down adventure: six rooms of a keep, a
+  character that walks in eight directions and swings a sword, slimes
+  that wander and bats that chase, a sign, hearts, a key and a locked
+  door, a switch that opens a gate in another room, a chest at the end, a
+  game over — zero lines of script. `tests/godot/test_godot_keep.py`
+  replays it: the slime wanders the same way from the same seed, walking
+  into an exit changes room and arrives at the matching exit, the bat
+  chases within sight and hurts once per cooldown, the swing kills it, the
+  key opens the door, the gate blocks until the switch is thrown, the
+  chest ends the game, three hurts are game over and jump starts again.
+- `projects/hopper/hopper.q`, the platformer: a world map and three
+  levels (the second drawn in Tiled). A character that walks and jumps on a tilemap, blocks with a
+  power-up in them that makes it big (a hit makes it small again), coins,
+  walkers to stomp or be hurt by, pits, checkpoints, spikes, a flag at the
+  end of each level that opens the next on the map, a game over after
+  three deaths; score, coins, lives and a message in the HUD — zero lines
+  of script. `tests/godot/test_godot_hopper.py` replays it in Godot: the
+  game starts on the map and a shut path stays shut; jump enters a level;
+  the character rests on the ground, runs at its `run-speed`, a held jump
+  peaks at `jump-height` within a pixel, a tap is a short hop, a coin
+  collected is counted, the block opens from below, the power-up and the
+  hit change its state, the walker hurts once (cooldown) and sends it
+  back to the start, landing on the walker stomps it, the pit costs a
+  life, the spikes send it back to the checkpoint, the flag wins the level
+  and opens the next on the map, three deaths are game over and jump
+  starts again, and the same tape gives the same game.
+- Laboratory, after the plan closed: `qg:input` (a game's own keys for an
+  action); `qg:timer after=` / `every=` in a scene (Hopper's clock,
+  Drift's "here it comes"); `qg:prefab solid="true" one-way="true"` (a
+  ledge jumped through from below) and `ai="shuttle"` (a lift that goes
+  `dx`,`dy` and back every `period` ticks, carrying what stands on it);
+  slices in expressions (`items[1:3]`, `name[-2:]`); `q:loop` over a
+  dictionary iterates its keys, as GDScript does. A `q:set` without
+  `type=` is a `Variant` in GDScript, so a number may follow a string as
+  in Quantum; a `q:set` named like a Godot node property (`name`,
+  `position`...) is refused. `str()` of a whole number is `7`, not `7.0`.
+  `tests/godot/test_godot_expressions.py` runs 45 expressions in Godot
+  and compares each with the Core evaluator.
+- `docs/targets/games.md`, the game language reference, generated from the
+  compiler's schema and the three games by `scripts/generate-games-reference.py`
+  (a test fails when it is stale); `scripts/export-games.py` exports the
+  games for the web with Godot's export templates, when they are installed.
+- Laboratory: the real engine checks and replays a game, headless.
+  `quantum run game.q --check` opens the built Godot project and fails on
+  any script error (Godot exits 0 either way; the check reads its output).
+  `quantum/runtime/godot_replay.py` runs a game for N physics ticks under
+  an input tape and returns the state every node reports through
+  `quantum_state()` — the same tape, the same state, which is how the games
+  get tested. The Godot version is pinned in `quantum/runtime/godot_bin.py`;
+  `python scripts/godot.py install` downloads it into `~/.cache/quantum/godot`,
+  and the Laboratory CI job does the same (cached by version). Without it,
+  the tests in `tests/godot/` skip.
+- A playground on the site (/playground/): the Cookbook's recipes, editable,
+  run in the browser by the real `quantum-framework` from PyPI (Pyodide) —
+  with the database built from their migrations, links and forms that work,
+  and **Run tests** for their `*.test.q` files. The AI recipes are left out;
+  they need a model. It replaces `playground/`, a small interpreter of its
+  own that imitated Quantum. `scripts/check-playground.mjs` runs every example
+  in Pyodide in CI.
 
 ### Breaking
 
@@ -1533,216 +1768,6 @@ alter the behaviour of an existing app is listed under **Breaking**.
   its runtime. The language is being redesigned (`PLAN_GAMES_2.md`) and
   owes them no compatibility; the three games of that plan replace them.
   The Kenney CC0 art and sounds they used stay, in `assets/kenney/`.
-
-### Added
-
-- Laboratory: the games on the site — `docs/targets/play.md` lists the
-  eight games with a browser build, Linux and Windows downloads, controls
-  and the network commands. `scripts/export-games.py` exports every
-  `projects/<name>/<name>.q` with Godot's templates (the web build without
-  threads, so it runs on a static host) and installs the templates itself
-  (`--install-templates`); the Deploy Docs workflow runs it, with the
-  templates cached, before the site is built. Nothing exported is committed.
-- Laboratory: an eighth game, `projects/chess/chess.q` — chess, its rules
-  written in `q:function`s over an array of 64 squares (the rules of
-  github.com/Prashanna135/chess, MIT; `projects/chess/README.md` maps it),
-  white and black over the network. What it made the language grow:
-  **local variables** — a `q:set` of an undeclared name inside a
-  `q:function` or a handler is the call's own (the first recursion the
-  language met); `<q:set name="board" index="{i}" />` for one element of
-  an array; `qg:put target= x= y=`; `qg:destroy`, `qg:swap`, `qg:put` on
-  any name holding a thing, and a named `qg:instance` as a name in its
-  scene; `qg:hud position="bottom-center"`.
-- Laboratory: a seventh game, `projects/arena/arena.q` — a one-on-one
-  fighting game (`projects/arena/README.md`), two players over the network.
-  What it made the language grow: `controller="fighter"` (walk, jump,
-  crouch, block by holding away, hit stun and push back, KO) with
-  `health=` and `facing=`; `qg:move` — an attack on an action with frame
-  data: `frames`, `active`, `reach`, `at`, `damage`, `stun`, `push`;
-  `qg:on-ko`; `qg:bar` in the HUD bound to a q:set or a fighter's
-  `id.health`; a character's id as a name in its scene's expressions
-  (`p1.health`) and as an action target (`qg:respawn target="p1"`).
-- Laboratory: a sixth game, `projects/towers/towers.q` — the MIT "Godot 4
-  Tower Defense Template" transcribed (`projects/towers/README.md` maps it),
-  playable by two over the network. What it made the language grow: named
-  actions (`qg:input action="buy-gatling"`, `qg:on-input` on any declared
-  action), `MouseLeft`/`MouseRight` keys and the default `select`/`cancel`
-  actions; `qg:cursor` (the mouse, or a player's directions, snapped to
-  `grid=`) and `qg:on-select` with `cursor` and `other` — under
-  `qg:multiplayer` the cursor travels in the input frame; `count(tag)` and
-  `thing_at(tag, x, y)` in expressions; `qg:path points=` with `ai="path"`
-  and `qg:spawn at="path"`; `ai="turret" targets= range= attack= damage=`
-  firing `fire-prefab` at the nearest target, `fire-prefab`/`range` on a
-  `qg:state`, `qg:become target="other"`, `qg:spawn at="cursor"`. The
-  replay tape takes `cursor` events (`cursor_at()`).
-- Laboratory: declarative multiplayer. `<qg:multiplayer players="2" />` in
-  a game: every peer runs the whole game in lockstep — a tick runs when
-  every player's input for it has arrived, `delay=` ticks after the press;
-  the peers compare a hash of the whole state every `check-every=` ticks
-  and a difference is a reported, fatal desync. One peer hosts
-  (`--q-host=PORT`, player 1), the others join (`--q-join=HOST:PORT`);
-  `player=` on the characters says whose is whose, as it did on one
-  keyboard. Nothing else in the game knows. `replay_peers()` runs N
-  headless Godots on localhost under tapes; `tests/godot/test_godot_multiplayer.py`
-  plays Pong on two and checks they agree with each other and with one
-  Godot replaying both tapes. Design and what is left: `PLAN_MULTIPLAYER.md`.
-- Laboratory: a fifth game, `projects/creeps/creeps.q` — Godot's "Dodge the
-  Creeps" tutorial game transcribed (`projects/creeps/README.md` maps it).
-  What it made the language grow: `qg:spawner along="edges" heading="inward"
-  spread=`, several prefabs drawn at random and `count="0"`; `speed="150..250"`
-  and `rotate=` on a prefab; `bounds="scene"`, `walk-up`/`walk-down` and
-  analog strength on the top-down controller; `qg:hud position="center"`,
-  `font=`, `size=`; `loop=` on `qg:sound`, `qg:stop`, and `qg:play`/`qg:stop`
-  directly in a scene; `from=` on `qg:timer every=`; a `q:set` of a
-  game-wide name in a scene sets it as the scene is entered.
-  `tests/godot/test_godot_creeps.py` replays it. `scripts/pack-sprites.py`
-  packs separate frames into a sheet.
-- Laboratory: joypads. `qg:input keys=` takes `JoyA`, `JoyUp`, `JoyLeftStickUp`
-  and the rest (the reference lists them); player n reads joypad n-1; the
-  defaults include the pad and the left stick; the ship and top-down
-  controllers read the stick's strength.
-- Laboratory: a scene state named like any member of Godot's `Node2D`
-  (`ready`, `draw`, `show`…) is a compile error, from the same generated
-  reference `gd:` attributes use; it was a GDScript error at run time.
-- Laboratory: a fourth game, `projects/pong/pong.q` — Godot's own "Pong
-  with GDScript" demo (godotengine/godot-demo-projects, MIT) transcribed
-  tag for node; `projects/pong/README.md` maps each piece of the original
-  to its tag. What it made the language grow, each a tag or an attribute:
-  `player=` on `qg:input` and `qg:character` (a second player's keys, as
-  `p2_up`…); `axis=` on the ship controller; `qg:zone` (an invisible
-  tagged rectangle, touched like a prefab); `heading="x,y"` and `accel=`
-  on a flying prefab, `qg:deflect` (reflect one axis, or set `dx`/`dy`),
-  `qg:respawn target="other"`; `tile="8x32"` on `qg:spritesheet` for frames
-  that are not square; `qg:sprite` (a picture with no behaviour); and
-  `random(a, b)` in expressions, from the scene's seeded source.
-  `tests/godot/test_godot_pong.py` replays it.
-- Laboratory: `gd:` attributes on game tags — `<qg:camera gd:zoom="2,2" />`
-  sets `Camera2D.zoom`. A pure forward: the compiler checks the name and the
-  type against Godot's own class reference (`godot_properties.json`,
-  generated from `godot --doctool` by `scripts/generate-godot-properties.py`),
-  and the runtime calls `node.set()` once as the scene is built. Properties
-  only (float, int, bool, String, Vector2, Vector2i, Color); methods, signals
-  and what the runtime sets itself (`position`, `velocity`, the collision
-  layers) are not forwarded. A wrong name is a compile error naming the
-  properties the class has. `tests/godot/test_godot_gd.py` reads back, in
-  Godot, the class and the values of every kind of node.
-- Laboratory: a new game compiler and runtime (`quantum/runtime/godot/`),
-  rebuilt from scratch on the "thin compiler, fat runtime" design of
-  `PLAN_GAMES_2.md`. The `.q` compiles to `game.json` (everything
-  declarative), one GDScript per scene (its `q:set`s as properties, its
-  `q:function`s and handlers as methods, Quantum expressions compiled to
-  GDScript), and a fixed runtime, `addons/quantum/`, that builds the scene
-  tree from the JSON. The schema (`schema.py`) is the language: an unknown
-  tag or attribute, a name no `q:set` declared, text where statements go
-  (the old backend's JavaScript) — each is a compile error with its line.
-  Tags so far: `qg:tileset`, `qg:spritesheet`, `qg:prefab`, `qg:scene`,
-  `qg:tilemap` (CSV), `qg:character controller="platformer"` (kinematic,
-  with `run-speed`, `jump-height` to the pixel, variable jump, coyote
-  frames), `qg:on-collision with=`, `qg:destroy`, `qg:instance`,
-  `qg:camera`, `qg:hud` with `qg:counter`; and `q:set`, `q:if`/`q:else`/
-  `q:elseif`, `q:loop`, `q:function`, `q:return` inside handlers. Then, for
-  the platformer: `qg:sound` and `qg:play`; `qg:animation` (frames cycled
-  by physics ticks — a character plays idle/walk/jump by what it does);
-  `qg:prefab ai="patrol"` (walks, turns at walls or edges, under gravity);
-  `qg:on-collision side="top"` (a stomp) with `cooldown=` ticks; `qg:bounce`,
-  `qg:respawn`; `qg:on-fall` below the tilemap; `jump-sound=`. Things
-  collide with the tiles, not with the characters: touching is the areas'
-  job, so a walker hurts instead of blocking. Then: `qg:state` (a form of
-  the character — hitbox, frame, animations; `me.state` reads it) and
-  `qg:become`; `qg:prefab solid="true"` (a block to stand on and bump) with
-  `qg:on-collision side="bottom"`; `qg:spawn`, `qg:swap`, `qg:checkpoint`;
-  `qg:text` in the HUD. Then: a `q:set` in `<q:application>` is the game's
-  state, kept across scenes (an autoload `G`); `qg:goto-scene`; a world
-  map (`qg:character controller="map"`, `qg:map-node`, `qg:map-path
-  requires=`); `qg:on-input` in a scene; `q:call` of a `q:function`. And
-  `qg:tilemap src="level.tmx"`: a level drawn in Tiled — its tile layers
-  (a `collision` property makes one solid) and its object layers, whose
-  objects place prefabs by their class. For the top-down game:
-  `qg:character controller="topdown"` (eight directions, `speed=`, a swing
-  on `attack-action=` with `attack-reach=`/`attack-frames=`), `qg:on-hit`
-  for what the swing reaches, `qg:exit` (a rectangle that leads to another
-  scene, arriving at the exit named there — disarmed until left),
-  `qg:prefab ai="wander"` (headings from the scene's seed) and
-  `ai="chase" sight=`, `qg:instance name=` (`other.name` in a handler) and
-  `if=` (placed only when true as the scene is built). For the shooter:
-  `qg:character controller="ship"` (eight directions, kept in the scene,
-  shoots `fire-prefab=` every `fire-every=` ticks while `fire-action=` is
-  held); `qg:prefab ai="fly" heading= lifetime=` and `ai="sway"`;
-  `health=` with `qg:damage`, `qg:on-damage` and `qg:on-death` (in the
-  prefab, or in the scene with `of=` a tag); `qg:on-collision` in a
-  prefab (a shot that hits); `qg:state` on a prefab (frame, speed,
-  fire-every); `qg:spawner` (so many of a prefab, every so many ticks,
-  `x="random"` from the scene's seed); `qg:burst` and `qg:shake`
-  (cosmetic); a `q:set` in `<q:application>` with `saved="true"` is kept
-  between runs (a file in `user://`; the replay harness gives each run its
-  own); `q:if`/`q:loop`/`q:call` directly in a scene run as it is entered.
-- `projects/drift/drift.q`, the vertical shooter: three waves of drones
-  and tanks that come down and shoot, then a boss with two phases; lives,
-  score and a high score kept between runs — zero lines of script.
-  `tests/godot/test_godot_drift.py` replays it: the waves come from the
-  seed the same way every run, shots kill drones and the score counts,
-  drones and their shots cost lives, the boss turns angry below half
-  health and its death wins, the high score survives into the next run,
-  three lives lost are game over and jump starts again.
-- `projects/keep/keep.q`, the top-down adventure: six rooms of a keep, a
-  character that walks in eight directions and swings a sword, slimes
-  that wander and bats that chase, a sign, hearts, a key and a locked
-  door, a switch that opens a gate in another room, a chest at the end, a
-  game over — zero lines of script. `tests/godot/test_godot_keep.py`
-  replays it: the slime wanders the same way from the same seed, walking
-  into an exit changes room and arrives at the matching exit, the bat
-  chases within sight and hurts once per cooldown, the swing kills it, the
-  key opens the door, the gate blocks until the switch is thrown, the
-  chest ends the game, three hurts are game over and jump starts again.
-- `projects/hopper/hopper.q`, the platformer: a world map and three
-  levels (the second drawn in Tiled). A character that walks and jumps on a tilemap, blocks with a
-  power-up in them that makes it big (a hit makes it small again), coins,
-  walkers to stomp or be hurt by, pits, checkpoints, spikes, a flag at the
-  end of each level that opens the next on the map, a game over after
-  three deaths; score, coins, lives and a message in the HUD — zero lines
-  of script. `tests/godot/test_godot_hopper.py` replays it in Godot: the
-  game starts on the map and a shut path stays shut; jump enters a level;
-  the character rests on the ground, runs at its `run-speed`, a held jump
-  peaks at `jump-height` within a pixel, a tap is a short hop, a coin
-  collected is counted, the block opens from below, the power-up and the
-  hit change its state, the walker hurts once (cooldown) and sends it
-  back to the start, landing on the walker stomps it, the pit costs a
-  life, the spikes send it back to the checkpoint, the flag wins the level
-  and opens the next on the map, three deaths are game over and jump
-  starts again, and the same tape gives the same game.
-- Laboratory, after the plan closed: `qg:input` (a game's own keys for an
-  action); `qg:timer after=` / `every=` in a scene (Hopper's clock,
-  Drift's "here it comes"); `qg:prefab solid="true" one-way="true"` (a
-  ledge jumped through from below) and `ai="shuttle"` (a lift that goes
-  `dx`,`dy` and back every `period` ticks, carrying what stands on it);
-  slices in expressions (`items[1:3]`, `name[-2:]`); `q:loop` over a
-  dictionary iterates its keys, as GDScript does. A `q:set` without
-  `type=` is a `Variant` in GDScript, so a number may follow a string as
-  in Quantum; a `q:set` named like a Godot node property (`name`,
-  `position`...) is refused. `str()` of a whole number is `7`, not `7.0`.
-  `tests/godot/test_godot_expressions.py` runs 45 expressions in Godot
-  and compares each with the Core evaluator.
-- `docs/targets/games.md`, the game language reference, generated from the
-  compiler's schema and the three games by `scripts/generate-games-reference.py`
-  (a test fails when it is stale); `scripts/export-games.py` exports the
-  games for the web with Godot's export templates, when they are installed.
-- Laboratory: the real engine checks and replays a game, headless.
-  `quantum run game.q --check` opens the built Godot project and fails on
-  any script error (Godot exits 0 either way; the check reads its output).
-  `quantum/runtime/godot_replay.py` runs a game for N physics ticks under
-  an input tape and returns the state every node reports through
-  `quantum_state()` — the same tape, the same state, which is how the games
-  get tested. The Godot version is pinned in `quantum/runtime/godot_bin.py`;
-  `python scripts/godot.py install` downloads it into `~/.cache/quantum/godot`,
-  and the Laboratory CI job does the same (cached by version). Without it,
-  the tests in `tests/godot/` skip.
-- A playground on the site (/playground/): the Cookbook's recipes, editable,
-  run in the browser by the real `quantum-framework` from PyPI (Pyodide) —
-  with the database built from their migrations, links and forms that work,
-  and **Run tests** for their `*.test.q` files. The AI recipes are left out;
-  they need a model. It replaces `playground/`, a small interpreter of its
-  own that imitated Quantum. `scripts/check-playground.mjs` runs every example
-  in Pyodide in CI.
 
 ## 1.0.1
 

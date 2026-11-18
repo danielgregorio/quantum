@@ -1,7 +1,7 @@
 ---
 title: 路线图
 source: roadmap/index.md
-source_hash: ec723835fb0c
+source_hash: 3ba5ae8316ba
 ---
 
 # 路线图
@@ -15,9 +15,9 @@ Quantum 今天是什么，接下来做什么。这里没有日期，也不作[�
 
 每个事项都标明状态：**计划中**（已批准，尚未开始）、**设计中**（在写任何代码之前先写下设计）或**进行中**（正在构建）。
 
-## 1.0——今天
+## 1.1——今天
 
-Quantum 1.0 是用 XML 编写的声明式 Web 应用，语言内置 AI 与 RAG。1.0 的承诺由它的层级确定：
+Quantum 是用 XML 编写的声明式应用，语言内置 AI 与 RAG。1.1 把同一个应用带到每一个可以阅读它的地方：浏览器、独立的窗口、由 Godot 绘制的文本屏幕、终端、适用于 Linux、Windows 和 macOS 的安装程序，以及手机，并且拥有自己的 REST API（[变更内容](/changelog/v1-1-0)，英文）。它的承诺由它的层级确定：
 
 - **核心层（Core）**（组件、查询与事务、动作与表单、文件、邮件、认证、`ui:*` 的核心集合）和
   **AI 层**（`q:llm`、`q:knowledge`、`q:agent`）遵循语义化版本：1.x 版本不会破坏只使用这两层的程序。
@@ -63,13 +63,16 @@ Quantum 1.0 是用 XML 编写的声明式 Web 应用，语言内置 AI 与 RAG�
 |---|---|
 | 实用示例：简短的示例，每一个都在 CI 中测试 | 进行中 |
 | 更多语言的网站 | 进行中 |
-| [Playground](/playground/)：在浏览器中编写并运行 Quantum | 进行中 |
+| [Playground](/playground/)：在浏览器中编写并运行 Quantum | 已完成 |
 | 任何人都可以重新运行的基准测试 | 计划中 |
 
 ## 实验室
 
 | 事项 | 状态 |
 |---|---|
-| Games 2：把游戏作为确定性的声明式模拟，相同的输入总是得到相同的游戏，因此游戏可以被测试和回放 | 设计中 |
+| Games 2：把游戏作为确定性的声明式模拟，相同的输入总是得到相同的游戏，因此游戏可以被测试和回放——一个面向 Godot 4 的编译器，八款游戏（[Hopper、Keep、Drift、Godot 的 Pong 与 Dodge the Creeps 演示、一款塔防、一款格斗游戏和国际象棋](/targets/games)），每一款都在 CI 中回放并[可在网站上游玩](/targets/play)，以及基于同一确定性的锁步多人游戏（`PLAN_MULTIPLAYER.md`） | 已完成 |
+| Games 3：游戏语言从 Godot 和 Unity 中借鉴的内容——游戏逻辑、瞄准、解谜与冒险、选项与存档、触屏、座位与分屏、光照、六边形地图（`PLAN_GAMES_3.md`）——共有十七款游戏[可在网站上游玩](/targets/play) | 已完成 |
+| PandaFoot：一款仿照 Elifoot 2 的足球经理游戏，运行在文本屏幕上，处于公开测试中，玩家可以在游戏内反馈问题（`PLAN_PANDAFOOT.md`） | 进行中 |
+| 游戏服务器（`q:gameserver`）：用标签编写、可容纳五百名玩家的世界——视野、野兽、账本、聊天、队伍、任务、带 AI 的角色——其引擎用 Rust 编写（`PLAN_GAME_SERVER.md`、`PLAN_WORLD_ENGINE.md`） | 进行中 |
 
 实验室的工作没有任何承诺：它可能随时改变或停止。

@@ -1,7 +1,7 @@
 ---
 title: Roadmap
 source: roadmap/index.md
-source_hash: ec723835fb0c
+source_hash: 3ba5ae8316ba
 ---
 
 # Roadmap
@@ -21,10 +21,14 @@ Cada item mostra seu estado: **planejado** (aprovado, não começou), **em
 desenho** (sendo escrito antes de qualquer código) ou **em andamento** (sendo
 construído agora).
 
-## 1.0 — hoje
+## 1.1 — hoje
 
-O Quantum 1.0 é aplicações web declarativas em XML, com IA e RAG na própria
-linguagem. O que a 1.0 promete é definido pelos níveis:
+O Quantum é aplicações declarativas em XML, com IA e RAG na própria linguagem.
+A 1.1 leva uma aplicação a todo lugar onde ela pode ser lida: o navegador, uma
+janela própria, uma tela de texto desenhada pelo Godot, o terminal, um
+instalador para Linux, Windows e macOS, e o celular, com uma API REST própria
+([o que mudou](/changelog/v1-1-0), em inglês). O que ela promete é definido
+pelos níveis:
 
 - O **Núcleo** (Core: componentes, consultas e transações, ações e
   formulários, arquivos, e-mail, autenticação, o conjunto `ui:*` do Núcleo) e
@@ -74,14 +78,17 @@ O `quantum test` saiu na 1.0 ([Testing](/guide/testing), em inglês). A seguir:
 |---|---|
 | Receitas: receitas curtas, cada uma testada no CI | em andamento |
 | O site em mais idiomas | em andamento |
-| Um [playground](/playground/): escrever Quantum e rodar no navegador | em andamento |
+| Um [playground](/playground/): escrever Quantum e rodar no navegador | feito |
 | Benchmarks que qualquer pessoa pode rodar de novo | planejado |
 
 ## Laboratório
 
 | Item | Estado |
 |---|---|
-| Games 2: jogos como uma simulação declarativa determinística, em que as mesmas entradas dão sempre o mesmo jogo, para que um jogo possa ser testado e repetido — um compilador para Godot 4, três jogos ([Hopper, Keep, Drift](/targets/games)), cada um repetido no CI | feito |
+| Games 2: jogos como uma simulação declarativa determinística, em que as mesmas entradas dão sempre o mesmo jogo, para que um jogo possa ser testado e repetido — um compilador para Godot 4, oito jogos ([Hopper, Keep, Drift, as demos Pong e Dodge the Creeps do Godot, um tower defense, um jogo de luta e xadrez](/targets/games)), cada um repetido no CI e [jogável no site](/targets/play), e multijogador em lockstep a partir do mesmo determinismo (`PLAN_MULTIPLAYER.md`) | feito |
+| Games 3: o que a linguagem de jogos traz do Godot e do Unity — lógica de jogo, mira, quebra-cabeças e aventura, opções e jogos salvos, toque, lugares e tela dividida, luzes, mapas de hexágonos (`PLAN_GAMES_3.md`) — com dezessete jogos [jogáveis no site](/targets/play) | feito |
+| PandaFoot: um jogo de técnico de futebol à moda do Elifoot 2, numa tela de texto, num beta aberto cujos jogadores relatam problemas de dentro do jogo (`PLAN_PANDAFOOT.md`) | em andamento |
+| Um servidor de jogos (`q:gameserver`): um mundo para quinhentos jogadores escrito em tags — visões, feras, um livro-caixa, chat, grupos, missões, personagens com IA — com o motor em Rust (`PLAN_GAME_SERVER.md`, `PLAN_WORLD_ENGINE.md`) | em andamento |
 
 O trabalho do Laboratório não tem promessa: pode mudar ou parar a qualquer
 momento.

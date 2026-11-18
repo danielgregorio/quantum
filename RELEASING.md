@@ -2,8 +2,8 @@
 
 Publishing a new version is driven entirely by a git tag. The
 `.github/workflows/release.yml` workflow does the rest, and **nothing is
-published unless the full test suite passes first** (the publish job depends
-on the test job).
+published unless CI passes first on the tagged commit**: the release's gate is
+`ci.yml` itself, every job of it, and the publish job depends on it.
 
 ## One-time setup: PyPI trusted publisher
 
@@ -27,27 +27,36 @@ publisher** (PyPI supports configuring one before the project exists):
 
 ## Cutting a release
 
-1. Bump `project.version` in `pyproject.toml` (e.g. `0.9.1`). The workflow
-   **refuses to publish if the tag does not match this value.**
-2. Commit the bump.
-3. Tag and push:
+1. In a pull request:
+   - bump `project.version` in `pyproject.toml` (e.g. `1.1.0`). The workflow
+     **refuses to publish if the tag does not match this value**;
+   - rename `## Unreleased` in `CHANGELOG.md` to the version (`## 1.1.0`),
+     with a few lines on top that say what the release is. The workflow
+     **refuses a version without its section**, and the GitHub Release's text
+     is that section (`scripts/release-notes.py`);
+   - run `python scripts/generate-site-pages.py`, which writes the version's
+     page under `docs/changelog/` (a test checks the newest version there is
+     the one in `pyproject.toml`).
+2. Merge it when CI is green.
+3. Tag the merge commit on `main` and push the tag:
 
    ```bash
-   git tag v0.9.1
-   git push origin v0.9.1
+   git fetch origin main
+   git tag v1.1.0 origin/main
+   git push origin v1.1.0
    ```
 
 That triggers, in order:
 
 | Job              | What it does                                              |
 |------------------|-----------------------------------------------------------|
-| `test`           | Full declared suite on Python 3.12 — the gate.             |
-| `build`          | Checks the tag matches `pyproject`, builds sdist + wheel, `twine check`. |
-| `publish`        | Uploads to PyPI via OIDC (only if `test` and `build` passed). |
-| `github-release` | Creates a GitHub Release with generated notes + the artifacts. |
+| `ci`             | The whole of `ci.yml` on the tagged commit — the gate.    |
+| `build`          | Checks the tag matches `pyproject` and has a CHANGELOG section, builds sdist + wheel, `twine check`, installs the wheel alone in a clean venv and runs it. |
+| `publish`        | Uploads to PyPI via OIDC (only if `ci` and `build` passed). |
+| `github-release` | Creates a GitHub Release with the version's CHANGELOG section + the artifacts. |
 
-If tests fail, the tag is still there but nothing is published — fix, delete
-the tag (`git push --delete origin v0.9.1`), and re-tag.
+If a job fails, the tag is still there but nothing is published — fix, delete
+the tag (`git push --delete origin v1.1.0`), and re-tag.
 
 ## After the first publish
 
